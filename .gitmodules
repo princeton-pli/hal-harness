@@ -1,0 +1,3 @@
+[submodule "agent_eval_harness/benchmark/SWE-bench"]
+	path = agent_eval_harness/benchmark/SWE-bench
+	url = https://github.com/princeton-nlp/SWE-bench.git
