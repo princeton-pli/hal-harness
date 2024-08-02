@@ -1,6 +1,5 @@
 import subprocess
 from .base_benchmark import BaseBenchmark
-from ..utils.validation import validate_agent_output
 import json
 from datasets import load_dataset
 from typing_extensions import NotRequired, TypedDict, List, Dict, Optional
@@ -9,6 +8,9 @@ from pydantic import TypeAdapter, ValidationError
 import time
 import os
 import sys
+from huggingface_hub import HfApi
+from ..utils.utils import move_merge_dirs
+from datetime import datetime
 
 class SWEBenchBenchmark(BaseBenchmark):
     def __init__(self, config):
@@ -19,11 +21,10 @@ class SWEBenchBenchmark(BaseBenchmark):
         self.environment = 'swebench'
         self.benchmark_name = 'swebench_lite'
 
-        self.benchmark = load_dataset('princeton-nlp/SWE-bench_Lite', split='test').to_list()[:1]
+        self.benchmark = load_dataset('princeton-nlp/SWE-bench_Lite', split='test').to_list()[:1] # TODO use full benchmark after dev
 
 
-    def run(self, agent_function):
-        run_id = f"swe_bench_{int(time.time())}"
+    def run(self, agent_function, run_id: str) -> Dict:
 
         # Generate predictions using the agent function
         predictions = self._generate_predictions(agent_function, run_id)
@@ -40,7 +41,7 @@ class SWEBenchBenchmark(BaseBenchmark):
 
         return result
 
-    def _generate_predictions(self, agent_function, run_id):
+    def _generate_predictions(self, agent_function, run_id) -> List[Dict]:
         # Get prediction from agent
         agent_output = agent_function(self.benchmark)
 
@@ -117,13 +118,9 @@ class SWEBenchBenchmark(BaseBenchmark):
         # delete file
         os.remove(f"{run_id}.{run_id}.json")
 
-        # move logs/ direcotry to results/benchmark_name/logs
-        os.makedirs(f"results/{self.benchmark_name}/", exist_ok=True)
-        os.system(f"mv logs/ results/{self.benchmark_name}/")
-
         return results
 
-    def test_run(self, agent_function):
+    def test_run(self, agent_function, weave_client):
         # Implement a simple test task for SWE-bench
         test_task = [{
                 'repo': 'example/math-operations',
@@ -177,7 +174,8 @@ class SWEBenchBenchmark(BaseBenchmark):
         # Validate agent output
         self.validate_agent_output(test_output)
 
-        # TODO check logging
+        # validate that there was cost associated with the test run
+        # self.validate_cost_logging(weave_client)
 
         return True
 
@@ -200,3 +198,54 @@ class SWEBenchBenchmark(BaseBenchmark):
             model_patch: str
             model_name_or_path: str
         return TypeAdapter(List[Task])
+
+
+    def process_and_upload_results(self, agent_name: str, run_id: str, eval_results: Dict, logging_results: Dict, config, upload=False):
+        # move logs/ direcotry to results/benchmark_name/logs
+        os.makedirs(f"results/{self.benchmark_name}/", exist_ok=True)
+        move_merge_dirs("logs/", f"results/{self.benchmark_name}/logs/")
+
+        # store results
+        out_path = f"results/{self.benchmark_name}/{run_id}.json"
+        with open(out_path, 'w') as f:
+            json.dump(eval_results, f)
+
+        # Process and upload results
+        print(f"Processing and uploading results for {self.benchmark_name}...")
+        print(f"Agent name: {agent_name}")
+
+        # New dict
+        upload_dict = {
+            "config": {'agent_name': agent_name, 
+                       'benchmark_name': self.benchmark_name, 
+                       'date': datetime.now().strftime("%Y-%m-%d"),
+                       **config[self.benchmark_name]},
+            "results": {
+                "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
+                "total_cost": logging_results['total_cost'],
+            },
+            "raw_eval_results": eval_results,
+            "raw_logging_results": logging_results
+        }
+
+        
+
+        if upload:
+            # Save results to a temp file
+            upload_path = f"results/{self.benchmark_name}/{run_id}_upload.json"
+            with open(upload_path, 'w') as f:
+                json.dump(upload_dict, f)
+            # Use huggingface API to upload results
+            api = HfApi(token=os.getenv("HF_TOKEN", '.'))
+            api.upload_file(
+                path_or_fileobj=upload_path,
+                path_in_repo=f"{run_id}.json",
+                repo_id="agent-evals/results"   ,
+                repo_type="dataset",
+                commit_message=f"Add {run_id} to leaderboard.",
+                )
+            
+            # remove temp file
+            os.remove(upload_path)
+
+        
