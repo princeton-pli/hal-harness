@@ -1,3 +1,23 @@
+[build-system]
+requires = ["setuptools>=40.8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent_eval_harness"
+version = "0.1.0"
+description = ""
+requires-python = ">=3.11"
+dependencies = [
+    'datasets',
+    'weave',
+    'pydantic>=2.0.0',
+    'huggingface-hub',
+    'python-dotenv',
+]
+
+[tool.setuptools.packages.find]
+include = ["agent_eval_harness*"]
+
 [tool.poetry]
 name = "agent-eval-harness"
 version = "0.1.0"
@@ -7,14 +27,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-weave = "*"
-pydantic = "^2.8.2"
-datasets = "*"
-huggingface-hub = "*"
 
 [tool.poetry.group.swebench]
 optional = true
-
 [tool.poetry.group.swebench.dependencies]
 python = "^3.11"
 weave = "0.50.12"
@@ -104,6 +119,3 @@ xxhash = "3.4.1"
 yarl = "1.9.4"
 swebench = { path = "agent_eval_harness/benchmarks/SWE-bench" }
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"

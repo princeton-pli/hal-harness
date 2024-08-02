@@ -1,4 +1,4 @@
 # SWE-bench Settings
-swe_bench:
+swebench_lite:
   dataset_name: "princeton-nlp/SWE-bench_Lite"
   max_workers: 1

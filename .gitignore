@@ -1,3 +1,4 @@
 poetry.lock
 **/__pycache__/**
 results/**
+agent_eval_harness/.env
