@@ -6,3 +6,4 @@ agent_eval_harness.egg-info/**
 dist/agent_eval_harness-0.1.0.tar.gz
 agent_eval_harness/scratch.py
 experiments/**
+logs/**

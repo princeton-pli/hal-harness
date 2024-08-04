@@ -8,8 +8,8 @@ from pydantic import TypeAdapter, ValidationError
 import time
 import os
 import sys
-from huggingface_hub import HfApi
 from ..utils.utils import move_merge_dirs
+from ..utils.weave_utils import get_total_cost, assert_task_id_logging, get_weave_calls
 from datetime import datetime
 
 class SWEBenchBenchmark(BaseBenchmark):
@@ -44,9 +44,6 @@ class SWEBenchBenchmark(BaseBenchmark):
     def _generate_predictions(self, agent_function, run_id) -> List[Dict]:
         # Get prediction from agent
         agent_output = agent_function(self.benchmark)
-
-        # Validate agent output
-        self.validate_agent_output(agent_output)
 
         # Format prediction for SWE-bench
         predictions = [{'instance_id': task["instance_id"], 
@@ -175,9 +172,15 @@ class SWEBenchBenchmark(BaseBenchmark):
         self.validate_agent_output(test_output)
 
         # validate that there was cost associated with the test run
-        # self.validate_cost_logging(weave_client)
+        time.sleep(5) # wait to finish usage calculation on weave
+        self.validate_logging(weave_client, test_task_id='math-operations-001')
 
         return True
+
+    def validate_logging(self, weave_client, test_task_id):
+        assert get_total_cost(weave_client) > 0, "Test run did not incur any cost"
+
+        assert_task_id_logging(weave_client, test_task_id)
 
     @property
     def type_adapter(self):
@@ -200,7 +203,13 @@ class SWEBenchBenchmark(BaseBenchmark):
         return TypeAdapter(List[Task])
 
 
-    def process_and_upload_results(self, agent_name: str, run_id: str, eval_results: Dict, logging_results: Dict, config, upload=False):
+    def process_and_upload_results(self, 
+                                   agent_name: str, 
+                                   run_id: str, 
+                                   eval_results: Dict, 
+                                   weave_client,
+                                   config, 
+                                   upload=False):
         # move logs/ direcotry to results/benchmark_name/logs
         os.makedirs(f"results/{self.benchmark_name}/", exist_ok=True)
         move_merge_dirs("logs/", f"results/{self.benchmark_name}/logs/")
@@ -211,7 +220,7 @@ class SWEBenchBenchmark(BaseBenchmark):
             json.dump(eval_results, f)
 
         # Process and upload results
-        print(f"Processing and uploading results for {self.benchmark_name}...")
+        print(f"=====\nProcessing and uploading results for {self.benchmark_name}...")
         print(f"Agent name: {agent_name}")
 
         # New dict
@@ -219,33 +228,19 @@ class SWEBenchBenchmark(BaseBenchmark):
             "config": {'agent_name': agent_name, 
                        'benchmark_name': self.benchmark_name, 
                        'date': datetime.now().strftime("%Y-%m-%d"),
+                       'run_id': run_id,
                        **config[self.benchmark_name]},
             "results": {
                 "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
-                "total_cost": logging_results['total_cost'],
+                "total_cost": get_total_cost(weave_client),
             },
             "raw_eval_results": eval_results,
-            "raw_logging_results": logging_results
+            "raw_logging_results": get_weave_calls(weave_client)
         }
 
-        
-
         if upload:
-            # Save results to a temp file
-            upload_path = f"results/{self.benchmark_name}/{run_id}_upload.json"
-            with open(upload_path, 'w') as f:
-                json.dump(upload_dict, f)
-            # Use huggingface API to upload results
-            api = HfApi(token=os.getenv("HF_TOKEN", '.'))
-            api.upload_file(
-                path_or_fileobj=upload_path,
-                path_in_repo=f"{run_id}.json",
-                repo_id="agent-evals/results"   ,
-                repo_type="dataset",
-                commit_message=f"Add {run_id} to leaderboard.",
-                )
-            
-            # remove temp file
-            os.remove(upload_path)
+            self.upload_results(run_id, upload_dict)
+            print(f"Results uploaded to Hugging Face Hub.")
+            print("=====")
 
         
