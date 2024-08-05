@@ -15,8 +15,7 @@ def main(ctx, config, **kwargs):
     """Run agent evaluation on specified benchmark with given model."""
     config = load_config(config)
         
-    result = run_agent_evaluation(config=config, **kwargs)
-    click.echo(f"Evaluation complete. Results stored and uploaded.")
+    run_agent_evaluation(config=config, **kwargs)
 
 if __name__ == '__main__':
     main()
