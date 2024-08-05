@@ -1,3 +1,6 @@
 [submodule "agent_eval_harness/benchmarks/SWE-bench"]
 	path = agent_eval_harness/benchmarks/SWE-bench
 	url = https://github.com/princeton-nlp/SWE-bench.git
+[submodule "agent_eval_harness/benchmarks/USACO"]
+	path = agent_eval_harness/benchmarks/USACO
+	url = https://github.com/princeton-nlp/USACO.git
