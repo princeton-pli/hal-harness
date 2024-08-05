@@ -171,9 +171,7 @@ class USACOBenchmark(BaseBenchmark):
                                    config, 
                                    upload=False):
 
-        # Process and upload results
-        print(f"=====\nProcessing and uploading results for {self.benchmark_name}...")
-        print(f"Agent name: {agent_name}")
+
         
         rdict, sdict, rs, ss = eval_results
         

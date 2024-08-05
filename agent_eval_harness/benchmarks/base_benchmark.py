@@ -66,4 +66,3 @@ class BaseBenchmark(ABC):
         os.remove(upload_path)
 
         print(f"Results uploaded to Hugging Face Hub.")
-        print("=====\n\n")
