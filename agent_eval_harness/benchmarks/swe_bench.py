@@ -53,8 +53,8 @@ class SWEBenchBenchmark(BaseBenchmark):
         return predictions
 
     def _run_evaluation_harness(self, predictions_path, run_id):
+
         command = (
-            f"poetry install --only {self.environment} --sync && "
             f"poetry run python -m swebench.harness.run_evaluation "
             f"--dataset_name {self.dataset_name} "
             f"--predictions_path {predictions_path} "
@@ -177,11 +177,6 @@ class SWEBenchBenchmark(BaseBenchmark):
 
         return True
 
-    def validate_logging(self, weave_client, test_task_id):
-        assert get_total_cost(weave_client) > 0, "Test run did not incur any cost"
-
-        assert_task_id_logging(weave_client, test_task_id)
-
     @property
     def type_adapter(self):
         class Task(TypedDict):
@@ -211,17 +206,13 @@ class SWEBenchBenchmark(BaseBenchmark):
                                    config, 
                                    upload=False):
         # move logs/ direcotry to results/benchmark_name/logs
-        os.makedirs(f"results/{self.benchmark_name}/", exist_ok=True)
+        os.makedirs(f"results/{self.benchmark_name}/{run_id}", exist_ok=True)
         move_merge_dirs("logs/", f"results/{self.benchmark_name}/logs/")
 
         # store results
-        out_path = f"results/{self.benchmark_name}/{run_id}.json"
+        out_path = f"results/{self.benchmark_name}/{run_id}/{run_id}.json"
         with open(out_path, 'w') as f:
-            json.dump(eval_results, f)
-
-        # Process and upload results
-        print(f"=====\nProcessing and uploading results for {self.benchmark_name}...")
-        print(f"Agent name: {agent_name}")
+            json.dump(eval_results, f)        
 
         # New dict
         upload_dict = {
@@ -240,7 +231,8 @@ class SWEBenchBenchmark(BaseBenchmark):
 
         if upload:
             self.upload_results(run_id, upload_dict)
-            print(f"Results uploaded to Hugging Face Hub.")
-            print("=====")
+
+
+        return upload_dict['results']
 
         
