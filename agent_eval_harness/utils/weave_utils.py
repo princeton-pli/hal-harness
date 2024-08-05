@@ -40,7 +40,6 @@ def get_total_cost(client):
 
 def assert_task_id_logging(client, task_id):
     for call in client.calls():
-        print(call.attributes['task_id'])
         if str(call.attributes['task_id']) == str(task_id):
             return True
     raise AssertionError("Task ID not logged or incorrect ID for test run. Please use weave.attributes to log the task_id for each API call.")
