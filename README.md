@@ -1,6 +1,6 @@
-## Cloning the Repository with Submodules
+## Setup
 
-To clone this repository and initialize its submodules, follow these steps:
+To clone this repository and initialize the benchmark submodules, follow these steps:
 
 1. **Clone the main repository:**
    ```bash
@@ -14,9 +14,9 @@ To clone this repository and initialize its submodules, follow these steps:
    ```
 
 
-## Simple example on USACO
+## Simple example on SWE-Bench Lite
    ```bash
-   python -m agent_eval_harness.cli --agent_function usaco_example_agent.agent.run --benchmark usaco --agent_dir usaco_example_agent/ --agent_name usaco_example_agent --upload
+   python -m agent_eval_harness.cli --agent_function swebench_lite_example_agent.agent.run --benchmark swebench_lite --agent_dir swebench_lite_example_agent/ --agent_name swebench_lite_example_agent --upload
    ```
 
 
