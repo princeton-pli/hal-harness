@@ -14,9 +14,9 @@ To clone this repository and initialize its submodules, follow these steps:
    ```
 
 
-## Test run swebench lite
+## Simple example on USACO
    ```bash
-   poetry run python -m agent_eval_harness.cli --agent agent_eval_harness.example_agent.agent.run --benchmark swebench_lite
+   python -m agent_eval_harness.cli --agent_function usaco_example_agent.agent.run --benchmark usaco --agent_dir usaco_example_agent/ --agent_name usaco_example_agent --upload
    ```
 
 
