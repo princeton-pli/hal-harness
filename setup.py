@@ -13,4 +13,10 @@ setup(
         'huggingface-hub',
         'python-dotenv',
     ],
+    entry_points={
+        'console_scripts': [
+            'agent-eval=agent_eval_harness.cli:main',
+            'agent-upload=agent_eval_harness.utils.upload:upload_results',
+        ],
+    },
 )
