@@ -8,3 +8,4 @@ agent_eval_harness/scratch.py
 experiments/**
 logs/**
 .vscode/**
+.env
