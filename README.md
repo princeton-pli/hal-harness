@@ -13,6 +13,12 @@ To clone this repository and initialize the benchmark submodules, follow these s
    git submodule update --init --recursive
    ```
 
+3. **Save .env with your API keys**
+   ```bash
+   cp .env.template .env
+   ```
+   Now add your personal API keys to the ```.env``` file.
+
 
 ## Simple example on SWE-Bench Lite
    ```bash
