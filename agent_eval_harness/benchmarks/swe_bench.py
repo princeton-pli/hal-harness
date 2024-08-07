@@ -173,7 +173,7 @@ class SWEBenchBenchmark(BaseBenchmark):
 
         # validate that there was cost associated with the test run
         time.sleep(5) # wait to finish usage calculation on weave
-        self.validate_logging(weave_client, test_task_id='math-operations-001')
+        self.validate_logging(weave_client, test_weave_task_id='math-operations-001')
 
         return True
 
