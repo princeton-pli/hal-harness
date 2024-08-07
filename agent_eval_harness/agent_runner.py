@@ -33,8 +33,7 @@ def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
     # Run the test task
     print("=====Running test task=====")
     print("Running test task...")
-    # test_passed = benchmark.test_run(agent_function, weave_client)
-    test_passed = True
+    test_passed = benchmark.test_run(agent_function, weave_client)
     print("Test task passed!")
     print("=====\n\n")
     

@@ -22,7 +22,7 @@ To clone this repository and initialize the benchmark submodules, follow these s
 
 ## Simple example on SWE-Bench Lite
    ```bash
-   python -m agent_eval_harness.cli --agent_function swebench_lite_example_agent.agent.run --benchmark swebench_lite --agent_dir swebench_lite_example_agent/ --agent_name swebench_lite_example_agent --upload
+   python -m agent_eval_harness.cli --agent_function agents.swebench_lite_example_agent.agent.run --benchmark swebench_lite --agent_dir agents/swebench_lite_example_agent/ --agent_name swebench_lite_example_agent --upload
    ```
 
 
