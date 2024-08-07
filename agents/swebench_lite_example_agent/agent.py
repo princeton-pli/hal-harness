@@ -5,7 +5,7 @@ def run(input):
     from openai import OpenAI
     client = OpenAI()
 
-    with weave.attributes({'task_id': 'math-operations-001'}):
+    with weave.attributes({'weave_task_id': 'math-operations-001'}):
         response = client.chat.completions.create(
             model="gpt-4o-mini-2024-07-18",
             messages=[

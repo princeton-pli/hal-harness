@@ -38,11 +38,11 @@ def get_total_cost(client):
 
     return total_cost
 
-def assert_task_id_logging(client, task_id):
+def assert_task_id_logging(client, weave_task_id):
     for call in client.calls():
-        if str(call.attributes['task_id']) == str(task_id):
+        if str(call.attributes['weave_task_id']) == str(weave_task_id):
             return True
-    raise AssertionError("Task ID not logged or incorrect ID for test run. Please use weave.attributes to log the task_id for each API call.")
+    raise AssertionError("Task ID not logged or incorrect ID for test run. Please use weave.attributes to log the weave_task_id for each API call.")
 
 
 
@@ -54,12 +54,12 @@ def get_weave_calls(client):
         ChatCompletion = weave.ref(call.output).get()
         choices = [choice.message.content for choice in ChatCompletion.choices]
         output = {
-            'task_id': call.attributes['task_id'],
+            'weave_task_id': call.attributes['weave_task_id'],
             'trace_id': call.trace_id,
             'project_id': call.project_id,
             'inputs': dict(call.inputs),
             'id': call.id,
-            'outputs': choices,
+            'outputs': {'choices' : choices},
             'exception': call.exception,
             'summary': call.summary,
             'display_name': call.display_name,
