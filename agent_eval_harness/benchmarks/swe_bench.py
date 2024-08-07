@@ -229,6 +229,10 @@ class SWEBenchBenchmark(BaseBenchmark):
             "raw_logging_results": get_weave_calls(weave_client)
         }
 
+        # Store the upload results locally
+        with open(os.path.join(out_path, f"{run_id}_UPLOAD.json"), 'w') as f:
+            json.dump(upload_dict, f)
+
         if upload:
             self.upload_results(run_id, upload_dict)
 
