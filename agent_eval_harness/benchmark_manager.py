@@ -1,15 +1,16 @@
 # benchmark_manager.py
 
 import importlib
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from .benchmarks.base_benchmark import BaseBenchmark
 from .benchmarks.swe_bench import SWEBenchBenchmark
 from .benchmarks.usaco import USACOBenchmark
 import subprocess
 import os
 
+
 class BenchmarkManager:
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Optional[Dict[str, Any]] = {}):
         self.config = config
         self.benchmarks = {
             "swebench_lite": SWEBenchBenchmark(config),
