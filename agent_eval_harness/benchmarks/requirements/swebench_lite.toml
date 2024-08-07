@@ -1,3 +1,4 @@
+[tool.poetry.dependencies]
 python = "^3.11"
 weave = "0.50.12"
 aiofiles = "24.1.0"

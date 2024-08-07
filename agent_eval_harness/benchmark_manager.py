@@ -29,21 +29,21 @@ class BenchmarkManager:
 
     
     def mount_benchmark(self, benchmark_name: str):
-        # concatenate main.toml and benchmark toml
-        with open('agent_eval_harness/benchmarks/requirements/main.toml', 'r') as f:
-            main_toml = f.read()
-
         try:
             with open(f'agent_eval_harness/benchmarks/requirements/{benchmark_name}.toml', 'r') as f:
                 requirements_toml = f.read()
         except FileNotFoundError:
             raise ValueError(f"Requirements file for benchmark '{benchmark_name}' not found. Available benchmarks: {', '.join(self.benchmarks.keys())}")
         with open('pyproject.toml', 'w') as f:
-            f.write(main_toml + "\n"  + requirements_toml)
+            f.write(f"""[tool.poetry]
+                        package-mode = false\n\n{requirements_toml}""")
 
         # install dependencies
         try:
-            subprocess.run(['poetry', 'install'])
+            print(f"Installing dependencies for benchmark '{benchmark_name}'")
+            # this command install the benchmark dependencies in a virtual environment separate from the agent_eval_harness and agent dependencies to run the evals
+            subprocess.run(['poetry env use python3 && poetry install --no-root'], shell=True)
+            print(f"Done!")
         except Exception as e:
             print(e)
             raise ValueError(f"Failed to install dependencies for benchmark '{benchmark_name}'")
