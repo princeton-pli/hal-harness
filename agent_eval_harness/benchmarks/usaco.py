@@ -1,7 +1,7 @@
 import subprocess
 from .base_benchmark import BaseBenchmark
 import json
-from datasets import load_dataset
+import shutil
 from typing_extensions import NotRequired, TypedDict, List, Dict, Optional
 from pydantic.config import ConfigDict
 from pydantic import TypeAdapter, ValidationError
@@ -9,12 +9,8 @@ import time
 import os
 import tempfile
 import sys
-from ..utils.utils import move_merge_dirs
-from ..utils.weave_utils import get_total_cost, assert_task_id_logging, get_weave_calls
+from ..utils.weave_utils import get_total_cost, get_weave_calls
 from datetime import datetime
-# from .USACO.USACOBench.data_utils import load_problem_dict
-# from .USACO.USACOBench.evaluation import print_metrics
-import shlex
 
 
 class USACOBenchmark(BaseBenchmark):
@@ -173,14 +169,19 @@ class USACOBenchmark(BaseBenchmark):
 
         
         rdict, sdict, rs, ss = eval_results
-        
-        
-        print(rs)
+        print(rs) # TODO: remove and add pretty print
+
         # store the results
         out_path = f"results/{self.benchmark_name}/{run_id}"
         os.makedirs(out_path, exist_ok=True)
         with open(os.path.join(out_path, f"{run_id}.json"), 'w') as f:
             json.dump(sdict, f)
+
+
+        # remove directories in benchmark_dir
+        shutil.rmtree(f'{self.benchmark_dir}/results', ignore_errors=True)
+        shutil.rmtree(f'{self.benchmark_dir}/judge_sandbox', ignore_errors=True)
+        shutil.rmtree(f'{self.benchmark_dir}/code_sandbox', ignore_errors=True)
             
 
         upload_dict = {
