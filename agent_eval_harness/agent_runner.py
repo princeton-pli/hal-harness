@@ -4,14 +4,16 @@ from .utils.weave_utils import get_total_cost
 import weave
 import time
 from dotenv import load_dotenv
+from .utils.utils import safe_filename
 import pprint
 pp = pprint.PrettyPrinter(depth=4)
 load_dotenv()
 
 def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
-    # Initialize logging
-    print("=====Initializing logging=====")
-    weave_client = weave.init(f"{benchmark}_{int(time.time())}")
+
+    # Initialize logging for test run
+    print("=====Initializing logging for test run=====")
+    weave_client = weave.init(f"{benchmark}_{int(time.time())}_TEST_RUN")
     print("Logging initialized!")
     print("=====\n\n")
     
@@ -28,7 +30,14 @@ def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
     print("Benchmark setup complete!")
     print("=====\n\n")
 
-    run_id = f"{benchmark.benchmark_name}_{kwargs['agent_name']}_{int(time.time())}"
+    run_id = safe_filename(f"{benchmark.benchmark_name}_{kwargs['agent_name']}_{int(time.time())}")
+    print(f"===\nRun ID: {run_id}\n===\n\n")
+
+    # Initialize logging for evaluation run
+    print("=====Initializing logging for main run=====")
+    weave_client = weave.init(run_id)
+    print("Logging initialized!")
+    print("=====\n\n")
 
     # Run the test task
     print("=====Running test task=====")
