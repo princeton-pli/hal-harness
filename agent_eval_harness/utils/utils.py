@@ -1,4 +1,4 @@
-import argparse
+import re
 import os
 
 def move_merge_dirs(source_root, dest_root):
@@ -17,3 +17,10 @@ def move_merge_dirs(source_root, dest_root):
         for dirname in dirs:
             os.rmdir(os.path.join(path, dirname))
     os.rmdir(source_root)
+
+def safe_filename(input_string):
+    # Replace spaces with underscores
+    transformed_string = input_string.replace(' ', '_')
+    # Remove or replace any characters that are not safe for file names
+    transformed_string = re.sub(r'[^\w\-\.]', '', transformed_string)
+    return transformed_string

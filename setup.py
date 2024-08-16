@@ -12,6 +12,7 @@ setup(
         'pydantic>=2.0.0',
         'huggingface-hub',
         'python-dotenv',
+        'setuptools>=48.0.0'
     ],
     entry_points={
         'console_scripts': [
