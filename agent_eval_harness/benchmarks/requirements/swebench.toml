@@ -1,5 +1,5 @@
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.10,<4"
 weave = "0.50.12"
 aiofiles = "24.1.0"
 aiohttp = "3.9.5"

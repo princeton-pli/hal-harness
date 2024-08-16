@@ -13,15 +13,21 @@ from ..utils.weave_utils import get_total_cost, assert_task_id_logging, get_weav
 from datetime import datetime
 
 class SWEBenchBenchmark(BaseBenchmark):
-    def __init__(self, config):
-        self.config = config
-        self.dataset_name = config.get('swe_bench_dataset', 'princeton-nlp/SWE-bench_Lite')
+    def __init__(self, agent_dir, config, dataset_name):
+        super().__init__(agent_dir, config)
+        self.benchmark_name = dataset_name
+        self.dataset_name = 'princeton-nlp/SWE-bench_Lite' if dataset_name == "swebench_lite" else 'princeton-nlp/SWE-bench_Verified'
         self.max_workers = config.get('swe_bench_max_workers', 1)
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), 'SWE-bench')
-        self.environment = 'swebench'
-        self.benchmark_name = 'swebench_lite'
+        self.requirements_file = 'swebench'
+        
 
-        self.benchmark = load_dataset('princeton-nlp/SWE-bench_Lite', split='test').to_list()[:1] # TODO use full benchmark after dev
+        self.benchmark = load_dataset(self.dataset_name, split='test').to_list()[:1]
+
+        # shuffle the benchmark
+        import random
+        random.seed(42)
+        random.shuffle(self.benchmark)
 
 
     def run(self, agent_function, run_id: str) -> Dict:
@@ -37,13 +43,17 @@ class SWEBenchBenchmark(BaseBenchmark):
             predictions_path = temp_file.name
 
         # Run the SWE-bench evaluation harness
+        self.mount_benchmark()
         result = self._run_evaluation_harness(predictions_path, run_id)
+        self.unmount_benchmark()
 
         return result
 
+
     def _generate_predictions(self, agent_function, run_id) -> List[Dict]:
-        # Get prediction from agent
-        agent_output = agent_function(self.benchmark)
+        self.mount_environment()
+        agent_output = self.run_agent(agent_function, self.benchmark)
+        self.unmount_environment()
 
         # Format prediction for SWE-bench
         predictions = [{'instance_id': task["instance_id"], 
@@ -119,61 +129,16 @@ class SWEBenchBenchmark(BaseBenchmark):
 
     def test_run(self, agent_function, weave_client):
         # Implement a simple test task for SWE-bench
-        test_task = [{
-                'repo': 'example/math-operations',
-                'instance_id': 'math-operations-001',
-                'base_commit': 'abc123',
-                'patch': """
-                        diff --git a/math_ops.py b/math_ops.py
-                        --- a/math_ops.py
-                        +++ b/math_ops.py
-                        @@ -1,3 +1,3 @@
-                        def operate(a, b):
-                        -    return a + b
-                        +    return a * b
-                        ''',
-                                'test_patch': '''
-                        diff --git a/test_math_ops.py b/test_math_ops.py
-                        --- a/test_math_ops.py
-                        +++ b/test_math_ops.py
-                        @@ -1,5 +1,5 @@
-                        def test_operate():
-                        -    assert operate(2, 3) == 5
-                        -    assert operate(-1, 1) == 0
-                        -    assert operate(0, 0) == 0
-                        +    assert operate(2, 3) == 6
-                        +    assert operate(-1, 1) == -1
-                        +    assert operate(0, 0) == 0
-                        """,
-                'test_patch': """
-                        diff --git a/test_math_ops.py b/test_math_ops.py
-                        --- a/test_math_ops.py
-                        +++ b/test_math_ops.py
-                        @@ -1,5 +1,5 @@
-                        def test_operate():
-                        -    assert operate(2, 3) == 5
-                        -    assert operate(-1, 1) == 0
-                        +    assert operate(2, 3) == 6
-                        +    assert operate(-1, 1) == -1
-                            assert operate(0, 0) == 0
-                        """,
-                'problem_statement': "Change the operation in the 'operate' function from addition to multiplication.",
-                'hints_text': "Consider changing the '+' operator to '*'.",
-                'created_at': '2023-07-30T12:00:00Z',
-                'version': '1.0',
-                'FAIL_TO_PASS': '["test_math_ops.py::test_operate"]',
-                'PASS_TO_PASS': '[]',
-                'environment_setup_commit': 'def456'
-            }]
-
-        test_output = agent_function(test_task)
+        test_task = [{'repo': 'astropy/astropy', 'instance_id': 'astropy__astropy-12907', 'base_commit': 'd16bfe05a744909de4b27f5875fe0d4ed41ce607', 'patch': "diff --git a/astropy/modeling/separable.py b/astropy/modeling/separable.py\n--- a/astropy/modeling/separable.py\n+++ b/astropy/modeling/separable.py\n@@ -242,7 +242,7 @@ def _cstack(left, right):\n         cright = _coord_matrix(right, 'right', noutp)\n     else:\n         cright = np.zeros((noutp, right.shape[1]))\n-        cright[-right.shape[0]:, -right.shape[1]:] = 1\n+        cright[-right.shape[0]:, -right.shape[1]:] = right\n \n     return np.hstack([cleft, cright])\n \n", 'test_patch': "diff --git a/astropy/modeling/tests/test_separable.py b/astropy/modeling/tests/test_separable.py\n--- a/astropy/modeling/tests/test_separable.py\n+++ b/astropy/modeling/tests/test_separable.py\n@@ -28,6 +28,13 @@\n p1 = models.Polynomial1D(1, name='p1')\n \n \n+cm_4d_expected = (np.array([False, False, True, True]),\n+                  np.array([[True,  True,  False, False],\n+                            [True,  True,  False, False],\n+                            [False, False, True,  False],\n+                            [False, False, False, True]]))\n+\n+\n compound_models = {\n     'cm1': (map3 & sh1 | rot & sh1 | sh1 & sh2 & sh1,\n             (np.array([False, False, True]),\n@@ -52,7 +59,17 @@\n     'cm7': (map2 | p2 & sh1,\n             (np.array([False, True]),\n              np.array([[True, False], [False, True]]))\n-            )\n+            ),\n+    'cm8': (rot & (sh1 & sh2), cm_4d_expected),\n+    'cm9': (rot & sh1 & sh2, cm_4d_expected),\n+    'cm10': ((rot & sh1) & sh2, cm_4d_expected),\n+    'cm11': (rot & sh1 & (scl1 & scl2),\n+             (np.array([False, False, True, True, True]),\n+              np.array([[True,  True,  False, False, False],\n+                        [True,  True,  False, False, False],\n+                        [False, False, True,  False, False],\n+                        [False, False, False, True,  False],\n+                        [False, False, False, False, True]]))),\n }\n \n \n", 'problem_statement': "Modeling's `separability_matrix` does not compute separability correctly for nested CompoundModels\nConsider the following model:\r\n\r\n```python\r\nfrom astropy.modeling import models as m\r\nfrom astropy.modeling.separable import separability_matrix\r\n\r\ncm = m.Linear1D(10) & m.Linear1D(5)\r\n```\r\n\r\nIt's separability matrix as you might expect is a diagonal:\r\n\r\n```python\r\n>>> separability_matrix(cm)\r\narray([[ True, False],\r\n       [False,  True]])\r\n```\r\n\r\nIf I make the model more complex:\r\n```python\r\n>>> separability_matrix(m.Pix2Sky_TAN() & m.Linear1D(10) & m.Linear1D(5))\r\narray([[ True,  True, False, False],\r\n       [ True,  True, False, False],\r\n       [False, False,  True, False],\r\n       [False, False, False,  True]])\r\n```\r\n\r\nThe output matrix is again, as expected, the outputs and inputs to the linear models are separable and independent of each other.\r\n\r\nIf however, I nest these compound models:\r\n```python\r\n>>> separability_matrix(m.Pix2Sky_TAN() & cm)\r\narray([[ True,  True, False, False],\r\n       [ True,  True, False, False],\r\n       [False, False,  True,  True],\r\n       [False, False,  True,  True]])\r\n```\r\nSuddenly the inputs and outputs are no longer separable?\r\n\r\nThis feels like a bug to me, but I might be missing something?\n", 'hints_text': '', 'created_at': '2022-03-03T15:14:54Z', 'version': '4.3', 'FAIL_TO_PASS': '["astropy/modeling/tests/test_separable.py::test_separable[compound_model6-result6]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model9-result9]"]', 'PASS_TO_PASS': '["astropy/modeling/tests/test_separable.py::test_coord_matrix", "astropy/modeling/tests/test_separable.py::test_cdot", "astropy/modeling/tests/test_separable.py::test_cstack", "astropy/modeling/tests/test_separable.py::test_arith_oper", "astropy/modeling/tests/test_separable.py::test_separable[compound_model0-result0]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model1-result1]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model2-result2]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model3-result3]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model4-result4]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model5-result5]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model7-result7]", "astropy/modeling/tests/test_separable.py::test_separable[compound_model8-result8]", "astropy/modeling/tests/test_separable.py::test_custom_model_separable"]', 'environment_setup_commit': '298ccb478e6bf092953bca67a3d29dc6c35f6752'}]
+        
+        test_output = self.run_agent(agent_function, test_task)
 
         # Validate agent output
         self.validate_agent_output(test_output)
 
         # validate that there was cost associated with the test run
         time.sleep(5) # wait to finish usage calculation on weave
-        self.validate_logging(weave_client, test_weave_task_id='math-operations-001')
+        self.validate_logging(weave_client, test_weave_task_id='astropy__astropy-12907')
 
         return True
 
@@ -206,28 +171,48 @@ class SWEBenchBenchmark(BaseBenchmark):
                                    config, 
                                    upload=False):
         # move logs/ direcotry to results/benchmark_name/logs
-        os.makedirs(f"results/{self.benchmark_name}/{run_id}", exist_ok=True)
+        out_path = f"results/{self.benchmark_name}/{run_id}"
+        os.makedirs(out_path, exist_ok=True)
         move_merge_dirs("logs/", f"results/{self.benchmark_name}/logs/")
 
         # store results
-        out_path = f"results/{self.benchmark_name}/{run_id}/{run_id}.json"
-        with open(out_path, 'w') as f:
+        with open(os.path.join(out_path, f"{run_id}.json"), 'w') as f:
             json.dump(eval_results, f)        
 
         # New dict
-        upload_dict = {
-            "config": {'agent_name': agent_name, 
-                       'benchmark_name': self.benchmark_name, 
-                       'date': datetime.now().strftime("%Y-%m-%d"),
-                       'run_id': run_id,
-                       **config[self.benchmark_name]},
-            "results": {
-                "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
-                "total_cost": get_total_cost(weave_client),
-            },
-            "raw_eval_results": eval_results,
-            "raw_logging_results": get_weave_calls(weave_client)
-        }
+        try:
+            upload_dict = {
+                "config": {'agent_name': agent_name, 
+                        'benchmark_name': self.benchmark_name, 
+                        'date': datetime.now().strftime("%Y-%m-%d"),
+                        'run_id': run_id,
+                        **config[self.benchmark_name]},
+                "results": {
+                    "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
+                    "total_cost": get_total_cost(weave_client),
+                    'successful_tasks': eval_results['resolved_ids'],
+                    'failed_tasks': eval_results['unresolved_ids']
+                },
+                "raw_eval_results": eval_results,
+                "raw_logging_results": get_weave_calls(weave_client)
+            }
+        except KeyError as e:
+            upload_dict = {
+                "config": {'agent_name': agent_name, 
+                        'benchmark_name': self.benchmark_name, 
+                        'date': datetime.now().strftime("%Y-%m-%d"),
+                        'run_id': run_id,
+                },
+                "results": {
+                    "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
+                    "total_cost": get_total_cost(weave_client),
+                    'successful_tasks': eval_results['resolved_ids'],
+                    'failed_tasks': eval_results['unresolved_ids']
+                },
+                "raw_eval_results": eval_results,
+                "raw_logging_results": get_weave_calls(weave_client)
+            }
+
 
         # Store the upload results locally
         with open(os.path.join(out_path, f"{run_id}_UPLOAD.json"), 'w') as f:
