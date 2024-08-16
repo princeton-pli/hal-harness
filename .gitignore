@@ -9,3 +9,4 @@ experiments/**
 logs/**
 .vscode/**
 .env
+.eggs/*
