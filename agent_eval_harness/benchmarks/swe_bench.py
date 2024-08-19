@@ -22,12 +22,14 @@ class SWEBenchBenchmark(BaseBenchmark):
         self.requirements_file = 'swebench'
         
 
-        self.benchmark = load_dataset(self.dataset_name, split='test').to_list()[:1]
+        self.benchmark = load_dataset(self.dataset_name, split='test').to_list()
 
         # shuffle the benchmark
         import random
-        random.seed(42)
+        random.seed(99)
         random.shuffle(self.benchmark)
+
+        self.benchmark = self.benchmark[:50]
 
 
     def run(self, agent_function, run_id: str) -> Dict:
@@ -170,6 +172,7 @@ class SWEBenchBenchmark(BaseBenchmark):
                                    weave_client,
                                    config, 
                                    upload=False):
+        
         # move logs/ direcotry to results/benchmark_name/logs
         out_path = f"results/{self.benchmark_name}/{run_id}"
         os.makedirs(out_path, exist_ok=True)
@@ -178,6 +181,10 @@ class SWEBenchBenchmark(BaseBenchmark):
         # store results
         with open(os.path.join(out_path, f"{run_id}.json"), 'w') as f:
             json.dump(eval_results, f)        
+
+
+        total_cost = get_total_cost(weave_client)
+        weave_calls = get_weave_calls(weave_client)
 
         # New dict
         try:
@@ -189,12 +196,12 @@ class SWEBenchBenchmark(BaseBenchmark):
                         **config[self.benchmark_name]},
                 "results": {
                     "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
-                    "total_cost": get_total_cost(weave_client),
+                    "total_cost": total_cost,
                     'successful_tasks': eval_results['resolved_ids'],
                     'failed_tasks': eval_results['unresolved_ids']
                 },
                 "raw_eval_results": eval_results,
-                "raw_logging_results": get_weave_calls(weave_client)
+                "raw_logging_results": weave_calls
             }
         except KeyError as e:
             upload_dict = {
@@ -205,12 +212,12 @@ class SWEBenchBenchmark(BaseBenchmark):
                 },
                 "results": {
                     "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
-                    "total_cost": get_total_cost(weave_client),
+                    "total_cost": total_cost,
                     'successful_tasks': eval_results['resolved_ids'],
                     'failed_tasks': eval_results['unresolved_ids']
                 },
                 "raw_eval_results": eval_results,
-                "raw_logging_results": get_weave_calls(weave_client)
+                "raw_logging_results": weave_calls
             }
 
 
