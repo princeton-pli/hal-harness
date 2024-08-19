@@ -22,15 +22,15 @@ class MLAgentBenchBenchmark(BaseBenchmark):
                 # "llama-inference",
                 # "identify-contrails",
                 "vectorization",
-                "babylm",
+                # "babylm",
                 "fathomnet",
                 "feedback",
                 "house-price",
                 "spaceship-titanic",
                 "amp-parkinsons-disease-progression-prediction",
-                "CLRS",
+                # "CLRS",
                 "cifar10",
-                "ogbn-arxiv",
+                # "ogbn-arxiv",
                 "imdb"]
         self.args = {
             "max_steps": 10e10, # very big numbers to impose no limit
@@ -89,6 +89,9 @@ class MLAgentBenchBenchmark(BaseBenchmark):
         for task in self.tasks:
             print(f"\n\nRunning evaluation harness for task: {task}")
             result = self._run_evaluation_harness(task, run_id)
+
+        # Parse the evaluation results
+        result = self._parse_evaluation_result(run_id)
         self.unmount_benchmark()
 
         return result
@@ -138,7 +141,7 @@ class MLAgentBenchBenchmark(BaseBenchmark):
                                                     output=''.join(stdout_output),
                                                     stderr=''.join(stderr_output))
 
-            return self._parse_evaluation_result(run_id)
+            return None
 
 
         except subprocess.CalledProcessError as e:
