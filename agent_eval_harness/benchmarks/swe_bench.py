@@ -195,7 +195,7 @@ class SWEBenchBenchmark(BaseBenchmark):
                         'run_id': run_id,
                         **config[self.benchmark_name]},
                 "results": {
-                    "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
+                    "accuracy": eval_results['resolved_instances']/eval_results['total_instances'],
                     "total_cost": total_cost,
                     'successful_tasks': eval_results['resolved_ids'],
                     'failed_tasks': eval_results['unresolved_ids']
@@ -211,7 +211,7 @@ class SWEBenchBenchmark(BaseBenchmark):
                         'run_id': run_id,
                 },
                 "results": {
-                    "accuracy": eval_results['completed_instances']/eval_results['total_instances'],
+                    "accuracy": eval_results['resolved_instances']/eval_results['total_instances'],
                     "total_cost": total_cost,
                     'successful_tasks': eval_results['resolved_ids'],
                     'failed_tasks': eval_results['unresolved_ids']
