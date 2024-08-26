@@ -229,6 +229,13 @@ class SWEBenchBenchmark(BaseBenchmark):
             self.upload_results(run_id, upload_dict)
 
 
+        # pretty print results_summary dict
+        print("\n\n=====Results Summary=====")
+        print(upload_dict['results']['accuracy'])
+        print(upload_dict['results']['total_cost'])
+        print('=====')
+
+
         return upload_dict['results']
 
         
