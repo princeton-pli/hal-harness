@@ -11,9 +11,10 @@ import os
 
 
 class BenchmarkManager:
-    def __init__(self, agent_dir: str, config: Optional[Dict[str, Any]] = {}):
+    def __init__(self, agent_dir: str = 'agent/', config: Optional[Dict[str, Any]] = {}):
         self.config = config
         self.agent_dir = agent_dir
+        self.benchmarks = ['usaco', 'mlagentbench', 'swebench_lite', 'swebench_verified']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         if benchmark_name == 'usaco':
@@ -31,4 +32,4 @@ class BenchmarkManager:
         return benchmark
 
     def list_benchmarks(self) -> list[str]:
-        return list(self.benchmarks.keys())
+        return self.benchmarks
