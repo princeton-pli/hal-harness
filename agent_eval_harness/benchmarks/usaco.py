@@ -19,19 +19,20 @@ class USACOBenchmark(BaseBenchmark):
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), 'USACO')
         self.environment = 'usaco'
         self.benchmark_name = 'usaco'
+        self.requirements_file = 'usaco'
 
         with open('agent_eval_harness/benchmarks/USACO/data/datasets/usaco_subset307_dict.json', 'r') as f:
             self.benchmark = json.load(f)
             
         # DEV: select only first 5 problems for testing
-        # self.benchmark = {k: self.benchmark[k] for k in list(self.benchmark.keys())[:15]}
+        # self.benchmark = {k: self.benchmark[k] for k in list(self.benchmark.keys())[:20]}
 
 
         
     
 
     def run(self, agent_function, run_id: str) -> Dict:
-        self.mount_enviroment()
+        self.mount_environment()
         agent_output = self.run_agent(agent_function, self.benchmark)
         self.unmount_environment()
 
@@ -219,6 +220,12 @@ class USACOBenchmark(BaseBenchmark):
 
         if upload:
             self.upload_results(run_id, upload_dict)
+
+        # pretty print results_summary dict
+        print("\n\n=====Results Summary=====")
+        print('Accuracy: ',upload_dict['results']['accuracy'])
+        print('Total Cost: ', upload_dict['results']['total_cost'])
+        print('=====')
             
         return upload_dict['results']
 
