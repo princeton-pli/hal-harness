@@ -11,6 +11,8 @@ from ..utils.weave_utils import get_total_cost, get_weave_calls
 from types import SimpleNamespace
 from datetime import datetime
 from .MLAgentBench.MLAgentBench.environment import Environment
+import pprint
+pp = pprint.PrettyPrinter(depth=4)
 
 class MLAgentBenchBenchmark(BaseBenchmark):
     def __init__(self, agent_dir, config):
@@ -249,6 +251,12 @@ class MLAgentBenchBenchmark(BaseBenchmark):
 
         if upload:
             self.upload_results(run_id, upload_dict)
+
+
+        # pretty print results_summary dict
+        print("\n\n=====Results Summary=====")
+        pp.pprint(upload_dict)
+        print('=====')
 
 
         return upload_dict['results']
