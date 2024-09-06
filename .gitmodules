@@ -4,3 +4,9 @@
 [submodule "agent_eval_harness/benchmarks/USACO"]
 	path = agent_eval_harness/benchmarks/USACO
 	url = https://github.com/benediktstroebl/USACO.git
+[submodule "agent_eval_harness/agents/Agentless"]
+	path = agent_eval_harness/agents/Agentless
+	url = https://github.com/benediktstroebl/Agentless.git
+[submodule "agent_eval_harness/agents/SWE-agent"]
+	path = agent_eval_harness/agents/SWE-agent
+	url = https://github.com/benediktstroebl/SWE-agent.git
