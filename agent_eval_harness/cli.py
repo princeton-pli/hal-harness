@@ -10,6 +10,7 @@ import os
 @click.option('--benchmark', required=True, help='Name of the benchmark to run')
 @click.option('--upload', is_flag=True, help='Upload results to HuggingFace')
 @click.option('--model', default='gpt-4o-mini', help='Backend model to use')
+@click.option('--run_id', help='Run ID to use for logging')
 @click.option('--config', default=os.path.join(os.path.dirname(__file__), 'config.yaml'), help='Path to configuration file')
 @click.pass_context
 def main(ctx, config, **kwargs):
