@@ -1,4 +1,3 @@
-import transformers
 import weave
 
 def run(input):
