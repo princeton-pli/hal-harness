@@ -11,6 +11,9 @@ MODEL_PRICES_DICT = {
                 "gpt-4-turbo-2024-04-09": {"prompt_tokens": 10/1e6, "completion_tokens": 30/1e6},
                 "gpt-4-turbo": {"prompt_tokens": 10/1e6, "completion_tokens": 30/1e6},
                 "gpt-4o-mini-2024-07-18": {"prompt_tokens": 0.15/1e6, "completion_tokens": 1/1e6},
+                "meta-llama/Meta-Llama-3.1-8B-Instruct": {"prompt_tokens": 0.18/1e6, "completion_tokens": 0.18/1e6},
+                "meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
+                "meta-llama/Meta-Llama-3.1-405B-Instruct": {"prompt_tokens": 5/1e6, "completion_tokens": 15/1e6},
 }
 
 def initialize_weave_client(benchmark):
@@ -21,6 +24,7 @@ def initialize_weave_client(benchmark):
 def get_total_cost(client):
     print("Getting total cost...")
     calls = []
+    unique_model_names = set()
     for call in tqdm(list(client.calls())):
         try:
             calls.append(call.summary["usage"])
@@ -31,14 +35,30 @@ def get_total_cost(client):
             print(f"TypeError in Weave call: {e}")
             print(call.summary)
 
-    total_cost = sum(
-        MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
-        MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"]
-        for call in calls
-        for model_name in call
-    )
+    try: 
+        total_cost = sum(
+            MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
+            MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"]
+            for call in calls
+            for model_name in call
+        )
+    except KeyError as e:
+        print(f"KeyError in Weave call: {e}")
+        total_cost = None
+
+    unique_model_names = set(model_name for call in calls for model_name in call)
+
+    token_usage = {
+        model_name: {
+            "prompt_tokens": sum(call[model_name]["prompt_tokens"] for call in calls),
+            "completion_tokens": sum(call[model_name]["completion_tokens"] for call in calls)
+        }
+        for model_name in unique_model_names
+    }
+    
+    
     print(f"Total cost: {round(total_cost,6)}")
-    return total_cost
+    return total_cost, token_usage
 
 # def process_call_for_cost(call):
 #     try:
