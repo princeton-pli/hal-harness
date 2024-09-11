@@ -6,8 +6,18 @@
 3. [How to add new agents](#how-to-add-new-agents)
 
    3.1. [SWE-bench Benchmark](#swe-bench-benchmark)
-   
+
    3.2. [USACO Benchmark](#usaco-benchmark)
+
+4. [Repository Structure and Usage](#repository-structure-and-usage)
+
+   4.1. [Code Structure](#code-structure)
+
+   4.2. [Evaluation Flow](#evaluation-flow)
+
+   4.3. [Command Line Interface](#command-line-interface)
+
+   4.4. [Uploading Results](#uploading-results)
 
 ## Setup
 
@@ -164,6 +174,64 @@ Certainly! I'll restructure the section to provide separate instructions for eac
    agent-eval --benchmark usaco --agent_dir agents/your_agent_directory/ --agent_function agent.run --agent_name "Your USACO Agent Name"
    ```
 
+## Repository Structure and Usage
 
+### Code Structure
 
+The repository is structured as follows:
 
+- `benchmark_manager.py`: Manages the different benchmarks available in the system.
+- `agent_runner.py`: Handles the execution of agent evaluations.
+- `upload_manager.py`: Manages the uploading of evaluation results.
+- `cli.py`: Provides the command-line interface for running evaluations.
+- `benchmarks/`: Directory containing individual benchmark implementations.
+  - `base_benchmark.py`: Base class for all benchmarks.
+  - `swe_bench.py`: Implementation of the SWE-bench benchmark.
+  - `usaco.py`: Implementation of the USACO benchmark.
+  - `mlagentbench.py`: Implementation of the MLAgentBench benchmark.
+- `agents/`: Directory containing individual agent implementations.
+
+### Evaluation Flow
+
+When a user runs an evaluation:
+
+1. The CLI (`cli.py`) parses the command-line arguments.
+2. `agent_runner.py` is called to run the evaluation:
+   a. It initializes logging.
+   b. Sets up the agent by importing the specified agent function.
+   c. Loads the benchmark using `benchmark_manager.py`.
+   d. Runs a test task to ensure the agent is functioning correctly.
+   e. If the test passes, it runs the full evaluation.
+3. After the evaluation, results are processed and optionally uploaded.
+
+### Command Line Interface
+
+The CLI provides the following options:
+
+```
+Usage: agent-eval [OPTIONS]
+
+Options:
+  --agent_name TEXT     Name of the agent you want to add to the leaderboard
+                        [required]
+  --agent_function TEXT Path to the agent function. Example: agent.agent.run
+                        [required]
+  --agent_dir TEXT      Path to the agent directory  [required]
+  --benchmark TEXT      Name of the benchmark to run  [required]
+  --upload              Upload results to HuggingFace
+  --model TEXT          Backend model to use  [default: gpt-4o-mini]
+  --run_id TEXT         Run ID to use for Weave logging in case you are continuing a run and want to log to the same project.
+  --config TEXT         Path to configuration file
+  --help                Show this message and exit.
+```
+
+### Uploading Results
+
+To upload results to HuggingFace:
+
+1. Ensure you have the necessary permissions and API keys set up in your `.env` file.
+2. Run your evaluation with the `--upload` flag.
+
+The results will be automatically processed and uploaded at the end of the evaluation run. The `upload_manager.py` handles the details of formatting and sending the data to HuggingFace.
+
+Note: Make sure your HuggingFace API key is properly set in your environment variables or `.env` file before attempting to upload results.
