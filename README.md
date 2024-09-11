@@ -1,3 +1,14 @@
+# Agent Evaluation Harness
+
+## Table of Contents
+1. [Setup](#setup)
+2. [How to run existing agents as baselines](#how-to-run-existing-agents-as-baselines)
+3. [How to add new agents](#how-to-add-new-agents)
+
+   3.1. [SWE-bench Benchmark](#swe-bench-benchmark)
+   
+   3.2. [USACO Benchmark](#usaco-benchmark)
+
 ## Setup
 
 To clone this repository and initialize the benchmark and agent submodules, follow these steps:
@@ -152,3 +163,7 @@ Certainly! I'll restructure the section to provide separate instructions for eac
    ```bash
    agent-eval --benchmark usaco --agent_dir agents/your_agent_directory/ --agent_function agent.run --agent_name "Your USACO Agent Name"
    ```
+
+
+
+
