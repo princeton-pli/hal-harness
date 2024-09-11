@@ -13,6 +13,11 @@ To clone this repository and initialize the benchmark submodules, follow these s
    git submodule update --init --recursive
    ```
 
+3. **Make sure poetry is installed**
+   ```bash
+   pip install poetry
+   ```
+
 3. **Save .env with your API keys**
    ```bash
    cp .env.template .env
