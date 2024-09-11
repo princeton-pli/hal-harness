@@ -6,8 +6,7 @@ import time
 import sys
 from dotenv import load_dotenv
 from .utils.utils import safe_filename
-import pprint
-pp = pprint.PrettyPrinter(depth=4)
+
 load_dotenv()
 
 def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
@@ -54,6 +53,10 @@ def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
     if test_passed:
         # Initialize logging for evaluation run
         print("=====Initializing logging for main run=====")
+        if kwargs['run_id']:
+            run_id = kwargs['run_id']
+        # run_id = 'swebench_verified_swe-agent_gpt-4o-mini-2024-07-18_cost_limit_1_50_instances_1723903216'
+        # run_id = 'mlagentbench_mlagentbench_researchagent_gpt-4o-mini-2024-07-18_1724018738'
         weave_client = weave.init(run_id)
         print("Logging initialized!")
         print("=====\n\n")
@@ -69,11 +72,7 @@ def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
         results_summary = benchmark.process_and_upload_results(kwargs["agent_name"], run_id, eval_results=result, weave_client=weave_client, config=config, upload=kwargs['upload'])
         print("=====\n\n")
 
-        # pretty print results_summary dict
-        print("=====Results Summary=====")
-        pp.pprint(results_summary)
-        print('=====')
-
+    
     else:
         print("Test task failed. Please make sure your agent function returns the correct output format and passes the weave_task_id as Weave attribute for each LLM API call.")
         
