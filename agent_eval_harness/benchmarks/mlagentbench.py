@@ -227,6 +227,8 @@ class MLAgentBenchBenchmark(BaseBenchmark):
         # store other logs that harness created
         os.system(f"mv {self.agent_dir}/{run_id}_logs {out_path}")
 
+        total_cost, total_token_usage = get_total_cost(weave_client)
+
         # New dict
         import numpy as np
         upload_dict = {
@@ -238,10 +240,12 @@ class MLAgentBenchBenchmark(BaseBenchmark):
             "results": {
                 'overall_score': np.mean([eval_results[task][list(eval_results[task].keys())[0]]['final_score'] for task in eval_results]), # mean across all tasks
                 **{f"{task}_score": eval_results[task][list(eval_results[task].keys())[0]]['final_score'] for task in eval_results}, # final score for each task
-                "total_cost": get_total_cost(weave_client),
+                "total_cost": total_cost,
             },
             "raw_eval_results": eval_results,
-            "raw_logging_results": get_weave_calls(weave_client)
+            "raw_logging_results": get_weave_calls(weave_client),
+            "total_usage": total_token_usage
+
         }
 
 

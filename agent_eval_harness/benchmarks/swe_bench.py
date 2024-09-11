@@ -24,12 +24,12 @@ class SWEBenchBenchmark(BaseBenchmark):
 
         self.benchmark = load_dataset(self.dataset_name, split='test').to_list()
 
-        # shuffle the benchmark
-        import random
-        random.seed(99)
-        random.shuffle(self.benchmark)
+        # # shuffle the benchmark
+        # import random
+        # random.seed(99)
+        # random.shuffle(self.benchmark)
 
-        self.benchmark = self.benchmark[:50]
+        # self.benchmark = self.benchmark[:10]
 
 
     def run(self, agent_function, run_id: str) -> Dict:
@@ -183,7 +183,7 @@ class SWEBenchBenchmark(BaseBenchmark):
             json.dump(eval_results, f)        
 
 
-        total_cost = get_total_cost(weave_client)
+        total_cost, total_usage = get_total_cost(weave_client)
         weave_calls = get_weave_calls(weave_client)
 
         # New dict
@@ -201,7 +201,8 @@ class SWEBenchBenchmark(BaseBenchmark):
                     'failed_tasks': eval_results['unresolved_ids']
                 },
                 "raw_eval_results": eval_results,
-                "raw_logging_results": weave_calls
+                "raw_logging_results": weave_calls,
+                "total_usage": total_usage
             }
         except KeyError as e:
             upload_dict = {
@@ -217,7 +218,8 @@ class SWEBenchBenchmark(BaseBenchmark):
                     'failed_tasks': eval_results['unresolved_ids']
                 },
                 "raw_eval_results": eval_results,
-                "raw_logging_results": weave_calls
+                "raw_logging_results": weave_calls,
+                "total_usage": total_usage
             }
 
 

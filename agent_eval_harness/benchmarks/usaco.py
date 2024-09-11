@@ -25,7 +25,7 @@ class USACOBenchmark(BaseBenchmark):
             self.benchmark = json.load(f)
             
         # DEV: select only first 5 problems for testing
-        # self.benchmark = {k: self.benchmark[k] for k in list(self.benchmark.keys())[:20]}
+        # self.benchmark = {k: self.benchmark[k] for k in list(self.benchmark.keys())[:5]}
 
 
         
@@ -194,7 +194,7 @@ class USACOBenchmark(BaseBenchmark):
         print("Processing results...")
 
 
-        total_cost = get_total_cost(weave_client)
+        total_cost, total_usage = get_total_cost(weave_client)
         raw_logging_results = get_weave_calls(weave_client)
             
 
@@ -211,7 +211,8 @@ class USACOBenchmark(BaseBenchmark):
                 'failed_tasks': [key for key in sdict if float(sdict[key][0]['result']['fraction_passed']) < 1],
             },
             "raw_eval_results": {'rdict': rdict, 'sdict': sdict, 'rs': rs, 'ss': ss},
-            "raw_logging_results": raw_logging_results
+            "raw_logging_results": raw_logging_results,
+            "total_usage": total_usage
         }
 
         # Store the upload results locally

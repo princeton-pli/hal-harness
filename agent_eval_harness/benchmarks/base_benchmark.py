@@ -64,7 +64,7 @@ class BaseBenchmark(ABC):
         self.type_adapter.validate_python(output)
 
     def validate_logging(self, weave_client, test_weave_task_id):
-        assert get_total_cost(weave_client) > 0, "Test run did not incur any cost"
+        assert get_total_cost(weave_client)[0] > 0, "Test run did not incur any cost"
 
         assert_task_id_logging(weave_client, test_weave_task_id)
 
