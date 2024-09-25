@@ -98,24 +98,25 @@ def get_weave_calls(client):
     print("Getting Weave traces...")
     processed_calls = []
     for call in tqdm(list(client.calls())):
-        ChatCompletion = weave.ref(call.output).get()
-        choices = [choice.message.content for choice in ChatCompletion.choices]
-        output = {
-            'weave_task_id': call.attributes['weave_task_id'],
-            'trace_id': call.trace_id,
-            'project_id': call.project_id,
-            'created_timestamp': ChatCompletion.created,
-            'inputs': dict(call.inputs),
-            'id': call.id,
-            'outputs': {'choices' : choices},
-            'exception': call.exception,
-            'summary': call.summary,
-            'display_name': call.display_name,
-            'attributes': dict(call.attributes),
-            "_children": call._children,
-            '_feedback': call._feedback,
-        }
-        processed_calls.append(output)
+        if call.output:
+            ChatCompletion = weave.ref(call.output).get()
+            choices = [choice.message.content for choice in ChatCompletion.choices]
+            output = {
+                'weave_task_id': call.attributes['weave_task_id'],
+                'trace_id': call.trace_id,
+                'project_id': call.project_id,
+                'created_timestamp': ChatCompletion.created,
+                'inputs': dict(call.inputs),
+                'id': call.id,
+                'outputs': {'choices' : choices},
+                'exception': call.exception,
+                'summary': call.summary,
+                'display_name': call.display_name,
+                'attributes': dict(call.attributes),
+                "_children": call._children,
+                '_feedback': call._feedback,
+            }
+            processed_calls.append(output)
     print(f"Total Weave traces: {len(processed_calls)}")
     return processed_calls
 
