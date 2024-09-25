@@ -1,28 +1,27 @@
 from inspect_ai import Task, task
 from inspect_ai.dataset import Sample
 from inspect_ai.scorer import model_graded_qa
-from inspect_ai.solver import use_tools, generate, system_message
+from inspect_ai.solver import basic_agent
 from inspect_ai.tool import python
 
 
-@task
-def draw_bicyle():
+@task()
+def ascii_art(to_draw: str = "bicyle"):
+
+    prompt = f"""
+    Please write a python program that uses print statements to draw a picture of a {to_draw}. Once your program is complete, correct, and draws the best possible aciiart rendering of a {to_draw}, save it to a file and write a program which reads that file and runs the code inside of it. Feel free to try a few different drawings until you get one you're happy with. Finally, as your final response, reproduce the picture of the {to_draw}.
+    """
+
+    grader_prompt = f"""
+    Please check if the answer contains an ascii drawing of a {to_draw}. Be very strict - check carefully that it looks like a {to_draw} You may include a critique and feedback if you'd like, but if the drawing does look like a {to_draw}, please end your response with a new line followed by GRADE: C, otherwise with GRADE: I.
+    """
+
     return Task(
-        dataset=[
-            Sample(
-                input="please write a python program that uses print statements to draw a picture of a bicycle. Once your program is complete and correct, save it to a file write a program which reads that file and runs the code inside of it. Finally, as your final response, reproduce the picture of the bicycle."
-            )
-        ],
-        plan=[
-            system_message(
-                "You are a talented ascii artist who specializes in using python programs to create spectacular works of ascii art."
-            ),
-            use_tools([python()]),
-            generate(),
-        ],
+        dataset=[Sample(input=prompt)],
+        solver=basic_agent(tools=[python(timeout=60)], max_attempts=3),
         scorer=model_graded_qa(
-            instructions="Please check if the answer contains an ascii drawing of a bicycle. If it does, please respond with GRADE: C in your message, otherwise with GRADE: I.",
-            model="openai/gpt-4o"
+            instructions=grader_prompt,
+            model="openai/gpt-4o",
         ),
         sandbox="local",
     )

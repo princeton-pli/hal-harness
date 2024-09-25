@@ -1,6 +1,7 @@
 import os
 
 import click
+import yaml
 
 from typing import Any
 
@@ -11,36 +12,90 @@ from .utils.config import load_config
 
 
 @click.command()
-@click.option('--agent_name', required=True, help='Name of the agent you want to add to the leaderboard')
-@click.option('--agent_function', required=False, help='Path to the agent function. Example: agent.agent.run')
-@click.option('--agent_dir', required=False, help='Path to the agent directory.')
-@click.option('--benchmark', required=True, help='Name of the benchmark to run')
-@click.option('--upload', is_flag=True, help='Upload results to HuggingFace')
-@click.option('--model', default='gpt-4o-mini', help='Backend model to use')
-@click.option('--run_id', help='Run ID to use for logging')
-@click.option('--config', default=os.path.join(os.path.dirname(__file__), 'config.yaml'), help='Path to configuration file')
-@click.pass_context
-def main(ctx, config, **kwargs):
+@click.option(
+    "--agent_name",
+    required=True,
+    help="Name of the agent you want to add to the leaderboard",
+)
+@click.option(
+    "--agent_function",
+    required=False,
+    help="Path to the agent function. Example: agent.agent.run",
+)
+@click.option("--agent_dir", required=False, help="Path to the agent directory.")
+@click.option(
+    "-A",
+    multiple=True,
+    type=str,
+    help="One or more args to pass to the agent (e.g. -A arg=value)",
+)
+@click.option("--benchmark", required=True, help="Name of the benchmark to run")
+@click.option(
+    "-B",
+    multiple=True,
+    type=str,
+    help="One or more args to pass to the benchmark (e.g. -B arg=value)",
+)
+@click.option("--upload", is_flag=True, help="Upload results to HuggingFace")
+@click.option("--model", default="gpt-4o-mini", help="Backend model to use")
+@click.option("--run_id", help="Run ID to use for logging")
+@click.option(
+    "--config",
+    default=os.path.join(os.path.dirname(__file__), "config.yaml"),
+    help="Path to configuration file",
+)
+def main(
+    config,
+    benchmark,
+    agent_name,
+    agent_function,
+    agent_dir,
+    model,
+    run_id,
+    upload,
+    a,
+    b,
+    **kwargs,
+):
     """Run agent evaluation on specified benchmark with given model."""
     config = load_config(config)
 
-    benchmark = kwargs["benchmark"]
+    # parse any agent or benchmark params
+    agent_args = parse_cli_args(a)
+    benchmark_args = parse_cli_args(b)
+
     if is_inspect_benchmark(benchmark):
         # run the inspect evaluation
         inspect_evaluate(
             benchmark=benchmark,
-            agent_name=kwargs["agent_name"],
-            agent_function=kwargs["agent_function"],
-            agent_dir=kwargs["agent_dir"],
-            model=kwargs["model"],
-            run_id=kwargs["run_id"],
-            upload=kwargs["upload"] or False,
+            benchmark_args=benchmark_args,
+            agent_name=agent_name,
+            agent_function=agent_function,
+            agent_dir=agent_dir,
+            agent_args=agent_args,
+            model=model,
+            run_id=run_id,
+            upload=upload or False,
         )
     else:
         # run the agent evaluation
-        if not is_valid("--agent-function", kwargs["agent_function"]) or not is_valid("--agent-dir", kwargs["agent_dir"]):
+        # Running agents directly requires both the agent_function and agent_dir
+        if not is_valid("--agent-function", kwargs["agent_function"]) or not is_valid(
+            "--agent-dir", kwargs["agent_dir"]
+        ):
             return
-        run_agent_evaluation(config=config, **kwargs)
+        run_agent_evaluation(
+            config=config,
+            benchmark=benchmark,
+            agent_name=agent_name,
+            agent_function=agent_function,
+            agent_dir=agent_dir,
+            model=model,
+            run_id=run_id,
+            upload=upload or False,
+            **kwargs,
+        )
+
 
 def is_valid(name: str, value: Any) -> bool:
     if value is None:
@@ -48,5 +103,22 @@ def is_valid(name: str, value: Any) -> bool:
         return False
     return True
 
-if __name__ == '__main__':
+
+def parse_cli_args(args: tuple[str] | list[str] | None) -> dict[str, Any]:
+    params: dict[str, Any] = dict()
+    if args:
+        for arg in list(args):
+            parts = arg.split("=")
+            if len(parts) > 1:
+                key = parts[0].replace("-", "_")
+                value = yaml.safe_load("=".join(parts[1:]))
+                if isinstance(value, str):
+                    value = value.split(",")
+                    value = value if len(value) > 1 else value[0]
+                params[key] = value
+    return params
+
+
+
+if __name__ == "__main__":
     main()

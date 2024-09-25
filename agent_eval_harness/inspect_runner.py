@@ -7,6 +7,8 @@ import weave  # type: ignore
 from inspect_ai import eval
 from pydantic_core import to_jsonable_python
 
+from typing import Any
+
 from .inspect.agent import load_agent, run_agent, validate_agent
 from .inspect.hf import upload_results
 from .inspect.inspect import (
@@ -15,7 +17,7 @@ from .inspect.inspect import (
     resolve_task,
     results_for_eval,
     task_name,
-    load_task
+    load_task,
 )
 from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
@@ -23,13 +25,15 @@ from .utils.utils import safe_filename
 from .utils.weave_utils import get_total_cost, get_weave_calls
 
 # TODO: weave_usage includes a KeyError warning (appears to be a running trace)
-# TODO: add support for agent and benchmark args
+
 
 def inspect_evaluate(
     benchmark: str,
+    benchmark_args: dict[str, Any],
     agent_name: str,
     agent_function: str,
     agent_dir: str,
+    agent_args: dict[str, Any],
     model: str,
     run_id: str,
     upload: bool,
@@ -39,6 +43,7 @@ def inspect_evaluate(
 
     Args:
         benchmark (str): The inspect benchmark to run
+        benchmark_args (dict[str,Any]): task_args for the Inspect task
         agent_name (str): The di    y name of the agent (in the leaderboard)
         agent_function (str): The fuction to load and us as an agent.
         agent_dir (str): The directory where to find the agent function
@@ -80,7 +85,7 @@ def inspect_evaluate(
                 agent = load_agent(agent_function)
 
                 # is the agent a solver?
-                solver = resolve_solver(agent)
+                solver = resolve_solver(agent, agent_args=agent_args)
 
                 if solver is None:
                     # Ensure this is a valid custom agent function
@@ -97,19 +102,32 @@ def inspect_evaluate(
                     # run the task (this will be fast since it mostly just scoring)
                     log_start(f"Scoring custom agent {agent_function}")
                     eval_logs = eval(
-                        resolved_task, solver=solver, model=model, log_dir=log_dir, sandbox="local"
+                        resolved_task,
+                        task_args=benchmark_args,
+                        solver=solver,
+                        model=model,
+                        log_dir=log_dir,
+                        sandbox="local",
                     )
                     log_end()
                 else:
                     # run the inspect task
                     log_start(f"Running Inspect task {task}")
-                    eval_logs = eval(tasks, solver=solver, model=model, log_dir=log_dir)
+                    eval_logs = eval(
+                        tasks,
+                        task_args=benchmark_args,
+                        solver=solver,
+                        model=model,
+                        log_dir=log_dir,
+                    )
                     log_end()
 
             else:
                 # run the inspect task
                 log_start(f"Running Inspect task {task}")
-                eval_logs = eval(tasks, model=model, log_dir=log_dir)
+                eval_logs = eval(
+                    tasks, task_args=benchmark_args, model=model, log_dir=log_dir
+                )
                 log_end()
 
             # unexpected if this is called for a log that hasn't completed

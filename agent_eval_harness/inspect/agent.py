@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import os
 from inspect_ai.solver import solver
 from typing import Callable, cast
 
@@ -46,15 +47,43 @@ def validate_agent(agent: Callable) -> None:
 @solver
 def run_agent(dataset: Dataset, agent: Callable) -> Solver:
 
+    # id
+    # input
+    # choices
+    # target
+    # metadata
+    # files
+    # setup
+
     # add sample ids to dataset if they aren't there (start at 1 not 0)
     agent_input = {}
     id = 1
+    cwd = os.getcwd()
     for sample in dataset:
         # ensure there is an id
         if sample.id is None:
             sample.id = id
             id = id + 1
-        agent_input[sample.id] = sample
+
+        # for files, convert them to absolute paths
+        data_files = {}
+        if sample.files:
+            for key, value in sample.files.items():
+                if os.path.isabs(value):
+                    data_files[key] = value
+                else:
+                    data_files[key] = os.path.join(cwd, value)
+            sample.files = data_files
+
+        agent_input[sample.id] = {
+            "id": sample.id,
+            "input": sample.input,
+            "choices": sample.choices,
+            "target": sample.target,
+            "metadata": sample.metadata,
+            "files": data_files,
+            "setup": sample.setup,
+        }
 
     # run the agent
     result = agent(agent_input)

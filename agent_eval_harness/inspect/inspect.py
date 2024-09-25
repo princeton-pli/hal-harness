@@ -48,7 +48,7 @@ def resolve_task(task: str) -> list[TaskInfo]:
     return list_tasks(task)
 
 
-def resolve_solver(agent_function: Callable) -> Solver | None:
+def resolve_solver(agent_function: Callable, agent_args: dict[str, Any]) -> Solver | None:
     """
     Resolves an agent function into an Inspect solver
 
@@ -59,10 +59,9 @@ def resolve_solver(agent_function: Callable) -> Solver | None:
         Tuple[Solver | None, str | None]: A tuple with the solver and sandbox to use
     """
     return_type = getattr(get_annotations(agent_function)["return"], "__name__", None)
-
     if return_type == "Solver":
         # If the callable is a solver, use that
-        return agent_function()
+        return agent_function(**agent_args)
 
     return None
 
