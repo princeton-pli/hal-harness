@@ -4,6 +4,7 @@ import os
 from inspect_ai.solver import solver
 from typing import Callable, cast
 
+from inspect_ai.model import ChatMessage
 from inspect_ai.dataset import Dataset
 from inspect_ai.solver import Generate, Solver, TaskState
 
@@ -67,9 +68,21 @@ def run_agent(dataset: Dataset, agent: Callable) -> Solver:
                     data_files[key] = os.path.join(cwd, value)
             sample.files = data_files
 
+        # Flatten the input
+        input_str = (
+            sample.input
+            if isinstance(sample.input, str)
+            else "\n".join(
+                [
+                    message.text
+                    for message in sample.input
+                ]
+            )
+        )
+
         agent_input[sample.id] = {
             "id": sample.id,
-            "input": sample.input,
+            "input": input_str,
             "choices": sample.choices,
             "target": sample.target,
             "metadata": sample.metadata,
