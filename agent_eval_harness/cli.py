@@ -1,13 +1,13 @@
 import os
 
 import click
-import yaml
+import yaml #type: ignore
 
 from typing import Any
 
 from .agent_runner import run_agent_evaluation
 from .inspect.inspect import is_inspect_benchmark
-from .inspect_runner import inspect_evaluate
+from .inspect.inspect_runner import inspect_evaluate
 from .utils.config import load_config
 
 
@@ -84,6 +84,7 @@ def main(
             "--agent-dir", kwargs["agent_dir"]
         ):
             return
+            
         run_agent_evaluation(
             config=config,
             benchmark=benchmark,
@@ -98,6 +99,17 @@ def main(
 
 
 def is_valid(name: str, value: Any) -> bool:
+    """
+    Validates if the given option has a value.
+
+    Args:
+        name (str): The name of the option being validated.
+        value (Any): The value of the option.
+
+    Returns:
+        bool: Returns True if the value is not None, otherwise returns False
+              and prints an error message.
+    """
     if value is None:
         print(f"Error: missing option `{name}`")
         return False
@@ -105,6 +117,18 @@ def is_valid(name: str, value: Any) -> bool:
 
 
 def parse_cli_args(args: tuple[str] | list[str] | None) -> dict[str, Any]:
+    """
+    Parses a tuple or list of CLI arguments and returns them as a dictionary.
+
+    Args:
+        args (tuple[str] | list[str] | None): A tuple or list of arguments
+                                              (in the format key=value).
+
+    Returns:
+        dict[str, Any]: A dictionary where keys are argument names (with hyphens
+                        replaced by underscores), and values are the parsed
+                        argument values. If values are lists, they are split by commas.
+    """
     params: dict[str, Any] = dict()
     if args:
         for arg in list(args):
@@ -117,7 +141,6 @@ def parse_cli_args(args: tuple[str] | list[str] | None) -> dict[str, Any]:
                     value = value if len(value) > 1 else value[0]
                 params[key] = value
     return params
-
 
 
 if __name__ == "__main__":

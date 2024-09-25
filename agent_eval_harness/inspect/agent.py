@@ -47,14 +47,6 @@ def validate_agent(agent: Callable) -> None:
 @solver
 def run_agent(dataset: Dataset, agent: Callable) -> Solver:
 
-    # id
-    # input
-    # choices
-    # target
-    # metadata
-    # files
-    # setup
-
     # add sample ids to dataset if they aren't there (start at 1 not 0)
     agent_input = {}
     id = 1
