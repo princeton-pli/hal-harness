@@ -43,6 +43,8 @@ def basic_agent(timeout: int = 60) -> Solver:
     return solve
 ```
 
+To learn more about implement agents using Inspect see the [documentation on agents](https://inspect.ai-safety-institute.org.uk/agents.html).
+
 ## Custom External Agents
 
 You may also use a completely external agent to complete the evaluation. In this scenario, the Inspect Task is primarily used to define the dataset and scoring function. When executed, this will read the Task's samples, execute the custom agent (passing the sample data to it), then score the results returned by the agent. To use a custom agent:
@@ -90,10 +92,6 @@ The agent function must return a dictionary with a key/value for each sample whi
 You may pass parameters to an Inspect solver `agent_function` or to the task. To do this use `-A <name>=<value>` for agent args (passed to the Inspect Solver), or `-B <name>=<value>` for benchmark args (passed to the Inspect Task). You may repeat these args any number of times.
 
 ## Uploading Results
-
-TODO: Test huggingface
-
-TODO: Run gaia level 1
 
 The Inspect runner will also upload results to HuggingFace, respecting the `--upload` key.
 

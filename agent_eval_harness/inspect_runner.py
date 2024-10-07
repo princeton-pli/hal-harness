@@ -24,9 +24,6 @@ from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename
 from .utils.weave_utils import get_total_cost, get_weave_calls
 
-# TODO: weave_usage includes a KeyError warning (appears to be a running trace)
-
-
 def inspect_evaluate(
     benchmark: str,
     benchmark_args: dict[str, Any],
