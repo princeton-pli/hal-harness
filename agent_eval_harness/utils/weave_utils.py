@@ -1,6 +1,7 @@
 import weave
 import time
 from tqdm import tqdm
+from .json import make_jsonable
 
 MODEL_PRICES_DICT = {
                 "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
@@ -99,16 +100,14 @@ def get_weave_calls(client):
     processed_calls = []
     for call in tqdm(list(client.calls())):
         if call.output:
-            ChatCompletion = weave.ref(call.output).get()
-            choices = [choice.message.content for choice in ChatCompletion.choices]
             output = {
                 'weave_task_id': call.attributes['weave_task_id'],
                 'trace_id': call.trace_id,
                 'project_id': call.project_id,
-                'created_timestamp': ChatCompletion.created,
+                'created_timestamp': call.output.created,
                 'inputs': dict(call.inputs),
                 'id': call.id,
-                'outputs': {'choices' : choices},
+                'outputs': make_jsonable(call.output.choices),
                 'exception': call.exception,
                 'summary': call.summary,
                 'display_name': call.display_name,
