@@ -42,9 +42,11 @@ def get_total_cost(client):
             for call in calls
             for model_name in call
         )
+        print(f"Total cost: {round(total_cost,6)}")
     except KeyError as e:
-        print(f"KeyError in Weave call: {e}")
+        
         total_cost = None
+        print("Model not found in MODEL_PRICES_DICT, total cost not calculated.")
 
     unique_model_names = set(model_name for call in calls for model_name in call)
 
@@ -56,8 +58,6 @@ def get_total_cost(client):
         for model_name in unique_model_names
     }
     
-    
-    print(f"Total cost: {round(total_cost,6)}")
     return total_cost, token_usage
 
 # def process_call_for_cost(call):
