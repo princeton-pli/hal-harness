@@ -12,3 +12,4 @@ logs/**
 .eggs/*
 agents/Agentless/results_run_agentless_gpt_4o_mini_c_1_2024-08-17_13-53-01
 agents/SWE_agent/trajectories/azureuser
+.venv/
