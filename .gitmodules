@@ -10,3 +10,6 @@
 [submodule "agents/Agentless"]
 	path = agents/Agentless
 	url = https://github.com/benediktstroebl/Agentless.git
+[submodule "agents/auto-code-rover"]
+	path = agents/auto-code-rover
+	url = https://github.com/vminvsky/auto-code-rover.git

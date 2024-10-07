@@ -1,6 +1,7 @@
 import weave
 import time
 from tqdm import tqdm
+from .json import make_jsonable
 
 MODEL_PRICES_DICT = {
                 "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
@@ -58,6 +59,8 @@ def get_total_cost(client):
         for model_name in unique_model_names
     }
     
+    if total_cost is not None:
+        print(f"Total cost: {round(total_cost,6)}")
     return total_cost, token_usage
 
 # def process_call_for_cost(call):
@@ -98,24 +101,23 @@ def get_weave_calls(client):
     print("Getting Weave traces...")
     processed_calls = []
     for call in tqdm(list(client.calls())):
-        ChatCompletion = weave.ref(call.output).get()
-        choices = [choice.message.content for choice in ChatCompletion.choices]
-        output = {
-            'weave_task_id': call.attributes['weave_task_id'],
-            'trace_id': call.trace_id,
-            'project_id': call.project_id,
-            'created_timestamp': ChatCompletion.created,
-            'inputs': dict(call.inputs),
-            'id': call.id,
-            'outputs': {'choices' : choices},
-            'exception': call.exception,
-            'summary': call.summary,
-            'display_name': call.display_name,
-            'attributes': dict(call.attributes),
-            "_children": call._children,
-            '_feedback': call._feedback,
-        }
-        processed_calls.append(output)
+        if call.output:
+            output = {
+                'weave_task_id': call.attributes['weave_task_id'],
+                'trace_id': call.trace_id,
+                'project_id': call.project_id,
+                'created_timestamp': call.output.created,
+                'inputs': dict(call.inputs),
+                'id': call.id,
+                'outputs': make_jsonable(call.output.choices),
+                'exception': call.exception,
+                'summary': call.summary,
+                'display_name': call.display_name,
+                'attributes': dict(call.attributes),
+                "_children": call._children,
+                '_feedback': call._feedback,
+            }
+            processed_calls.append(output)
     print(f"Total Weave traces: {len(processed_calls)}")
     return processed_calls
 
