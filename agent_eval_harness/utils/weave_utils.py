@@ -56,8 +56,8 @@ def get_total_cost(client):
         for model_name in unique_model_names
     }
     
-    
-    print(f"Total cost: {round(total_cost,6)}")
+    if total_cost is not None:
+        print(f"Total cost: {round(total_cost,6)}")
     return total_cost, token_usage
 
 # def process_call_for_cost(call):
