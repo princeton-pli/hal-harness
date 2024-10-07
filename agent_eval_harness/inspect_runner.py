@@ -73,7 +73,7 @@ def inspect_evaluate(
             if len(tasks) > 1:
                 # We expect this to only run a single task
                 raise RuntimeError(
-                    f"Expected a single task for this benchmar, got ${len(tasks)}"
+                    f"Expected a single task for this benchmar, got {len(tasks)}"
                 )
 
             # append agent dir to path

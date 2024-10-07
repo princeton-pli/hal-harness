@@ -7,7 +7,7 @@ from typing import Any
 
 from .agent_runner import run_agent_evaluation
 from .inspect.inspect import is_inspect_benchmark
-from .inspect.inspect_runner import inspect_evaluate
+from .inspect_runner import inspect_evaluate
 from .utils.config import load_config
 
 

@@ -35,7 +35,7 @@ def task_name(benchmark: str) -> str:
     return benchmark.removeprefix("inspect:")
 
 
-def resolve_task(task: str) -> list[TaskInfo]:
+def resolve_task(task: str) -> list[TaskInfo] | list[str]:
     """
     Fully resolves a task string into one or more Tasks
 
@@ -45,7 +45,10 @@ def resolve_task(task: str) -> list[TaskInfo]:
     Returns:
         list[TaskInfo]: A list of the resolved TaskInfos
     """
-    return list_tasks(task)
+    if task.startswith("inspect_evals/"):
+        return [task]
+    else:
+        return list_tasks(task)
 
 
 def resolve_solver(agent_function: Callable, agent_args: dict[str, Any]) -> Solver | None:
@@ -97,13 +100,13 @@ def config_for_eval(
     return config
 
 
-def results_for_eval(eval_log: EvalLog, total_cost: float) -> dict[str, Any]:
+def results_for_eval(eval_log: EvalLog, total_cost: float | None) -> dict[str, Any]:
     """
     Processes and returns the evaluation results, including status, cost, and scores.
 
     Args:
         eval_log (EvalLog): The log containing the results of the evaluation.
-        total_cost (float): The total cost of the evaluation.
+        total_cost (float | None): The total cost of the evaluation.
 
     Returns:
         dict[str, Any]: A dictionary containing the processed evaluation results.
