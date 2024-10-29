@@ -37,6 +37,8 @@ from .utils.config import load_config
     help="One or more args to pass to the benchmark (e.g. -B arg=value)",
 )
 @click.option("--upload", is_flag=True, help="Upload results to HuggingFace")
+@click.option("--max_concurrent", default=10, help="Maximum agents to run for this benchmark")
+@click.option("--conda_env_name", help="Conda environment to run the custom external agent in")
 @click.option("--model", default="gpt-4o-mini", help="Backend model to use")
 @click.option("--run_id", help="Run ID to use for logging")
 @click.option(
@@ -53,6 +55,8 @@ def main(
     model,
     run_id,
     upload,
+    max_concurrent,
+    conda_env_name,
     a,
     b,
     **kwargs,
@@ -76,14 +80,10 @@ def main(
             model=model,
             run_id=run_id,
             upload=upload or False,
+            max_concurrent=max_concurrent,
+            conda_env_name=conda_env_name,
         )
     else:
-        # run the agent evaluation
-        # Running agents directly requires both the agent_function and agent_dir
-        if not is_valid("--agent-function", kwargs["agent_function"]) or not is_valid(
-            "--agent-dir", kwargs["agent_dir"]
-        ):
-            return
             
         run_agent_evaluation(
             config=config,
