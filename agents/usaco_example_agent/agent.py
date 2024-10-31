@@ -1,6 +1,6 @@
 import weave
 
-def run(input):
+def run(input, **kwargs):
     from openai import OpenAI
     client = OpenAI()
 
