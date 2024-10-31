@@ -236,8 +236,12 @@ def get_weave_calls(client):
         if call['output']:
             if type(call['output']) is str:
                 ChatCompletion = weave.ref(call['output']).get()
-                choices = [choice.message.content for choice in ChatCompletion.choices]
-                created = ChatCompletion.created
+                try:
+                    choices = [choice.message.content for choice in ChatCompletion.choices]
+                    created = ChatCompletion.created
+                except AttributeError as e:
+                    choices = [content.text for content in ChatCompletion.content]
+                    created = call['started_at']
             elif 'choices' in call['output']:
                 choices = call['output']['choices']
                 created = call['output']['created']
