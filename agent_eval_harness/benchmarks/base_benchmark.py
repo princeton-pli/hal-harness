@@ -18,7 +18,7 @@ class BaseBenchmark(ABC):
         self.main_cwd: str
 
     @abstractmethod
-    def run(self, agent_function, run_id: str):
+    def run(self, agent_function, run_id: str, agent_args: Dict):
         pass
 
     def mount_environment(self):
@@ -28,13 +28,13 @@ class BaseBenchmark(ABC):
     def unmount_environment(self):
         os.chdir(self.cwd)
 
-    def run_agent(self, agent_function, input):
+    def run_agent(self, agent_function, input, **kwargs):
         """
         Run the agent on the input and return the output. This function assumes that the agent is a python function that takes the input as an argument and returns the output.
         If a benchmark requires the agent to be a class that is instantiated before running, this function should be overridden in the benchmark class.
         """
         # Get prediction from agent
-        agent_output = agent_function(input)
+        agent_output = agent_function(input, **kwargs)
         return agent_output
 
     @abstractmethod

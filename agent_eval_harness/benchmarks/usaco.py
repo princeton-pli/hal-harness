@@ -31,9 +31,9 @@ class USACOBenchmark(BaseBenchmark):
         
     
 
-    def run(self, agent_function, run_id: str) -> Dict:
+    def run(self, agent_function, run_id: str, agent_args: Dict) -> Dict:
         self.mount_environment()
-        agent_output = self.run_agent(agent_function, self.benchmark)
+        agent_output = self.run_agent(agent_function, self.benchmark, **agent_args)
         self.unmount_environment()
 
         # Evaluate the agent output

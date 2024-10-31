@@ -9,7 +9,7 @@ from .utils.utils import safe_filename
 
 load_dotenv()
 
-def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
+def run_agent_evaluation(agent_function, benchmark, model, config, agent_args, **kwargs):
 
     # Initialize logging for test run
     print("=====Initializing logging for test run=====")
@@ -62,7 +62,7 @@ def run_agent_evaluation(agent_function, benchmark, model, config, **kwargs):
         print("=====\n\n")
 
         print("=====Running evaluation=====")
-        result = benchmark.run(agent_function, run_id)
+        result = benchmark.run(agent_function, run_id, agent_args=agent_args)
         print("Agent eval complete!")
         print("=====\n\n")
 

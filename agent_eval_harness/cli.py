@@ -91,6 +91,7 @@ def main(
             agent_name=agent_name,
             agent_function=agent_function,
             agent_dir=agent_dir,
+            agent_args=agent_args,
             model=model,
             run_id=run_id,
             upload=upload or False,
