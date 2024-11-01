@@ -134,6 +134,19 @@ with open("output.json", "w") as f:
 
         semaphore = asyncio.Semaphore(max_concurrent)
 
+        if log_dir:
+            raw_submissions_path = os.path.join(abs_log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl")
+            
+            if os.path.exists(raw_submissions_path):
+                # read in previous submissions and remove from agent_input
+                with open(raw_submissions_path, "r") as f:
+                    previous_submissions = [json.loads(line) for line in f]
+                
+                previous_ids = {list(submission.keys())[0] for submission in previous_submissions}
+                agent_input = {k: v for k, v in agent_input.items() if k not in previous_ids}
+
+                print( f"Previous submissions found. {len(previous_ids)} submissions removed from agent input.")
+
 
         async def sem_run_single_agent(task_id, input_data):
             async with semaphore:
@@ -172,7 +185,7 @@ with open("output.json", "w") as f:
             raw_submissions_path = os.path.join(log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl")
             
             if os.path.exists(raw_submissions_path):
-                # read in previous submissions and remove from agent_input
+                # read in previous submissions for scoring
                 with open(raw_submissions_path, "r") as f:
                     previous_submissions = [json.loads(line) for line in f]
                 
