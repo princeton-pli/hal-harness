@@ -40,7 +40,7 @@ class BaseBenchmark(ABC):
             # Serialize the input data to a JSON file in the temp directory
             input_file = os.path.join(temp_dir, 'input.json')
             with open(input_file, 'w') as f:
-                json.dump(single_input, f)
+                json.dump({task_id: single_input}, f)
 
             # Prepare the agent arguments
             agent_args_file = os.path.join(temp_dir, 'agent_args.json')
@@ -111,7 +111,7 @@ with open("output.json", "w") as f:
             except Exception as e:
                 print(f"Error running agent: {e}")
                 traceback.print_exc()
-                result = {single_input['id']: f"ERROR RUNNING AGENT: {e}"}
+                result = {task_id: f"ERROR RUNNING AGENT: {e}"}
 
                 # delete the temp directory
                 shutil.rmtree(temp_dir, ignore_errors=True)
