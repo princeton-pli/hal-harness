@@ -23,7 +23,7 @@ from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename
 from .utils.weave_utils import get_total_cost, get_weave_calls
-from .benchmarks import swebench
+import swebench_harness
 
 def inspect_evaluate(
     benchmark: str,
@@ -181,7 +181,7 @@ def inspect_evaluate(
                     )
                     log_end()
                 else:
-                    results = swebench.run_evaluation_harness(predictions_path=f"{log_dir}/{run_id}_SWE_BENCH_SUBMISSIONS.jsonl", run_id=run_id)
+                    results = swebench_harness.run_evaluation_harness(predictions_path=f"{log_dir}/{run_id}_SWE_BENCH_SUBMISSIONS.jsonl", run_id=run_id)
 
 
             else:
