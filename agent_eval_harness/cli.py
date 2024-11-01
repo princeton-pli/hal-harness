@@ -94,6 +94,8 @@ def main(
             agent_args=agent_args,
             model=model,
             run_id=run_id,
+            max_concurrent=max_concurrent,
+            conda_env_name=conda_env_name,
             upload=upload or False,
             **kwargs,
         )
