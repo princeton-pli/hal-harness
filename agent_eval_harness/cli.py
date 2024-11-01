@@ -8,7 +8,6 @@ from typing import Any
 from .agent_runner import run_agent_evaluation
 from .inspect.inspect import is_inspect_benchmark
 from .inspect_runner import inspect_evaluate
-from .utils.config import load_config
 
 
 @click.command()
@@ -62,7 +61,6 @@ def main(
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
-    config = load_config(config)
 
     # parse any agent or benchmark params
     agent_args = parse_cli_args(a)
