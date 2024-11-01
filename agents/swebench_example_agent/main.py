@@ -22,9 +22,5 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                 temperature=1,
             )
             results[task_id] = response.choices[0].message.content
-
-    for task_id, task in input.items():
-        task['model_name_or_path'] = 'example_model'
-        task['model_patch'] = results[task_id]
         
-    return input
+    return results
