@@ -54,6 +54,63 @@ def inspect_evaluate(
         None
     """
 
+    # for swebench we use inspect implementation with custom harness right now because of inconsistencies in inspect implementation. will replace hardcoded bits once resolved
+    if "swebench" in benchmark:
+        benchmark = "inspect_evals/swe_bench"
+        if "mini" in benchmark:
+            benchmark_args['instance_ids'] = ['django__django-11206',
+ 'django__django-12262',
+ 'django__django-12419',
+ 'django__django-13128',
+ 'django__django-13346',
+ 'django__django-13809',
+ 'django__django-14725',
+ 'django__django-15569',
+ 'django__django-16493',
+ 'django__django-7530',
+ 'pydata__xarray-3151',
+ 'pylint-dev__pylint-4551',
+ 'pytest-dev__pytest-5631',
+ 'sphinx-doc__sphinx-9367',
+ 'sympy__sympy-15017',
+ 'sympy__sympy-15599',
+ 'sympy__sympy-17318',
+ 'sympy__sympy-18763',
+ 'sympy__sympy-22914',
+ 'sympy__sympy-23824',
+ 'django__django-14855',
+ 'django__django-15128',
+ 'django__django-11333',
+ 'django__django-14053',
+ 'django__django-11099',
+ 'django__django-13658',
+ 'astropy__astropy-7336',
+ 'django__django-12304',
+ 'django__django-14011',
+ 'django__django-16901',
+ 'django__django-15930',
+ 'matplotlib__matplotlib-24970',
+ 'django__django-15629',
+ 'scikit-learn__scikit-learn-11310',
+ 'psf__requests-1766',
+ 'pallets__flask-5014',
+ 'matplotlib__matplotlib-23476',
+ 'sympy__sympy-13551',
+ 'sympy__sympy-13480',
+ 'django__django-16950',
+ 'sympy__sympy-15349',
+ 'sphinx-doc__sphinx-9281',
+ 'scikit-learn__scikit-learn-10908',
+ 'sympy__sympy-12481',
+ 'sympy__sympy-15875',
+ 'sphinx-doc__sphinx-9461',
+ 'sympy__sympy-20428',
+ 'sympy__sympy-16450',
+ 'scikit-learn__scikit-learn-25747',
+ 'scikit-learn__scikit-learn-25973']    
+        if resolve_solver(agent, agent_args=agent_args) is None:
+            model = "openai/gpt-4o" # this will not be used because inspect harness is not used right now
+
     # resolve the task name (this is the benchmark name)
     task = task_name(benchmark)
 
@@ -172,6 +229,7 @@ def inspect_evaluate(
             )
         else:
             eval_log = None
+            benchmark = "swebench_verified_mini" if "mini" in benchmark else "swebench_verified"
 
     
 
