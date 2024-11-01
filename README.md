@@ -1,237 +1,136 @@
 # Agent Evaluation Harness
 
+This repository provides a standardized harness for evaluating different agents across various benchmarks. It supports several benchmarks and allows users to easily add new agents and benchmarks.  The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, and the officiel [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for storing and sharing evaluation results.
+
 ## Table of Contents
+
 1. [Setup](#setup)
-2. [How to run existing agents as baselines](#how-to-run-existing-agents-as-baselines)
-3. [How to add new agents](#how-to-add-new-agents)
+2. [Running Evaluations](#running-evaluations)
+3. [Adding New Agents](#adding-new-agents)
+    - [SWE-bench Verified](#swe-bench-benchmark)
+    - [USACO](#usaco-benchmark)
+    - [Inspect AI Benchmarks](#inspect-ai-benchmarks)
+        - [Custom Inspect Agents](#custom-inspect-agents)
+        - [Custom External Agents](#custom-external-agents)
+4. [Uploading Results](#uploading-results)
+5. [Repository Structure](#repository-structure)
 
-   3.1. [SWE-bench Benchmark](#swe-bench-benchmark)
-
-   3.2. [USACO Benchmark](#usaco-benchmark)
-
-4. [Repository Structure and Usage](#repository-structure-and-usage)
-
-   4.1. [Code Structure](#code-structure)
-
-   4.2. [Evaluation Flow](#evaluation-flow)
-
-   4.3. [Command Line Interface](#command-line-interface)
-
-   4.4. [Uploading Results](#uploading-results)
 
 ## Setup
 
-To clone this repository and initialize the benchmark and agent submodules, follow these steps:
-
-1. **Clone the main repository:**
+1. **Clone the repository:**
    ```bash
    git clone --recursive https://github.com/benediktstroebl/agent-eval-harness.git
    cd agent-eval-harness
    ```
 
-2. **Make sure poetry is installed:**
+2. **Install Poetry (if you don't have it):**
    ```bash
    pip install poetry
    ```
 
-3. **Install package:**
+3. **Install the package:**
    ```bash
    pip install -e .
    ```
 
-3. **Save .env with your API keys**
+4. **Create a `.env` file:**
    ```bash
    cp .env.template .env
    ```
-   Now add your personal API keys to the ```.env``` file.
+   Add your API keys (HuggingFace, Weave, OpenAI/other LLMs as needed) to the `.env` file.  See `.env.template` for details.
 
 
-## How to run existing agents as baselines
+## Running Evaluations
 
-To demonstrate the simplest example of how to implement and run an agent with this harness, you can take a look at the `agents/swebench_example_agent/`. It can be evaluated on SWE-bench Verified with the following command: 
+The harness uses a command-line interface (CLI) to run evaluations.  The basic command structure is:
 
-   ```bash
-   agent-eval --benchmark swebench_verified --agent_dir agents/swebench_example_agent/ --agent_function agent.run --agent_name "SWE-bench Verified Example Agent (gpt-4o-mini)"
-   ```
+```bash
+agent-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_function <agent_function> --agent_name <agent_name> [OPTIONS]
+```
 
-Certainly! I'll restructure the section to provide separate instructions for each benchmark while maintaining a similar outline. Here's the updated section:
+*   **`--benchmark <benchmark_name>`**: The name of the benchmark to run (e.g., `swebench_verified`, `usaco`, `mlagentbench`, `inspect_evals/gaia`).  For Inspect AI benchmarks, provide the path to the task.  
+*   **`--agent_dir <agent_directory>`**: Path to the directory containing your agent's code.
+*   **`--agent_function <agent_function>`**:  The name of the agent's main function, including the module path if applicable (e.g., `agent.run`, `my_agent_module.main`).
+*   **`--agent_name <agent_name>`**: A descriptive name for your agent.  This will be used for logging and on the leaderboard.
+*   **`-A <key>=<value>`**: Agent arguments. These are passed as keyword arguments to your agent function.
+*   **`-B <key>=<value>`**: Benchmark arguments.  These are passed to the benchmark itself.  For Inspect AI tasks, these are passed as `task_args`.
+*   **`--upload`**: If present, uploads results to the HuggingFace Hub.
+*   **`--model <model_name>`**:  Specifies the LLM model to use (e.g., `gpt-4o-mini`).  Defaults to `gpt-4o-mini`. For inspect runs, you will need to specify the model name in the inspect format (e.g. `openai/gpt-4`).
+*   **`--run_id <run_id>`**:  Provides a specific run ID. Useful for resuming interrupted runs
+*   **`--config <config_file>`**: Path to a configuration file (YAML format). Defaults to `agent_eval_harness/config.yaml`.
+*   **`--max_concurrent <number>`**: Run multiple samples in parallel for Inspect AI and other benchmarks. Defaults to 10.
+*   **`--conda_env_name <conda_env>`**:  Specifies the name of the conda environment to run the agent in.
 
-## How to add new agents
+
+**Example:**
+
+```bash
+agent-eval --benchmark swebench_verified_mini --agent_dir agents/swebench_example_agent/ --agent_function main.run --agent_name "My SWE-bench Agent (gpt-4o-2024-08-06)" -A model_name=gpt-4o-mini --upload 
+```
+
+
+## Adding New Agents
 
 ### SWE-bench Benchmark
 
-1. **Create a new directory** for your agent in the `agents/` directory.
-
-2. **Implement the agent function** with the following signature:
-
-   ```python
-   def run(tasks: Dict[str, Dict]) -> Dict[str, Dict]:
-       # Your SWE-bench agent implementation here
-       pass
-   ```
-
-3. **Input format:** The `tasks` parameter is a dictionary where each key is a task identifier and each value is a dictionary:
-
-   ```python
-   {
-       "task_id": {
-           "repo": str,
-           "instance_id": str,
-           "base_commit": str,
-           "patch": str,
-           "test_patch": str,
-           "problem_statement": str,
-           "hints_text": str,
-           "created_at": str,
-           "version": str,
-           "FAIL_TO_PASS": str,
-           "PASS_TO_PASS": str,
-           "environment_setup_commit": str
-       }
-   }
-   ```
-
-4. **Output format:** Your agent function should return a dictionary with the same keys as the input:
-
-   ```python
-   {
-       "task_id": {
-           "instance_id": str,  # Same as input
-           # Same keys as input
-           "model_patch": str,  # The patch generated by your agent to fix the issue
-           "model_name_or_path": str 
-       }
-   }
-   ```
-
-5. **Expose the agent function:** Ensure your agent function is importable as `from agent import run`.
-
-6. **Test your agent:** Before we run your agent with the full benchmark we will use a simple test task provided in the `SWEBenchBenchmark` class to validate your agent. So feel free to run your agent as shown in `Step 7` to debug. 
-
-7. **Run the evaluation:**
-
-   ```bash
-   agent-eval --benchmark [swebench_verified|swebench_lite] --agent_dir agents/your_agent_directory/ --agent_function agent.run --agent_name "Your SWE-bench Agent Name"
-   ```
+1.  **Create a directory** e.g. in the `agents/` directory for your agent.
+2.  **Implement the agent function**  (see example in `agents/swebench_example_agent/agent.py`).  The function should take a dictionary of tasks as input and return a dictionary of results.
+3.  Ensure your agent function is importable.
 
 ### USACO Benchmark
 
-1. **Create a new directory** for your agent in the `agents/` directory.
+1.  **Create a directory** in the `agents/` directory.
+2.  **Implement the agent function** (see example in `agents/usaco_example_agent/agent.py`).  The function should take a dictionary of tasks and return a dictionary of results.
+3.  Ensure your agent function is importable.
 
-2. **Implement the agent function** with the following signature:
+### Inspect AI Benchmarks
 
-   ```python
-   def run(tasks: Dict[str, Dict]) -> Dict[str, Dict]:
-       # Your USACO agent implementation here
-       pass
-   ```
+The agent harness can run any Inspect AI task.  The simplest approach is to use a benchmark from the `inspect_evals` package.  Install `inspect_ai` and `inspect_evals` first:
 
-3. **Input format:** The `tasks` parameter is a dictionary where each key is a problem identifier and each value is a dictionary:
-
-   ```python
-   {
-       "problem_id": {
-           "name": str,
-           "problem_link": str,
-           "test_data_link": str,
-           "solution_link": str,
-           "contest_link": str,
-           "inner_contest_link": str,
-           "problem_level": str,
-           "cp_id": str,
-           "description": str,
-           "num_tests": int,
-           "solution": str,
-           "runtime_limit": int,
-           "memory_limit": int,
-           "samples": List[Dict[str, str]],
-           "description_no_samples": str,
-           "num_samples": int,
-           "solution_python3": str,
-           "solution_english": str
-       }
-   }
-   ```
-
-4. **Output format:** Your agent function should return a dictionary with the same keys as the input:
-
-   ```python
-   {
-       "problem_id": {
-           # same keys as in input
-           "response": str  # The solution code generated by your agent
-       }
-   }
-   ```
-
-5. **Expose the agent function:** Ensure your agent function is importable as `from agent import run`.
-
-6. **Test your agent:** Before we run your agent with the full benchmark we will use a simple test task provided in the `USACOBenchmark` class to validate your agent. So feel free to run your agent as shown in `Step 7` to debug. 
-
-7. **Run the evaluation:**
-
-   ```bash
-   agent-eval --benchmark usaco --agent_dir agents/your_agent_directory/ --agent_function agent.run --agent_name "Your USACO Agent Name"
-   ```
-
-## Repository Structure and Usage
-
-### Code Structure
-
-The repository is structured as follows:
-
-- `benchmark_manager.py`: Manages the different benchmarks available in the system.
-- `agent_runner.py`: Handles the execution of agent evaluations.
-- `upload_manager.py`: Manages the uploading of evaluation results.
-- `cli.py`: Provides the command-line interface for running evaluations.
-- `benchmarks/`: Directory containing individual benchmark implementations.
-  - `base_benchmark.py`: Base class for all benchmarks.
-  - `swe_bench.py`: Implementation of the SWE-bench benchmark.
-  - `usaco.py`: Implementation of the USACO benchmark.
-  - `mlagentbench.py`: Implementation of the MLAgentBench benchmark.
-- `agents/`: Directory containing individual agent implementations.
-
-### Evaluation Flow
-
-When a user runs an evaluation:
-
-1. The CLI (`cli.py`) parses the command-line arguments.
-2. `agent_runner.py` is called to run the evaluation:
-   a. It initializes logging.
-   b. Sets up the agent by importing the specified agent function.
-   c. Loads the benchmark using `benchmark_manager.py`.
-   d. Runs a test task to ensure the agent is functioning correctly.
-   e. If the test passes, it runs the full evaluation.
-3. After the evaluation, results are processed and optionally uploaded.
-
-### Command Line Interface
-
-The CLI provides the following options:
-
-```
-Usage: agent-eval [OPTIONS]
-
-Options:
-  --agent_name TEXT     Name of the agent you want to add to the leaderboard
-                        [required]
-  --agent_function TEXT Path to the agent function. Example: agent.agent.run
-                        [required]
-  --agent_dir TEXT      Path to the agent directory  [required]
-  --benchmark TEXT      Name of the benchmark to run  [required]
-  --upload              Upload results to HuggingFace
-  --model TEXT          Backend model to use  [default: gpt-4o-mini]
-  --run_id TEXT         Run ID to use for Weave logging in case you are continuing a run and want to log to the same project.
-  --config TEXT         Path to configuration file
-  --help                Show this message and exit.
+```bash
+pip install inspect_ai
+pip install git+https://github.com/UKGovernmentBEIS/inspect_evals
 ```
 
-### Uploading Results
+There are two types of agents you can run with any inspect task. Inspect solver agents and custom external agents that can follow any implementation. More details and examples can be found in `agent_eval_harness/inspect/README.md`.
 
-To upload results to HuggingFace:
+#### Custom Inspect Agents
 
-1. Ensure you have the necessary permissions and API keys set up in your `.env` file.
-2. Run your evaluation with the `--upload` flag.
+You can provide a custom solver (agent) for an Inspect AI task.  Your `agent_function` should point to a function decorated with `@solver` from `inspect_ai`.  Example:
 
-The results will be automatically processed and uploaded at the end of the evaluation run. The `upload_manager.py` handles the details of formatting and sending the data to HuggingFace.
+```bash
+agent-eval --agent_name MyInspectAgent --benchmark inspect_evals/gaia --model openai/gpt-4o --agent_dir agents/my_inspect_agent --agent_function my_solver.my_agent 
+```
 
-Note: Make sure your HuggingFace API key is properly set in your environment variables or `.env` file before attempting to upload results.
+See `agents/inspect/solver_agent.py` for an example solver.
+
+#### Custom External Agents
+
+You can use a completely external agent.  In this case, the Inspect AI task defines the dataset and scoring. The `agent_function` should take a dictionary of samples and return a dictionary of completions. Example:
+
+```bash
+agent-eval --agent_name MyExternalAgent --benchmark inspect_evals/gaia --model openai/gpt-4o --agent_dir agents/my_external_agent --agent_function my_agent.run -A model_name=gpt-4o
+```
+
+See `agents/inspect/custom_agent.py` for an example.
+
+
+## Uploading Results
+
+To upload results to HuggingFace, use the `--upload` flag when running an evaluation.  You can also upload previously generated results using the `agent-upload` command:
+
+```bash
+agent-upload --benchmark <benchmark_name>
+```
+
+This command searches for `_UPLOAD.json` files in the `results/<benchmark_name>` directory and uploads them to the HuggingFace Hub.
+
+
+## Repository Structure
+
+*   `agent_eval_harness`:  Contains the core harness code.
+    *   `benchmarks`: Implementations of the different benchmarks.
+    *   `inspect`:  Code specific to running Inspect AI benchmarks.
+    *   `utils`: Utility functions for logging, configuration, etc.
+*   `agents`: Directory for user-defined agent implementations.
