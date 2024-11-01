@@ -23,32 +23,21 @@ class USACOBenchmark(BaseBenchmark):
 
         with open('agent_eval_harness/benchmarks/USACO/data/datasets/usaco_subset307_dict.json', 'r') as f:
             self.benchmark = json.load(f)
+
             
         # DEV: select only first 5 problems for testing
-        # self.benchmark = {k: self.benchmark[k] for k in list(self.benchmark.keys())[:5]}
+        self.benchmark = {k: self.benchmark[k] for k in list(self.benchmark.keys())[:1]}
 
 
         
-    
 
-    def run(self, agent_function, run_id: str, agent_args: Dict) -> Dict:
-        self.mount_environment()
-        agent_output = self.run_agent(agent_function, self.benchmark, **agent_args)
-        self.unmount_environment()
-
-        # Evaluate the agent output
+    def run_evaluation_harness(self, agent_output, run_id):
         self.mount_benchmark()
-        rdict, sdict, rs, ss = self._run_evaluation_harness(agent_output, run_id)
-        self.unmount_benchmark()
-
-        return (rdict, sdict, rs, ss)
-
-    def _run_evaluation_harness(self, problem_dict_with_responses, run_id):
         
         # Create a temporary file
         with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
             # Serialize the dictionary to JSON and write to the temporary file
-            json.dump(problem_dict_with_responses, temp_file)
+            json.dump(agent_output, temp_file)
             temp_file_path = temp_file.name
         
         
@@ -99,7 +88,10 @@ class USACOBenchmark(BaseBenchmark):
             # Delete the temporary file
             os.unlink(temp_file_path)
             
-        return self._parse_evaluation_result(run_id)
+        
+        self.unmount_benchmark()
+        rdict, sdict, rs, ss = self._parse_evaluation_result(run_id)
+        return (rdict, sdict, rs, ss)
             
         
         
@@ -177,12 +169,11 @@ class USACOBenchmark(BaseBenchmark):
         # print(rs) # TODO: remove and add pretty print
 
         # store the results
-        out_path = f"results/{self.benchmark_name}/{run_id}"
-        os.makedirs(out_path, exist_ok=True)
-        with open(os.path.join(out_path, f"{run_id}.json"), 'w') as f:
+        os.makedirs(self.log_dir, exist_ok=True)
+        with open(os.path.join(self.log_dir, f"{run_id}.json"), 'w') as f:
             json.dump(sdict, f)
 
-        print(f"Results stored in {out_path}")
+        print(f"Results stored in {self.log_dir}")
 
 
         # remove directories in benchmark_dir
@@ -216,7 +207,7 @@ class USACOBenchmark(BaseBenchmark):
         }
 
         # Store the upload results locally
-        with open(os.path.join(out_path, f"{run_id}_UPLOAD.json"), 'w') as f:
+        with open(os.path.join(self.log_dir, f"{run_id}_UPLOAD.json"), 'w') as f:
             json.dump(upload_dict, f)
 
         if upload:

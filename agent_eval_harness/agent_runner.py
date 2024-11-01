@@ -22,10 +22,8 @@ def run_agent_evaluation(agent_function, benchmark, model, config, agent_args, *
     # add agent dir to sys.path
     sys.path.append(kwargs['agent_dir'])
     # Load the agent function
-    module_name, function_name = agent_function.rsplit('.', 1)
-    print(f"Loading agent function: {function_name} from module: {module_name}")
-    module = importlib.import_module(module_name)
-    agent_function = getattr(module, function_name)
+    module_name, agent_function_name = agent_function.rsplit('.', 1)
+    print(f"Loading agent function: {agent_function_name} from module: {module_name}")
     print("Agent setup complete!")
     print("=====\n\n")
 
@@ -55,15 +53,27 @@ def run_agent_evaluation(agent_function, benchmark, model, config, agent_args, *
         print("=====Initializing logging for main run=====")
         if kwargs['run_id']:
             run_id = kwargs['run_id']
-        # run_id = 'swebench_verified_swe-agent_gpt-4o-mini-2024-07-18_cost_limit_1_50_instances_1723903216'
-        # run_id = 'mlagentbench_mlagentbench_researchagent_gpt-4o-mini-2024-07-18_1724018738'
+
         weave_client = weave.init(run_id)
         print("Logging initialized!")
         print("=====\n\n")
 
+        print("=====Running agent=====")
+        result = benchmark.run(agent_function=agent_function, 
+                               run_id=run_id, 
+                               agent_args=agent_args,
+                               conda_env_name=kwargs.get('conda_env_name', None),
+                               max_concurrent=kwargs.get('max_concurrent', 1))
+        print("Done!")
+        print("=====\n\n")
+
+
         print("=====Running evaluation=====")
-        result = benchmark.run(agent_function, run_id, agent_args=agent_args)
-        print("Agent eval complete!")
+        result = benchmark.run_evaluation_harness(
+            agent_output=result,
+            run_id=run_id
+        )
+        print("Done!")
         print("=====\n\n")
 
         # Process and upload results
