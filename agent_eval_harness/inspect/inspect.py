@@ -158,7 +158,7 @@ def results_for_eval(eval_log: EvalLog, total_cost: float | None) -> dict[str, A
     return eval_results
 
 
-def load_task(task: str, model: str) -> Task:
+def load_task(task: str, model: str, task_args: dict[str, Any] = {}) -> Task:
     """
     Loads a single for a task & model
 
@@ -169,7 +169,7 @@ def load_task(task: str, model: str) -> Task:
     Returns:
         Task: The task 
     """
-    tasks = load_tasks([task], get_model(model))
+    tasks = load_tasks([task], get_model(model), task_args=task_args)
     if len(tasks) == 0:
         raise RuntimeError(f"The task {task} for model {model} could not be found.")
     elif len(tasks) > 1:
