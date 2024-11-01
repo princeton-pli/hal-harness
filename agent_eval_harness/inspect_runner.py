@@ -108,8 +108,6 @@ def inspect_evaluate(
  'sympy__sympy-16450',
  'scikit-learn__scikit-learn-25747',
  'scikit-learn__scikit-learn-25973']    
-        if resolve_solver(agent, agent_args=agent_args) is None:
-            model = "openai/gpt-4o" # this will not be used because inspect harness is not used right now
 
     # resolve the task name (this is the benchmark name)
     task = task_name(benchmark)
@@ -145,6 +143,9 @@ def inspect_evaluate(
             if solver is None:
                 # Ensure this is a valid custom agent function
                 validate_agent(agent)
+
+                if "swe_bench" in benchmark:
+                    model = "openai/gpt-4o" # hardcoded for swebench 
 
                 # Load the task
                 resolved_task = load_task(task, model, task_args=benchmark_args)
