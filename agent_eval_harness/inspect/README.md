@@ -50,8 +50,9 @@ To learn more about implement agents using Inspect see the [documentation on age
 You may also use a completely external agent to complete the evaluation. In this scenario, the Inspect Task is primarily used to define the dataset and scoring function. When executed, this will read the Task's samples, execute the custom agent (passing the sample data to it), then score the results returned by the agent. To use a custom agent:
 
 ``` bash
-agent-eval --agent_name gaia --benchmark inspect_evals/gaia --model openai/gpt-4o --agent_dir agents/inspect --agent_function custom_agent.run
+agent-eval --agent_name gaia --benchmark inspect_evals/gaia --model openai/gpt-4o --agent_dir agents/inspect --agent_function custom_agent.run --max_concurrent 5 -A model_name=gpt-4o-mini
 ```
+**Note:** Right now we always need to specify the inspect model with --model and the model passed to the agent function as agent argument. This is because the inspect eval function requires a model argument. If the eval harness of the benchmark you are running does not use LLM calls the --model argument will have no effect. 
 
 In the above example, the `run` function from the file `agents/inspect/custom_agent.py` will be used as the solver when executing the Task.
 
@@ -73,7 +74,7 @@ def run(tasks: dict[str, dict]) -> dict[str, str]:
 
 ### Agent Function Signature
 
-The `--agent_function` argument must point to a Python function which expects a single argument, a `dict[str, dict[str, Any]]` which will contain sample data. The dictionary that is passed to the custom agent will include fields from the inspect Dataset, including:
+The `--agent_function` argument must point to a Python function which expects a single argument and kwargs, a `dict[str, dict[str, Any]], **kwargs` which will contain sample data. The dictionary that is passed to the custom agent will include fields from the inspect Dataset, including:
 
 ```         
 id: (int | str) Unique identifier for sample.
@@ -107,5 +108,3 @@ The flow is the same the `agent_runner` with the exception of some additional da
 
 1)  An Inspect log file will be produced which includes the results and metrics, each sample and a complete transcript of the sample trajectory.
 2)  The eval summary and result metrics are included in the benchmark `_UPLOAD` file.
-
-##
