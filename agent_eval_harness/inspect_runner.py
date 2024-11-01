@@ -2,7 +2,7 @@ import json
 import os
 import sys
 import time
-
+import datetime
 import weave  # type: ignore
 from inspect_ai import eval
 from pydantic_core import to_jsonable_python
@@ -34,6 +34,8 @@ def inspect_evaluate(
     model: str,
     run_id: str,
     upload: bool,
+    max_concurrent: int = 10,
+    conda_env_name: str = None,
 ) -> None:
     """
     Evaluates a task using a specified model and agent, logs results, and optionally uploads them.
@@ -61,72 +63,101 @@ def inspect_evaluate(
     # determine the log directory
     log_dir = os.path.join("results", task, run_id)
 
-    # initialize the weave client
+
     with weave_tracing(run_id) as weave_client:
-        with weave.attributes({"weave_task_id": task}):
 
-            # resolve the task
-            tasks = resolve_task(task)
-            if len(tasks) > 1:
-                # We expect this to only run a single task
-                raise RuntimeError(
-                    f"Expected a single task for this benchmar, got {len(tasks)}"
-                )
+        # resolve the task
+        tasks = resolve_task(task)
+        if len(tasks) > 1:
+            # We expect this to only run a single task
+            raise RuntimeError(
+                f"Expected a single task for this benchmar, got {len(tasks)}"
+            )
 
-            # append agent dir to path
-            if agent_dir is not None:
-                sys.path.append(agent_dir)
+        # append agent dir to path
+        if agent_dir is not None:
+            sys.path.append(agent_dir)
 
-            if agent_function is not None:
-                # load the agent function
-                agent = load_agent(agent_function)
+        if agent_function is not None:
+            # load the agent function
+            agent = load_agent(agent_function)
 
-                # is the agent a solver?
-                solver = resolve_solver(agent, agent_args=agent_args)
+            # is the agent a solver?
+            solver = resolve_solver(agent, agent_args=agent_args)
 
-                if solver is None:
-                    # Ensure this is a valid custom agent function
-                    validate_agent(agent)
+            if solver is None:
+                # Ensure this is a valid custom agent function
+                validate_agent(agent)
 
-                    # Load the task
-                    resolved_task = load_task(task, model)
+                # Load the task
+                resolved_task = load_task(task, model, task_args=benchmark_args)
 
-                    # Run the custom agent
-                    log_start(f"Running Inspect custom agent {agent_function}")
-                    solver = run_agent(resolved_task.dataset, agent)
-                    log_end()
+                # Run the custom agent
+                log_start(f"Running Inspect custom agent {agent_function}")
+                
+                solver = run_agent(
+                    resolved_task.dataset, 
+                    agent, 
+                    agent_args=agent_args, 
+                    agent_function=agent_function, 
+                    agent_dir=agent_dir, 
+                    max_concurrent=max_concurrent, 
+                    run_id=run_id, 
+                    log_dir=log_dir, 
+                    task_name=task,
+                    conda_env_name=conda_env_name,
+                    )
 
+                print(f"Solver: {solver}")
+                log_end()
+
+                if "swe_bench" not in benchmark: # for swebench we use official harness
                     # run the task (this will be fast since it mostly just scoring)
                     log_start(f"Scoring custom agent {agent_function}")
                     eval_logs = eval(
                         resolved_task,
-                        task_args=benchmark_args,
+                        task_args=benchmark_args,                    
                         solver=solver,
                         model=model,
                         log_dir=log_dir,
-                        sandbox="local",
-                    )
-                    log_end()
-                else:
-                    # run the inspect task
-                    log_start(f"Running Inspect task {task}")
-                    eval_logs = eval(
-                        tasks,
-                        task_args=benchmark_args,
-                        solver=solver,
-                        model=model,
-                        log_dir=log_dir,
+                        sandbox="docker",
                     )
                     log_end()
 
             else:
                 # run the inspect task
+                # initialize the weave client
+                with weave.attributes({"weave_task_id": task}):
+                    log_start(f"Running Inspect task {task}")
+                    eval_logs = eval(
+                        tasks,
+                        task_args=benchmark_args,
+                        solver=solver,                        
+                        model=model,
+                        log_dir=log_dir,
+                    )
+                    log_end()
+
+        else:
+            # run the inspect task
+            # initialize the weave client
+            with weave.attributes({"weave_task_id": task}):
                 log_start(f"Running Inspect task {task}")
                 eval_logs = eval(
-                    tasks, task_args=benchmark_args, model=model, log_dir=log_dir
+                    tasks, 
+                    task_args=benchmark_args, 
+                    model=model, 
+                    log_dir=log_dir,            
                 )
                 log_end()
 
+        # Compute weave metrics
+        log_start("Computing Weave Metrics")
+        total_cost, total_usage = get_total_cost(weave_client)
+        weave_calls = get_weave_calls(weave_client)
+        log_end()
+
+        if "swe_bench" not in benchmark:
             # unexpected if this is called for a log that hasn't completed
             eval_log = eval_logs[0]
             if eval_log.status == "started":
@@ -134,40 +165,46 @@ def inspect_evaluate(
                     "Cannot process an evaluation which is still running."
                 )
 
-            # Compute weave metrics
-            log_start("Computing Weave Metrics")
-            total_cost, total_usage = get_total_cost(weave_client)
-            weave_calls = get_weave_calls(weave_client)
-            log_end()
-
             # Compute the evaluation results and configuration
             eval_results = results_for_eval(eval_log=eval_log, total_cost=total_cost)
             eval_config = config_for_eval(
                 run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
             )
+        else:
+            eval_log = None
 
-            # Compose the final uploadable result
-            eval_header_raw = eval_log
-            del eval_header_raw.samples
-            final_result = {
-                "config": eval_config,
-                "results": eval_results,
-                "raw_eval_results": to_jsonable_python(eval_header_raw),
-                "raw_logging_results": weave_calls,
-                "total_usage": total_usage,
-            }
+    
 
-            # Store the upload results locally
-            upload_path = os.path.join(log_dir, f"{run_id}_UPLOAD.json")
-            with open(upload_path, "w") as f:
-                json.dump(final_result, f, indent=2)
+        eval_config = {
+            "agent_name": agent_name,
+            "benchmark_name": benchmark,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "run_id": run_id,
+            "agent_args": agent_args,
+        }
 
-            if upload:
-                log_start("Uploading to hf")
-                upload_results(run_id, final_result)
-                log_end()
+        # Compose the final uploadable result
+        eval_header_raw = eval_log
+        del eval_header_raw.samples
+        final_result = {
+            "config": {**eval_config, 'agent_args': agent_args},
+            "results": eval_results,
+            "raw_eval_results": to_jsonable_python(eval_header_raw),            
+            "raw_logging_results": weave_calls,
+            "total_usage": total_usage,
+        }
 
-            log_start(msg="Run results")
-            log_abs_path = os.path.join(os.getcwd(), log_dir)
-            log(f"\n{log_abs_path}\n")
+        # Store the upload results locally
+        upload_path = os.path.join(log_dir, f"{run_id}_UPLOAD.json")
+        with open(upload_path, "w") as f:
+            json.dump(final_result, f, indent=2)
+
+        if upload:
+            log_start("Uploading to hf")
+            upload_results(run_id, final_result)
             log_end()
+
+        log_start(msg="Run results")
+        log_abs_path = os.path.join(os.getcwd(), log_dir)
+        log(f"\n{log_abs_path}\n")
+        log_end()
