@@ -1,6 +1,6 @@
-# Agent Evaluation Harness
+# HAL Harness
 
-This repository provides a standardized harness for evaluating different agents across various benchmarks. It supports several benchmarks and allows users to easily add new agents and benchmarks.  The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, and the officiel [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for storing and sharing evaluation results.
+This repository provides a standardized evaluation harness for evaluating different AI agents across various benchmarks. It supports several benchmarks and allows users to easily add new agents and benchmarks.  The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, and the official [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for storing and sharing evaluation results.
 
 ## Table of Contents
 
