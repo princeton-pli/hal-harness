@@ -57,8 +57,7 @@ agent-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_fu
 *   **`-B <key>=<value>`**: Benchmark arguments.  These are passed to the benchmark itself.  For Inspect AI tasks, these are passed as `task_args`.
 *   **`--upload`**: If present, uploads results to the HuggingFace Hub.
 *   **`--model <model_name>`**:  Specifies the LLM model to use (e.g., `gpt-4o-mini`).  Defaults to `gpt-4o-mini`. For inspect runs, you will need to specify the model name in the inspect format (e.g. `openai/gpt-4`).
-*   **`--run_id <run_id>`**:  Provides a specific run ID. Useful for resuming interrupted runs
-*   **`--config <config_file>`**: Path to a configuration file (YAML format). Defaults to `agent_eval_harness/config.yaml`.
+*   **`--run_id <run_id>`**:  Provides a specific run ID. Only use this if you want to resume a run from an existing one.
 *   **`--max_concurrent <number>`**: Run multiple samples in parallel for Inspect AI and other benchmarks. Defaults to 10.
 *   **`--conda_env_name <conda_env>`**:  Specifies the name of the conda environment to run the agent in.
 
