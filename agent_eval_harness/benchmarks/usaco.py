@@ -24,9 +24,7 @@ class USACOBenchmark(BaseBenchmark):
         with open('agent_eval_harness/benchmarks/USACO/data/datasets/usaco_subset307_dict.json', 'r') as f:
             self.benchmark = json.load(f)
 
-            
-        # DEV: select only first 5 problems for testing
-        self.benchmark = {k: self.benchmark[k] for k in list(self.benchmark.keys())[:1]}
+
 
 
         
