@@ -5,3 +5,5 @@ logs/**
 **/__pycache__/**
 results/**
 agent_eval_harness.egg-info/**
+agents/Moatless/evaluations/**
+agents/Moatless/index_store/**
