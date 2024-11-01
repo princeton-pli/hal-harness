@@ -23,6 +23,7 @@ from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename
 from .utils.weave_utils import get_total_cost, get_weave_calls
+from .benchmarks import swebench
 
 def inspect_evaluate(
     benchmark: str,
@@ -165,8 +166,6 @@ def inspect_evaluate(
                     task_name=task,
                     conda_env_name=conda_env_name,
                     )
-
-                print(f"Solver: {solver}")
                 log_end()
 
                 if "swe_bench" not in benchmark: # for swebench we use official harness
@@ -181,6 +180,9 @@ def inspect_evaluate(
                         sandbox="docker",
                     )
                     log_end()
+                else:
+                    results = swebench.run_evaluation_harness(predictions_path=f"{log_dir}/{run_id}_SWE_BENCH_SUBMISSIONS.jsonl", run_id=run_id)
+
 
             else:
                 # run the inspect task
@@ -229,18 +231,23 @@ def inspect_evaluate(
                 run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
             )
         else:
-            eval_log = None
+            
             benchmark = "swebench_verified_mini" if "mini" in benchmark else "swebench_verified"
-
     
-
-        eval_config = {
-            "agent_name": agent_name,
-            "benchmark_name": benchmark,
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "run_id": run_id,
-            "agent_args": agent_args,
-        }
+            eval_log = results
+            eval_results =  {
+                    "accuracy": results['resolved_instances']/results['total_instances'],
+                    "total_cost": total_cost,
+                    'successful_tasks': results['resolved_ids'],
+                    'failed_tasks': results['unresolved_ids']
+                }
+            eval_config = {
+                "agent_name": agent_name,
+                "benchmark_name": benchmark,
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "run_id": run_id,
+                "agent_args": agent_args,
+            }
 
         # Compose the final uploadable result
         eval_header_raw = eval_log
