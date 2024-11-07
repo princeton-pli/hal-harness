@@ -6,11 +6,11 @@ import time
 
 def parse_evaluation_result(run_id):
     # Load the evaluation results
-    with open(f"{run_id}.{run_id}.json", 'r') as f:
+    with open(f"swebench.{run_id}.json", 'r') as f:
         results = json.load(f)
 
     # delete file
-    os.remove(f"{run_id}.{run_id}.json")
+    os.remove(f"swebench.{run_id}.json")
 
     return results
 
