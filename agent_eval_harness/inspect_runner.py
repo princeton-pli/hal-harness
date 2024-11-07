@@ -23,7 +23,7 @@ from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename
 from .utils.weave_utils import get_total_cost, get_weave_calls
-import swebench_harness
+from .benchmarks import swebench_harness
 
 def inspect_evaluate(
     benchmark: str,
@@ -241,10 +241,11 @@ def inspect_evaluate(
                     'successful_tasks': results['resolved_ids'],
                     'failed_tasks': results['unresolved_ids']
                 }
+            now = datetime.datetime.now()
             eval_config = {
                 "agent_name": agent_name,
                 "benchmark_name": benchmark,
-                "date": datetime.now().strftime("%Y-%m-%d"),
+                "date": now.strftime("%Y-%m-%d %H:%M:%S"),
                 "run_id": run_id,
                 "agent_args": agent_args,
             }
