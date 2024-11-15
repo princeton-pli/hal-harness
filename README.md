@@ -89,7 +89,7 @@ The agent harness can run any Inspect AI task.  The simplest approach is to use 
 
 ```bash
 pip install inspect_ai
-pip install git+https://github.com/UKGovernmentBEIS/inspect_evals
+pip install git+https://github.com/UKGovernmentBEIS/inspect_evals@max/fixing_more_swebench_bugs
 ```
 
 There are two types of agents you can run with any inspect task. Inspect solver agents and custom external agents that can follow any implementation. More details and examples can be found in `agent_eval_harness/inspect/README.md`.
