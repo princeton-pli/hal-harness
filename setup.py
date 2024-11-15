@@ -12,7 +12,9 @@ setup(
         'pydantic>=2.0.0',
         'huggingface-hub',
         'python-dotenv',
-        'setuptools>=48.0.0'
+        'setuptools>=48.0.0',
+        'inspect_ai',
+        'inspect-evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals@max/fixing_more_swebench_bugs'
     ],
     entry_points={
         'console_scripts': [
