@@ -24,17 +24,23 @@ This repository provides a standardized evaluation harness for evaluating differ
    cd agent-eval-harness
    ```
 
-2. **Install Poetry (if you don't have it):**
+2. **Create conda environment:**
+   ```bash
+   conda create -n hal python=3.11
+   conda activate hal
+   ```
+
+3. **Install Poetry (if you don't have it):**
    ```bash
    pip install poetry
    ```
 
-3. **Install the package:**
+4. **Install the package:**
    ```bash
    pip install -e .
    ```
 
-4. **Create a `.env` file:**
+5. **Create a `.env` file:**
    ```bash
    cp .env.template .env
    ```
