@@ -24,17 +24,23 @@ This repository provides a standardized evaluation harness for evaluating differ
    cd agent-eval-harness
    ```
 
-2. **Install Poetry (if you don't have it):**
+2. **Create conda environment:**
+   ```bash
+   conda create -n hal python=3.11
+   conda activate hal
+   ```
+
+3. **Install Poetry (if you don't have it):**
    ```bash
    pip install poetry
    ```
 
-3. **Install the package:**
+4. **Install the package:**
    ```bash
    pip install -e .
    ```
 
-4. **Create a `.env` file:**
+5. **Create a `.env` file:**
    ```bash
    cp .env.template .env
    ```
@@ -65,7 +71,7 @@ agent-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_fu
 **Example:**
 
 ```bash
-agent-eval --benchmark swebench_verified_mini --agent_dir agents/swebench_example_agent/ --agent_function main.run --agent_name "My SWE-bench Agent (gpt-4o-2024-08-06)" -A model_name=gpt-4o-mini --upload 
+agent-eval --benchmark swebench_verified_mini --agent_dir agents/swebench_example_agent/ --agent_function main.run --agent_name "My SWE-bench Agent (gpt-4o-2024-08-06)" -A model_name=gpt-4o-mini
 ```
 
 
