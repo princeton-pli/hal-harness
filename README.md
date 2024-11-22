@@ -71,7 +71,7 @@ agent-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_fu
 **Example:**
 
 ```bash
-agent-eval --benchmark swebench_verified_mini --agent_dir agents/swebench_example_agent/ --agent_function main.run --agent_name "My SWE-bench Agent (gpt-4o-2024-08-06)" -A model_name=gpt-4o-mini --upload 
+agent-eval --benchmark swebench_verified_mini --agent_dir agents/swebench_example_agent/ --agent_function main.run --agent_name "My SWE-bench Agent (gpt-4o-2024-08-06)" -A model_name=gpt-4o-mini
 ```
 
 
