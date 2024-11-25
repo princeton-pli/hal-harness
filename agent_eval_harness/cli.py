@@ -37,7 +37,7 @@ from .inspect_runner import inspect_evaluate
 )
 @click.option("--upload", is_flag=True, help="Upload results to HuggingFace")
 @click.option("--max_concurrent", default=10, help="Maximum agents to run for this benchmark")
-@click.option("--conda_env_name", help="Conda environment to run the custom external agent in")
+@click.option("--conda_env_name", help="Conda environment to run the custom external agent in if run locally")
 @click.option("--model", default="gpt-4o-mini", help="Backend model to use")
 @click.option("--run_id", help="Run ID to use for logging")
 @click.option(
@@ -45,6 +45,8 @@ from .inspect_runner import inspect_evaluate
     default=os.path.join(os.path.dirname(__file__), "config.yaml"),
     help="Path to configuration file",
 )
+@click.option("--vm", is_flag=True, help="Run the agent on an azure VM")
+@click.option("--continue_run", is_flag=True, help="Continue from a previous run, only running failed or incomplete tasks")
 def main(
     config,
     benchmark,
@@ -56,11 +58,17 @@ def main(
     upload,
     max_concurrent,
     conda_env_name,
+    continue_run,
     a,
     b,
+    vm,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
+
+    # Validate that run_id is provided when continuing a run
+    if continue_run and not run_id:
+        raise click.UsageError("--run_id must be provided when using --continue_run")
 
     # parse any agent or benchmark params
     agent_args = parse_cli_args(a)
@@ -80,9 +88,10 @@ def main(
             upload=upload or False,
             max_concurrent=max_concurrent,
             conda_env_name=conda_env_name,
+            vm=vm,
+            continue_run=continue_run
         )
-    else:
-            
+    else:   
         run_agent_evaluation(
             config=config,
             benchmark=benchmark,
@@ -95,6 +104,8 @@ def main(
             max_concurrent=max_concurrent,
             conda_env_name=conda_env_name,
             upload=upload or False,
+            vm=vm,
+            continue_run=continue_run,
             **kwargs,
         )
 

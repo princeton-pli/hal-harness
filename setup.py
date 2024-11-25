@@ -14,7 +14,13 @@ setup(
         'python-dotenv',
         'setuptools>=48.0.0',
         'inspect_ai',
-        'inspect-evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals@max/fixing_more_swebench_bugs'
+        'inspect-evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals@max/fixing_more_swebench_bugs',
+        'azure-mgmt-compute>=29.1.0',
+        'azure-mgmt-network>=25.1.0',
+        'azure-mgmt-resource>=23.0.1',
+        'azure-identity>=1.12.0',
+        'paramiko',
+        'tenacity>=8.2.0'
     ],
     entry_points={
         'console_scripts': [

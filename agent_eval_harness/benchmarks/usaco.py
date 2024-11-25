@@ -23,10 +23,9 @@ class USACOBenchmark(BaseBenchmark):
 
         with open('agent_eval_harness/benchmarks/USACO/data/datasets/usaco_subset307_dict.json', 'r') as f:
             self.benchmark = json.load(f)
-
-
-
-
+            
+        # cap the number of tasks to run to 1
+        self.benchmark = {k: v for k, v in self.benchmark.items() if k in list(self.benchmark.keys())[:1]}
         
 
     def run_evaluation_harness(self, agent_output, run_id):
@@ -37,8 +36,6 @@ class USACOBenchmark(BaseBenchmark):
             # Serialize the dictionary to JSON and write to the temporary file
             json.dump(agent_output, temp_file)
             temp_file_path = temp_file.name
-        
-        
         
         # Combine the command parts into a single string
         command = f"cd {self.benchmark_dir} && poetry run python harness.py --problem_dict_with_responses {temp_file_path} --run_id {run_id}"
@@ -91,8 +88,7 @@ class USACOBenchmark(BaseBenchmark):
         rdict, sdict, rs, ss = self._parse_evaluation_result(run_id)
         return (rdict, sdict, rs, ss)
             
-        
-        
+              
     def _parse_evaluation_result(self, run_id):
         # Load the evaluation results
         with open(f'{self.benchmark_dir}/results/sdict_{run_id}.json', 'r') as f:
@@ -123,7 +119,6 @@ class USACOBenchmark(BaseBenchmark):
         self.validate_logging(weave_client, test_weave_task_id='1333_platinum_good_bitstrings')
 
         return True
-
 
     @property
     def type_adapter(self):
@@ -191,8 +186,8 @@ class USACOBenchmark(BaseBenchmark):
             "config": {'agent_name': agent_name, 
                        'benchmark_name': self.benchmark_name, 
                        'date': datetime.now().strftime("%Y-%m-%d"),
-                       'run_id': run_id,
-                       **{k: v for k, v in config.get(self.benchmark_name, {}).items()}},
+                       'run_id': run_id
+                       },
             "results": {
                 "accuracy": sum([1 if float(sdict[key][0]['result']['fraction_passed']) == 1 else 0 for key in sdict])/len(sdict),
                 "total_cost": total_cost,

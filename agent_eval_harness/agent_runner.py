@@ -51,7 +51,7 @@ def run_agent_evaluation(agent_function, benchmark, model, config, agent_args, *
     if test_passed:
         # Initialize logging for evaluation run
         print("=====Initializing logging for main run=====")
-        if kwargs['run_id']:
+        if kwargs['run_id']: # if run_id is provided, use it
             run_id = kwargs['run_id']
 
         weave_client = weave.init(run_id)
@@ -63,7 +63,8 @@ def run_agent_evaluation(agent_function, benchmark, model, config, agent_args, *
                                run_id=run_id, 
                                agent_args=agent_args,
                                conda_env_name=kwargs.get('conda_env_name', None),
-                               max_concurrent=kwargs.get('max_concurrent', 1))
+                               max_concurrent=kwargs.get('max_concurrent', 1),
+                               vm=kwargs.get('vm', False))
         print("Done!")
         print("=====\n\n")
 

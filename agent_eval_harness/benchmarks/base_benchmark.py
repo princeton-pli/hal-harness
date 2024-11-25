@@ -13,6 +13,11 @@ import uuid
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 from typing import Callable, cast
+from ..utils.azure_utils import VirtualMachineManager
+import time
+from typing import Optional, Dict, Any
+from concurrent.futures import ThreadPoolExecutor
+
 
 class BaseBenchmark(ABC):
     def __init__(self, agent_dir: str, config: Dict):
@@ -24,7 +29,7 @@ class BaseBenchmark(ABC):
         self.main_cwd: str
         self.temp_dirs = [] # List of temporary directories created during agent runs
         self.log_dir: str
-
+        self.vm_manager = VirtualMachineManager()
 
     def run_single_agent(self, task_id, single_input, agent_dir, agent_function, agent_args, module_name, run_id, conda_env_name, log_dir=None):
             # Create a unique directory in /tmp/
@@ -204,32 +209,229 @@ with open("output.json", "w") as f:
             
 
         return merged_result
-
     
-    def run(self, agent_function, run_id: str, agent_args: Dict, conda_env_name: str = None, max_concurrent: int = 1):
-        self.log_dir = f"results/{self.benchmark_name}/{run_id}"
-        print("Max concurrent: ", max_concurrent)
-        return asyncio.run(self.run_agent_parallel(dataset=self.benchmark, agent_function=agent_function, agent_args=agent_args, agent_dir=self.agent_dir, run_id=run_id, max_concurrent=max_concurrent, log_dir=self.log_dir, conda_env_name=conda_env_name))
+    async def run_agent_on_vm(self, dataset, agent_function, agent_args, agent_dir, run_id, max_concurrent, log_dir, conda_env_name, timeout=7200):
+        """
+        Run agents on Azure VMs in parallel with a timeout.
         
+        Args:
+            dataset: Dictionary of task_id -> input_data
+            agent_function: Path to agent function (e.g. "agent.run")
+            agent_args: Arguments to pass to the agent
+            agent_dir: Directory containing agent code
+            run_id: Unique identifier for this run
+            max_concurrent: Maximum number of concurrent VMs
+            log_dir: Directory to store logs
+            conda_env_name: Name of conda environment to use
+            timeout: Maximum time in seconds to wait for each task (default: 2 hours)
+        """
+        results = {}
+        vm_names = []
+        
+        async def process_task(task_id: str, input_data: Any) -> Optional[Dict]:
+            # Create unique VM name
+            vm_name = f"agent-{self.benchmark_name}-{uuid.uuid4()}"[:32].lower().replace("_", "-")
+            vm_names.append(vm_name)
+            
+            try:
+                # Create VM
+                print(f"Creating VM {vm_name} for task {task_id}")
+                vm = self.vm_manager.create_vm(
+                    vm_name=vm_name,
+                    username="agent",
+                    ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
+                    network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                )
+
+                # Copy agent code and input files
+                print(f"Copying files to VM {vm_name}")
+                self.vm_manager.copy_files_to_vm(
+                    source_directory=agent_dir,
+                    vm_name=vm_name,
+                    username="agent",
+                    ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                )
+
+                # Create input.json and agent_args.json on VM
+                temp_dir = tempfile.mkdtemp()
+                try:
+                    input_file = os.path.join(temp_dir, 'input.json')
+                    args_file = os.path.join(temp_dir, 'agent_args.json')
+                    
+                    with open(input_file, 'w') as f:
+                        json.dump({task_id: input_data}, f)
+                    with open(args_file, 'w') as f:
+                        json.dump(agent_args, f)
+
+                    self.vm_manager.copy_files_to_vm(
+                        source_directory=temp_dir,
+                        vm_name=vm_name,
+                        username="agent", 
+                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                    )
+                finally:
+                    shutil.rmtree(temp_dir)
+
+                # Run agent on VM
+                print(f"Running agent on VM {vm_name}")
+                self.vm_manager.run_agent_on_vm(
+                    agent_function=agent_function,
+                    vm_name=vm_name,
+                    task_id=task_id,
+                    input_data=input_data,
+                    agent_args=agent_args,
+                    agent_dir="/home/agent",
+                    run_id=run_id,
+                    conda_env_name=conda_env_name,
+                    username="agent",
+                    ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                )
+
+                # Wait for completion or timeout
+                start_time = time.time()
+                result = None
+                
+                while time.time() - start_time < timeout:
+                    try:
+                        # Fetch and store trace logs
+                        await self.fetch_agent_trace(
+                            vm_name=vm_name,
+                            username="agent",
+                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                            task_id=task_id,
+                            log_dir=self.log_dir
+                        )
+                        
+                        result = self.vm_manager.check_task_completion(
+                            vm_name=vm_name,
+                            username="agent",
+                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                        )
+                        if result is not None:
+                            break
+                    except Exception as e:
+                        print(f"Error checking task completion on {vm_name}: {e}")
+                    await asyncio.sleep(30)  # Check every 30 seconds
+
+                if result is None:
+                    print(f"Task {task_id} timed out after {timeout} seconds")
+                    return {task_id: f"TIMEOUT after {timeout} seconds"}
+
+                # Copy results back
+                if log_dir:
+                    dest_dir = os.path.join(log_dir, f"{task_id}")
+                    os.makedirs(dest_dir, exist_ok=True)
+                    self.vm_manager.copy_files_from_vm(
+                        vm_name=vm_name,
+                        username="agent",
+                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                        destination_directory=dest_dir
+                    )
+
+                return result
+
+            except Exception as e:
+                print(f"Error processing task {task_id} on VM {vm_name}: {e}")
+                traceback.print_exc()
+                return {task_id: f"ERROR: {str(e)}"}
+            
+            finally:
+                # Cleanup VM
+                try:
+                    print(f"Deleting VM {vm_name}")
+                    self.vm_manager.delete_vm(vm_name)
+                except Exception as e:
+                    print(f"Error deleting VM {vm_name}: {e}")
+
+        # Run tasks in parallel with semaphore to limit concurrency
+        semaphore = asyncio.Semaphore(max_concurrent)
+        
+        async def run_with_semaphore(task_id, input_data):
+            async with semaphore:
+                return await process_task(task_id, input_data)
+
+        # Create tasks for all inputs
+        tasks = [run_with_semaphore(task_id, input_data) 
+                 for task_id, input_data in dataset.items()]
+        
+        # Run all tasks and gather results
+        results = await asyncio.gather(*tasks)
+        
+        # Merge results
+        merged_results = {}
+        for result in results:
+            if result:
+                merged_results.update(result)
+
+        # Save raw submissions if log_dir provided
+        if log_dir:
+            raw_submissions_path = os.path.join(log_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
+            os.makedirs(log_dir, exist_ok=True)
+            
+            with open(raw_submissions_path, "w") as f:
+                for task_id, result in merged_results.items():
+                    json.dump({task_id: result}, f)
+                    f.write('\n')
+
+        return merged_results
+    
+    def run(self, agent_function, run_id: str, agent_args: Dict, conda_env_name: str = None, max_concurrent: int = 1, vm: bool = False, continue_run: bool = False):
+        """
+        Run the agent evaluation.
+        
+        Args:
+            agent_function: Path to agent function
+            run_id: Unique identifier for this run
+            agent_args: Arguments to pass to agent
+            conda_env_name: Name of conda environment to use
+            max_concurrent: Maximum number of concurrent tasks
+            vm: Whether to run on Azure VMs
+            continue_run: Whether to continue from a previous run
+        """
+        self.log_dir = f"results/{self.benchmark_name}/{run_id}"
+        
+        # Get dataset to run (either full or remaining tasks)
+        dataset = self.benchmark
+        if continue_run:
+            dataset = self.get_remaining_tasks(self.benchmark, run_id, self.log_dir)
+            if not dataset:
+                print("No remaining tasks to run")
+                # Load and return previous results
+                raw_submissions_path = os.path.join(self.log_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
+                if os.path.exists(raw_submissions_path):
+                    with open(raw_submissions_path, "r") as f:
+                        merged_results = {}
+                        for line in f:
+                            merged_results.update(json.loads(line))
+                        return merged_results
+                return {}
+        
+        if vm:
+            return asyncio.run(self.run_agent_on_vm(
+                dataset=dataset,
+                agent_function=agent_function,
+                agent_args=agent_args,
+                agent_dir=self.agent_dir,
+                run_id=run_id,
+                max_concurrent=max_concurrent,
+                log_dir=self.log_dir,
+                conda_env_name=conda_env_name
+            ))
+        else:
+            return asyncio.run(self.run_agent_parallel(
+                dataset=dataset,
+                agent_function=agent_function,
+                agent_args=agent_args,
+                agent_dir=self.agent_dir,
+                run_id=run_id,
+                max_concurrent=max_concurrent,
+                log_dir=self.log_dir,
+                conda_env_name=conda_env_name
+            ))
+    
     @abstractmethod
-    def run_evaluation_harness(self, agent_output, run_id: str):
+    def run_evaluation_harness(self, agent_output, run_id: str, log_dir: str):
         pass
-
-    def mount_environment(self):
-        self.cwd = os.getcwd()
-        os.chdir(self.agent_dir)
-
-    def unmount_environment(self):
-        os.chdir(self.cwd)
-
-    def run_agent(self, agent_function, input, **kwargs):
-        """
-        Run the agent on the input and return the output. This function assumes that the agent is a python function that takes the input as an argument and returns the output.
-        If a benchmark requires the agent to be a class that is instantiated before running, this function should be overridden in the benchmark class.
-        """
-        # Get prediction from agent
-        agent_output = agent_function(input, **kwargs)
-        return agent_output
 
     @abstractmethod
     def test_run(self, agent_function, weave_client):
@@ -238,10 +440,6 @@ with open("output.json", "w") as f:
     @property
     @abstractmethod
     def type_adapter(self) -> TypeAdapter:
-        pass
-
-    @abstractmethod
-    def validate_logging(self, weave_client, test_task_id):
         pass
     
     @abstractmethod
@@ -313,6 +511,67 @@ with open("output.json", "w") as f:
             os.remove('pyproject.toml')
         if os.path.exists('poetry.lock'):
             os.remove('poetry.lock')
+
+    def get_remaining_tasks(self, dataset, run_id, log_dir):
+        """
+        Get tasks that haven't been successfully completed in previous runs.
+        
+        Args:
+            dataset: Dictionary of task_id -> input_data
+            run_id: Run identifier
+            log_dir: Directory containing logs from previous runs
+        
+        Returns:
+            Dictionary of remaining tasks to run
+        """
+        remaining_tasks = dataset.copy()
+        
+        if log_dir:
+            raw_submissions_path = os.path.join(log_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
+            if os.path.exists(raw_submissions_path):
+                with open(raw_submissions_path, "r") as f:
+                    previous_submissions = [json.loads(line) for line in f]
+                
+                # Remove tasks that were previously completed successfully
+                for submission in previous_submissions:
+                    task_id = list(submission.keys())[0]
+                    result = submission[task_id]
+                    # Only remove if the result isn't an error or timeout
+                    if not isinstance(result, str) or not (result.startswith("ERROR") or result.startswith("TIMEOUT")):
+                        remaining_tasks.pop(task_id, None)
+                
+                print(f"Found {len(dataset) - len(remaining_tasks)} completed tasks from previous run")
+                print(f"Remaining tasks: {len(remaining_tasks)}")
+        
+        return remaining_tasks
+
+    async def fetch_agent_trace(self, vm_name, username, ssh_private_key_path, task_id, log_dir):
+        """Fetch the latest agent trace log from a VM and store it locally."""
+        try:
+            result = self.vm_manager.get_agent_trace(
+                vm_name=vm_name,
+                username=username,
+                ssh_private_key_path=ssh_private_key_path
+            )
+            
+            if result and log_dir:
+                trace_dir = os.path.join(log_dir, "agent_traces")
+                os.makedirs(trace_dir, exist_ok=True)
+                
+                # Write/update the trace file
+                trace_path = os.path.join(trace_dir, f"{task_id}_trace.log")
+                with open(trace_path, "w") as f:
+                    f.write(result)
+                
+                # Also write to a combined trace file
+                combined_path = os.path.join(trace_dir, "combined_trace.log")
+                with open(combined_path, "a") as f:
+                    f.write(f"\n=== {task_id} @ {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+                    f.write(result)
+                    f.write("\n")
+                
+        except Exception as e:
+            print(f"Error fetching trace for {task_id}: {e}")
 
 
 
