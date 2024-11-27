@@ -1,13 +1,15 @@
 import os
-
 import click
-import yaml #type: ignore
+import yaml
+import asyncio
+from typing import Any, Dict
 
-from typing import Any
-
-from .agent_runner import run_agent_evaluation
+from .agent_runner import AgentRunner
 from .inspect.inspect import is_inspect_benchmark
 from .inspect_runner import inspect_evaluate
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @click.command()
@@ -70,12 +72,21 @@ def main(
     if continue_run and not run_id:
         raise click.UsageError("--run_id must be provided when using --continue_run")
 
-    # parse any agent or benchmark params
+    # Validate required parameters
+    if not agent_function:
+        raise click.UsageError("--agent_function is required")
+    if not agent_dir:
+        raise click.UsageError("--agent_dir is required")
+
+    # Parse agent and benchmark args
     agent_args = parse_cli_args(a)
     benchmark_args = parse_cli_args(b)
 
+    # Add model to agent args
+    agent_args['model_name'] = model
+
     if is_inspect_benchmark(benchmark):
-        # run the inspect evaluation
+        # Run the inspect evaluation
         inspect_evaluate(
             benchmark=benchmark,
             benchmark_args=benchmark_args,
@@ -91,57 +102,39 @@ def main(
             vm=vm,
             continue_run=continue_run
         )
-    else:   
-        run_agent_evaluation(
-            config=config,
-            benchmark=benchmark,
-            agent_name=agent_name,
+    else:
+        # Initialize agent runner
+        runner = AgentRunner(
             agent_function=agent_function,
             agent_dir=agent_dir,
             agent_args=agent_args,
-            model=model,
+            benchmark_name=benchmark,
+            config=config,
             run_id=run_id,
+            use_vm=vm,
             max_concurrent=max_concurrent,
-            conda_env_name=conda_env_name,
-            upload=upload or False,
-            vm=vm,
-            continue_run=continue_run,
-            **kwargs,
+            conda_env=conda_env_name,
+            continue_run=continue_run
         )
 
-
-def is_valid(name: str, value: Any) -> bool:
-    """
-    Validates if the given option has a value.
-
-    Args:
-        name (str): The name of the option being validated.
-        value (Any): The value of the option.
-
-    Returns:
-        bool: Returns True if the value is not None, otherwise returns False
-              and prints an error message.
-    """
-    if value is None:
-        print(f"Error: missing option `{name}`")
-        return False
-    return True
+        # Run evaluation
+        try:
+            results = asyncio.run(runner.run(
+                agent_name=agent_name,
+                upload=upload or False
+            ))
+            print("\n=====Results Summary=====")
+            print(f"Accuracy: {results.get('accuracy', 'N/A')}")
+            print(f"Total Cost: {results.get('total_cost', 'N/A')}")
+            print("=====")
+        except Exception as e:
+            print(f"Error running evaluation: {e}")
+            raise
 
 
-def parse_cli_args(args: tuple[str] | list[str] | None) -> dict[str, Any]:
-    """
-    Parses a tuple or list of CLI arguments and returns them as a dictionary.
-
-    Args:
-        args (tuple[str] | list[str] | None): A tuple or list of arguments
-                                              (in the format key=value).
-
-    Returns:
-        dict[str, Any]: A dictionary where keys are argument names (with hyphens
-                        replaced by underscores), and values are the parsed
-                        argument values. If values are lists, they are split by commas.
-    """
-    params: dict[str, Any] = dict()
+def parse_cli_args(args: tuple[str] | list[str] | None) -> Dict[str, Any]:
+    """Parse CLI arguments into a dictionary."""
+    params: Dict[str, Any] = {}
     if args:
         for arg in list(args):
             parts = arg.split("=")
