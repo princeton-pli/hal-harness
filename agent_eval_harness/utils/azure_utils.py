@@ -11,6 +11,14 @@ import time
 from functools import wraps
 import random
 from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
+import asyncio
+import tempfile
+import json
+import os
+import shutil
+import time
+import traceback
+import uuid
 
 # Define retry decorator with tenacity
 def get_retry_decorator(max_attempts=3, initial_wait=1, max_wait=30):
@@ -415,7 +423,7 @@ class VirtualMachineManager:
         return result
     
     @get_retry_decorator()
-    def setup_vm_environment(self, vm_name: str, username: str, ssh_private_key_path: str, agent_dir: str) -> None:
+    def setup_vm_environment(self, vm_name: str, username: str, ssh_private_key_path: str, agent_dir: str, log_dir: str, benchmark) -> None:
         """
         Set up the VM environment using uv and a setup script.
         """
@@ -452,10 +460,24 @@ class VirtualMachineManager:
                 # Run setup script with sudo (passing username as argument)
                 print(f"Setting up environment on VM {vm_name}")
                 _, stdout, stderr = ssh_client.exec_command(f"sudo bash {remote_setup_path} {username}")
-
-                # Save log to file
-                with open(f"/home/{username}/setup_vm_log.log", 'w') as f:
+                
+                # Create log file 
+                with open(f"{log_dir}/setup_vm_log.log", 'w') as f:
                     f.write(stdout.read().decode())
+                    
+                    
+                # Run setup script if it exists
+                if benchmark and benchmark.setup_script:
+                    setup_script = os.path.join(benchmark.setup_script)
+                    if os.path.exists(setup_script):
+                        print(f"Running setup script on VM {vm_name}")
+                        try:
+                            _, stdout, stderr = ssh_client.exec_command(f"cd /home/agent && conda activate agent_env && bash {benchmark.setup_script}")
+                            with open(f"{log_dir}/setup_script_log.log", 'w') as f:
+                                f.write(stdout.read().decode())
+                        except Exception as e:
+                            print(f"Error running setup script on VM {vm_name}: {e}")
+                            
 
             finally:
                 sftp_client.close()
@@ -465,14 +487,13 @@ class VirtualMachineManager:
             print(f"Error setting up VM environment: {e}")
             raise
             
-    @get_retry_decorator()
-    def run_agent_on_vm(self, agent_function, vm_name, task_id, input_data, agent_args, agent_dir, run_id, username, ssh_private_key_path, timeout=8100):
+    def run_agent_on_vm(self, agent_function, vm_name, task_id, input_data, agent_args, agent_dir, run_id, username, log_dir,ssh_private_key_path, benchmark,timeout=7200):
         """
         Run agent on VM with improved monitoring and error handling.
         """
         try:
             # Setup conda environment if it exists
-            self.setup_vm_environment(vm_name, username, ssh_private_key_path, agent_dir)
+            self.setup_vm_environment(vm_name, username, ssh_private_key_path, agent_dir, log_dir, benchmark)
             
             # Get the public IP address of the VM
             public_ip_address = self.network_client.public_ip_addresses.get(
@@ -565,6 +586,7 @@ except Exception as e:
         except Exception as e:
             print(f"Error running agent on VM {vm_name}: {e}")
             raise
+    
 
     @get_retry_decorator(max_attempts=2, initial_wait=5)
     def get_agent_trace(self, vm_name, username, ssh_private_key_path):

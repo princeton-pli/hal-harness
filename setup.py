@@ -9,7 +9,6 @@ setup(
     install_requires=[
         'datasets',
         'weave',
-        'pydantic>=2.0.0',
         'huggingface-hub',
         'python-dotenv',
         'setuptools>=48.0.0',
