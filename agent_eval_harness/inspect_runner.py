@@ -55,61 +55,6 @@ def inspect_evaluate(
         None
     """
 
-    # for swebench we use inspect implementation with custom harness right now because of inconsistencies in inspect implementation. will replace hardcoded bits once resolved
-    if "swebench" in benchmark:
-        benchmark = "inspect_evals/swe_bench"
-        if "mini" in benchmark:
-            benchmark_args['instance_ids'] = ['django__django-11206',
- 'django__django-12262',
- 'django__django-12419',
- 'django__django-13128',
- 'django__django-13346',
- 'django__django-13809',
- 'django__django-14725',
- 'django__django-15569',
- 'django__django-16493',
- 'django__django-7530',
- 'pydata__xarray-3151',
- 'pylint-dev__pylint-4551',
- 'pytest-dev__pytest-5631',
- 'sphinx-doc__sphinx-9367',
- 'sympy__sympy-15017',
- 'sympy__sympy-15599',
- 'sympy__sympy-17318',
- 'sympy__sympy-18763',
- 'sympy__sympy-22914',
- 'sympy__sympy-23824',
- 'django__django-14855',
- 'django__django-15128',
- 'django__django-11333',
- 'django__django-14053',
- 'django__django-11099',
- 'django__django-13658',
- 'astropy__astropy-7336',
- 'django__django-12304',
- 'django__django-14011',
- 'django__django-16901',
- 'django__django-15930',
- 'matplotlib__matplotlib-24970',
- 'django__django-15629',
- 'scikit-learn__scikit-learn-11310',
- 'psf__requests-1766',
- 'pallets__flask-5014',
- 'matplotlib__matplotlib-23476',
- 'sympy__sympy-13551',
- 'sympy__sympy-13480',
- 'django__django-16950',
- 'sympy__sympy-15349',
- 'sphinx-doc__sphinx-9281',
- 'scikit-learn__scikit-learn-10908',
- 'sympy__sympy-12481',
- 'sympy__sympy-15875',
- 'sphinx-doc__sphinx-9461',
- 'sympy__sympy-20428',
- 'sympy__sympy-16450',
- 'scikit-learn__scikit-learn-25747',
- 'scikit-learn__scikit-learn-25973']    
-
     # resolve the task name (this is the benchmark name)
     task = task_name(benchmark)
 
@@ -127,7 +72,7 @@ def inspect_evaluate(
         if len(tasks) > 1:
             # We expect this to only run a single task
             raise RuntimeError(
-                f"Expected a single task for this benchmar, got {len(tasks)}"
+                f"Expected a single task for this benchmark, got {len(tasks)}"
             )
 
         # append agent dir to path
@@ -144,9 +89,6 @@ def inspect_evaluate(
             if solver is None:
                 # Ensure this is a valid custom agent function
                 validate_agent(agent)
-
-                if "swe_bench" in benchmark:
-                    model = "openai/gpt-4o" # hardcoded for swebench 
 
                 # Load the task
                 resolved_task = load_task(task, model, task_args=benchmark_args)
@@ -168,21 +110,17 @@ def inspect_evaluate(
                     )
                 log_end()
 
-                if "swe_bench" not in benchmark: # for swebench we use official harness
-                    # run the task (this will be fast since it mostly just scoring)
-                    log_start(f"Scoring custom agent {agent_function}")
-                    eval_logs = eval(
-                        resolved_task,
-                        task_args=benchmark_args,                    
-                        solver=solver,
-                        model=model,
-                        log_dir=log_dir,
-                        sandbox="docker",
-                    )
-                    log_end()
-                else:
-                    results = swebench_harness.run_evaluation_harness(predictions_path=f"{log_dir}/{run_id}_SWE_BENCH_SUBMISSIONS.jsonl", run_id=run_id)
-
+                # run the task (this will be fast since it mostly just scoring)
+                log_start(f"Scoring custom agent {agent_function}")
+                eval_logs = eval(
+                    resolved_task,
+                    task_args=benchmark_args,                    
+                    solver=solver,
+                    model=model,
+                    log_dir=log_dir,
+                    sandbox="docker",
+                )
+                log_end()
 
             else:
                 # run the inspect task
@@ -198,57 +136,35 @@ def inspect_evaluate(
                     )
                     log_end()
 
-        else:
-            # run the inspect task
-            # initialize the weave client
-            with weave.attributes({"weave_task_id": task}):
-                log_start(f"Running Inspect task {task}")
-                eval_logs = eval(
-                    tasks, 
-                    task_args=benchmark_args, 
-                    model=model, 
-                    log_dir=log_dir,            
-                )
-                log_end()
-
         # Compute weave metrics
         log_start("Computing Weave Metrics")
         total_cost, total_usage = get_total_cost(weave_client)
         weave_calls = get_weave_calls(weave_client)
         log_end()
-
-        if "swe_bench" not in benchmark:
-            # unexpected if this is called for a log that hasn't completed
-            eval_log = eval_logs[0]
-            if eval_log.status == "started":
-                raise RuntimeError(
-                    "Cannot process an evaluation which is still running."
-                )
-
-            # Compute the evaluation results and configuration
-            eval_results = results_for_eval(eval_log=eval_log, total_cost=total_cost)
-            eval_config = config_for_eval(
-                run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
-            )
-        else:
+        
+        if "composio" in agent_dir.lower(): # todo remove
+            # load the results from json file
+            with open(f"{log_dir}/{run_id}_USAGE.json", "r") as f:
+                usage = json.load(f)
             
-            benchmark = "swebench_verified_mini" if "mini" in benchmark else "swebench_verified"
-    
-            eval_log = results
-            eval_results =  {
-                    "accuracy": results['resolved_instances']/results['total_instances'],
-                    "total_cost": total_cost,
-                    'successful_tasks': results['resolved_ids'],
-                    'failed_tasks': results['unresolved_ids']
-                }
-            now = datetime.datetime.now()
-            eval_config = {
-                "agent_name": agent_name,
-                "benchmark_name": benchmark,
-                "date": now.strftime("%Y-%m-%d %H:%M:%S"),
-                "run_id": run_id,
-                "agent_args": agent_args,
+            total_cost = sum([usage[task]['total_cost'] for task, value in usage.items()])
+            total_usage = {
+                "prompt_tokens": sum([usage[task]['prompt_tokens'] for task, value in usage.items()]),
+                "completion_tokens": sum([usage[task]['completion_tokens'] for task, value in usage.items()]),
             }
+
+        # unexpected if this is called for a log that hasn't completed
+        eval_log = eval_logs[0]
+        if eval_log.status == "started":
+            raise RuntimeError(
+                "Cannot process an evaluation which is still running."
+            )
+
+        # Compute the evaluation results and configuration
+        eval_results = results_for_eval(eval_log=eval_log, total_cost=total_cost)
+        eval_config = config_for_eval(
+            run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
+        )
 
         # Compose the final uploadable result
         eval_header_raw = eval_log
