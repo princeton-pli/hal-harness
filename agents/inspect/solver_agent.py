@@ -12,7 +12,7 @@ from inspect_ai.tool import python
 ## agent-eval --agent_name basic-agent --benchmark inspect:agents/simple_task/task.py@ascii_art --model openai/gpt-4o -B to_draw=circle --agent_dir=agents/inspect-task --agent_function=solver_agent.basic_agent -A timeout=30
 
 @solver
-def basic_agent(timeout: int = 60) -> Solver:
+def basic_agent(timeout: int = 60, model_name: str = "openai/gpt-4o-mini") -> Solver:
 
     async def solve(state: TaskState, generate: Generate):
 
