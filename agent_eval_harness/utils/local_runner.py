@@ -7,6 +7,7 @@ import asyncio
 from typing import Dict, Any, Optional
 from pathlib import Path
 from agent_eval_harness.benchmarks.base_benchmark import BaseBenchmark
+from rich.progress import Progress, TaskID
 
 class LocalRunner:
     """Handles running agents locally in isolated environments"""
@@ -26,7 +27,9 @@ class LocalRunner:
                        agent_dir: str,
                        agent_args: Dict[str, Any],
                        run_id: str,
-                       benchmark: Optional[BaseBenchmark] = None) -> Dict[str, Any]:
+                       benchmark: Optional[BaseBenchmark] = None,
+                       progress: Optional[Progress] = None,
+                       task: Optional[TaskID] = None) -> Dict[str, Any]:
         """
         Run agent on all tasks with concurrency control
         """
@@ -36,10 +39,9 @@ class LocalRunner:
             run_dir = benchmark.get_run_dir(run_id) if benchmark else f"results/{run_id}"
             submissions_file = os.path.join(run_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
             
-            print(f"Running evaluation with max_concurrent={self.max_concurrent}")
             tasks = []
             for task_id, input_data in dataset.items():
-                task = self._process_task(
+                task_coro = self._process_task(
                     task_id=task_id,
                     input_data=input_data,
                     agent_function=agent_function,
@@ -48,10 +50,14 @@ class LocalRunner:
                     run_id=run_id,
                     submissions_file=submissions_file
                 )
-                tasks.append(task)
+                tasks.append(task_coro)
             
             # Run tasks with concurrency control
             results = await asyncio.gather(*tasks)
+            
+            # Update progress if provided
+            if progress and task is not None:
+                progress.update(task, advance=1)
             
             # Merge results
             merged_results = {}
@@ -156,6 +162,7 @@ class LocalRunner:
                 task_id=task_id,
                 run_id=run_id
             )
+                        
             script_path = temp_dir / "run_agent.py"
             with open(script_path, "w") as f:
                 f.write(script)
@@ -213,12 +220,12 @@ class LocalRunner:
 import os
 import json
 import importlib.util
-#import weave
+import weave
 import traceback
 
 try:
     # Initialize weave
-    #weave.init("{run_id}")
+    weave.init("{run_id}")
     
     # Load input data
     with open("input.json", "r") as f:
@@ -237,9 +244,9 @@ try:
     spec.loader.exec_module(module)
     agent_fn = getattr(module, "{function_name}")
     
-    # Run agent with task ID tracking
-    #with weave.attributes({{"weave_task_id": "{task_id}"}}):
-    result = agent_fn(input_data, **agent_args)
+    # Run the agent function
+    with weave.attributes({{"weave_task_id": "{task_id}"}}):
+        result = agent_fn(input_data, **agent_args)
     
     # Save output
     with open("output.json", "w") as f:
