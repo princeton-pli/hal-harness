@@ -69,7 +69,8 @@ su - $USERNAME -c "bash -c '\
         pip install weave==0.51 && \
         echo \"Requirements installed\"; \
     else \
-        echo \"No requirements.txt found\"; \
+        echo \"No requirements.txt found\" && \
+        exit 1; \
     fi'"
 
 echo "Setup completed successfully"
