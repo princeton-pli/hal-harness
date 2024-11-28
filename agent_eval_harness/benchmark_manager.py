@@ -14,7 +14,7 @@ class BenchmarkManager:
     def __init__(self, agent_dir: str = 'agent/', config: Optional[Dict[str, Any]] = {}):
         self.config = config
         self.agent_dir = agent_dir
-        self.benchmarks = ['usaco', 'mlagentbench', 'swebench_lite', 'swebench_verified']
+        self.benchmarks = ['usaco', 'mlagentbench', 'swebench_lite', 'swebench_verified', 'swebench_verified_mini', 'appworld']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         if benchmark_name == 'usaco':
@@ -23,9 +23,12 @@ class BenchmarkManager:
         elif benchmark_name == 'mlagentbench':
             from .benchmarks.mlagentbench import MLAgentBenchBenchmark
             benchmark = MLAgentBenchBenchmark(self.agent_dir, self.config)
-        elif benchmark_name in ['swebench_lite', 'swebench_verified']:
-            from .benchmarks.swe_bench import SWEBenchBenchmark
+        elif benchmark_name in ['swebench_lite', 'swebench_verified', 'swebench_verified_mini']:
+            from .benchmarks.swebench import SWEBenchBenchmark
             benchmark = SWEBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == 'appworld':
+            from .benchmarks.appworld import AppWorldBenchmark
+            benchmark = AppWorldBenchmark(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark '{benchmark_name}'")
         
