@@ -1,10 +1,11 @@
 import weave
 import time
-from tqdm import tqdm
-from .json import make_jsonable
 import requests
 import os
 import json
+from typing import Dict, Any, Tuple, List, Optional
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from .logging_utils import print_step, print_warning, console, create_progress
 
 MODEL_PRICES_DICT = {
                 "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
@@ -32,265 +33,162 @@ MODEL_PRICES_DICT = {
                 "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
 }
 
-def initialize_weave_client(benchmark):
-    client = weave.init(f"{benchmark}_{int(time.time())}")
-    return client
-
-
-# def get_total_cost(client):
-#     print("Getting total cost...")
-#     calls = []
-#     unique_model_names = set()
-#     for call in tqdm(list(client.calls())):
-#         try:
-#             calls.append(call.summary["usage"])
-#         except KeyError as e:
-#             print(f"KeyError in Weave call: {e}")
-#             print(call.summary)
-#         except TypeError as e:
-#             print(f"TypeError in Weave call: {e}")
-#             print(call.summary)
-
-#     try: 
-#         total_cost = sum(
-#             MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
-#             MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"]
-#             for call in calls
-#             for model_name in call
-#         )
-#         print(f"Total cost: {round(total_cost,6)}")
-#     except KeyError as e:
-        
-#         total_cost = None
-#         print("Model not found in MODEL_PRICES_DICT, total cost not calculated.")
-
-#     unique_model_names = set(model_name for call in calls for model_name in call)
-
-#     token_usage = {
-#         model_name: {
-#             "prompt_tokens": sum(call[model_name]["prompt_tokens"] for call in calls),
-#             "completion_tokens": sum(call[model_name]["completion_tokens"] for call in calls)
-#         }
-#         for model_name in unique_model_names
-#     }
-    
-#     if total_cost is not None:
-#         print(f"Total cost: {round(total_cost,6)}")
-#     return total_cost, token_usage
-
-
-def get_total_cost(client):
-    print("Getting total cost...")
-    
-    # URL and headers
+def fetch_weave_calls(client) -> List[Dict[str, Any]]:
+    """Fetch Weave calls from the API"""
     url = 'https://trace.wandb.ai/calls/stream_query'
-    headers = {
-        'Content-Type': 'application/json'
-    }
+    headers = {'Content-Type': 'application/json'}
+    payload = {"project_id": client._project_id()}
 
-    # Data payload
-    payload = {
-        "project_id": client._project_id(),
-    }
+    response = requests.post(
+        url, 
+        headers=headers, 
+        json=payload, 
+        auth=('api', os.getenv('WANDB_API_KEY'))
+    )
+    return [json.loads(line) for line in response.text.strip().splitlines()]
 
-    # Make the request with basic authentication
-    response = requests.post(url, headers=headers, json=payload, auth=('api', os.getenv('WANDB_API_KEY')))
-    calls = [json.loads(line) for line in response.text.strip().splitlines()]
-
-    # Process usage data
+def process_usage_data(calls: List[Dict[str, Any]], progress: Progress) -> Tuple[float, Dict[str, Dict[str, int]]]:
+    """Process usage data from Weave calls"""
     usage_calls = []
     unique_model_names = set()
     
-    for call in tqdm(calls):
+    task = progress.add_task("Processing usage data...", total=len(calls))
+    
+    for call in calls:
         try:
             if 'summary' in call and 'usage' in call['summary']:
                 usage_calls.append(call['summary']['usage'])
-        except KeyError as e:
-            print(f"KeyError in Weave call: {e}")
-            print(call['summary'])
-        except TypeError as e:
-            print(f"TypeError in Weave call: {e}")
-            print(call['summary'])
-
-    try:
-        unique_model_names = set(model_name for call in usage_calls for model_name in call)
-
-        # check if all unique model names are in the MODEL_PRICES_DICT
-        for model_name in unique_model_names:
-            if model_name not in MODEL_PRICES_DICT:
-                raise KeyError(f"Model '{model_name}' not found in MODEL_PRICES_DICT.")
-
-        total_cost = 0
-        token_usage = {}
-        for call in usage_calls:
-            for model_name in unique_model_names:
-                if model_name in call:
-                    
-                    # normal call
-                    if 'prompt_tokens' in call[model_name] and 'completion_tokens' in call[model_name]:
-                        token_usage[model_name] = {"prompt_tokens": 0, "completion_tokens": 0}
-                        token_usage[model_name]["prompt_tokens"] += call[model_name]["prompt_tokens"]
-                        token_usage[model_name]["completion_tokens"] += call[model_name]["completion_tokens"]
-
-                        total_cost += (MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
-                                    MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"])
-                    
-                    # tool use call
-                    elif 'input_tokens' in call[model_name] and 'output_tokens' in call[model_name]:
-                        token_usage[model_name] = {"prompt_tokens": 0, "completion_tokens": 0}
-                        token_usage[model_name]["prompt_tokens"] += call[model_name]["input_tokens"]
-                        token_usage[model_name]["completion_tokens"] += call[model_name]["output_tokens"]
-
-                        total_cost += (MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["input_tokens"] +
-                                    MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["output_tokens"])
-
-                
-
-        # total_cost = sum(
-        #     MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
-        #     MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"]
-        #     for call in usage_calls if call is not Non
-        #     for model_name in call
-        # )
-
-        # token_usage = {
-        #     model_name: {
-        #         "prompt_tokens": sum(call[model_name]["prompt_tokens"] for call in usage_calls if model_name in call),
-        #         "completion_tokens": sum(call[model_name]["completion_tokens"] for call in usage_calls if model_name in call)
-        #     }
-        #     for model_name in unique_model_names
-        # }
-    except KeyError as e:
-        print(e)
-        total_cost = None
-        print("Model not found in MODEL_PRICES_DICT, total cost not calculated.")    
+        except (KeyError, TypeError) as e:
+            print_warning(f"Error processing call: {str(e)}")
+        progress.update(task, advance=1)
     
-    if total_cost is not None:
-        print(f"Total cost: {round(total_cost, 6)}")
+    return calculate_costs(usage_calls)
 
-    else:
-        print("Total cost could not be calculated.")
-        token_usage = {
-            model_name: {
-                "prompt_tokens": None,
-                "completion_tokens": None
-            }
-            for model_name in unique_model_names
-        }
+def calculate_costs(usage_calls: List[Dict[str, Any]]) -> Tuple[float, Dict[str, Dict[str, int]]]:
+    """Calculate total costs and token usage from processed calls"""
+    unique_model_names = set(model_name for call in usage_calls for model_name in call)
+    
+    # Validate models
+    for model_name in unique_model_names:
+        if model_name not in MODEL_PRICES_DICT:
+            raise KeyError(f"Model '{model_name}' not found in MODEL_PRICES_DICT.")
+    
+    total_cost = 0
+    token_usage = {model: {"prompt_tokens": 0, "completion_tokens": 0} for model in unique_model_names}
+    
+    for call in usage_calls:
+        for model_name in call:
+            if 'prompt_tokens' in call[model_name] and 'completion_tokens' in call[model_name]:
+                # Standard call
+                token_usage[model_name]["prompt_tokens"] += call[model_name]["prompt_tokens"]
+                token_usage[model_name]["completion_tokens"] += call[model_name]["completion_tokens"]
+                total_cost += (
+                    MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
+                    MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"]
+                )
+            elif 'input_tokens' in call[model_name] and 'output_tokens' in call[model_name]:
+                # Tool use call
+                token_usage[model_name]["prompt_tokens"] += call[model_name]["input_tokens"]
+                token_usage[model_name]["completion_tokens"] += call[model_name]["output_tokens"]
+                total_cost += (
+                    MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["input_tokens"] +
+                    MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["output_tokens"]
+                )
     
     return total_cost, token_usage
 
-# def process_call_for_cost(call):
-#     try:
-#         return call.summary["usage"]
-#     except KeyError as e:
-#         print(f"KeyError in Weave call: {e}")
-#         print(call.summary)
-#     except TypeError as e:
-#         print(f"TypeError in Weave call: {e}")
-#         print(call.summary)
-#     return None
+def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
+    """Get total cost and token usage for all Weave calls"""
+    print_step("Calculating total cost...")
+    
+    with create_progress() as progress:
+        # Fetch calls
+        task1 = progress.add_task("Fetching Weave calls...", total=1)
+        calls = fetch_weave_calls(client)
+        progress.update(task1, completed=1)
+        
+        try:
+            # Process calls and calculate costs
+            total_cost, token_usage = process_usage_data(calls, progress)
+            console.print(f"[green]Total cost: ${total_cost:.6f}[/]")
+            return total_cost, token_usage
+            
+        except KeyError as e:
+            print_warning(f"Error calculating costs: {str(e)}")
+            return None, {
+                model_name: {"prompt_tokens": None, "completion_tokens": None}
+                for model_name in set(model_name for call in calls for model_name in call.get('summary', {}).get('usage', {}))
+            }
 
-# def get_total_cost(client):
-#     print("Getting total cost...")
-#     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-#         calls = list(executor.map(process_call_for_cost, client.calls()))
-
-#     calls = [call for call in calls if call is not None]
-
-#     total_cost = sum(
-#         MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
-#         MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"]
-#         for call in calls
-#         for model_name in call
-#     )
-#     print(f"Total cost: {round(total_cost,6)}")
-
-#     return total_cost
-
-def assert_task_id_logging(client, weave_task_id):
-    for call in tqdm(list(client.calls())):
-        if str(call.attributes['weave_task_id']) == str(weave_task_id):
-            return True
-    raise AssertionError("Task ID not logged or incorrect ID for test run. Please use weave.attributes to log the weave_task_id for each API call.")
-
-def get_weave_calls(client):
-    print("Getting Weave traces...")
-    # URL and headers
-    url = 'https://trace.wandb.ai/calls/stream_query'
-    headers = {
-        'Content-Type': 'application/json'
-    }
-
-    # Data payload
-    payload = {
-        "project_id": client._project_id(),
-    }
-
-    # Make the request with basic authentication
-    response = requests.post(url, headers=headers, json=payload, auth=('api', os.getenv('WANDB_API_KEY')))
-    calls = [json.loads(line) for line in response.text.strip().splitlines()]
-
-    processed_calls = []
-    for call in tqdm(calls):
-        if call['output']:
-            if type(call['output']) is str:
-                ChatCompletion = weave.ref(call['output']).get()
-                try:
-                    choices = [choice.message.content for choice in ChatCompletion.choices]
-                    created = ChatCompletion.created
-                except AttributeError as e:
-                    choices = [content.text for content in ChatCompletion.content]
-                    created = call['started_at']
-            elif 'choices' in call['output']:
-                choices = call['output']['choices']
-                created = call['output']['created']
-            elif call['output']['content']: # tooluse
+def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
+    """Process a single Weave call output"""
+    if call['output']:
+        if isinstance(call['output'], str):
+            ChatCompletion = weave.ref(call['output']).get()
+            try:
+                choices = [choice.message.content for choice in ChatCompletion.choices]
+                created = ChatCompletion.created
+            except AttributeError:
+                choices = [content.text for content in ChatCompletion.content]
+                created = call['started_at']
+        elif 'choices' in call['output']:
+            choices = call['output']['choices']
+            created = call['output']['created']
+        elif call['output']['content']: # tooluse
                 choices = call['output']['content']
                 created = None
+        
+        return {
+            'weave_task_id': call['attributes']['weave_task_id'],
+            'trace_id': call['trace_id'],
+            'project_id': call['project_id'],
+            'created_timestamp': created,
+            'inputs': call['inputs'],
+            'id': call['id'],
+            'outputs': choices,
+            'exception': call['exception'],
+            'summary': call['summary'],
+            'display_name': call['display_name'],
+            'attributes': call['attributes'],
+        }
+    return {}
 
-            output = {
-                'weave_task_id': call['attributes']['weave_task_id'],
-                'trace_id': call['trace_id'],
-                'project_id': call['project_id'],
-                'created_timestamp': created,
-                'inputs': call['inputs'],
-                'id': call['id'],
-                'outputs': choices,
-                'exception':  call['exception'],
-                'summary': call['summary'],
-                'display_name': call['display_name'],
-                'attributes': call['attributes'],
-            }
-            processed_calls.append(output)
-    print(f"Total Weave traces: {len(processed_calls)}")
+def get_weave_calls(client) -> List[Dict[str, Any]]:
+    """Get processed Weave calls with progress tracking"""
+    print_step("Retrieving Weave traces...")
+    
+    with create_progress() as progress:
+        # Fetch calls
+        task1 = progress.add_task("Fetching Weave calls...", total=1)
+        calls = fetch_weave_calls(client)
+        progress.update(task1, completed=1)
+        
+        # Process calls
+        processed_calls = []
+        task2 = progress.add_task("Processing calls... (this can take a while)", total=len(calls))
+        
+        for call in calls:
+            processed_call = process_weave_output(call)
+            if processed_call:
+                processed_calls.append(processed_call)
+            progress.update(task2, advance=1)
+    
+    console.print(f"[green]Total Weave traces: {len(processed_calls)}[/]")
     return processed_calls
 
-
-# def process_call_for_weave(call):
-#     ChatCompletion = weave.ref(call.output).get()
-#     choices = [choice.message.content for choice in ChatCompletion.choices]
-#     output = {
-#             'weave_task_id': call.attributes['weave_task_id'],
-#             'trace_id': call.trace_id,
-#             'project_id': call.project_id,
-#             'created_timestamp': ChatCompletion.created,
-#             'inputs': dict(call.inputs),
-#             'id': call.id,
-#             'outputs': {'choices' : choices},
-#             'exception': call.exception,
-#             'summary': call.summary,
-#             'display_name': call.display_name,
-#             'attributes': dict(call.attributes),
-#             "_children": call._children,
-#             '_feedback': call._feedback,
-#         }
-#     return output
-
-# def get_weave_calls(client):
-#     print("Getting Weave traces...")
-#     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-#         processed_calls = list(executor.map(process_call_for_weave, client.calls()))
-#     print(f"Total Weave traces: {len(processed_calls)}")
-
-#     return processed_calls
+def assert_task_id_logging(client, weave_task_id: str) -> bool:
+    """Assert that task ID is properly logged in Weave calls"""
+    with create_progress() as progress:
+        task = progress.add_task("Checking task ID logging...", total=1)
+        calls = fetch_weave_calls(client)
+        
+        for call in calls:
+            if str(call['attributes'].get('weave_task_id')) == str(weave_task_id):
+                progress.update(task, completed=1)
+                return True
+                
+        progress.update(task, completed=1)
+        raise AssertionError(
+            "Task ID not logged or incorrect ID for test run. "
+            "Please use weave.attributes to log the weave_task_id for each API call."
+        )

@@ -1,5 +1,3 @@
-import importlib
-import asyncio
 import os
 import json
 import weave
@@ -8,6 +6,11 @@ from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
 from .utils.vm_runner import VMRunner
 from .utils.local_runner import LocalRunner
+from .utils.logging_utils import print_step, print_success, print_error, create_progress, console, log_warning
+import sys
+from rich.table import Table
+from rich.box import ROUNDED
+from .utils.logging_utils import terminal_print
 
 class AgentRunner:
     """Handles running agents either locally or on VMs"""
@@ -24,19 +27,29 @@ class AgentRunner:
                  conda_env: Optional[str] = None,
                  continue_run: bool = False):
         
+        # Validate agent_function format
+        if not isinstance(agent_function, str) or '.' not in agent_function:
+            raise ValueError("agent_function must be in format 'module.function' (e.g., 'my_agent.run_agent')")
+        
+        module_name, func_name = agent_function.rsplit('.', 1)
+        if not module_name or not func_name:
+            raise ValueError("Invalid agent_function format. Both module and function names must be non-empty")
+        
+        # Check for requirements.txt
+        requirements_path = os.path.join(agent_dir, 'requirements.txt')
+        if not os.path.exists(requirements_path):
+            raise ValueError(f"No requirements.txt found in agent directory: {agent_dir}")
+        
         # Initialize benchmark first
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
-        
-        print(f"Benchmark VM only: {self.benchmark.vm_only}")
-        
+                
         # Check if benchmark requires VM
         if self.benchmark.vm_only and not use_vm:
             raise ValueError(f"Benchmark {benchmark_name} requires VM execution. Please use --vm flag.")
         
         
-        print(f"Benchmark setup script: {self.benchmark.setup_script}")
         # Set run ID
         self.run_id = run_id or f"{benchmark_name}_{int(time.time())}"
         
@@ -98,9 +111,6 @@ class AgentRunner:
                 if task_id not in completed_tasks
             }
             
-            print(f"Found {len(completed_tasks)} completed tasks from previous run")
-            print(f"Remaining tasks: {len(remaining_tasks)}")
-            
             return remaining_tasks
             
         except Exception as e:
@@ -111,6 +121,7 @@ class AgentRunner:
         """Run the full agent evaluation pipeline"""
         
         # Initialize logging for main run
+        print_step("Initializing logging with W&B Weave...")
         weave_client = weave.init(self.run_id)
         
         # Get dataset and filter for remaining tasks if continuing
@@ -118,7 +129,7 @@ class AgentRunner:
         dataset = self.get_remaining_tasks(dataset)
         
         if not dataset:
-            print("No tasks to run")
+            print_step("No remaining tasks to run")
             # Load and return previous results
             results_path = os.path.join(self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_UPLOAD.json")
             if os.path.exists(results_path):
@@ -128,15 +139,18 @@ class AgentRunner:
             return {}
         
         # Run agent on all tasks
-        print("Running main evaluation...")
-        agent_output = await self.runner.run_agent(
-            dataset=dataset,
-            agent_function=self.agent_function,
-            agent_dir=self.agent_dir,
-            agent_args=self.agent_args,
-            run_id=self.run_id,
-            benchmark=self.benchmark
-        )
+        with create_progress() as progress:
+            task = progress.add_task("Running evaluation... (check logs in results directory for more details)", total=len(dataset))
+            agent_output = await self.runner.run_agent(
+                dataset=dataset,
+                agent_function=self.agent_function,
+                agent_dir=self.agent_dir,
+                agent_args=self.agent_args,
+                run_id=self.run_id,
+                benchmark=self.benchmark,
+                task=task,
+                progress=progress   
+            )
         
         # If continuing run, merge with previous results
         if self.continue_run:
@@ -146,13 +160,31 @@ class AgentRunner:
                     previous_output = json.load(f)
                 agent_output.update(previous_output)
         
-        # Evaluate outputs
-        print("Evaluating results...")
+        print_step("Evaluating results...")
+        # Create a temporary dataset with agent_output to check remaining tasks
+        remaining = self.get_remaining_tasks(dataset)
+        if len(remaining) > 0:
+            # Create a more informative error message
+            print_error(f"Evaluation cannot proceed - {len(remaining)} tasks are incomplete")
+            
+            # Create and display table of remaining tasks
+            table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
+            table.add_column("Task ID", style="cyan")
+            table.add_column("Task Type", style="yellow")
+            
+            for task_id, task_data in remaining.items():
+                task_type = task_data.get('type', 'Unknown')
+                table.add_row(task_id, task_type)
+            
+            with terminal_print():
+                console.print(table)
+            
+            print_step("Use --continue-run flag to complete the remaining tasks. Exiting...")
+            sys.exit(1)
         eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
         
-        # Process and return results
-        print("Processing results...")
-        return self.benchmark.process_results(
+        print_step("Processing results...")
+        results = self.benchmark.process_results(
             agent_name=agent_name,
             run_id=self.run_id,
             eval_results=eval_results,
@@ -160,3 +192,5 @@ class AgentRunner:
             upload=upload
         )
         
+        print_success("Evaluation completed")
+        return results

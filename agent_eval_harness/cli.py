@@ -2,12 +2,29 @@ import os
 import click
 import yaml
 import asyncio
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+import time
 
 from .agent_runner import AgentRunner
 from .inspect.inspect import is_inspect_benchmark
 from .inspect_runner import inspect_evaluate
 from dotenv import load_dotenv
+from .utils.logging_utils import (
+    setup_logging, 
+    print_header, 
+    print_step, 
+    print_success, 
+    print_error,
+    print_results_table,
+    print_run_summary,
+    print_warning,
+    terminal_print,
+    console,
+    print_run_config
+)
+from rich.table import Table
+from rich import print
+from rich.box import ROUNDED
 
 load_dotenv()
 
@@ -67,25 +84,47 @@ def main(
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
-
-    # Validate that run_id is provided when continuing a run
-    if continue_run and not run_id:
-        raise click.UsageError("--run_id must be provided when using --continue_run")
-
-    # Validate required parameters
-    if not agent_function:
-        raise click.UsageError("--agent_function is required")
-    if not agent_dir:
-        raise click.UsageError("--agent_dir is required")
-
+    
+    # Generate default run_id if none provided
+    if not run_id:
+        # Take last part after final "/" if present (inspect_evals), otherwise use full benchmark name
+        benchmark_name = benchmark.split("/")[-1]
+        run_id = f"{benchmark_name}_{int(time.time())}"
+    
+    # Setup logging first, before any other operations
+    log_dir = os.path.join("results", benchmark, run_id)
+    os.makedirs(log_dir, exist_ok=True)
+    setup_logging(log_dir, run_id)
+    
+    print_header("HAL Harness")
+    
     # Parse agent and benchmark args
+    print_step("Parsing configuration...")
     agent_args = parse_cli_args(a)
     benchmark_args = parse_cli_args(b)
-
+    
+    # Print summary with run_id, benchmark, and the run config to terminal 
+    print_run_config(
+        run_id=run_id,
+        benchmark=benchmark,
+        agent_name=agent_name,
+        agent_function=agent_function,
+        agent_dir=agent_dir,
+        model=model,
+        agent_args=agent_args,
+        benchmark_args=benchmark_args,
+        upload=upload,
+        max_concurrent=max_concurrent,
+        conda_env_name=conda_env_name,
+        vm=vm,
+        continue_run=continue_run
+    )
+    
     # Add model to agent args
     agent_args['model_name'] = model
-
+    
     if is_inspect_benchmark(benchmark):
+        print_step("Running inspect evaluation...")
         # Run the inspect evaluation
         inspect_evaluate(
             benchmark=benchmark,
@@ -95,7 +134,7 @@ def main(
             agent_dir=agent_dir,
             agent_args=agent_args,
             model=model,
-            run_id=run_id,
+            run_id=run_id,  # Now guaranteed to have a value
             upload=upload or False,
             max_concurrent=max_concurrent,
             conda_env_name=conda_env_name,
@@ -104,31 +143,39 @@ def main(
         )
     else:
         # Initialize agent runner
-        runner = AgentRunner(
-            agent_function=agent_function,
-            agent_dir=agent_dir,
-            agent_args=agent_args,
-            benchmark_name=benchmark,
-            config=config,
-            run_id=run_id,
-            use_vm=vm,
-            max_concurrent=max_concurrent,
-            conda_env=conda_env_name,
-            continue_run=continue_run
-        )
-
-        # Run evaluation
+        print_step("Initializing agent runner...")
         try:
+            runner = AgentRunner(
+                agent_function=agent_function,
+                agent_dir=agent_dir,
+                agent_args=agent_args,
+                benchmark_name=benchmark,
+                config=config,
+                run_id=run_id,  # Now guaranteed to have a value
+                use_vm=vm,
+                max_concurrent=max_concurrent,
+                conda_env=conda_env_name,
+                continue_run=continue_run
+            )
+
+            # Run evaluation
+            print_step("Running evaluation...")
             results = asyncio.run(runner.run(
                 agent_name=agent_name,
                 upload=upload or False
             ))
-            print("\n=====Results Summary=====")
-            print(f"Accuracy: {results.get('accuracy', 'N/A')}")
-            print(f"Total Cost: {results.get('total_cost', 'N/A')}")
-            print("=====")
+            
+            print_success("Evaluation completed successfully")
+            print_results_table(results)
+            
+            # Only print run summary if we have a valid benchmark and run_id
+            if runner.benchmark and runner.benchmark.get_run_dir(run_id):
+                print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
+            else:
+                print_warning("Could not generate run summary - missing benchmark or run directory")
+            
         except Exception as e:
-            print(f"Error running evaluation: {e}")
+            print_error(f"Error running evaluation: {str(e)}")
             raise
 
 

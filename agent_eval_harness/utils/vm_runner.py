@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional, List
 from .azure_utils import VirtualMachineManager
 from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
+from rich.progress import Progress, TaskID
 
 class VMRunner:
     """Handles running agents on Azure VMs"""
@@ -56,8 +57,10 @@ class VMRunner:
                        agent_dir: str,
                        agent_args: Dict[str, Any],
                        run_id: str,
-                       timeout: int = 7200,
-                       benchmark: Optional[BaseBenchmark] = None) -> Dict[str, Any]:
+                       benchmark: Optional[BaseBenchmark] = None,
+                       progress: Optional[Progress] = None,
+                       task: Optional[TaskID] = None,
+                       timeout: int = 7200) -> Dict[str, Any]:
         """Run agent on all tasks using Azure VMs"""
         self.benchmark = benchmark
         results = {}
@@ -90,7 +93,6 @@ class VMRunner:
                     with open(args_file, 'w') as f:
                         json.dump(agent_args, f)
 
-                    print(os.path.exists(self.benchmark.setup_script))
                     # Copy setup script if it exists
                     if self.benchmark and self.benchmark.setup_script:
                         setup_script_src = os.path.join(self.benchmark.setup_script)
@@ -186,6 +188,8 @@ class VMRunner:
                 try:
                     print(f"Deleting VM {vm_name}")
                     self.vm_manager.delete_vm(vm_name)
+                    if progress and task is not None:
+                        progress.update(task, advance=1)
                 except Exception as e:
                     print(f"Error deleting VM {vm_name}: {e}")
 
@@ -214,7 +218,8 @@ class VMRunner:
             raw_submissions_path = os.path.join(self.log_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
             os.makedirs(self.log_dir, exist_ok=True)
             
-            with open(raw_submissions_path, "w") as f:
+            # append to submissions file
+            with open(raw_submissions_path, "a") as f:
                 for task_id, result in merged_results.items():
                     json.dump({task_id: result}, f)
                     f.write('\n')
