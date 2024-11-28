@@ -464,7 +464,7 @@ class VirtualMachineManager:
                 # Create log file 
                 with open(f"{log_dir}/setup_vm_log.log", 'w') as f:
                     f.write(stdout.read().decode())
-                    
+                    f.write(stderr.read().decode())
                     
                 # Run setup script if it exists
                 if benchmark and benchmark.setup_script:
@@ -472,9 +472,15 @@ class VirtualMachineManager:
                     if os.path.exists(setup_script):
                         print(f"Running setup script on VM {vm_name}")
                         try:
-                            _, stdout, stderr = ssh_client.exec_command(f"cd /home/agent && conda activate agent_env && bash {benchmark.setup_script}")
+                            cmd = f"""
+                            source /home/{username}/miniconda3/etc/profile.d/conda.sh && \
+                            cd /home/{username} && \
+                            bash setup_script.sh
+                            """
+                            _, stdout, stderr = ssh_client.exec_command(cmd)
                             with open(f"{log_dir}/setup_script_log.log", 'w') as f:
                                 f.write(stdout.read().decode())
+                                f.write(stderr.read().decode())
                         except Exception as e:
                             print(f"Error running setup script on VM {vm_name}: {e}")
                             
