@@ -31,6 +31,13 @@ MODEL_PRICES_DICT = {
                 "claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "us.anthropic.claude-3-5-sonnet-20240620-v1:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "openai/gpt-4o-2024-11-20": {"prompt_tokens": 5/1e6, "completion_tokens": 15/1e6},
+                "openai/gpt-4o-2024-08-06": {"prompt_tokens": 5/1e6, "completion_tokens": 15/1e6},
+                "openai/gpt-4o-mini-2024-07-18": {"prompt_tokens": 0.15/1e6, "completion_tokens": 1/1e6},
+                "openai/o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},
+                "openai/o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
+                "anthropic/claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
@@ -119,6 +126,11 @@ def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
                 model_name: {"prompt_tokens": None, "completion_tokens": None}
                 for model_name in set(model_name for call in calls for model_name in call.get('summary', {}).get('usage', {}))
             }
+            
+def comput_cost_from_inspect_usage(usage: Dict[str, Dict[str, int]]) -> float:
+    """Compute cost from token usage"""
+    return sum(MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name]["input_tokens"] +
+               MODEL_PRICES_DICT[model_name]["completion_tokens"] * usage[model_name]["output_tokens"] for model_name in usage)
 
 def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     """Process a single Weave call output"""

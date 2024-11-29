@@ -4,11 +4,13 @@ import yaml
 import asyncio
 from typing import Any, Dict, Optional
 import time
-
+import importlib
+from inspect import get_annotations
 from .agent_runner import AgentRunner
 from .inspect.inspect import is_inspect_benchmark
 from .inspect_runner import inspect_evaluate
 from dotenv import load_dotenv
+import sys
 from .utils.logging_utils import (
     setup_logging, 
     print_header, 
@@ -57,7 +59,6 @@ load_dotenv()
 @click.option("--upload", is_flag=True, help="Upload results to HuggingFace")
 @click.option("--max_concurrent", default=10, help="Maximum agents to run for this benchmark")
 @click.option("--conda_env_name", help="Conda environment to run the custom external agent in if run locally")
-@click.option("--model", default="gpt-4o-mini", help="Backend model to use")
 @click.option("--run_id", help="Run ID to use for logging")
 @click.option(
     "--config",
@@ -66,13 +67,18 @@ load_dotenv()
 )
 @click.option("--vm", is_flag=True, help="Run the agent on an azure VM")
 @click.option("--continue_run", is_flag=True, help="Continue from a previous run, only running failed or incomplete tasks")
+@click.option(
+    "-I",
+    multiple=True,
+    type=str,
+    help="One or more args to pass to inspect eval (e.g. -I token_limit=1000)",
+)
 def main(
     config,
     benchmark,
     agent_name,
     agent_function,
     agent_dir,
-    model,
     run_id,
     upload,
     max_concurrent,
@@ -80,6 +86,7 @@ def main(
     continue_run,
     a,
     b,
+    i,
     vm,
     **kwargs,
 ):
@@ -102,7 +109,18 @@ def main(
     print_step("Parsing configuration...")
     agent_args = parse_cli_args(a)
     benchmark_args = parse_cli_args(b)
+    inspect_eval_args = parse_cli_args(i)
     
+    # Validate model pricing if model_name is provided in agent_args
+    if "model_name" in agent_args:
+        validate_model_pricing(agent_args["model_name"])
+    
+    # Check if continuing runs is attempted with inspect solver
+    if continue_run and is_inspect_benchmark(benchmark):
+        if agent_function and is_inspect_solver(agent_function, agent_dir):
+            print_error("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag.")
+            sys.exit(1)
+            
     # Print summary with run_id, benchmark, and the run config to terminal 
     print_run_config(
         run_id=run_id,
@@ -110,9 +128,9 @@ def main(
         agent_name=agent_name,
         agent_function=agent_function,
         agent_dir=agent_dir,
-        model=model,
         agent_args=agent_args,
         benchmark_args=benchmark_args,
+        inspect_eval_args=inspect_eval_args,
         upload=upload,
         max_concurrent=max_concurrent,
         conda_env_name=conda_env_name,
@@ -120,27 +138,54 @@ def main(
         continue_run=continue_run
     )
     
-    # Add model to agent args
-    agent_args['model_name'] = model
-    
     if is_inspect_benchmark(benchmark):
-        print_step("Running inspect evaluation...")
-        # Run the inspect evaluation
-        inspect_evaluate(
-            benchmark=benchmark,
-            benchmark_args=benchmark_args,
-            agent_name=agent_name,
-            agent_function=agent_function,
-            agent_dir=agent_dir,
-            agent_args=agent_args,
-            model=model,
-            run_id=run_id,  # Now guaranteed to have a value
-            upload=upload or False,
-            max_concurrent=max_concurrent,
-            conda_env_name=conda_env_name,
-            vm=vm,
-            continue_run=continue_run
-        )
+        if agent_function and is_inspect_solver(agent_function, agent_dir):
+            # Use original inspect_evaluate for solver agents
+            print_step("Running evaluation for inspect solver and harness (see logs for more details and monitoring)...")
+            inspect_evaluate(
+                benchmark=benchmark,
+                benchmark_args=benchmark_args,
+                agent_name=agent_name,
+                agent_function=agent_function,
+                agent_dir=agent_dir,
+                agent_args=agent_args,
+                model=agent_args['model_name'],
+                run_id=run_id,
+                upload=upload or False,
+                max_concurrent=max_concurrent,
+                conda_env_name=conda_env_name,
+                vm=vm,
+                continue_run=continue_run,
+                inspect_eval_args=inspect_eval_args
+            )
+        else:
+            # Use AgentRunner with InspectBenchmark for non-solver agents
+            print_step("Running inspect evaluation for custom agent and inspect harness...")
+            runner = AgentRunner(
+                agent_function=agent_function,
+                agent_dir=agent_dir,
+                agent_args=agent_args,
+                benchmark_name=benchmark,
+                config=config,
+                run_id=run_id,
+                use_vm=vm,
+                max_concurrent=max_concurrent,
+                conda_env=conda_env_name,
+                continue_run=continue_run
+            )
+            results = asyncio.run(runner.run(
+                agent_name=agent_name,
+                upload=upload or False
+            ))
+            
+            print_success("Evaluation completed successfully")
+            print_results_table(results)
+            
+            # Only print run summary if we have a valid benchmark and run_id
+            if runner.benchmark and runner.benchmark.get_run_dir(run_id):
+                print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
+            else:
+                print_warning("Could not generate run summary - missing benchmark or run directory")
     else:
         # Initialize agent runner
         print_step("Initializing agent runner...")
@@ -159,7 +204,7 @@ def main(
             )
 
             # Run evaluation
-            print_step("Running evaluation...")
+            print_step("Running evaluation with custom agent and HAL harness...")
             results = asyncio.run(runner.run(
                 agent_name=agent_name,
                 upload=upload or False
@@ -184,15 +229,67 @@ def parse_cli_args(args: tuple[str] | list[str] | None) -> Dict[str, Any]:
     params: Dict[str, Any] = {}
     if args:
         for arg in list(args):
-            parts = arg.split("=")
+            parts = arg.split("=", 1)  # Split on first = only
             if len(parts) > 1:
                 key = parts[0].replace("-", "_")
-                value = yaml.safe_load("=".join(parts[1:]))
-                if isinstance(value, str):
-                    value = value.split(",")
-                    value = value if len(value) > 1 else value[0]
-                params[key] = value
+                value = parts[1]
+                
+                try:
+                    # First try to parse as YAML
+                    parsed_value = yaml.safe_load(value)
+                    
+                    # Handle special cases for string values that yaml doesn't parse
+                    if isinstance(parsed_value, str):
+                        # Handle comma-separated lists
+                        if "," in value:
+                            parsed_value = value.split(",")
+                        # Handle boolean values
+                        elif value.lower() in ['true', 'false']:
+                            parsed_value = value.lower() == 'true'
+                        # Handle numeric values
+                        else:
+                            try:
+                                parsed_value = int(value)
+                            except ValueError:
+                                try:
+                                    parsed_value = float(value)
+                                except ValueError:
+                                    parsed_value = value
+                    
+                    params[key] = parsed_value
+                except yaml.YAMLError:
+                    # If YAML parsing fails, use the raw string
+                    params[key] = value
     return params
+
+
+def is_inspect_solver(agent_function: str, agent_dir: str) -> bool:
+    """Check if an agent function returns a Solver"""
+    try:
+        sys.path.append(agent_dir)
+        # parse the agent name
+        module_name, function_name = agent_function.rsplit(".", 1)
+
+        # attempt to load it from the module
+        module = importlib.import_module(module_name)
+        loaded_agent = getattr(module, function_name)
+        return_type = getattr(get_annotations(loaded_agent)["return"], "__name__", None)
+        
+        # remove the agent dir from the path
+        sys.path.remove(agent_dir)
+        return return_type == "Solver"
+    except Exception as e:
+        print_error(f"Error checking if agent function is a solver: {str(e)}")
+        return False
+
+
+def validate_model_pricing(model_name: str) -> None:
+    """Validate that model pricing information exists"""
+    from .utils.weave_utils import MODEL_PRICES_DICT
+    
+    if model_name not in MODEL_PRICES_DICT:
+        print_error(f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

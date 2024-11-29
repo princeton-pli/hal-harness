@@ -3,6 +3,7 @@ from typing import Dict, Any, Optional, TypeVar, Generic
 from pydantic import BaseModel, TypeAdapter
 import json
 import os
+from inspect_ai.log import EvalLog, write_eval_log
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
 
@@ -24,8 +25,8 @@ class BaseBenchmark(ABC):
 
     @abstractmethod
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-        """Evaluate the agent's output and return evaluation metrics"""
-        pass
+        """Evaluate agent outputs"""
+        raise NotImplementedError("Benchmark must implement evaluate_output")
         
     def get_dataset(self) -> Dict[str, Any]:
         """Get the benchmark dataset. Override if needed."""
@@ -40,6 +41,7 @@ class BaseBenchmark(ABC):
     def process_results(self, 
                        agent_name: str,
                        run_id: str, 
+                       agent_args: Dict[str, Any],
                        eval_results: Dict[str, Any],
                        weave_client,
                        upload: bool = False) -> Dict[str, Any]:
@@ -49,9 +51,16 @@ class BaseBenchmark(ABC):
         run_dir = self.get_run_dir(run_id)
         
         # Store raw results
-        results_path = os.path.join(run_dir, f"{run_id}.json")
-        with open(results_path, 'w') as f:
-            json.dump(eval_results, f)
+        if isinstance(eval_results, EvalLog):
+            # read json file that does not contain "SUBMISSION" and is most recently created (workaround because we cant set the filename and not convert the eval_results to json serializable variable from inspect output)
+            json_files = [f for f in os.listdir(run_dir) if f.endswith('.json') and "SUBMISSION" not in f]
+            latest_file = max(json_files, key=lambda x: os.path.getctime(os.path.join(run_dir, x)))
+            with open(os.path.join(run_dir, latest_file), 'r') as f:
+                inspect_eval_results = json.load(f)
+        else:
+            results_path = os.path.join(run_dir, f"{run_id}.json")
+            with open(results_path, 'w') as f:
+                json.dump(eval_results, f)
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
@@ -63,10 +72,11 @@ class BaseBenchmark(ABC):
                 'agent_name': agent_name,
                 'benchmark_name': self.benchmark_name,
                 'date': datetime.now().strftime("%Y-%m-%d"),
-                'run_id': run_id
+                'run_id': run_id,
+                'agent_args': agent_args
             },
             "results": {**self.get_metrics(eval_results), 'total_cost': total_cost},
-            "raw_eval_results": eval_results,
+            "raw_eval_results": inspect_eval_results if isinstance(eval_results, EvalLog) else eval_results,
             "raw_logging_results": raw_logging,
             "total_usage": total_usage,
             'total_cost': total_cost

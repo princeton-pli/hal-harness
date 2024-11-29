@@ -1,13 +1,14 @@
 from datetime import datetime
 from inspect import get_annotations
-from typing import Any, Callable
+from typing import Any, Callable, Union
 
 from inspect_ai import TaskInfo, list_tasks, Task
 from inspect_ai.log import EvalLog
 from inspect_ai.model import get_model
 from inspect_ai.solver import Solver
 from inspect_ai._eval.loader import load_tasks
-
+from agent_eval_harness.benchmarks.inspect_benchmark import InspectBenchmark
+from agent_eval_harness.utils.logging_utils import log_error, print_warning
 
 def is_inspect_benchmark(benchmark: str) -> bool:
     """
@@ -120,12 +121,12 @@ def results_for_eval(eval_log: EvalLog, total_cost: float | None) -> dict[str, A
                 "No results present in log even though status is 'success'"
             )
 
+        succ_tasks, failed_tasks = InspectBenchmark.get_succ_and_fail_tasks(eval_log)
         eval_results = {
             "status": "success",
             "total_cost": total_cost,
-            "successful_tasks": eval_log.results.completed_samples,
-            "failed_tasks": eval_log.results.total_samples
-            - eval_log.results.completed_samples,
+            "successful_tasks": succ_tasks,
+            "failed_tasks": failed_tasks,
         }
 
         # Pick out the first accuracy or mean metric to represent 'accuracy'
@@ -155,6 +156,10 @@ def results_for_eval(eval_log: EvalLog, total_cost: float | None) -> dict[str, A
         }
     elif eval_log.status == "canceled":
         eval_results = {"status": "canceled"}
+        
+        
+    eval_results = InspectBenchmark.add_additional_metrics(inspect_eval_log=eval_log, eval_results=eval_results)
+        
     return eval_results
 
 
