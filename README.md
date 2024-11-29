@@ -1,20 +1,58 @@
 # HAL Harness
 
-This repository provides a standardized evaluation harness for evaluating different AI agents across various benchmarks. It supports several benchmarks and allows users to easily add new agents and benchmarks.  The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, and the official [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for storing and sharing evaluation results.
+[![HAL Leaderboard](https://img.shields.io/badge/🤗_HAL_Leaderboard-View_Results-blue)](https://agent-evals-leaderboard.hf.space)
+[![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
+[![Inspect AI](https://img.shields.io/badge/Inspect_AI-green)](https://github.com/UKGovernmentBEIS/inspect_ai)
+
+This repository provides a standardized evaluation harness for evaluating different AI agents across various benchmarks. It supports several benchmarks and allows users to easily add new agents and benchmarks. Key highlight is the unified agent-eval CLI across all benchmarks and agent types. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, and the official [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for sharing evaluation results.
+
+## Features
+
+* **Unified agent-eval CLI across all benchmarks and agent types**
+  - Already supportsSWE-bench Verified, USACO, AppWorld, Inspect AI benchmarks (Gaia, Cybench)
+  - Easy integration of new benchmarks
+  - See [Running Evaluations](#running-evaluations) for details on CLI usage
+
+* **Flexible Execution Environments**
+  - Local execution with conda environment isolation
+  - Azure VM support for isolated and resource-intensive tasks
+  - Docker container support for AppWorld benchmark
+  - Parallel task execution with configurable concurrency
+
+* **Comprehensive Logging and Monitoring**
+  - Integration with [Weave](https://wandb.ai/site/weave/) for detailed cost tracking and usage metrics
+  - Automatic logging of agent traces and execution details
+
+* **Fully flexible agent support**
+  - Support for both custom agents and Inspect AI solvers
+  - Flexible agent configuration through command-line arguments
+  - Environment isolation for each agent run
+  - Automatic dependency management
+
+* **HAL Leaderboard Integration**
+  - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space)
+  - Detailed metrics and performance analysis
+
+* **Developer-Friendly Design**
+  - Clear command-line interface for all benchmark and agent types
+  - Modular architecture for easy extension
 
 ## Table of Contents
 
 1. [Setup](#setup)
 2. [Running Evaluations](#running-evaluations)
-3. [Adding New Agents](#adding-new-agents)
+3. [Supported Benchmarks](#supported-benchmarks)
     - [SWE-bench Verified](#swe-bench-benchmark)
     - [USACO](#usaco-benchmark)
+    - [MLAgentBench](#mlagentbench-benchmark)
+    - [AppWorld](#appworld-benchmark)
     - [Inspect AI Benchmarks](#inspect-ai-benchmarks)
-        - [Custom Inspect Agents](#custom-inspect-agents)
-        - [Custom External Agents](#custom-external-agents)
-4. [Uploading Results](#uploading-results)
-5. [Repository Structure](#repository-structure)
-
+4. [Adding New Agents](#adding-new-agents)
+5. [Running Environments](#running-environments)
+    - [Local Execution](#local-execution)
+    - [VM Execution](#vm-execution)
+6. [Uploading Results](#uploading-results)
+7. [Repository Structure](#repository-structure)
 
 ## Setup
 
@@ -30,112 +68,171 @@ This repository provides a standardized evaluation harness for evaluating differ
    conda activate hal
    ```
 
-3. **Install Poetry (if you don't have it):**
-   ```bash
-   pip install poetry
-   ```
-
 4. **Install the package:**
    ```bash
    pip install -e .
    ```
 
+   **Note:** Some benchmarks require additional dependencies which can be installed using `pip install agent_eval_harness[benchmark_name]`. See [Supported Benchmarks](#supported-benchmarks) for details.
+
 5. **Create a `.env` file:**
    ```bash
    cp .env.template .env
    ```
-   Add your API keys (HuggingFace, Weave, OpenAI/other LLMs as needed) to the `.env` file.  See `.env.template` for details.
+   Add your API keys (HuggingFace, Weave, OpenAI/other LLMs as needed) to the `.env` file. See `.env.template` for details.
 
+6. **Optional: Azure VM Setup**
+   If you plan to use Azure VMs for evaluation, add the following to your `.env`:
+   ```
+   AZURE_SUBSCRIPTION_ID=your_subscription_id
+   AZURE_RESOURCE_GROUP_NAME=your_resource_group
+   AZURE_LOCATION=your_location
+   SSH_PUBLIC_KEY_PATH=/path/to/your/ssh/key.pub
+   SSH_PRIVATE_KEY_PATH=/path/to/your/ssh/key
+   NETWORK_SECURITY_GROUP_NAME=your_nsg_name
+   ```
 
 ## Running Evaluations
 
-The harness uses a command-line interface (CLI) to run evaluations.  The basic command structure is:
+The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
 
 ```bash
 agent-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_function <agent_function> --agent_name <agent_name> [OPTIONS]
 ```
 
-*   **`--benchmark <benchmark_name>`**: The name of the benchmark to run (e.g., `swebench_verified`, `usaco`, `mlagentbench`, `inspect_evals/gaia`).  For Inspect AI benchmarks, provide the path to the task.  
-*   **`--agent_dir <agent_directory>`**: Path to the directory containing your agent's code.
-*   **`--agent_function <agent_function>`**:  The name of the agent's main function, including the module path if applicable (e.g., `agent.run`, `my_agent_module.main`).
-*   **`--agent_name <agent_name>`**: A descriptive name for your agent.  This will be used for logging and on the leaderboard.
-*   **`-A <key>=<value>`**: Agent arguments. These are passed as keyword arguments to your agent function.
-*   **`-B <key>=<value>`**: Benchmark arguments.  These are passed to the benchmark itself.  For Inspect AI tasks, these are passed as `task_args`.
-*   **`--upload`**: If present, uploads results to the HuggingFace Hub.
-*   **`--model <model_name>`**:  Specifies the LLM model to use (e.g., `gpt-4o-mini`).  Defaults to `gpt-4o-mini`. For inspect runs, you will need to specify the model name in the inspect format (e.g. `openai/gpt-4`).
-*   **`--run_id <run_id>`**:  Provides a specific run ID. Only use this if you want to resume a run from an existing one.
-*   **`--max_concurrent <number>`**: Run multiple samples in parallel for Inspect AI and other benchmarks. Defaults to 10.
-*   **`--conda_env_name <conda_env>`**:  Specifies the name of the conda environment to run the agent in.
+### Core Options
 
+*   **`--benchmark <benchmark_name>`**: The name of the benchmark to run. Supported benchmarks:
+    - `swebench_verified` or `swebench_verified_mini`
+    - `usaco`
+    - `appworld`
+    - `inspect_evals/<task_name>` (e.g., `inspect_evals/gaia`)
+*   **`--agent_dir <agent_directory>`**: Path to the directory containing your agent's code
+*   **`--agent_function <agent_function>`**: The name of the agent's main function (e.g., `agent.run` if `agent.py` in agent directory contains `def run(): ...`)
+*   **`--agent_name <agent_name>`**: A descriptive name for your agent (used in logging/leaderboard) (e.g., `My Agent (gpt-4o)`)
 
-**Example:**
+### Additional Options
 
+*   **`-A <key>=<value>`**: Agent arguments passed to your agent function
+*   **`-B <key>=<value>`**: Benchmark arguments passed to the benchmark
+*   **`-I <key>=<value>`**: Inspect-specific arguments (for Inspect AI benchmarks)
+*   **`--upload`**: Upload results to HuggingFace Hub
+*   **`--max_concurrent <number>`**: Number of parallel tasks (default: 1)
+*   **`--conda_env_name <env_name>`**: Conda environment for agent execution
+*   **`--vm`**: Run evaluation on Azure VMs
+*   **`--run_id <run_id>`**: Specify a run ID (useful for continuing runs)
+*   **`--continue_run`**: Continue from a previous run (requires run_id)
+
+### Examples
+
+1. **Running SWE-bench locally:**
 ```bash
-agent-eval --benchmark swebench_verified_mini --agent_dir agents/swebench_example_agent/ --agent_function main.run --agent_name "My SWE-bench Agent (gpt-4o-2024-08-06)" -A model_name=gpt-4o-mini
+agent-eval --benchmark swebench_verified_mini \
+  --agent_dir agents/swebench_example_agent/ \
+  --agent_function main.run \
+  --agent_name "My Agent (gpt-4o-mini)" \
+  -A model_name=gpt-4o-mini \
+  --max_concurrent 5
 ```
 
-
-## Adding New Agents
-
-### SWE-bench Benchmark
-
-1.  **Create a directory** e.g. in the `agents/` directory for your agent.
-2.  **Implement the agent function**  (see example in `agents/swebench_example_agent/agent.py`).  The function should take a dictionary of tasks as input and return a dictionary of results.
-3.  Ensure your agent function is importable.
-
-### USACO Benchmark
-
-1.  **Create a directory** in the `agents/` directory.
-2.  **Implement the agent function** (see example in `agents/usaco_example_agent/agent.py`).  The function should take a dictionary of tasks and return a dictionary of results.
-3.  Ensure your agent function is importable.
-
-### Inspect AI Benchmarks
-
-The agent harness can run any Inspect AI task.  The simplest approach is to use a benchmark from the `inspect_evals` package.  Install `inspect_ai` and `inspect_evals` first:
-
+2. **Running USACO on Azure VM:**
 ```bash
-pip install inspect_ai
-pip install git+https://github.com/UKGovernmentBEIS/inspect_evals@max/fixing_more_swebench_bugs
+agent-eval --benchmark usaco \
+  --agent_dir agents/usaco_example_agent/ \
+  --agent_function main.run \
+  --agent_name "USACO Solver (gpt-4o)" \
+  --vm \
+  --max_concurrent 5 \
+  -A model_name=gpt-4o
 ```
 
-There are two types of agents you can run with any inspect task. Inspect solver agents and custom external agents that can follow any implementation. More details and examples can be found in `agent_eval_harness/inspect/README.md`.
-
-#### Custom Inspect Agents
-
-You can provide a custom solver (agent) for an Inspect AI task.  Your `agent_function` should point to a function decorated with `@solver` from `inspect_ai`.  Example:
-
+3. **Running Inspect AI benchmark:**
 ```bash
-agent-eval --agent_name MyInspectAgent --benchmark inspect_evals/gaia --model openai/gpt-4o --agent_dir agents/my_inspect_agent --agent_function my_solver.my_agent 
+agent-eval --benchmark inspect_evals/gaia \
+  --agent_dir agents/inspect/ \
+  --agent_function gaia.default_agent \
+  --agent_name "Gaia Agent (gpt-4o)" \
+  -A model_name=gpt-4o \
+  -I token_limit=4000 \
+  -I model_args="{'temperature': 0.4}"
 ```
 
-See `agents/inspect/solver_agent.py` for an example solver.
+## Supported Benchmarks
 
-#### Custom External Agents
+### [SWE-bench Verified (Mini)](https://github.com/princeton-nlp/SWE-bench)
+- Evaluates code generation and bug fixing capabilities
+- Full dataset (`swebench_verified`) or mini version (`swebench_verified_mini`)
+- Mini version is a subset of 50 randomly selected problems from the full dataset
+- Supports both local and VM execution
 
-You can use a completely external agent.  In this case, the Inspect AI task defines the dataset and scoring. The `agent_function` should take a dictionary of samples and return a dictionary of completions. Example:
+### [USACO](https://github.com/princeton-nlp/USACO)
+- Programming competition problems
+- Requires additional dependencies (`pip install agent_eval_harness[usaco]`)
+- Supports both local and VM execution
 
-```bash
-agent-eval --agent_name MyExternalAgent --benchmark inspect_evals/gaia --model openai/gpt-4o --agent_dir agents/my_external_agent --agent_function my_agent.run -A model_name=gpt-4o
-```
+### [AppWorld](https://appworld.dev/)
+- A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
+- **Requires VM execution** (`--vm` flag mandatory)
 
-See `agents/inspect/custom_agent.py` for an example.
+### [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) Benchmarks
+- Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
+- Two agent types supported:
+  1. Inspect Solver agents (using `@solver` decorator)
+  2. Custom external agents
+- Inspect solvers are run locally by default with orchestration being done by inspect_ai. Custom agents are run using the harness and can be run either locally or on Azure VMs via the `--vm` flag.
 
+#### [Gaia](https://arxiv.org/abs/2311.12983)
+- General AI assistants benchmark
+- More details on Inspect AI implementation [here](https://github.com/UKGovernmentBEIS/inspect_evals/tree/main/src/inspect_evals/gaia)
+
+#### [Cybench](https://arxiv.org/abs/2408.08926)
+- Cybersecurity agent task
+- Does not support arm64 machines
+- More details on Inspect AI implementation [here](https://github.com/UKGovernmentBEIS/inspect_evals/tree/main/src/inspect_evals/cybench)
+
+## Running Environment Options
+
+### Local Execution
+- Default execution mode
+- Uses conda environments and temporary directories for isolation 
+- Parallel execution via `--max_concurrent`
+- See above examples for usage
+
+### VM Execution
+- Uses Azure VMs for isolated execution
+- Required for some benchmarks (e.g., AppWorld)
+- Automatic VM provisioning and cleanup
+- See above examples for usage
 
 ## Uploading Results
 
-To upload results to HuggingFace, use the `--upload` flag when running an evaluation.  You can also upload previously generated results using the `agent-upload` command:
+Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in two ways:
 
+1. **During evaluation:**
+```bash
+agent-eval --benchmark <benchmark> ... --upload
+```
+
+2. **After evaluation:**
 ```bash
 agent-upload --benchmark <benchmark_name>
 ```
 
-This command searches for `_UPLOAD.json` files in the `results/<benchmark_name>` directory and uploads them to the HuggingFace Hub.
-
+The leaderboard provides a comprehensive view of agent performance across different benchmarks and allows for easy comparison between different approaches.
 
 ## Repository Structure
 
-*   `agent_eval_harness`:  Contains the core harness code.
-    *   `benchmarks`: Implementations of the different benchmarks.
-    *   `inspect`:  Code specific to running Inspect AI benchmarks.
-    *   `utils`: Utility functions for logging, configuration, etc.
-*   `agents`: Directory for user-defined agent implementations.
+*   `agent_eval_harness/`: Core harness code
+    *   `benchmarks/`: Benchmark implementations
+        - `swebench.py`: SWE-bench implementation
+        - `usaco.py`: USACO implementation
+        - `mlagentbench.py`: MLAgentBench implementation
+        - `appworld.py`: AppWorld implementation
+        - `inspect_benchmark.py`: Inspect AI benchmark support
+    *   `utils/`: Utility functions
+        - `local_runner.py`: Local execution support
+        - `vm_runner.py`: Azure VM execution support
+        - `weave_utils.py`: Weave logging utilities
+    *   `inspect/`: Inspect AI specific code
+*   `agents/`: Example agent implementations
+*   `results/`: Evaluation results and logs
