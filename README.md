@@ -81,7 +81,19 @@ This repository provides a standardized evaluation harness for evaluating differ
    ```
    Add your API keys (HuggingFace, Weave, OpenAI/other LLMs as needed) to the `.env` file. See `.env.template` for details.
 
-6. **Optional: Azure VM Setup**
+6. **Install Model Provider Dependencies:**
+   
+   For **Inspect AI benchmarks**, you'll need to install the appropriate Python SDK for your chosen model provider:
+
+   ```bash
+   # For OpenAI models (gpt-4, gpt-3.5-turbo, etc.)
+   pip install openai
+
+   # For Anthropic models (claude-3, etc.)
+   pip install anthropic
+   ```
+
+7. **Optional: Azure VM Setup**
    If you plan to use Azure VMs for evaluation, add the following to your `.env`:
    ```
    AZURE_SUBSCRIPTION_ID=your_subscription_id
