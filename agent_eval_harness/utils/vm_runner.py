@@ -93,6 +93,22 @@ class VMRunner:
                     with open(args_file, 'w') as f:
                         json.dump(agent_args, f)
 
+                    # Copy task-specific files if they exist in input_data
+                    if isinstance(input_data, dict) and 'files' in input_data:
+                        for dest_path, src_path in input_data['files'].items():
+                            # Remove 'root' prefix and leading slash if present
+                            dest_path = dest_path.replace('/root/', '').lstrip('/')
+                            
+                            # Create destination directory structure in temp_dir
+                            dest_full_path = os.path.join(temp_dir, dest_path)
+                            os.makedirs(os.path.dirname(dest_full_path), exist_ok=True)
+                            
+                            # Copy the file
+                            try:
+                                shutil.copy2(src_path, dest_full_path)
+                            except Exception as e:
+                                print(f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}")
+
                     # Copy setup script if it exists
                     if self.benchmark and self.benchmark.setup_script:
                         setup_script_src = os.path.join(self.benchmark.setup_script)

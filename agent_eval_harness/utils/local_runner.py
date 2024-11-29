@@ -130,6 +130,22 @@ class LocalRunner:
             with open(temp_dir / "agent_args.json", "w") as f:
                 json.dump(agent_args, f)
 
+            # Copy task-specific files if they exist in input_data
+            if isinstance(input_data, dict) and 'files' in input_data:
+                for dest_path, src_path in input_data['files'].items():
+                    # Remove 'root' prefix and leading slash if present
+                    dest_path = dest_path.replace('/root/', '').lstrip('/')
+                    
+                    # Create destination directory structure
+                    dest_full_path = temp_dir / dest_path
+                    dest_full_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Copy the file
+                    try:
+                        shutil.copy2(src_path, dest_full_path)
+                    except Exception as e:
+                        print(f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}")
+
             # Copy and run setup script if it exists
             if self.benchmark and self.benchmark.setup_script:
                 setup_script_src = Path(self.benchmark.setup_script)
