@@ -174,14 +174,21 @@ def log_success(message: str) -> None:
         console.print(f"[bold green]✓[/] {message}")
     main_logger.info(f"SUCCESS: {message}")
 
-def log_error(message: str, exc_info: Optional[Exception] = None) -> None:
-    """Log an error message and optionally include exception info"""
-    with terminal_print():
-        console.print(f"[bold red]✗[/] {message}")
-    if exc_info:
-        main_logger.error(f"ERROR: {message}", exc_info=exc_info)
-    else:
-        main_logger.error(f"ERROR: {message}")
+def print_error(message: str, verbose_log_path: Optional[str] = None):
+    """Print error message in red with error symbol"""
+    
+    if not verbose_log_path:
+        # Log the main error message to both terminal and log file
+        main_logger.error(f"❌ ERROR: {message}[/]")
+    
+    # Only print the verbose log path to the terminal
+    if verbose_log_path:
+        with terminal_print():
+            console.print(f"[yellow]📝 For detailed error information, check: {verbose_log_path}[/]")
+
+def log_error(message: str):
+    """Log error message to file only"""
+    main_logger.error(f"ERROR: {message}")
 
 def log_warning(message: str) -> None:
     """Log a warning message"""
@@ -366,7 +373,6 @@ def print_run_config(
 # Rename the old print_* functions to use log_* instead
 print_step = log_step
 print_success = log_success
-print_error = log_error
 print_warning = log_warning
 print_results_table = log_results_table
 print_run_summary = log_run_summary 

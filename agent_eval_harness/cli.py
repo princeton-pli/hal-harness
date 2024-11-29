@@ -27,6 +27,9 @@ from .utils.logging_utils import (
 from rich.table import Table
 from rich import print
 from rich.box import ROUNDED
+import traceback
+from datetime import datetime
+from pathlib import Path
 
 load_dotenv()
 
@@ -91,137 +94,153 @@ def main(
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
-    
-    # Generate default run_id if none provided
-    if not run_id:
-        # Take last part after final "/" if present (inspect_evals), otherwise use full benchmark name
-        benchmark_name = benchmark.split("/")[-1]
-        run_id = f"{benchmark_name}_{int(time.time())}"
-    
-    # Setup logging first, before any other operations
-    log_dir = os.path.join("results", benchmark, run_id)
-    os.makedirs(log_dir, exist_ok=True)
-    setup_logging(log_dir, run_id)
-    
-    print_header("HAL Harness")
-    
-    # Parse agent and benchmark args
-    print_step("Parsing configuration...")
-    agent_args = parse_cli_args(a)
-    benchmark_args = parse_cli_args(b)
-    inspect_eval_args = parse_cli_args(i)
-    
-    # Validate model pricing if model_name is provided in agent_args
-    if "model_name" in agent_args:
-        validate_model_pricing(agent_args["model_name"])
-    
-    # Check if continuing runs is attempted with inspect solver
-    if continue_run and is_inspect_benchmark(benchmark):
-        if agent_function and is_inspect_solver(agent_function, agent_dir):
-            print_error("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag.")
-            sys.exit(1)
-            
-    # Print summary with run_id, benchmark, and the run config to terminal 
-    print_run_config(
-        run_id=run_id,
-        benchmark=benchmark,
-        agent_name=agent_name,
-        agent_function=agent_function,
-        agent_dir=agent_dir,
-        agent_args=agent_args,
-        benchmark_args=benchmark_args,
-        inspect_eval_args=inspect_eval_args,
-        upload=upload,
-        max_concurrent=max_concurrent,
-        conda_env_name=conda_env_name,
-        vm=vm,
-        continue_run=continue_run
-    )
-    
-    if is_inspect_benchmark(benchmark):
-        if agent_function and is_inspect_solver(agent_function, agent_dir):
-            # Use original inspect_evaluate for solver agents
-            print_step("Running evaluation for inspect solver and harness (see logs for more details and monitoring)...")
-            inspect_evaluate(
-                benchmark=benchmark,
-                benchmark_args=benchmark_args,
-                agent_name=agent_name,
-                agent_function=agent_function,
-                agent_dir=agent_dir,
-                agent_args=agent_args,
-                model=agent_args['model_name'],
-                run_id=run_id,
-                upload=upload or False,
-                max_concurrent=max_concurrent,
-                conda_env_name=conda_env_name,
-                vm=vm,
-                continue_run=continue_run,
-                inspect_eval_args=inspect_eval_args
-            )
+    try:
+        # Generate default run_id if none provided
+        if not run_id:
+            benchmark_name = benchmark.split("/")[-1]
+            run_id = f"{benchmark_name}_{int(time.time())}"
+        
+        # Setup logging first, before any other operations
+        log_dir = os.path.join("results", benchmark, run_id)
+        os.makedirs(log_dir, exist_ok=True)
+        verbose_log_path = os.path.join(log_dir, f"{run_id}_verbose.log")
+        setup_logging(log_dir, run_id)
+        
+        print_header("HAL Harness")
+        
+        # Parse agent and benchmark args
+        print_step("Parsing configuration...")
+        agent_args = parse_cli_args(a)
+        benchmark_args = parse_cli_args(b)
+        inspect_eval_args = parse_cli_args(i)
+        
+        # Validate model pricing if model_name is provided in agent_args
+        if "model_name" in agent_args:
+            validate_model_pricing(agent_args["model_name"])
+        
+        # Check if continuing runs is attempted with inspect solver
+        if continue_run and is_inspect_benchmark(benchmark):
+            if agent_function and is_inspect_solver(agent_function, agent_dir):
+                print_error("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag.")
+                sys.exit(1)
+                
+        # Print summary with run_id, benchmark, and the run config to terminal 
+        print_run_config(
+            run_id=run_id,
+            benchmark=benchmark,
+            agent_name=agent_name,
+            agent_function=agent_function,
+            agent_dir=agent_dir,
+            agent_args=agent_args,
+            benchmark_args=benchmark_args,
+            inspect_eval_args=inspect_eval_args,
+            upload=upload,
+            max_concurrent=max_concurrent,
+            conda_env_name=conda_env_name,
+            vm=vm,
+            continue_run=continue_run
+        )
+        
+        if is_inspect_benchmark(benchmark):
+            if agent_function and is_inspect_solver(agent_function, agent_dir):
+                # Use original inspect_evaluate for solver agents
+                print_step("Running evaluation for inspect solver and harness (see logs for more details and monitoring)...")
+                inspect_evaluate(
+                    benchmark=benchmark,
+                    benchmark_args=benchmark_args,
+                    agent_name=agent_name,
+                    agent_function=agent_function,
+                    agent_dir=agent_dir,
+                    agent_args=agent_args,
+                    model=agent_args['model_name'],
+                    run_id=run_id,
+                    upload=upload or False,
+                    max_concurrent=max_concurrent,
+                    conda_env_name=conda_env_name,
+                    vm=vm,
+                    continue_run=continue_run,
+                    inspect_eval_args=inspect_eval_args
+                )
+            else:
+                # Use AgentRunner with InspectBenchmark for non-solver agents
+                print_step("Running inspect evaluation for custom agent and inspect harness...")
+                runner = AgentRunner(
+                    agent_function=agent_function,
+                    agent_dir=agent_dir,
+                    agent_args=agent_args,
+                    benchmark_name=benchmark,
+                    config=config,
+                    run_id=run_id,
+                    use_vm=vm,
+                    max_concurrent=max_concurrent,
+                    conda_env=conda_env_name,
+                    continue_run=continue_run
+                )
+                results = asyncio.run(runner.run(
+                    agent_name=agent_name,
+                    upload=upload or False
+                ))
+                
+                print_success("Evaluation completed successfully")
+                print_results_table(results)
+                
+                # Only print run summary if we have a valid benchmark and run_id
+                if runner.benchmark and runner.benchmark.get_run_dir(run_id):
+                    print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
+                else:
+                    print_warning("Could not generate run summary - missing benchmark or run directory")
         else:
-            # Use AgentRunner with InspectBenchmark for non-solver agents
-            print_step("Running inspect evaluation for custom agent and inspect harness...")
-            runner = AgentRunner(
-                agent_function=agent_function,
-                agent_dir=agent_dir,
-                agent_args=agent_args,
-                benchmark_name=benchmark,
-                config=config,
-                run_id=run_id,
-                use_vm=vm,
-                max_concurrent=max_concurrent,
-                conda_env=conda_env_name,
-                continue_run=continue_run
-            )
-            results = asyncio.run(runner.run(
-                agent_name=agent_name,
-                upload=upload or False
-            ))
-            
-            print_success("Evaluation completed successfully")
-            print_results_table(results)
-            
-            # Only print run summary if we have a valid benchmark and run_id
-            if runner.benchmark and runner.benchmark.get_run_dir(run_id):
-                print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
-            else:
-                print_warning("Could not generate run summary - missing benchmark or run directory")
-    else:
-        # Initialize agent runner
-        print_step("Initializing agent runner...")
-        try:
-            runner = AgentRunner(
-                agent_function=agent_function,
-                agent_dir=agent_dir,
-                agent_args=agent_args,
-                benchmark_name=benchmark,
-                config=config,
-                run_id=run_id,  # Now guaranteed to have a value
-                use_vm=vm,
-                max_concurrent=max_concurrent,
-                conda_env=conda_env_name,
-                continue_run=continue_run
-            )
+            # Initialize agent runner
+            print_step("Initializing agent runner...")
+            try:
+                runner = AgentRunner(
+                    agent_function=agent_function,
+                    agent_dir=agent_dir,
+                    agent_args=agent_args,
+                    benchmark_name=benchmark,
+                    config=config,
+                    run_id=run_id,  # Now guaranteed to have a value
+                    use_vm=vm,
+                    max_concurrent=max_concurrent,
+                    conda_env=conda_env_name,
+                    continue_run=continue_run
+                )
 
-            # Run evaluation
-            print_step("Running evaluation with custom agent and HAL harness...")
-            results = asyncio.run(runner.run(
-                agent_name=agent_name,
-                upload=upload or False
-            ))
-            
-            print_success("Evaluation completed successfully")
-            print_results_table(results)
-            
-            # Only print run summary if we have a valid benchmark and run_id
-            if runner.benchmark and runner.benchmark.get_run_dir(run_id):
-                print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
-            else:
-                print_warning("Could not generate run summary - missing benchmark or run directory")
-            
-        except Exception as e:
-            print_error(f"Error running evaluation: {str(e)}")
-            raise
+                # Run evaluation
+                print_step("Running evaluation with custom agent and HAL harness...")
+                results = asyncio.run(runner.run(
+                    agent_name=agent_name,
+                    upload=upload or False
+                ))
+                
+                print_success("Evaluation completed successfully")
+                print_results_table(results)
+                
+                # Only print run summary if we have a valid benchmark and run_id
+                if runner.benchmark and runner.benchmark.get_run_dir(run_id):
+                    print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
+                else:
+                    print_warning("Could not generate run summary - missing benchmark or run directory")
+                
+            except Exception as e:
+                print_error(f"Error running evaluation: {str(e)}")
+                raise
+
+    except Exception as e:
+        # Get the full traceback
+        full_traceback = traceback.format_exc()
+        
+        # Log the full error to the verbose log file
+        with open(verbose_log_path, 'a') as f:
+            f.write("\n=== ERROR TRACEBACK ===\n")
+            f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(full_traceback)
+            f.write("\n=== END ERROR TRACEBACK ===\n")
+        
+        # Print clean error message to terminal
+        print_error(f"An error occurred: {str(e)}")
+        print_error(f"For detailed error information, check: {verbose_log_path}", verbose_log_path)
+        sys.exit(1)
 
 
 def parse_cli_args(args: tuple[str] | list[str] | None) -> Dict[str, Any]:
@@ -289,7 +308,7 @@ def validate_model_pricing(model_name: str) -> None:
     
     if model_name not in MODEL_PRICES_DICT:
         print_error(f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py")
-        sys.exit(1)
+        raise ValueError(f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py")
 
 
 if __name__ == "__main__":
