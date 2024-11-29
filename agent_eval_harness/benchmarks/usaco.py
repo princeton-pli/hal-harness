@@ -18,6 +18,14 @@ class USACOBenchmark(BaseBenchmark):
     """USACO benchmark implementation"""
     
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
+        try:
+            import poetry
+        except ImportError:
+            raise ImportError(
+                "USACO dependencies not found. Install them with: "
+                "pip install agent_eval_harness[usaco]"
+            )
+        
         self.benchmark_name = 'usaco'
         self.requirements_file = 'usaco'
         self.vm_only = False
