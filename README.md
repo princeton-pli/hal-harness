@@ -186,7 +186,7 @@ agent-eval --benchmark inspect_evals/gaia \
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
 - **Requires VM execution** (`--vm` flag mandatory)
 
-### [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) Benchmarks
+### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
 - Two agent types supported:
   1. Inspect Solver agents (using `@solver` decorator)
@@ -199,8 +199,43 @@ agent-eval --benchmark inspect_evals/gaia \
 
 #### [Cybench](https://arxiv.org/abs/2408.08926)
 - Cybersecurity agent task
-- Does not support arm64 machines
+- **Does not support arm64 machines**
 - More details on Inspect AI implementation [here](https://github.com/UKGovernmentBEIS/inspect_evals/tree/main/src/inspect_evals/cybench)
+- Additional **Docker Configuration** required for Cybench:
+
+For Cybench, you'll need to configure Docker's default address pools to avoid IP address conflicts when running the harness. Follow these steps:
+
+1. Edit or create the daemon.json file:
+   ```bash
+   sudo nano /etc/docker/daemon.json
+   ```
+
+2. Add or modify the default-address-pools configuration. For example:
+   ```json
+   {
+     "default-address-pools": [
+       {
+         "base": "172.17.0.0/16",
+         "size": 24
+       },
+       {
+         "base": "172.18.0.0/16",
+         "size": 24
+       },
+       {
+         "base": "172.19.0.0/16",
+         "size": 24
+       }
+     ]
+   }
+   ```
+
+3. Save the file and restart the Docker daemon:
+   ```bash
+   sudo systemctl restart docker
+   ```
+
+Now the harness should be able to run Cybench.
 
 ## Running Environment Options
 
