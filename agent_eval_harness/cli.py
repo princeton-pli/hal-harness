@@ -35,43 +35,43 @@ load_dotenv()
 @click.option(
     "--agent_name",
     required=True,
-    help="Name of the agent you want to add to the leaderboard",
+    help="Name of the agent you want to add to the leaderboard. Please use a short name and add model name in parentheses if applicable (e.g. 'inspect_solver (gpt-4o)'",
 )
 @click.option(
     "--agent_function",
     required=False,
-    help="Path to the agent function. Example: agent.agent.run",
+    help="Path to the agent function. Example: agent.run (if 'agent.py' is the name of the file in the agent directory and 'run' is the name of the function)",
 )
-@click.option("--agent_dir", required=False, help="Path to the agent directory.")
+@click.option("--agent_dir", required=False, help="Path to the agent directory in which the entrypoint file and function are located.")
 @click.option(
     "-A",
     multiple=True,
     type=str,
-    help="One or more args to pass to the agent (e.g. -A arg=value)",
+    help="One or more args to pass to the agent (e.g. -A model_name=gpt-4o -A arg_2=value)",
 )
 @click.option("--benchmark", required=True, help="Name of the benchmark to run")
 @click.option(
     "-B",
     multiple=True,
     type=str,
-    help="One or more args to pass to the benchmark (e.g. -B arg=value)",
+    help="One or more args to pass to the benchmark (e.g. -B arg_1=value -B arg_2=value)",
 )
-@click.option("--upload", is_flag=True, help="Upload results to HuggingFace")
-@click.option("--max_concurrent", default=10, help="Maximum agents to run for this benchmark")
+@click.option("--upload", is_flag=True, help="Upload results to HuggingFace after evaluation")
+@click.option("--max_concurrent", default=1, help="Maximum task-agent pairs to run concurrently for this run")
 @click.option("--conda_env_name", help="Conda environment to run the custom external agent in if run locally")
-@click.option("--run_id", help="Run ID to use for logging")
+@click.option("--run_id", help="Run ID to use for logging. For continuous runs, use the same run_id to continue from a previous run")
 @click.option(
     "--config",
     default=os.path.join(os.path.dirname(__file__), "config.yaml"),
-    help="Path to configuration file",
+    help="Path to configuration file. (currently not used)",
 )
-@click.option("--vm", is_flag=True, help="Run the agent on an azure VM")
-@click.option("--continue_run", is_flag=True, help="Continue from a previous run, only running failed or incomplete tasks")
+@click.option("--vm", is_flag=True, help="Run the agent on azure VMs")
+@click.option("--continue_run", is_flag=True, help="Continue from a previous run, only running failed or incomplete tasks. You must provide the same run_id to continue a run.")
 @click.option(
     "-I",
     multiple=True,
     type=str,
-    help="One or more args to pass to inspect eval (e.g. -I token_limit=1000)",
+    help="One or more args to pass to inspect eval (e.g. -I token_limit=1000 -I model_args='{'temperature': 0.5}'"
 )
 def main(
     config,
