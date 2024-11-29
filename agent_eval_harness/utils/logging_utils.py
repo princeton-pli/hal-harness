@@ -205,6 +205,30 @@ def create_progress() -> Progress:
         console=Console(file=sys.__stdout__)  # Use system stdout directly
     )
 
+def _print_results_table(results: dict[str, Any]) -> None:
+    """Helper function to print results table to console"""
+    table = Table(title="Evaluation Results")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    
+    # Handle both direct results dict and nested results structure
+    metrics_dict = results.get("results", results) if isinstance(results, dict) else results
+    
+    if isinstance(metrics_dict, dict):
+        for key, value in metrics_dict.items():
+            # Skip nested dictionaries and certain keys we don't want to display
+            if isinstance(value, (int, float)):
+                formatted_value = f"{value:.6f}" if isinstance(value, float) else str(value)
+                table.add_row(key, formatted_value)
+            elif isinstance(value, str) and key not in ["status", "message", "traceback"]:
+                table.add_row(key, value)
+            elif key == "successful_tasks":
+                table.add_row("successful_tasks", str(len(value)))
+            elif key == "failed_tasks":
+                table.add_row("failed_tasks", str(len(value)))
+    
+    console.print(table)
+
 def log_results_table(results: dict[str, Any]) -> None:
     """Log results to both console and file"""
     if not _log_paths['results_log']:
@@ -222,9 +246,17 @@ def log_results_table(results: dict[str, Any]) -> None:
         "results": {}
     }
     
-    for key, value in results.items():
-        if isinstance(value, (int, float)) or (isinstance(value, str) and key != "status"):
-            log_data["results"][key] = value
+    # Handle both direct results dict and nested results structure
+    metrics_dict = results.get("results", results) if isinstance(results, dict) else results
+    
+    if isinstance(metrics_dict, dict):
+        for key, value in metrics_dict.items():
+            if isinstance(value, (int, float)) or (isinstance(value, str) and key not in ["status", "message", "traceback"]):
+                log_data["results"][key] = value
+            elif key == "successful_tasks":
+                log_data["results"]["successful_tasks"] = len(value)
+            elif key == "failed_tasks":
+                log_data["results"]["failed_tasks"] = len(value)
     
     # Log to results file
     with open(_log_paths['results_log'], 'a') as f:
@@ -233,21 +265,6 @@ def log_results_table(results: dict[str, Any]) -> None:
     
     # Also log to main log file
     main_logger.info(f"Results: {json.dumps(log_data['results'], indent=2)}")
-
-def _print_results_table(results: dict[str, Any]) -> None:
-    """Helper function to print results table to console"""
-    table = Table(title="Evaluation Results")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="green")
-    
-    for key, value in results.items():
-        if isinstance(value, (int, float)):
-            formatted_value = f"{value:.6f}" if isinstance(value, float) else str(value)
-            table.add_row(key, formatted_value)
-        elif isinstance(value, str) and key != "status":
-            table.add_row(key, value)
-    
-    console.print(table)
 
 def log_run_summary(run_id: str, log_dir: str) -> None:
     """Log run summary information"""
@@ -271,9 +288,9 @@ def print_run_config(
     agent_name: str,
     agent_function: str,
     agent_dir: str,
-    model: str,
     agent_args: dict,
     benchmark_args: dict,
+    inspect_eval_args: dict,
     upload: bool,
     max_concurrent: int,
     conda_env_name: Optional[str],
@@ -291,7 +308,6 @@ def print_run_config(
     table.add_row("Agent Name", agent_name)
     table.add_row("Agent Function", agent_function)
     table.add_row("Agent Directory", agent_dir)
-    table.add_row("Model", model)
     table.add_row("Max Concurrent", str(max_concurrent))
     table.add_row("Upload Results", "✓" if upload else "✗")
     table.add_row("VM Execution", "✓" if vm else "✗")
@@ -313,6 +329,13 @@ def print_run_config(
         table.add_row("Benchmark Arguments", "")
         for key, value in benchmark_args.items():
             table.add_row(f"  {key}", str(value))
+            
+    # Add inspect eval arguments if present
+    if inspect_eval_args:
+        table.add_section()
+        table.add_row("Inspect Eval Arguments", "")
+        for key, value in inspect_eval_args.items():
+            table.add_row(f"  {key}", str(value))
     
     # Use terminal_print context manager to ensure output goes to terminal
     with terminal_print():
@@ -324,7 +347,6 @@ def print_run_config(
     main_logger.info(f"  Benchmark: {benchmark}")
     main_logger.info(f"  Agent Name: {agent_name}")
     main_logger.info(f"  Agent Function: {agent_function}")
-    main_logger.info(f"  Model: {model}")
     main_logger.info(f"  Upload Results: {upload}")
     main_logger.info(f"  VM Execution: {vm}")
     main_logger.info(f"  Continue Previous Run: {continue_run}")
@@ -335,6 +357,10 @@ def print_run_config(
     if benchmark_args:
         main_logger.info("  Benchmark Arguments:")
         for key, value in benchmark_args.items():
+            main_logger.info(f"    {key}: {value}")
+    if inspect_eval_args:
+        main_logger.info("  Inspect Eval Arguments:")
+        for key, value in inspect_eval_args.items():
             main_logger.info(f"    {key}: {value}")
 
 # Rename the old print_* functions to use log_* instead

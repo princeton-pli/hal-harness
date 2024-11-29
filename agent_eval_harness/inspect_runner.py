@@ -22,8 +22,9 @@ from .inspect.inspect import (
 from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename
-from .utils.weave_utils import get_total_cost, get_weave_calls
-from .benchmarks import swebench_harness
+from .utils.weave_utils import comput_cost_from_inspect_usage
+
+from .utils.logging_utils import print_success, print_results_table, print_warning
 
 def inspect_evaluate(
     benchmark: str,
@@ -37,6 +38,9 @@ def inspect_evaluate(
     upload: bool,
     max_concurrent: int = 10,
     conda_env_name: str = None,
+    vm: bool = False,
+    continue_run: bool = False,
+    inspect_eval_args: dict[str, Any] = None,
 ) -> None:
     """
     Evaluates a task using a specified model and agent, logs results, and optionally uploads them.
@@ -62,8 +66,7 @@ def inspect_evaluate(
     run_id = run_id or safe_filename(f"{task}_{int(time.time())}")
 
     # determine the log directory
-    log_dir = os.path.join("results", task, run_id)
-
+    log_dir = os.path.join("results", benchmark, run_id)
 
     with weave_tracing(run_id) as weave_client:
 
@@ -78,6 +81,26 @@ def inspect_evaluate(
         # append agent dir to path
         if agent_dir is not None:
             sys.path.append(agent_dir)
+            
+            
+        # Filter out inspect_eval_args that are already set
+        filtered_eval_args = {}
+        if inspect_eval_args:
+            # Define arguments that are already set in our eval() calls
+            preset_args = [
+                'task',
+                'task_args',
+                'solver',
+                'model',
+                'log_dir',
+                'sandbox',
+                'log_format'
+            ]
+            # Only keep args that aren't preset
+            filtered_eval_args = {
+                k: v for k, v in inspect_eval_args.items() 
+                if k not in preset_args
+            }
 
         if agent_function is not None:
             # load the agent function
@@ -113,34 +136,46 @@ def inspect_evaluate(
                 # run the task (this will be fast since it mostly just scoring)
                 log_start(f"Scoring custom agent {agent_function}")
                 eval_logs = eval(
-                    resolved_task,
+                    tasks=resolved_task,
                     task_args=benchmark_args,                    
                     solver=solver,
                     model=model,
                     log_dir=log_dir,
                     sandbox="docker",
+                    **filtered_eval_args  # Use filtered args
                 )
                 log_end()
 
             else:
-                # run the inspect task
-                # initialize the weave client
+    
                 with weave.attributes({"weave_task_id": task}):
                     log_start(f"Running Inspect task {task}")
                     eval_logs = eval(
-                        tasks,
+                        tasks=tasks,
                         task_args=benchmark_args,
                         solver=solver,                        
                         model=model,
                         log_dir=log_dir,
+                        log_format="json",
+                        **filtered_eval_args  # Use filtered args
                     )
                     log_end()
 
-        # Compute weave metrics
-        log_start("Computing Weave Metrics")
-        total_cost, total_usage = get_total_cost(weave_client)
-        weave_calls = get_weave_calls(weave_client)
-        log_end()
+        # unexpected if this is called for a log that hasn't completed
+        eval_log = eval_logs[0]
+        if eval_log.status == "started":
+            raise RuntimeError(
+                "Cannot process an evaluation which is still running."
+            )
+            
+        # Read raw json logs from inspect harness
+        json_files = [f for f in os.listdir(log_dir) if f.endswith('.json')]
+        latest_file = max(json_files, key=lambda x: os.path.getctime(os.path.join(log_dir, x)))
+        with open(os.path.join(log_dir, latest_file), 'r') as f:
+            inspect_eval_results = json.load(f)
+            
+        # Compute the total cost from the model usage
+        total_cost = comput_cost_from_inspect_usage(inspect_eval_results['stats']['model_usage'])
         
         if "composio" in agent_dir.lower(): # todo remove
             # load the results from json file
@@ -153,15 +188,9 @@ def inspect_evaluate(
                 "completion_tokens": sum([usage[task]['completion_tokens'] for task, value in usage.items()]),
             }
 
-        # unexpected if this is called for a log that hasn't completed
-        eval_log = eval_logs[0]
-        if eval_log.status == "started":
-            raise RuntimeError(
-                "Cannot process an evaluation which is still running."
-            )
-
         # Compute the evaluation results and configuration
-        eval_results = results_for_eval(eval_log=eval_log, total_cost=total_cost)
+        inspect_eval_results_json = results_for_eval(eval_log=eval_log, total_cost=total_cost)
+                
         eval_config = config_for_eval(
             run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
         )
@@ -171,10 +200,10 @@ def inspect_evaluate(
         del eval_header_raw.samples
         final_result = {
             "config": {**eval_config, 'agent_args': agent_args},
-            "results": eval_results,
-            "raw_eval_results": to_jsonable_python(eval_header_raw),            
-            "raw_logging_results": weave_calls,
-            "total_usage": total_usage,
+            "results": inspect_eval_results_json,
+            "raw_eval_results": inspect_eval_results,            
+            "raw_logging_results": "Inspect logs are contained in raw_eval_results",
+            "total_usage": inspect_eval_results['stats']['model_usage'],
         }
 
         # Store the upload results locally
@@ -191,3 +220,7 @@ def inspect_evaluate(
         log_abs_path = os.path.join(os.getcwd(), log_dir)
         log(f"\n{log_abs_path}\n")
         log_end()
+        
+        print_success("Evaluation completed successfully")
+        print_results_table(final_result)
+            
