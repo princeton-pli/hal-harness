@@ -48,16 +48,14 @@ class LocalRunner:
                     agent_dir=agent_dir,
                     agent_args=agent_args,
                     run_id=run_id,
-                    submissions_file=submissions_file
+                    submissions_file=submissions_file,
+                    progress=progress,
+                    task=task
                 )
                 tasks.append(task_coro)
             
             # Run tasks with concurrency control
             results = await asyncio.gather(*tasks)
-            
-            # Update progress if provided
-            if progress and task is not None:
-                progress.update(task, advance=1)
             
             # Merge results
             merged_results = {}
@@ -82,7 +80,9 @@ class LocalRunner:
                           agent_dir: str,
                           agent_args: Dict[str, Any],
                           run_id: str,
-                          submissions_file: str) -> Optional[Dict[str, Any]]:
+                          submissions_file: str,
+                          progress: Optional[Progress] = None,
+                          task: Optional[TaskID] = None) -> Optional[Dict[str, Any]]:
         """Process a single task with semaphore control"""
         async with self._semaphore:
             print(f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})")
@@ -101,6 +101,10 @@ class LocalRunner:
                     with open(submissions_file, "a") as f:
                         json.dump(result, f)
                         f.write("\n")
+            
+            # Update progress after task completion
+            if progress and task is not None:
+                progress.update(task, advance=1)
             
             print(f"Completed task {task_id}")
             return result
