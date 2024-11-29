@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 from .base_benchmark import BaseBenchmark
 from datasets import load_dataset
 import subprocess
+
 class SWEBenchBenchmark(BaseBenchmark):
     """SWEBench benchmark implementation"""
     
@@ -126,6 +127,9 @@ class SWEBenchBenchmark(BaseBenchmark):
 
             # delete file
             os.remove(f"{self.benchmark_name}.{run_id}.json")
+            
+            # remove conda environment
+            subprocess.run(['conda', 'env', 'remove', '-n', 'swebench_hal', '--yes', '--all'], check=True)
 
             return results
 
