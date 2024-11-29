@@ -7,11 +7,11 @@
 ## This can be invoked like:
 ## agent-eval --agent_name draw --benchmark inspect:agents/inspect-task/task.py@ascii_art --model openai/gpt-4o --agent_function custom_agent.run --agent_dir agents/inspect-task
 
-def run(tasks: dict[str, dict]) -> dict[str, str]:
+def run(tasks: dict[str, dict], **kwargs) -> dict[str, str]:
 
     result = {}
     for key, value in tasks.items():
         result[key] = (
-            f"Sample {value["id"]} Nam venenatis turpis mauris. Donec ut massa vel lacus maximus placerat."
+            f"Sample {value['id']} Nam venenatis turpis mauris. Donec ut massa vel lacus maximus placerat."
         )
     return result
