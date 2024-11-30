@@ -30,23 +30,23 @@ class AgentRunner:
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
-            print_error("Invalid agent_function format. Must be in format 'module.function' (e.g., 'my_agent.run_agent')")
             raise ValueError("Invalid agent_function format. Must be in format 'module.function' (e.g., 'my_agent.run_agent')")
         
         module_name, func_name = agent_function.rsplit('.', 1)
         if not module_name or not func_name:
-            print_error("Invalid agent_function format. Both module and function names must be non-empty")
             raise ValueError("Invalid agent_function format. Both module and function names must be non-empty")
         
         # Check for requirements.txt
         requirements_path = os.path.join(agent_dir, 'requirements.txt')
-        if not os.path.exists(requirements_path):
-            print_error(f"No requirements.txt found in agent directory: {agent_dir}")
+        if not os.path.exists(requirements_path) and not conda_env:
             raise ValueError(f"No requirements.txt found in agent directory: {agent_dir}")
+        
+        # add check such that conda env and run on vm is not set together
+        if conda_env and use_vm:
+            raise ValueError("Conda environment and VM execution cannot be set together. If you want to run the agent on a VM, please do not set the conda_env flag but create requirements.txt instead in agent directory instead.")
         
         # check that if continue_run is set, run_id is also set
         if continue_run and not run_id:
-            print_error("continue_run flag requires run_id to be set")
             raise ValueError("continue_run flag requires run_id to be set")
         
         # Initialize benchmark first
@@ -56,7 +56,6 @@ class AgentRunner:
                 
         # Check if benchmark requires VM
         if self.benchmark.vm_only and not use_vm:
-            print_error(f"Benchmark {benchmark_name} requires VM execution. Please use --vm flag.")
             raise ValueError(f"Benchmark {benchmark_name} requires VM execution. Please use --vm flag.")
         
         
