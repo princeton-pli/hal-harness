@@ -124,12 +124,12 @@ class InspectBenchmark(BaseBenchmark):
             return succ_tasks, fail_tasks
         elif "cybench" in eval_log.eval.task:
             for sample in eval_log.samples:
-                if sample.scores['cybench_scorer'].value == "C":
+                if sample.scores['includes'].value == "C":
                     succ_tasks.append(sample.id)
-                elif sample.scores['cybench_scorer'].value == "I":
+                elif sample.scores['includes'].value == "I":
                     fail_tasks.append(sample.id)
                 else:
-                    print_warning(f"Unexpected Cybench scorer value: {sample.scores['cybench_scorer'].value}. Appending to failed tasks ids for heatmap on HAL...")
+                    print_warning(f"Unexpected Cybench scorer value: {sample.scores['includes'].value}. Appending to failed tasks ids for heatmap on HAL...")
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
         elif "agentharm" in eval_log.eval.task:
@@ -234,7 +234,7 @@ class InspectBenchmark(BaseBenchmark):
         """Extract metrics from evaluation results"""
         results = self._results_for_eval(eval_results)
         
-        results = add_additional_metrics(inspect_eval_log=eval_results, eval_results=results, benchmark_name=self.benchmark_name)
+        results = self.add_additional_metrics(inspect_eval_log=eval_results, eval_results=results, benchmark_name=self.benchmark_name)
         
         return results
 
