@@ -149,6 +149,7 @@ def main(
             upload=upload,
             max_concurrent=max_concurrent,
             conda_env_name=conda_env_name,
+            log_dir=log_dir,
             vm=vm,
             continue_run=continue_run
         )
