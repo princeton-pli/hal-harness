@@ -10,7 +10,6 @@ class SWEBenchBenchmark(BaseBenchmark):
     
     def __init__(self, agent_dir: str, config: Dict[str, Any], mini: bool = False):
         self.benchmark_name = 'swebench_verified_mini' if mini else 'swebench_verified'
-        self.requirements_file = 'swebench'
         self.vm_only = False
         super().__init__(agent_dir, config, vm_only=self.vm_only)
         
