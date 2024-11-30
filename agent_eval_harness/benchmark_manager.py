@@ -36,7 +36,10 @@ class BenchmarkManager:
             benchmark = MLAgentBenchBenchmark(self.agent_dir, self.config)
         elif benchmark_name in ['swebench_verified', 'swebench_verified_mini']:
             from .benchmarks.swebench import SWEBenchBenchmark
-            benchmark = SWEBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+            if benchmark_name == 'swebench_verified_mini':
+                benchmark = SWEBenchBenchmark(self.agent_dir, self.config, mini=True)
+            else:    
+                benchmark = SWEBenchBenchmark(self.agent_dir, self.config, mini=False)
         elif benchmark_name == "appworld":
             from .benchmarks.appworld import AppWorldBenchmark
             benchmark = AppWorldBenchmark(self.agent_dir, self.config)

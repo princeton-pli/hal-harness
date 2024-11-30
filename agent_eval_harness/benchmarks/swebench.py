@@ -69,10 +69,6 @@ class SWEBenchBenchmark(BaseBenchmark):
         # download swebench verified from huggingface
         ds = load_dataset("princeton-nlp/SWE-bench_Verified", split="test")
         self.benchmark = {}
-
-        
-        # Set instance IDs based on mini flag
-        self.instance_ids = self.mini_instance_ids if mini else None
         
         # Load benchmark dataset
         if mini:
