@@ -16,7 +16,13 @@ class BenchmarkManager:
         self.config = config
         self.agent_dir = agent_dir
         self.agent_args = agent_args
-        self.benchmarks = ['usaco', 'mlagentbench', 'swebench_lite', 'swebench_verified', 'swebench_verified_mini', 'appworld']
+        self.benchmarks = ['usaco', 
+                           'swebench_verified', 
+                           'swebench_verified_mini', 
+                           'appworld',
+                           'inspect_evals/gaia',
+                           'inspect_evals/cybench',
+                           'inspect_evals/appworld']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
@@ -28,9 +34,12 @@ class BenchmarkManager:
         elif benchmark_name == "mlagentbench":
             from .benchmarks.mlagentbench import MLAgentBenchBenchmark
             benchmark = MLAgentBenchBenchmark(self.agent_dir, self.config)
-        elif benchmark_name in ['swebench_lite', 'swebench_verified', 'swebench_verified_mini']:
+        elif benchmark_name in ['swebench_verified', 'swebench_verified_mini']:
             from .benchmarks.swebench import SWEBenchBenchmark
-            benchmark = SWEBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+            if benchmark_name == 'swebench_verified_mini':
+                benchmark = SWEBenchBenchmark(self.agent_dir, self.config, mini=True)
+            else:    
+                benchmark = SWEBenchBenchmark(self.agent_dir, self.config, mini=False)
         elif benchmark_name == "appworld":
             from .benchmarks.appworld import AppWorldBenchmark
             benchmark = AppWorldBenchmark(self.agent_dir, self.config)

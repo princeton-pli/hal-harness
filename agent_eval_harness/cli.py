@@ -130,6 +130,12 @@ def main(
                 print_error("VM execution is not supported for inspect solvers. Please run without --vm flag. Exiting...")
                 sys.exit(1)
                 
+        # Check if conda environment is specified for inspect solver
+        if conda_env_name and is_inspect_benchmark(benchmark):
+            if agent_function and is_inspect_solver(agent_function, agent_dir):
+                print_error("Conda environments are not supported for inspect solvers. Dependencies are managed by Inspect harness. Run without --conda_env_name flag. Exiting...")
+                sys.exit(1)
+                
         # Print summary with run_id, benchmark, and the run config to terminal 
         print_run_config(
             run_id=run_id,
@@ -143,6 +149,7 @@ def main(
             upload=upload,
             max_concurrent=max_concurrent,
             conda_env_name=conda_env_name,
+            log_dir=log_dir,
             vm=vm,
             continue_run=continue_run
         )

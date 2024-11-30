@@ -300,6 +300,7 @@ def print_run_config(
     inspect_eval_args: dict,
     upload: bool,
     max_concurrent: int,
+    log_dir: str,
     conda_env_name: Optional[str],
     vm: bool,
     continue_run: bool
@@ -315,6 +316,7 @@ def print_run_config(
     table.add_row("Agent Name", agent_name)
     table.add_row("Agent Function", agent_function)
     table.add_row("Agent Directory", agent_dir)
+    table.add_row("Log Directory", log_dir)
     table.add_row("Max Concurrent", str(max_concurrent))
     table.add_row("Upload Results", "✓" if upload else "✗")
     table.add_row("VM Execution", "✓" if vm else "✗")
@@ -355,6 +357,7 @@ def print_run_config(
     main_logger.info(f"  Agent Name: {agent_name}")
     main_logger.info(f"  Agent Function: {agent_function}")
     main_logger.info(f"  Upload Results: {upload}")
+    main_logger.info(f"  Log Directory: {log_dir}")
     main_logger.info(f"  VM Execution: {vm}")
     main_logger.info(f"  Continue Previous Run: {continue_run}")
     if agent_args:
