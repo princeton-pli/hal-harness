@@ -121,7 +121,13 @@ def main(
         # Check if continuing runs is attempted with inspect solver
         if continue_run and is_inspect_benchmark(benchmark):
             if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_error("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag.")
+                print_warning("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag. Exiting...")
+                sys.exit(1)
+                
+        # Check if VM execution is attempted with inspect solver
+        if vm and is_inspect_benchmark(benchmark):
+            if agent_function and is_inspect_solver(agent_function, agent_dir):
+                print_warning("VM execution is not supported for inspect solvers. Please run without --vm flag. Exiting...")
                 sys.exit(1)
                 
         # Print summary with run_id, benchmark, and the run config to terminal 
