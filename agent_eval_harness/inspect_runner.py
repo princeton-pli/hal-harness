@@ -4,7 +4,7 @@ import sys
 import time
 import datetime
 import weave  # type: ignore
-from inspect_ai import eval
+from inspect_ai import eval, eval_retry
 from pydantic_core import to_jsonable_python
 
 from typing import Any
@@ -149,16 +149,23 @@ def inspect_evaluate(
             else:
     
                 with weave.attributes({"weave_task_id": task}):
-                    log_start(f"Running Inspect task {task}")
-                    eval_logs = eval(
-                        tasks=tasks,
-                        task_args=benchmark_args,
-                        solver=solver,                        
-                        model=model,
-                        log_dir=log_dir,
-                        log_format="json",
-                        **filtered_eval_args  # Use filtered args
-                    )
+                    if not continue_run:
+                        log_start(f"Running Inspect task {task}")
+                        eval_logs = eval(
+                            tasks=tasks,
+                            task_args=benchmark_args,
+                            solver=solver,                        
+                            model=model,
+                            log_dir=log_dir,
+                            log_format="json",
+                            **filtered_eval_args  # Use filtered args
+                        )
+                    
+                    else:
+                        log_start(f"Continuing Inspect task {task}")
+                        # get last .json file created in log_dir
+                        latest_file = [f for f in os.listdir(log_dir) if f.endswith('.json')][-1]
+                        eval_logs = eval_retry(os.path.join(log_dir, latest_file))
                     log_end()
 
         # unexpected if this is called for a log that hasn't completed

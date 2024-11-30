@@ -117,12 +117,6 @@ def main(
         # Validate model pricing if model_name is provided in agent_args
         if "model_name" in agent_args:
             validate_model_pricing(agent_args["model_name"])
-        
-        # Check if continuing runs is attempted with inspect solver
-        if continue_run and is_inspect_benchmark(benchmark):
-            if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_error("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag. Exiting...")
-                sys.exit(1)
                 
         # Check if VM execution is attempted with inspect solver
         if vm and is_inspect_benchmark(benchmark):
@@ -167,11 +161,11 @@ def main(
                     agent_args=agent_args,
                     model=agent_args['model_name'],
                     run_id=run_id,
+                    continue_run=continue_run,
                     upload=upload or False,
                     max_concurrent=max_concurrent,
                     conda_env_name=conda_env_name,
                     vm=vm,
-                    continue_run=continue_run,
                     inspect_eval_args=inspect_eval_args
                 )
             else:
