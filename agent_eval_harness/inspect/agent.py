@@ -8,7 +8,6 @@ from typing import Callable, cast, Dict
 import shutil
 from contextlib import contextmanager
 import uuid
-import weave
 import subprocess
 import json
 from concurrent.futures import ProcessPoolExecutor
@@ -253,6 +252,26 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
     # Delete all created directories after processing all jobs
     for temp_dir in temp_dirs:
         shutil.rmtree(temp_dir, ignore_errors=True)
+        
+    # "composio" in agent_dir.lower() then extract cost from results first
+    if "composio" in agent_dir.lower():
+        usage_logs = {}
+        
+        
+        raw_usage_path = os.path.join(log_dir, f"{run_id}_USAGE.json")
+        usage_logs = {}
+        # for each key in results, extract the cost
+        for key, value in results.items():
+            
+            usage_logs[key] = {
+                'total_cost': value['total_cost'],
+                "prompt_tokens": value["prompt_tokens"],
+                "completion_tokens": value["completion_tokens"],
+                "total_tokens": value["total_tokens"]
+            }
+        
+        with open(raw_usage_path, "w") as f:
+            json.dump(usage_logs, f, indent=2)
 
     # Merge results list into a single dictionary
     merged_result = {k: v for d in results for k, v in d.items()}

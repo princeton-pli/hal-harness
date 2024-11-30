@@ -121,13 +121,13 @@ def main(
         # Check if continuing runs is attempted with inspect solver
         if continue_run and is_inspect_benchmark(benchmark):
             if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_warning("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag. Exiting...")
+                print_error("Continuing runs is not supported for inspect solvers. Please run without --continue-run flag. Exiting...")
                 sys.exit(1)
                 
         # Check if VM execution is attempted with inspect solver
         if vm and is_inspect_benchmark(benchmark):
             if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_warning("VM execution is not supported for inspect solvers. Please run without --vm flag. Exiting...")
+                print_error("VM execution is not supported for inspect solvers. Please run without --vm flag. Exiting...")
                 sys.exit(1)
                 
         # Print summary with run_id, benchmark, and the run config to terminal 
@@ -313,8 +313,8 @@ def validate_model_pricing(model_name: str) -> None:
     from .utils.weave_utils import MODEL_PRICES_DICT
     
     if model_name not in MODEL_PRICES_DICT:
-        print_error(f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py")
-        raise ValueError(f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py")
+        print_error(f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py. Exiting...")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
