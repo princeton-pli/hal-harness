@@ -1,14 +1,21 @@
 import os
-import json
 import click
 from huggingface_hub import HfApi
 from ..benchmark_manager import BenchmarkManager
 from dotenv import load_dotenv
+from .logging_utils import (
+    print_header,
+    print_step,
+    print_success,
+    print_error,
+    terminal_print,
+    console,
+    create_progress
+)
 
 load_dotenv()
 
 bm = BenchmarkManager()
-
 available_benchmarks = bm.list_benchmarks()
 
 def find_upload_files(directory):
@@ -19,43 +26,60 @@ def find_upload_files(directory):
                 yield os.path.join(root, filename)
 
 @click.command()
-@click.option('--benchmark', required=True, help='Name of the benchmark', type=click.Choice(available_benchmarks))
+@click.option('--benchmark', '-B', required=True, help='Name of the benchmark', type=click.Choice(available_benchmarks))
 def upload_results(benchmark):
     """Upload result files for a given benchmark to Hugging Face Hub, including all subdirectories."""
-    results_dir = os.path.join('results', benchmark)
-    
-    if not os.path.exists(results_dir):
-        click.echo(f"Error: Directory {results_dir} does not exist.")
-        return
-
-    api = HfApi(token=os.getenv("HF_TOKEN"))
-    file_paths = find_upload_files(results_dir)
-
-    print("==== Uploading results ====")
-    for file_path in file_paths:
-        filename = os.path.basename(file_path)
+    try:
+        print_header("HAL Upload Results")
         
-        # Extract run_id from filename
-        run_id = filename.replace('_UPLOAD.json', '')
+        results_dir = os.path.join('results', benchmark)
         
-        try:
-            
-            # Upload to Hugging Face Hub
-            api.upload_file(
-                path_or_fileobj=file_path,
-                path_in_repo=f"{run_id}.json",
-                repo_id="agent-evals/results"   ,
-                repo_type="dataset",
-                commit_message=f"Add {run_id} to leaderboard.",
+        if not os.path.exists(results_dir):
+            print_error(f"Directory {results_dir} does not exist.")
+            return
+
+        api = HfApi(token=os.getenv("HF_TOKEN"))
+        file_paths = list(find_upload_files(results_dir))
+        
+        if not file_paths:
+            print_error(f"No upload files found in {results_dir}")
+            return
+
+        print_step(f"Found {len(file_paths)} files to upload")
+        
+        # Create progress bar
+        with create_progress() as progress:
+            upload_task = progress.add_task(
+                "Uploading files...",
+                total=len(file_paths)
             )
             
-            click.echo(f"Uploaded {filename} to Hugging Face Hub.")
-            
-        except Exception as e:
-            click.echo(f"Error uploading {filename}: {str(e)}")
+            for file_path in file_paths:
+                filename = os.path.basename(file_path)
+                run_id = filename.replace('_UPLOAD.json', '')
+                
+                try:
+                    # Upload to Hugging Face Hub
+                    api.upload_file(
+                        path_or_fileobj=file_path,
+                        path_in_repo=f"{run_id}.json",
+                        repo_id="agent-evals/results",
+                        repo_type="dataset",
+                        commit_message=f"Add {run_id} to leaderboard.",
+                    )
+                    
+                    print_success(f"Successfully uploaded {filename}")
+                    
+                except Exception as e:
+                    print_error(f"Error uploading {filename}: {str(e)}")
+                
+                progress.update(upload_task, advance=1)
 
-    click.echo("Upload process completed.")
-    print("=====")
+        print_success("Upload process completed")
+
+    except Exception as e:
+        print_error(f"An error occurred during upload: {str(e)}")
+        raise
 
 if __name__ == '__main__':
     upload_results()
