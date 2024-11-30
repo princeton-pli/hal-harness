@@ -123,7 +123,7 @@ class InspectBenchmark(BaseBenchmark):
                         print_warning(f"Unexpected Gaia scorer value: {sample.scores['gaia_scorer'].value}. Appending to failed tasks ids for heatmap on HAL...")
                         fail_tasks.append(sample.id)      
                 except KeyError:
-                    print_warning(f"Sample {sample.id} does not have expected scorer output. Appending to failed tasks ids for heatmap on HAL...")
+                    print_warning(f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL...")
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
         elif "cybench" in eval_log.eval.task:
@@ -137,7 +137,7 @@ class InspectBenchmark(BaseBenchmark):
                         print_warning(f"Unexpected Cybench scorer value: {sample.scores['includes'].value}. Appending to failed tasks ids for heatmap on HAL...")
                         fail_tasks.append(sample.id)
                 except KeyError:
-                    print_warning(f"Sample {sample.id} does not have expected scorer output. Appending to failed tasks ids for heatmap on HAL...")
+                    print_warning(f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL...")
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
         elif "agentharm" in eval_log.eval.task:
