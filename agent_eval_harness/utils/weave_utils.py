@@ -38,6 +38,9 @@ MODEL_PRICES_DICT = {
                 "openai/o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "anthropic/claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "anthropic/claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "google/gemini-1.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 5/1e6},
+                "google/gemini-1.5-flash": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
+                "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {"prompt_tokens": 3.5/1e6, "completion_tokens": 3.5/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
