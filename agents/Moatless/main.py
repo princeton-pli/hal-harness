@@ -102,12 +102,14 @@ def run_moatless(tasks: dict[str, dict], **kwargs) -> dict[str, str]:
     for task in tasks:
         input = tasks[task]
 
-        instance = {
-            "instance_id": input["id"],
-            "problem_statement": input["input"],
-            "repo": input["metadata"]["repo"],
-            "base_commit": input["metadata"]["base_commit"]
-        }
+        # instance = {
+        #     "instance_id": input["id"],
+        #     "problem_statement": input["input"],
+        #     "repo": input["metadata"]["repo"],
+        #     "base_commit": input["metadata"]["base_commit"]
+        # }
+        
+        instance = input
         
 
         code_index = create_index(instance)
