@@ -176,6 +176,7 @@ agent-eval --benchmark inspect_evals/gaia \
 - Full dataset (`swebench_verified`) or mini version (`swebench_verified_mini`)
 - Mini version is a subset of 50 randomly selected problems from the full dataset
 - Supports both local and VM execution
+- The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
 
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
