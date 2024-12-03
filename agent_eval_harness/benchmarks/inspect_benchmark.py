@@ -114,22 +114,30 @@ class InspectBenchmark(BaseBenchmark):
         fail_tasks = []
         if "gaia" in eval_log.eval.task:
             for sample in eval_log.samples:
-                if sample.scores['gaia_scorer'].value == "C":
-                    succ_tasks.append(sample.id)
-                elif sample.scores['gaia_scorer'].value == "I":
+                try:
+                    if sample.scores['gaia_scorer'].value == "C":
+                        succ_tasks.append(sample.id)
+                    elif sample.scores['gaia_scorer'].value == "I":
+                        fail_tasks.append(sample.id)
+                    else:
+                        print_warning(f"Unexpected Gaia scorer value: {sample.scores['gaia_scorer'].value}. Appending to failed tasks ids for heatmap on HAL...")
+                        fail_tasks.append(sample.id)      
+                except KeyError:
+                    print_warning(f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL...")
                     fail_tasks.append(sample.id)
-                else:
-                    print_warning(f"Unexpected Gaia scorer value: {sample.scores['gaia_scorer'].value}. Appending to failed tasks ids for heatmap on HAL...")
-                    fail_tasks.append(sample.id)      
             return succ_tasks, fail_tasks
         elif "cybench" in eval_log.eval.task:
             for sample in eval_log.samples:
-                if sample.scores['includes'].value == "C":
-                    succ_tasks.append(sample.id)
-                elif sample.scores['includes'].value == "I":
-                    fail_tasks.append(sample.id)
-                else:
-                    print_warning(f"Unexpected Cybench scorer value: {sample.scores['includes'].value}. Appending to failed tasks ids for heatmap on HAL...")
+                try:
+                    if sample.scores['includes'].value == "C":
+                        succ_tasks.append(sample.id)
+                    elif sample.scores['includes'].value == "I":
+                        fail_tasks.append(sample.id)
+                    else:
+                        print_warning(f"Unexpected Cybench scorer value: {sample.scores['includes'].value}. Appending to failed tasks ids for heatmap on HAL...")
+                        fail_tasks.append(sample.id)
+                except KeyError:
+                    print_warning(f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL...")
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
         elif "agentharm" in eval_log.eval.task:
