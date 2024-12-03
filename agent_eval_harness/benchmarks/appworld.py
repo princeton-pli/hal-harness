@@ -126,6 +126,10 @@ class AppWorldBenchmark(BaseBenchmark):
             aggregate = eval_results["aggregate"]
             for metric_name, value in aggregate.items():
                 metrics[f"aggregate_{metric_name}"] = value
+                
+        # if "aggregate_task_goal_completion" in metrics rename to "accuracy"
+        if "aggregate_task_goal_completion" in metrics:
+            metrics["accuracy"] = metrics.pop("aggregate_task_goal_completion")
         
         # Process individual results to get successful and failed task IDs
         if "individual" in eval_results:
