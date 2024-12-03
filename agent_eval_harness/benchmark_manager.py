@@ -19,7 +19,8 @@ class BenchmarkManager:
         self.benchmarks = ['usaco', 
                            'swebench_verified', 
                            'swebench_verified_mini', 
-                           'appworld',
+                           'appworld_test_normal',
+                           'appworld_test_challenge',
                            'inspect_evals/gaia',
                            'inspect_evals/cybench',
                            'inspect_evals/appworld']
@@ -40,9 +41,9 @@ class BenchmarkManager:
                 benchmark = SWEBenchBenchmark(self.agent_dir, self.config, mini=True)
             else:    
                 benchmark = SWEBenchBenchmark(self.agent_dir, self.config, mini=False)
-        elif benchmark_name == "appworld":
+        elif benchmark_name in ['appworld_test_normal', 'appworld_test_challenge']:
             from .benchmarks.appworld import AppWorldBenchmark
-            benchmark = AppWorldBenchmark(self.agent_dir, self.config)
+            benchmark = AppWorldBenchmark(self.agent_dir, self.config, benchmark_name)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         
