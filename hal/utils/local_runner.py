@@ -6,7 +6,7 @@ import subprocess
 import asyncio
 from typing import Dict, Any, Optional
 from pathlib import Path
-from agent_eval_harness.benchmarks.base_benchmark import BaseBenchmark
+from hal.benchmarks.base_benchmark import BaseBenchmark
 from rich.progress import Progress, TaskID
 
 class LocalRunner:
@@ -146,7 +146,10 @@ class LocalRunner:
                     
                     # Copy the file
                     try:
-                        shutil.copy2(src_path, dest_full_path)
+                        if os.path.isdir(src_path):
+                            shutil.copytree(src_path, dest_full_path)
+                        else:
+                            shutil.copy2(src_path, dest_full_path)
                     except Exception as e:
                         print(f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}")
 

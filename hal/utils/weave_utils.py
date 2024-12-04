@@ -41,6 +41,7 @@ MODEL_PRICES_DICT = {
                 "google/gemini-1.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 5/1e6},
                 "google/gemini-1.5-flash": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
                 "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {"prompt_tokens": 3.5/1e6, "completion_tokens": 3.5/1e6},
+                "together/meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:

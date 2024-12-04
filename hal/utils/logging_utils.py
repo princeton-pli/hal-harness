@@ -224,14 +224,14 @@ def _print_results_table(results: dict[str, Any]) -> None:
     if isinstance(metrics_dict, dict):
         for key, value in metrics_dict.items():
             # Skip nested dictionaries and certain keys we don't want to display
-            if isinstance(value, (int, float)):
+            if isinstance(value, (int, float)) and value:
                 formatted_value = f"{value:.6f}" if isinstance(value, float) else str(value)
                 table.add_row(key, formatted_value)
-            elif isinstance(value, str) and key not in ["status", "message", "traceback"]:
+            elif isinstance(value, str) and key not in ["status", "message", "traceback"] and value:
                 table.add_row(key, value)
-            elif key == "successful_tasks":
+            elif key == "successful_tasks" and value:
                 table.add_row("successful_tasks", str(len(value)))
-            elif key == "failed_tasks":
+            elif key == "failed_tasks" and value:
                 table.add_row("failed_tasks", str(len(value)))
     
     console.print(table)

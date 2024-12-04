@@ -23,7 +23,7 @@ class USACOBenchmark(BaseBenchmark):
         except ImportError:
             raise ImportError(
                 "USACO dependencies not found. Install them with: "
-                "pip install agent_eval_harness[usaco]"
+                "pip install hal[usaco]"
             )
         
         self.benchmark_name = 'usaco'
@@ -129,7 +129,7 @@ class USACOBenchmark(BaseBenchmark):
     def mount_benchmark(self):
         """Mount USACO benchmark environment"""
         try:
-            requirements_path = f'agent_eval_harness/benchmarks/requirements/{self.requirements_file}.toml'
+            requirements_path = f'hal/benchmarks/requirements/{self.requirements_file}.toml'
             with open(requirements_path) as f:
                 requirements = f.read()
         except FileNotFoundError:

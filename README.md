@@ -73,7 +73,7 @@ This repository provides a standardized evaluation harness for evaluating differ
    pip install -e .
    ```
 
-   **Note:** Some benchmarks require additional dependencies which can be installed using `pip install agent_eval_harness[benchmark_name]`. See [Supported Benchmarks](#supported-benchmarks) for details.
+   **Note:** Some benchmarks require additional dependencies which can be installed using `pip install hal[benchmark_name]`. See [Supported Benchmarks](#supported-benchmarks) for details.
 
 5. **Create a `.env` file:**
    ```bash
@@ -109,7 +109,7 @@ This repository provides a standardized evaluation harness for evaluating differ
 The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
 
 ```bash
-agent-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_function <agent_function> --agent_name <agent_name> [OPTIONS]
+hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_function <agent_function> --agent_name <agent_name> [OPTIONS]
 ```
 
 ### Core Options
@@ -139,7 +139,7 @@ agent-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_fu
 
 1. **Running SWE-bench locally:**
 ```bash
-agent-eval --benchmark swebench_verified_mini \
+hal-eval --benchmark swebench_verified_mini \
   --agent_dir agents/swebench_example_agent/ \
   --agent_function main.run \
   --agent_name "My Agent (gpt-4o-mini)" \
@@ -149,7 +149,7 @@ agent-eval --benchmark swebench_verified_mini \
 
 2. **Running USACO on Azure VM:**
 ```bash
-agent-eval --benchmark usaco \
+hal-eval --benchmark usaco \
   --agent_dir agents/usaco_example_agent/ \
   --agent_function main.run \
   --agent_name "USACO Solver (gpt-4o)" \
@@ -160,7 +160,7 @@ agent-eval --benchmark usaco \
 
 3. **Running Inspect AI benchmark:**
 ```bash
-agent-eval --benchmark inspect_evals/gaia \
+hal-eval --benchmark inspect_evals/gaia \
   --agent_dir agents/inspect/ \
   --agent_function gaia.default_agent \
   --agent_name "Gaia Agent (gpt-4o)" \
@@ -180,7 +180,7 @@ agent-eval --benchmark inspect_evals/gaia \
 
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
-- Requires additional dependencies (`pip install agent_eval_harness[usaco]`)
+- Requires additional dependencies (`pip install hal[usaco]`)
 - Supports both local and VM execution
 
 ### [AppWorld](https://appworld.dev/)
@@ -254,23 +254,39 @@ Now the harness should be able to run Cybench.
 
 ## Uploading Results
 
-Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in two ways:
+Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in two ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
 
 1. **During evaluation:**
 ```bash
-agent-eval --benchmark <benchmark> ... --upload
+hal-eval --benchmark <benchmark> ... --upload
 ```
 
 2. **After evaluation:**
 ```bash
-agent-upload --benchmark <benchmark_name>
+hal-upload --benchmark <benchmark_name>
 ```
 
-The leaderboard provides a comprehensive view of agent performance across different benchmarks and allows for easy comparison between different approaches.
+## Decrypting Results
+
+You can decrypt evaluation results that were encrypted during upload using the `hal-decrypt` command. This also appplies to trace files downloaded from the leaderboard.
+
+1. **Decrypt a single file:**
+```bash
+hal-decrypt -F path/to/file.zip
+```
+
+2. **Decrypt all zip files in a directory:**
+```bash
+hal-decrypt -D path/to/directory
+```
+
+## About HAL
+
+coming soon...
 
 ## Repository Structure
 
-*   `agent_eval_harness/`: Core harness code
+*   `hal/`: Core harness code
     *   `benchmarks/`: Benchmark implementations
         - `swebench.py`: SWE-bench implementation
         - `usaco.py`: USACO implementation

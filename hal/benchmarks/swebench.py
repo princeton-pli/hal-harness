@@ -15,7 +15,7 @@ class SWEBenchBenchmark(BaseBenchmark):
         super().__init__(agent_dir, config, vm_only=self.vm_only)
         
         # Read mini instance ids
-        with open('agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt', 'r') as f:
+        with open('hal/benchmarks/swebench_verified_mini_task_ids.txt', 'r') as f:
             self.mini_instance_ids = [line.strip() for line in f.readlines()]
         
         # download swebench verified from huggingface

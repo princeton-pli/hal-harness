@@ -3,6 +3,7 @@ import click
 from huggingface_hub import HfApi
 from ..benchmark_manager import BenchmarkManager
 from dotenv import load_dotenv
+from .encryption import ZipEncryption
 from .logging_utils import (
     print_header,
     print_step,
@@ -17,6 +18,7 @@ load_dotenv()
 
 bm = BenchmarkManager()
 available_benchmarks = bm.list_benchmarks()
+ENCRYPTION_PASSWORD = "hal1234"  # Fixed encryption password
 
 def find_upload_files(directory):
     """Recursively find all files containing '_UPLOAD' in their name and ending with '.json'."""
@@ -28,7 +30,7 @@ def find_upload_files(directory):
 @click.command()
 @click.option('--benchmark', '-B', required=True, help='Name of the benchmark', type=click.Choice(available_benchmarks))
 def upload_results(benchmark):
-    """Upload result files for a given benchmark to Hugging Face Hub, including all subdirectories."""
+    """Upload encrypted zip files for a given benchmark to Hugging Face Hub."""
     try:
         print_header("HAL Upload Results")
         
@@ -45,35 +47,51 @@ def upload_results(benchmark):
             print_error(f"No upload files found in {results_dir}")
             return
 
-        print_step(f"Found {len(file_paths)} files to upload")
+        print_step(f"Found {len(file_paths)} files to process")
         
         # Create progress bar
         with create_progress() as progress:
-            upload_task = progress.add_task(
-                "Uploading files...",
-                total=len(file_paths)
-            )
+            task = progress.add_task("Processing and uploading files...", total=len(file_paths))
             
+            # Group files by directory
+            files_by_dir = {}
             for file_path in file_paths:
-                filename = os.path.basename(file_path)
-                run_id = filename.replace('_UPLOAD.json', '')
+                dir_path = os.path.dirname(file_path)
+                if dir_path not in files_by_dir:
+                    files_by_dir[dir_path] = []
+                files_by_dir[dir_path].append(file_path)
+            
+            # Process each directory
+            for dir_path, dir_files in files_by_dir.items():
+                # Create a temporary encrypted zip file
+                zip_encryptor = ZipEncryption(ENCRYPTION_PASSWORD)
+                temp_zip_path = os.path.join(dir_path, "temp_encrypted.zip")
                 
                 try:
+                    # Create encrypted zip
+                    zip_encryptor.encrypt_files(dir_files, temp_zip_path)
+                    
                     # Upload to Hugging Face Hub
+                    dir_name = os.path.basename(dir_path)
                     api.upload_file(
-                        path_or_fileobj=file_path,
-                        path_in_repo=f"{run_id}.json",
+                        path_or_fileobj=temp_zip_path,
+                        path_in_repo=f"{dir_name}.zip",
                         repo_id="agent-evals/results",
                         repo_type="dataset",
-                        commit_message=f"Add {run_id} to leaderboard.",
+                        commit_message=f"Add encrypted results for {dir_name}.",
                     )
                     
-                    print_success(f"Successfully uploaded {filename}")
+                    print_success(f"\nSuccessfully uploaded encrypted results for {dir_name}")
                     
                 except Exception as e:
-                    print_error(f"Error uploading {filename}: {str(e)}")
+                    print_error(f"Error processing directory {dir_path}: {str(e)}")
                 
-                progress.update(upload_task, advance=1)
+                finally:
+                    # Clean up temporary zip file
+                    if os.path.exists(temp_zip_path):
+                        os.remove(temp_zip_path)
+                
+                progress.update(task, advance=len(dir_files))
 
         print_success("Upload process completed")
 

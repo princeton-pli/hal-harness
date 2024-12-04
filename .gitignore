@@ -4,11 +4,11 @@ logs/**
 .eggs/**
 **/__pycache__/**
 results/**
-agent_eval_harness.egg-info/**
+hal.egg-info/**
 agents/Moatless/evaluations/**
 agents/Moatless/index_store/**
-agent_eval_harness/scratch.ipynb
-agent_eval_harness/benchmarks/SWE-bench
+hal/scratch.ipynb
+hal/benchmarks/SWE-bench
 agents/Agentless
 agents/SWE-agent
 agents/Moatless/ingest.ipynb

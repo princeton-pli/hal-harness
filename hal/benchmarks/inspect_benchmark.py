@@ -8,7 +8,7 @@ from inspect_ai._eval.loader import load_tasks
 from inspect_ai.solver import solver
 from inspect_ai.log import EvalLog
 from inspect_ai.solver import Solver
-from agent_eval_harness.utils.logging_utils import log_warning, print_warning, log_error
+from hal.utils.logging_utils import log_warning, print_warning, log_error
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 

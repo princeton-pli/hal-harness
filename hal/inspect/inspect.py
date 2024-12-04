@@ -7,8 +7,8 @@ from inspect_ai.log import EvalLog
 from inspect_ai.model import get_model
 from inspect_ai.solver import Solver
 from inspect_ai._eval.loader import load_tasks
-from agent_eval_harness.benchmarks.inspect_benchmark import InspectBenchmark
-from agent_eval_harness.utils.logging_utils import log_error, print_warning
+from hal.benchmarks.inspect_benchmark import InspectBenchmark
+from hal.utils.logging_utils import log_error, print_warning
 
 def is_inspect_benchmark(benchmark: str) -> bool:
     """
