@@ -14,6 +14,7 @@ from inspect_ai.tool import ToolFunction
 
 from prompts import get_jailbreak_template, get_system_prompt
 
+
 @solver
 def system_prompt_based_on_model(
     system_prompt_template: Optional[str],
@@ -44,6 +45,7 @@ def system_prompt_based_on_model(
 
     return solve
 
+
 @solver
 def set_tool_choice(choice: Literal["forced_first", "auto", "none"]) -> Solver:
     """
@@ -64,13 +66,14 @@ def set_tool_choice(choice: Literal["forced_first", "auto", "none"]) -> Solver:
 
     return solve
 
+
 @solver
 def default_agent(
     tool_choice: Literal["forced_first", "auto", "none"] = "auto",
     user_prompt_template: str = "empty",
     system_prompt_template: Optional[str] = None,
     prompt_technique: Literal["standard", "cot", "react", "refusal"] = "standard",
-    model_name: str = "openai/gpt-4o-2024-11-20",
+    model_name: Optional[str] = None,
 ) -> Solver:
     """
     Get the default solver for the harmful tools task.
@@ -80,6 +83,7 @@ def default_agent(
         user_prompt_template (str): Name of user prompt in `prompts.py`.
         system_prompt_template (str): Name of system prompt in `prompts.py`.
         prompt_technique (Literal['standard', 'cot', 'react', 'refusal']): Prompting technique to apply to the system prompt.
+        model_name (Optional[str]): Name of the model to use.
     """
     agent_setup = [
         system_prompt_based_on_model(system_prompt_template, prompt_technique),
