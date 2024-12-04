@@ -50,7 +50,7 @@ class AppWorldBenchmark(BaseBenchmark):
             'python:3.11',
             command='tail -f /dev/null',
             volumes={
-                os.path.join(os.getcwd(), 'results', self.benchmark_name, run_id): {
+                self.get_run_dir(run_id): {
                     'bind': '/home/',
                     'mode': 'rw',
                     'chmod': '777'
