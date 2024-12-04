@@ -81,7 +81,7 @@ def upload_results(benchmark):
                         commit_message=f"Add encrypted results for {dir_name}.",
                     )
                     
-                    print_success(f"Successfully uploaded encrypted results for {dir_name}")
+                    print_success(f"\nSuccessfully uploaded encrypted results for {dir_name}")
                     
                 except Exception as e:
                     print_error(f"Error processing directory {dir_path}: {str(e)}")
