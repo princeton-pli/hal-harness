@@ -258,11 +258,11 @@ def log_results_table(results: dict[str, Any]) -> None:
     
     if isinstance(metrics_dict, dict):
         for key, value in metrics_dict.items():
-            if isinstance(value, (int, float)) or (isinstance(value, str) and key not in ["status", "message", "traceback"]):
+            if isinstance(value, (int, float)) or (isinstance(value, str) and key not in ["status", "message", "traceback"]) and value:
                 log_data["results"][key] = value
-            elif key == "successful_tasks":
+            elif key == "successful_tasks" and value:
                 log_data["results"]["successful_tasks"] = len(value)
-            elif key == "failed_tasks":
+            elif key == "failed_tasks" and value:
                 log_data["results"]["failed_tasks"] = len(value)
     
     # Log to results file
