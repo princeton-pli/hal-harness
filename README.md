@@ -1,4 +1,4 @@
-# HAL: A Holistic Agent Leaderboard for Reproducible Agent Evaluation
+# HAL: The Holistic Agent Leaderboard for Reproducible Agent Evaluation
 
 [![HAL Leaderboard](https://img.shields.io/badge/🤗_HAL_Leaderboard-View_Results-blue)](https://agent-evals-leaderboard.hf.space)
 [![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
