@@ -280,6 +280,10 @@ hal-decrypt -F path/to/file.zip
 hal-decrypt -D path/to/directory
 ```
 
+## About HAL
+
+coming soon...
+
 ## Repository Structure
 
 *   `hal/`: Core harness code
