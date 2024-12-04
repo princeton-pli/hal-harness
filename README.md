@@ -1,15 +1,15 @@
-# HAL Harness
+# HAL: A Holistic Agent Leaderboard for Reproducible Agent Evaluation
 
 [![HAL Leaderboard](https://img.shields.io/badge/🤗_HAL_Leaderboard-View_Results-blue)](https://agent-evals-leaderboard.hf.space)
 [![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
 [![Inspect AI](https://img.shields.io/badge/Inspect_AI-green)](https://github.com/UKGovernmentBEIS/inspect_ai)
 
-This repository provides a standardized evaluation harness for evaluating different AI agents across various benchmarks. It supports several benchmarks and allows users to easily add new agents and benchmarks. Key highlight is the unified agent-eval CLI across all benchmarks and agent types. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, and the official [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for sharing evaluation results.
+This repository provides a standardized evaluation harness for evaluating different AI agents across benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, and the official [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for sharing evaluation results.
 
 ## Features
 
 * **Unified agent-eval CLI across all benchmarks and agent types**
-  - Already supportsSWE-bench Verified, USACO, AppWorld, Inspect AI benchmarks (Gaia, Cybench)
+  - HAL supports SWE-bench Verified, USACO, AppWorld, Inspect AI benchmarks (Gaia, Cybench), with support for more coming soon
   - Easy integration of new benchmarks
   - See [Running Evaluations](#running-evaluations) for details on CLI usage
 
