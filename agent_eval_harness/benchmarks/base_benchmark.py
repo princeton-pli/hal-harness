@@ -84,8 +84,13 @@ class BaseBenchmark(ABC):
 
         # Save full results
         upload_path = os.path.join(run_dir, f"{run_id}_UPLOAD.json")
-        with open(upload_path, 'w') as f:
-            json.dump(results_summary, f)
+        try:
+            with open(upload_path, 'w') as f:
+                json.dump(results_summary, f)
+        except TypeError as e:
+            print_warning(f"Error serializing results summary: {e}. Converting to json serializable.")
+            with open(upload_path, 'w') as f:
+                json.dump(make_json_serializable(results_summary), f)
 
         if upload:
             self.upload_results(run_id, results_summary)

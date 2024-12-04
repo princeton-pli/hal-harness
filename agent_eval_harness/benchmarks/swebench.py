@@ -11,6 +11,7 @@ class SWEBenchBenchmark(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any], mini: bool = False):
         self.benchmark_name = 'swebench_verified_mini' if mini else 'swebench_verified'
         self.vm_only = False
+        self.mini = mini
         super().__init__(agent_dir, config, vm_only=self.vm_only)
         
         # Read mini instance ids
@@ -92,6 +93,6 @@ class SWEBenchBenchmark(BaseBenchmark):
         total_instances = 50 if self.mini else eval_results['total_instances']
         return {
             "accuracy": eval_results['resolved_instances']/total_instances,
-            'successful_tasks': set(eval_results['resolved_ids']),
-            'failed_tasks': set(eval_results['unresolved_ids'] + eval_results['error_ids'])
+            'successful_tasks': list(set(eval_results['resolved_ids'])),
+            'failed_tasks': list(set(eval_results['unresolved_ids'] + eval_results['error_ids']))
         } 
