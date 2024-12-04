@@ -6,7 +6,7 @@ import subprocess
 import asyncio
 from typing import Dict, Any, Optional
 from pathlib import Path
-from agent_eval_harness.benchmarks.base_benchmark import BaseBenchmark
+from hal.benchmarks.base_benchmark import BaseBenchmark
 from rich.progress import Progress, TaskID
 
 class LocalRunner:

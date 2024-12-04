@@ -4,7 +4,7 @@ from typing import Dict, Any, TypedDict, List
 from typing_extensions import NotRequired
 from .base_benchmark import BaseBenchmark
 import docker
-from agent_eval_harness.utils import print_warning
+from hal.utils import print_warning
 
 class AppWorldBenchmark(BaseBenchmark):
     """AppWorld benchmark implementation"""
@@ -13,7 +13,7 @@ class AppWorldBenchmark(BaseBenchmark):
         self.benchmark_name = benchmark_name
         self.split = 'test_normal' if benchmark_name == 'appworld_test_normal' else 'test_challenge'
         self.requirements_file = 'appworld'
-        self.setup_script = 'agent_eval_harness/benchmarks/appworld/appworld_setup.sh'
+        self.setup_script = 'hal/benchmarks/appworld/appworld_setup.sh'
         self.vm_only = True
         super().__init__(agent_dir, config, vm_only=self.vm_only, setup_script=self.setup_script)
         
@@ -37,7 +37,7 @@ class AppWorldBenchmark(BaseBenchmark):
             
     def _read_task_ids(self, filename: str) -> List[str]:
         """Read task IDs from a given file"""
-        with open(os.path.join(os.getcwd(), 'agent_eval_harness', 'benchmarks', 'appworld', filename), 'r') as file:
+        with open(os.path.join(os.getcwd(), 'hal', 'benchmarks', 'appworld', filename), 'r') as file:
             return [line.strip() for line in file.readlines()]
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:

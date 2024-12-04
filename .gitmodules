@@ -1,8 +1,8 @@
-[submodule "agent_eval_harness/benchmarks/SWE-bench"]
-	path = agent_eval_harness/benchmarks/SWE-bench
+[submodule "hal/benchmarks/SWE-bench"]
+	path = hal/benchmarks/SWE-bench
 	url = https://github.com/benediktstroebl/SWE-bench.git
-[submodule "agent_eval_harness/benchmarks/USACO"]
-	path = agent_eval_harness/benchmarks/USACO
+[submodule "hal/benchmarks/USACO"]
+	path = hal/benchmarks/USACO
 	url = https://github.com/benediktstroebl/USACO.git
 [submodule "agents/SWE-agent"]
 	path = agents/SWE-agent
