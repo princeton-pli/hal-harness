@@ -254,7 +254,7 @@ Now the harness should be able to run Cybench.
 
 ## Uploading Results
 
-Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in two ways. To avoid benchmark contamination, we encrypt the results before uploading.
+Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in two ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
 
 1. **During evaluation:**
 ```bash
