@@ -20,31 +20,57 @@ bm = BenchmarkManager()
 available_benchmarks = bm.list_benchmarks()
 ENCRYPTION_PASSWORD = "hal1234"  # Fixed encryption password
 
-def find_upload_files(directory):
-    """Recursively find all files containing '_UPLOAD' in their name and ending with '.json'."""
+def find_upload_files(directory, require_upload_suffix=False):
+    """Recursively find JSON files.
+    
+    Args:
+        directory: Directory to search
+        require_upload_suffix: If True, only find files containing '_UPLOAD.json'
+    """
     for root, _, files in os.walk(directory):
         for filename in files:
-            if '_UPLOAD.json' in filename and filename.endswith('.json'):
-                yield os.path.join(root, filename)
+            if require_upload_suffix:
+                if '_UPLOAD.json' in filename and filename.endswith('.json'):
+                    yield os.path.join(root, filename)
+            else:
+                if filename.endswith('.json'):
+                    yield os.path.join(root, filename)
 
 @click.command()
-@click.option('--benchmark', '-B', required=True, help='Name of the benchmark', type=click.Choice(available_benchmarks))
-def upload_results(benchmark):
-    """Upload encrypted zip files for a given benchmark to Hugging Face Hub."""
+@click.option('--benchmark', '-B', help='Name of the benchmark', type=click.Choice(available_benchmarks))
+@click.option('--file', '-F', type=click.Path(exists=True), help='Path to single file to upload')
+@click.option('--directory', '-D', type=click.Path(exists=True), help='Path to directory containing files to upload')
+def upload_results(benchmark, file, directory):
+    """Upload encrypted zip files to Hugging Face Hub. Use one of: -B (benchmark), -F (file), or -D (directory)."""
     try:
         print_header("HAL Upload Results")
         
-        results_dir = os.path.join('results', benchmark)
-        
-        if not os.path.exists(results_dir):
-            print_error(f"Directory {results_dir} does not exist.")
+        # Check that only one option is provided
+        options_count = sum(1 for opt in [benchmark, file, directory] if opt is not None)
+        if options_count != 1:
+            print_error("Please provide exactly one of: -B (benchmark), -F (file), or -D (directory)")
             return
 
         api = HfApi(token=os.getenv("HF_TOKEN"))
-        file_paths = list(find_upload_files(results_dir))
+        
+        if benchmark:
+            results_dir = os.path.join('results', benchmark)
+            if not os.path.exists(results_dir):
+                print_error(f"Directory {results_dir} does not exist.")
+                return
+            file_paths = list(find_upload_files(results_dir, require_upload_suffix=True))
+            
+        elif file:
+            if not file.endswith('.json'):
+                print_error(f"File must be a JSON file")
+                return
+            file_paths = [file]
+            
+        else:  # directory option
+            file_paths = list(find_upload_files(directory, require_upload_suffix=False))
         
         if not file_paths:
-            print_error(f"No upload files found in {results_dir}")
+            print_error(f"No upload files found")
             return
 
         print_step(f"Found {len(file_paths)} files to process")
@@ -73,6 +99,10 @@ def upload_results(benchmark):
                     
                     # Upload to Hugging Face Hub
                     dir_name = os.path.basename(dir_path)
+                    # Remove _UPLOAD from the directory name if present
+                    if '_UPLOAD' in dir_name:
+                        dir_name = dir_name.replace('_UPLOAD', '')
+                    
                     api.upload_file(
                         path_or_fileobj=temp_zip_path,
                         path_in_repo=f"{dir_name}.zip",
