@@ -12,7 +12,7 @@ benchmarks/
       ├── __init__.py
       ├── benchmark.py    # Main benchmark class
       ├── setup.sh        # Optional setup script for VMs
-      └── data/          # Benchmark data files
+      └── data/          # Optional benchmark data files
 ```
 
 ## Benchmark Interface
@@ -174,7 +174,7 @@ Key points about file handling:
 
 ## Advanced Features
 
-1. **Custom Evaluation Logic**:
+1. **Custom Evaluation Logic Using complete Agent Environments**:
    ```python
    def evaluate_output(self, agent_output, run_id):
        # Save submissions
