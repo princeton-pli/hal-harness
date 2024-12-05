@@ -166,7 +166,7 @@ hal-eval --benchmark inspect_evals/gaia \
   --agent_name "Gaia Agent (gpt-4o)" \
   -A model_name=gpt-4o \
   -I token_limit=4000 \
-  -I model_args="{'temperature': 0.4}"
+  -I temperature=0.4
 ```
 
 ## Supported Benchmarks
