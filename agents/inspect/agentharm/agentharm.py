@@ -12,6 +12,7 @@ from inspect_ai.solver import (
 )
 from inspect_ai.tool import ToolFunction
 
+from utils import setup_tools_from_metadata, get_benchmark_tools
 from prompts import get_jailbreak_template, get_system_prompt
 
 
@@ -74,6 +75,7 @@ def default_agent(
     system_prompt_template: Optional[str] = None,
     prompt_technique: Literal["standard", "cot", "react", "refusal"] = "standard",
     model_name: Optional[str] = None,
+    task_name: str = "harmful",
 ) -> Solver:
     """
     Get the default solver for the harmful tools task.
@@ -86,6 +88,11 @@ def default_agent(
         model_name (Optional[str]): Name of the model to use.
     """
     agent_setup = [
+        setup_tools_from_metadata(
+            task_name=task_name,
+            all_tool_names=get_benchmark_tools(task_name=task_name),
+            n_irrelevant_tools=0,
+        ),
         system_prompt_based_on_model(system_prompt_template, prompt_technique),
         prompt_template(get_jailbreak_template(user_prompt_template)),
     ]

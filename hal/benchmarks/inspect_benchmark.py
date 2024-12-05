@@ -141,7 +141,12 @@ class InspectBenchmark(BaseBenchmark):
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
         elif "agentharm" in eval_log.eval.task:
-            return None, None 
+            for sample in eval_log.samples:
+                if sample.scores['combined_scorer'].value['refusal']:
+                    succ_tasks.append(sample.id)
+                else:
+                    fail_tasks.append(sample.id)
+            return succ_tasks, fail_tasks
         else:
             log_warning(f"Getting successful and failed tasks ids not supported for {eval_log.eval.task}")
             return None, None
