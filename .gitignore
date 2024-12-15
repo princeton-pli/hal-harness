@@ -8,7 +8,6 @@ hal.egg-info/**
 agents/Moatless/evaluations/**
 agents/Moatless/index_store/**
 hal/scratch.ipynb
-hal/benchmarks/SWE-bench
 agents/Agentless
 agents/SWE-agent
 agents/Moatless/ingest.ipynb
