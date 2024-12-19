@@ -8,7 +8,7 @@ This repository provides a standardized evaluation harness for evaluating differ
 
 ## Features
 
-* **Unified agent-eval CLI across all benchmarks and agent types**
+* **Unified hal-eval CLI across all benchmarks and agent types**
   - HAL supports SWE-bench Verified, USACO, AppWorld, Inspect AI benchmarks (Gaia, Cybench), with support for more coming soon
   - Easy integration of new benchmarks
   - See [Running Evaluations](#running-evaluations) for details on CLI usage
