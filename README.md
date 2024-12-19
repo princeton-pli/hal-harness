@@ -47,7 +47,7 @@ This repository provides a standardized evaluation harness for evaluating differ
     - [MLAgentBench](#mlagentbench-benchmark)
     - [AppWorld](#appworld-benchmark)
     - [Inspect AI Benchmarks](#inspect-ai-benchmarks)
-4. [Adding New Agents](#adding-new-agents)
+4. [Example Evaluations](#example-evaluations)
 5. [Running Environments](#running-environments)
     - [Local Execution](#local-execution)
     - [VM Execution](#vm-execution)
@@ -135,40 +135,6 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
 *   **`--run_id <run_id>`**: Specify a run ID (useful for continuing runs)
 *   **`--continue_run`**: Continue from a previous run (requires run_id)
 
-### Examples
-
-1. **Running SWE-bench locally:**
-```bash
-hal-eval --benchmark swebench_verified_mini \
-  --agent_dir agents/swebench_example_agent/ \
-  --agent_function main.run \
-  --agent_name "My Agent (gpt-4o-mini)" \
-  -A model_name=gpt-4o-mini \
-  --max_concurrent 5
-```
-
-2. **Running USACO on Azure VM:**
-```bash
-hal-eval --benchmark usaco \
-  --agent_dir agents/usaco_example_agent/ \
-  --agent_function main.run \
-  --agent_name "USACO Solver (gpt-4o)" \
-  --vm \
-  --max_concurrent 5 \
-  -A model_name=gpt-4o
-```
-
-3. **Running Inspect AI benchmark:**
-```bash
-hal-eval --benchmark inspect_evals/gaia \
-  --agent_dir agents/inspect/ \
-  --agent_function gaia.default_agent \
-  --agent_name "Gaia Agent (gpt-4o)" \
-  -A model_name=gpt-4o \
-  -I token_limit=4000 \
-  -I temperature=0.4
-```
-
 ## Supported Benchmarks
 
 ### [SWE-bench Verified (Mini)](https://github.com/princeton-nlp/SWE-bench)
@@ -237,6 +203,40 @@ For Cybench, you'll need to configure Docker's default address pools to avoid IP
    ```
 
 Now the harness should be able to run Cybench.
+
+## Example Evaluations
+
+1. **Running SWE-bench locally:**
+```bash
+hal-eval --benchmark swebench_verified_mini \
+  --agent_dir agents/swebench_example_agent/ \
+  --agent_function main.run \
+  --agent_name "My Agent (gpt-4o-mini)" \
+  -A model_name=gpt-4o-mini \
+  --max_concurrent 5
+```
+
+2. **Running USACO on Azure VM:**
+```bash
+hal-eval --benchmark usaco \
+  --agent_dir agents/usaco_example_agent/ \
+  --agent_function main.run \
+  --agent_name "USACO Solver (gpt-4o)" \
+  --vm \
+  --max_concurrent 5 \
+  -A model_name=gpt-4o
+```
+
+3. **Running Inspect AI benchmark:**
+```bash
+hal-eval --benchmark inspect_evals/gaia \
+  --agent_dir agents/inspect/ \
+  --agent_function gaia.default_agent \
+  --agent_name "Gaia Agent (gpt-4o)" \
+  -A model_name=gpt-4o \
+  -I token_limit=4000 \
+  -I temperature=0.4
+```
 
 ## Running Environment Options
 
