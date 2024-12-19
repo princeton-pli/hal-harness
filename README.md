@@ -58,8 +58,8 @@ This repository provides a standardized evaluation harness for evaluating differ
 
 1. **Clone the repository:**
    ```bash
-   git clone --recursive https://github.com/benediktstroebl/agent-eval-harness.git
-   cd agent-eval-harness
+   git clone --recursive https://github.com/benediktstroebl/hal-harness.git
+   cd hal-harness
    ```
 
 2. **Create conda environment:**
