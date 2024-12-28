@@ -97,6 +97,7 @@ def main(
     try:
         # Generate default run_id if none provided
         if not run_id:
+            set_run_id = False
             benchmark_name = benchmark.split("/")[-1]
             run_id = f"{benchmark_name}_{int(time.time())}"
         
@@ -129,6 +130,9 @@ def main(
             if agent_function and is_inspect_solver(agent_function, agent_dir):
                 print_error("Conda environments are not supported for inspect solvers. Dependencies are managed by Inspect harness. Run without --conda_env_name flag. Exiting...")
                 sys.exit(1)
+                
+        if continue_run and not set_run_id:
+            raise ValueError("continue_run flag requires run_id to be set")
                 
         # Print summary with run_id, benchmark, and the run config to terminal 
         print_run_config(

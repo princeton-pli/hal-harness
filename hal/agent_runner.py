@@ -45,10 +45,6 @@ class AgentRunner:
         if conda_env and use_vm:
             raise ValueError("Conda environment and VM execution cannot be set together. If you want to run the agent on a VM, please do not set the conda_env flag but create requirements.txt instead in agent directory instead.")
         
-        # check that if continue_run is set, run_id is also set
-        if continue_run and not run_id:
-            raise ValueError("continue_run flag requires run_id to be set")
-        
         # Initialize benchmark first
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
