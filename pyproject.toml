@@ -26,12 +26,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-usaco = [
-    "poetry>=1.8.4",
-]
-all = [
-    "poetry>=1.8.4",
-]
 
 [project.scripts]
 hal-eval = "hal.cli:main"

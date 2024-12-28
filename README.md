@@ -115,10 +115,14 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
 ### Core Options
 
 *   **`--benchmark <benchmark_name>`**: The name of the benchmark to run. Supported benchmarks:
-    - `swebench_verified` or `swebench_verified_mini`
-    - `usaco`
-    - `appworld`
-    - `inspect_evals/<task_name>` (e.g., `inspect_evals/gaia`)
+    - `swebench_verified`: Full SWE-bench Verified dataset
+    - `swebench_verified_mini`: Mini version with 50 randomly selected problems
+    - `usaco`: USACO programming competition problems
+    - `appworld_test_normal`: AppWorld normal test suite
+    - `appworld_test_challenge`: AppWorld challenge test suite
+    - `inspect_evals/gaia`: Gaia general AI assistants benchmark
+    - `inspect_evals/cybench`: Cybersecurity agent tasks
+    - `inspect_evals/agentharm`: Agent harm evaluation benchmark
 *   **`--agent_dir <agent_directory>`**: Path to the directory containing your agent's code
 *   **`--agent_function <agent_function>`**: The name of the agent's main function (e.g., `agent.run` if `agent.py` in agent directory contains `def run(): ...`)
 *   **`--agent_name <agent_name>`**: A descriptive name for your agent (used in logging/leaderboard) (e.g., `My Agent (gpt-4o)`)
@@ -146,8 +150,12 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
 
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
-- Requires additional dependencies (`pip install hal[usaco]`)
 - Supports both local and VM execution
+
+For USACO, you will need to download and extract the USACO dataset. This can be done with the following steps:
+
+1. Download the USACO dataset from [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link)
+2. Unzip the dataset and move the `data` directory to `hal/benchmarks/USACO/`. Hence there should be a `data/` directory in `hal/benchmarks/USACO/`
 
 ### [AppWorld](https://appworld.dev/)
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
