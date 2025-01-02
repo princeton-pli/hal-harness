@@ -224,7 +224,40 @@ hal-eval --benchmark swebench_verified_mini \
   --max_concurrent 5
 ```
 
-2. **Running USACO on Azure VM:**
+1. **Running USACO on Amazon EC2 using models available via Amazon Bedrock**
+
+    - Create an Amazon EC2 VM with `t3.2xlarge` instance type and the latest Ubuntu AMI (see [this](https://aws-samples.github.io/foundation-model-benchmarking-tool/misc/ec2_instance_creation_steps.html) for general guidance on creating EC2 VMs).
+    - Make sure that the IAM role associated with the VM has `AmazonBedrockFullAccess` permissions.
+    - Follow steps in the [Setup](#setup) section.
+    - Run the following command:
+
+    ```{.bashrc}
+    BENCHMARK_NAME=usaco
+    AGENT_DIR=agents/usaco_example_agent/
+    AGENT_FUNCTION=main.run
+    MODEL_NAME=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0
+    AGENT_NAME="USACO_${MODEL_NAME}"
+    PROMPT_TEMPLATE_PATH=/home/ubuntu/repos/latest/hal-harness/agents/usaco_example_agent/prompt_templates/claude_prompt_template.txt
+    hal-eval --benchmark $BENCHMARK_NAME\
+         --agent_dir $AGENT_DIR\
+         --agent_function $AGENT_FUNCTION \
+         --agent_name $AGENT_NAME \
+         -A model_name=$MODEL_NAME \
+         -A prompt_template_path=$PROMPT_TEMPLATE_PATH \
+         --max_concurrent 10
+    ```
+    Use the model ids listed in the table below for the `MODEL_NAME` variable to try out other foundation models available via Amazon Bedrock.
+    | Model Name                  | Model ID                                             |
+    |-----------------------------|-----------------------------------------------------|
+    | Anthropic Claude 3.5 Haiku  | bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0  |
+    | Anthropic Claude 3.5 Sonnet | bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 |
+    | Anthropic Claude 3 Sonnet   | bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0   |
+    | Amazon Nova Pro             | bedrock/amazon.nova-pro-v1:0                         |
+    | Amazon Nova Lite            | bedrock/amazon.nova-lite-v1:0                        |
+    | Amazon Nova Micro           | bedrock/amazon.nova-micro-v1:0                       |
+
+
+1. **Running USACO on Azure VM:**
 ```bash
 hal-eval --benchmark usaco \
   --agent_dir agents/usaco_example_agent/ \
@@ -235,7 +268,7 @@ hal-eval --benchmark usaco \
   -A model_name=gpt-4o
 ```
 
-3. **Running Inspect AI benchmark:**
+1. **Running Inspect AI benchmark:**
 ```bash
 hal-eval --benchmark inspect_evals/gaia \
   --agent_dir agents/inspect/ \
