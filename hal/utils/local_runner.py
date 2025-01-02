@@ -4,10 +4,14 @@ import shutil
 import uuid
 import subprocess
 import asyncio
+import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 from hal.benchmarks.base_benchmark import BaseBenchmark
 from rich.progress import Progress, TaskID
+
+# Get logger for verbose output
+verbose_logger = logging.getLogger('agent_eval.verbose')
 
 class LocalRunner:
     """Handles running agents locally in isolated environments"""
@@ -151,7 +155,8 @@ class LocalRunner:
                         else:
                             shutil.copy2(src_path, dest_full_path)
                     except Exception as e:
-                        print(f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}")
+                        error_msg = f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}"
+                        verbose_logger.debug(error_msg)
 
             # Copy and run setup script if it exists
             if self.benchmark and self.benchmark.setup_script:
@@ -161,7 +166,7 @@ class LocalRunner:
                     shutil.copy2(setup_script_src, setup_script_dest)
                     setup_script_dest.chmod(0o755)
 
-                    print(f"Running setup script for task {task_id}")
+                    verbose_logger.debug(f"Running setup script for task {task_id}")
                     cmd = ["bash", str(setup_script_dest)]
                     if self.conda_env:
                         cmd = ["conda", "run", "-n", self.conda_env] + cmd
@@ -174,9 +179,15 @@ class LocalRunner:
                     )
                     stdout, stderr = await process.communicate()
                     
+                    # Log setup script output
+                    if stdout:
+                        verbose_logger.debug(f"Setup script stdout for task {task_id}:\n{stdout.decode()}")
+                    if stderr:
+                        verbose_logger.debug(f"Setup script stderr for task {task_id}:\n{stderr.decode()}")
+                    
                     if process.returncode != 0:
                         error_msg = stderr.decode() if stderr else "Unknown error"
-                        print(f"Error running setup script for task {task_id}: {error_msg}")
+                        verbose_logger.debug(f"Error running setup script for task {task_id}: {error_msg}")
                         return {task_id: f"ERROR: Setup script failed: {error_msg}"}
 
             # Create runner script
@@ -196,6 +207,7 @@ class LocalRunner:
                 cmd = ["conda", "run", "-n", self.conda_env] + cmd
                 
             # Run agent
+            verbose_logger.debug(f"Running agent for task {task_id}")
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 cwd=str(temp_dir),
@@ -205,9 +217,15 @@ class LocalRunner:
 
             stdout, stderr = await process.communicate()
             
+            # Log agent output
+            if stdout:
+                verbose_logger.debug(f"Agent stdout for task {task_id}:\n{stdout.decode()}")
+            if stderr:
+                verbose_logger.debug(f"Agent stderr for task {task_id}:\n{stderr.decode()}")
+            
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
-                print(f"Error running task {task_id}: {error_msg}")
+                verbose_logger.debug(f"Error running task {task_id}: {error_msg}")
                 return {task_id: f"ERROR: {error_msg}"}
 
             # Load results
@@ -215,10 +233,13 @@ class LocalRunner:
                 with open(temp_dir / "output.json") as f:
                     return json.load(f)
             except FileNotFoundError:
-                return {task_id: "ERROR: No output file generated"}
+                error_msg = "ERROR: No output file generated"
+                verbose_logger.debug(f"{error_msg} for task {task_id}")
+                return {task_id: error_msg}
 
         except Exception as e:
-            print(f"Error processing task {task_id}: {e}")
+            error_msg = f"Error processing task {task_id}: {e}"
+            verbose_logger.debug(error_msg)
             return {task_id: f"ERROR: {str(e)}"}
 
         finally:
@@ -231,7 +252,8 @@ class LocalRunner:
                 # Remove temp directory
                 shutil.rmtree(temp_dir)
             except Exception as e:
-                print(f"Warning: Failed to cleanup {temp_dir}: {e}")
+                error_msg = f"Warning: Failed to cleanup {temp_dir}: {e}"
+                verbose_logger.debug(error_msg)
 
     def _create_runner_script(self, agent_function: str, task_id: str, run_id: str) -> str:
         """
