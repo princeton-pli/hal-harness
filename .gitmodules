@@ -17,5 +17,5 @@
 	path = agents/Moatless/moatless-tools
 	url = https://github.com/benediktstroebl/moatless-tools.git
 [submodule "agents/usaco_bedrock_agents"]
-        path = agents/usaco_bedrock_agents
-        url = https://github.com/aarora79/usaco_bedrock_agents.git
+	path = agents/usaco_bedrock_agents
+	url = https://github.com/aarora79/usaco_bedrock_agents.git
