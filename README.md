@@ -215,14 +215,14 @@ Now the harness should be able to run Cybench.
 ## Example Evaluations
 
 1. **Running SWE-bench locally:**
-```bash
-hal-eval --benchmark swebench_verified_mini \
-  --agent_dir agents/swebench_example_agent/ \
-  --agent_function main.run \
-  --agent_name "My Agent (gpt-4o-mini)" \
-  -A model_name=gpt-4o-mini \
-  --max_concurrent 5
-```
+    ```bash
+    hal-eval --benchmark swebench_verified_mini \
+      --agent_dir agents/swebench_example_agent/ \
+      --agent_function main.run \
+      --agent_name "My Agent (gpt-4o-mini)" \
+      -A model_name=gpt-4o-mini \
+      --max_concurrent 5
+    ```
 
 1. **Running USACO on Amazon EC2 using models available via Amazon Bedrock**
 
