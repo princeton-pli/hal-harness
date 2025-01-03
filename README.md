@@ -241,11 +241,12 @@ Now the harness should be able to run Cybench.
 
       ```{.bashrc}
       BENCHMARK_NAME=usaco
-      AGENT_DIR=agents/usaco_example_agent/
+      AGENT_DIR=agents/usaco_bedrock_agents/
       AGENT_FUNCTION=main.run
       MODEL_NAME=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0
       AGENT_NAME="USACO_${MODEL_NAME}"
-      PROMPT_TEMPLATE_PATH=agents/usaco_example_agent/prompt_templates/claude_prompt_template.txt
+      PWD=`pwd`
+      PROMPT_TEMPLATE_PATH=${PWD}/${AGENT_DIR}/prompt_templates/claude.txt
       # adjust the concurrency based on your service quota, higher concurrency could lead to rate limiting
       CONCURRENCY=10
       hal-eval --benchmark $BENCHMARK_NAME\
@@ -257,14 +258,14 @@ Now the harness should be able to run Cybench.
           --max_concurrent $CONCURRENCY
       ```
     Use the model ids listed in the table below for the `MODEL_NAME` variable to try out other foundation models available via Amazon Bedrock.
-    | Model Name                  | Model ID                                             |
-    |-----------------------------|-----------------------------------------------------|
-    | Anthropic Claude 3.5 Haiku  | bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0  |
-    | Anthropic Claude 3.5 Sonnet | bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 |
-    | Anthropic Claude 3 Sonnet   | bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0   |
-    | Amazon Nova Pro             | bedrock/amazon.nova-pro-v1:0                         |
-    | Amazon Nova Lite            | bedrock/amazon.nova-lite-v1:0                        |
-    | Amazon Nova Micro           | bedrock/amazon.nova-micro-v1:0                       |
+    | Model Name                  | Model ID                                             |Model ID                                             |
+    |-----------------------------|-----------------------------------------------------|-----------------------------------------------------|
+    | Anthropic Claude 3.5 Haiku  | bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0  | `claude.txt` |
+    | Anthropic Claude 3.5 Sonnet | bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 |`claude.txt` |
+    | Anthropic Claude 3 Sonnet   | bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0   |`claude.txt` |
+    | Amazon Nova Pro             | bedrock/amazon.nova-pro-v1:0                         |`nova.txt` |
+    | Amazon Nova Lite            | bedrock/amazon.nova-lite-v1:0                        |`nova.txt` |
+    | Amazon Nova Micro           | bedrock/amazon.nova-micro-v1:0                       |`nova.txt` |
 
 
 1. **Running USACO on Azure VM:**
