@@ -229,23 +229,31 @@ Now the harness should be able to run Cybench.
     - Create an Amazon EC2 VM with `t3.2xlarge` instance type and the latest Ubuntu AMI (see [this](https://aws-samples.github.io/foundation-model-benchmarking-tool/misc/ec2_instance_creation_steps.html) for general guidance on creating EC2 VMs).
     - Make sure that the IAM role associated with the VM has `AmazonBedrockFullAccess` permissions.
     - Follow steps in the [Setup](#setup) section.
-    - Run the following command:
+        - Install `Docker` on this VM. 
+            ```{.bashrc}
+            sudo apt-get update
+            sudo apt-get install --reinstall docker.io -y
+            sudo apt-get install -y docker-compose
+            docker compose version
+            ```
+    - Copy the test data `usaco_v3` dataset in the `hal/benchmarks/USACO/data/datasets/usaco_v3` folder. The dataset runs into several GBs and is available for direct download as a Zip archive [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link). You can download the dataset Zip archive and then find the `usaco_v3` folder in the extracted contents (also see the official [`USACO README`](https://github.com/princeton-nlp/USACO/blob/main/README.md#data)).
+    - Run the following command to run the benchmarking. The command shown below runs the USACO benchmark for the `Anthropic Claude 3.5 Sonnet` model. _Depending upon your service quota limits this may take anywhere from 30 minutes to several hours_.
 
-    ```{.bashrc}
-    BENCHMARK_NAME=usaco
-    AGENT_DIR=agents/usaco_example_agent/
-    AGENT_FUNCTION=main.run
-    MODEL_NAME=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0
-    AGENT_NAME="USACO_${MODEL_NAME}"
-    PROMPT_TEMPLATE_PATH=/home/ubuntu/repos/latest/hal-harness/agents/usaco_example_agent/prompt_templates/claude_prompt_template.txt
-    hal-eval --benchmark $BENCHMARK_NAME\
-         --agent_dir $AGENT_DIR\
-         --agent_function $AGENT_FUNCTION \
-         --agent_name $AGENT_NAME \
-         -A model_name=$MODEL_NAME \
-         -A prompt_template_path=$PROMPT_TEMPLATE_PATH \
-         --max_concurrent 10
-    ```
+      ```{.bashrc}
+      BENCHMARK_NAME=usaco
+      AGENT_DIR=agents/usaco_example_agent/
+      AGENT_FUNCTION=main.run
+      MODEL_NAME=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0
+      AGENT_NAME="USACO_${MODEL_NAME}"
+      PROMPT_TEMPLATE_PATH=/home/ubuntu/repos/latest/hal-harness/agents/usaco_example_agent/prompt_templates/claude_prompt_template.txt
+      hal-eval --benchmark $BENCHMARK_NAME\
+          --agent_dir $AGENT_DIR\
+          --agent_function $AGENT_FUNCTION \
+          --agent_name $AGENT_NAME \
+          -A model_name=$MODEL_NAME \
+          -A prompt_template_path=$PROMPT_TEMPLATE_PATH \
+          --max_concurrent 10
+      ```
     Use the model ids listed in the table below for the `MODEL_NAME` variable to try out other foundation models available via Amazon Bedrock.
     | Model Name                  | Model ID                                             |
     |-----------------------------|-----------------------------------------------------|
