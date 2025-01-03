@@ -20,6 +20,9 @@ from pandas.api.types import CategoricalDtype
 logging.basicConfig(format='[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# global constants
+RESULTS_DIR: str = "results"
+METRICS_DIR: str = os.path.join(RESULTS_DIR, "metrics")
 
 # Set default plotting styles
 #plt.style.use('seaborn')
@@ -42,17 +45,6 @@ class ResultType(int, Enum):
     COMPILATION_ERROR     = 5
     RUNTIME_ERROR         = 6
     UNKNOWN               = 7
-
-# global constants
-METRICS_DIR: str = "metrics"
-os.makedirs(METRICS_DIR, exist_ok=True)
-PROBLEM_COUNTS_BY_CATEGORY_FILE_PATH: str = os.path.join(METRICS_DIR, "problem_counts_by_category.csv")
-PASSED_TESTS_FILE_PATH: str = os.path.join(METRICS_DIR, "passed.csv")
-PASSED_TESTS_BY_CATEGORY_FILE_PATH: str = os.path.join(METRICS_DIR, "passed_by_category.csv")
-RESULT_TYPE_COUNTS_FILE_PATH: str = os.path.join(METRICS_DIR, "result_type_counts.csv")
-RESULT_TYPE_BY_PROBLEM_CATEGORY_COUNTS_FILE_PATH: str = os.path.join(METRICS_DIR, "result_type_by_problem_category_counts.csv")
-RESULT_TYPE_BY_PROBLEM_CATEGORY_PLOT_FILE_PATH: str = os.path.join(METRICS_DIR, "result_type_by_problem_category_plot.png")
-RESULT_TYPE_BY_PROBLEM_CATEGORY_WITHIN_CATEGORY_PCT_PLOT_FILE_PATH: str = os.path.join(METRICS_DIR, "result_type_by_problem_category_within_category_pct_plot.png")
 
 def value_counts_with_percentage(series):
     counts = series.value_counts()
@@ -235,7 +227,7 @@ def perform_eda(df: pd.DataFrame, args) -> None:
     df_passed = df_passed[df_passed.result_type == True]
     logger.info(f"out of a total of {len(df.problem_id.unique())} problems we had {len(df_passed)} problems for which the generated code passed all unit tests")
     logger.info(df_passed)
-    fpath: str = PASSED_TESTS_FILE_PATH
+    fpath: str = args.passed_tests_file_path
     logger.info(f"going to save passed problems list to {fpath}")
     df_passed.to_csv(fpath, index=False)
 
@@ -243,7 +235,7 @@ def perform_eda(df: pd.DataFrame, args) -> None:
     df_problems_by_category = value_counts_with_percentage(df[['problem_id', 'problem_category']].drop_duplicates()['problem_category'])
     logger.info(f"problem counts by category")
     logger.info(df_problems_by_category)
-    fpath: str = PROBLEM_COUNTS_BY_CATEGORY_FILE_PATH
+    fpath: str = args.problem_counts_by_category_file_path
     logger.info(f"going to save problems by category to {fpath}")
     df_problems_by_category.to_csv(fpath, index=True)
 
@@ -251,7 +243,7 @@ def perform_eda(df: pd.DataFrame, args) -> None:
     df_passed_by_category = value_counts_with_percentage(df_passed['problem_category'])
     logger.info(f"passed problem counts by category")
     logger.info(df_passed_by_category)
-    fpath: str = PASSED_TESTS_BY_CATEGORY_FILE_PATH
+    fpath: str = args.passed_tests_by_category_file_path
     logger.info(f"going to save passed problems by category to {fpath}")
     df_passed_by_category.to_csv(fpath, index=True)
 
@@ -261,7 +253,7 @@ def perform_eda(df: pd.DataFrame, args) -> None:
     df_result_type_metrics = value_counts_with_percentage(df['result_type'])
     logger.info(f"result_type counts")
     logger.info(df_result_type_metrics)
-    fpath: str = RESULT_TYPE_COUNTS_FILE_PATH
+    fpath: str = args.result_type_counts_file_path
     logger.info(f"going to save result_type counts to {fpath}")
     df_result_type_metrics.to_csv(fpath, index=True)
 
@@ -274,7 +266,7 @@ def perform_eda(df: pd.DataFrame, args) -> None:
     #df_result_type_by_problem_category_metrics = df_result_type_by_problem_category_metrics.reset_index().sort_values(by="problem_category")
     logger.info(f"result_type by problem_category counts")
     logger.info(df_result_type_by_problem_category_metrics)
-    fpath: str = RESULT_TYPE_BY_PROBLEM_CATEGORY_COUNTS_FILE_PATH
+    fpath: str = args.result_type_by_probpem_category_counts_file_path
     logger.info(f"going to save result_type by problem_category counts to {fpath}")
     df_result_type_by_problem_category_metrics.to_csv(fpath, index=False)
 
@@ -302,7 +294,7 @@ def perform_eda(df: pd.DataFrame, args) -> None:
     plt.tight_layout()
 
     # save
-    fpath: str = RESULT_TYPE_BY_PROBLEM_CATEGORY_PLOT_FILE_PATH
+    fpath: str = args.result_type_by_problem_category_plot_file_path
     plt.savefig(fpath)
     plt.clf()
 
@@ -359,7 +351,7 @@ def perform_eda(df: pd.DataFrame, args) -> None:
     plt.tight_layout()
 
     # Save the plot
-    fpath = RESULT_TYPE_BY_PROBLEM_CATEGORY_WITHIN_CATEGORY_PCT_PLOT_FILE_PATH
+    fpath = args.result_type_by_problem_category_within_category_pct_plot_file_path
     plt.savefig(fpath)
     plt.clf()
 
@@ -368,6 +360,17 @@ def main():
     try:
         # Parse command line arguments
         args = parse_arguments()
+
+        # create model specific metrics dir
+        metrics_dir = os.path.join(METRICS_DIR, args.model_id.replace(":", "-"))
+        os.makedirs(metrics_dir, exist_ok=True)
+        args.problem_counts_by_category_file_path = os.path.join(metrics_dir, "problem_counts_by_category.csv")
+        args.passed_tests_file_path = os.path.join(metrics_dir, "passed.csv")
+        args.passed_tests_by_category_file_path = os.path.join(metrics_dir, "passed_by_category.csv")
+        args.result_type_counts_file_path = os.path.join(metrics_dir, "result_type_counts.csv")
+        args.result_type_by_probpem_category_counts_file_path = os.path.join(metrics_dir, "result_type_by_problem_category_counts.csv")
+        args.result_type_by_problem_category_plot_file_path = os.path.join(metrics_dir, "result_type_by_problem_category_plot.png")
+        args.result_type_by_problem_category_within_category_pct_plot_file_path = os.path.join(metrics_dir, "result_type_by_problem_category_within_category_pct_plot.png")
         
         # Load data from JSON files
         data_list = load_json_files(args.data_dir)
