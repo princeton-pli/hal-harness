@@ -245,14 +245,16 @@ Now the harness should be able to run Cybench.
       AGENT_FUNCTION=main.run
       MODEL_NAME=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0
       AGENT_NAME="USACO_${MODEL_NAME}"
-      PROMPT_TEMPLATE_PATH=/home/ubuntu/repos/latest/hal-harness/agents/usaco_example_agent/prompt_templates/claude_prompt_template.txt
+      PROMPT_TEMPLATE_PATH=agents/usaco_example_agent/prompt_templates/claude_prompt_template.txt
+      # adjust the concurrency based on your service quota, higher concurrency could lead to rate limiting
+      CONCURRENCY=10
       hal-eval --benchmark $BENCHMARK_NAME\
           --agent_dir $AGENT_DIR\
           --agent_function $AGENT_FUNCTION \
           --agent_name $AGENT_NAME \
           -A model_name=$MODEL_NAME \
           -A prompt_template_path=$PROMPT_TEMPLATE_PATH \
-          --max_concurrent 10
+          --max_concurrent $CONCURRENCY
       ```
     Use the model ids listed in the table below for the `MODEL_NAME` variable to try out other foundation models available via Amazon Bedrock.
     | Model Name                  | Model ID                                             |
@@ -266,26 +268,28 @@ Now the harness should be able to run Cybench.
 
 
 1. **Running USACO on Azure VM:**
-```bash
-hal-eval --benchmark usaco \
-  --agent_dir agents/usaco_example_agent/ \
-  --agent_function main.run \
-  --agent_name "USACO Solver (gpt-4o)" \
-  --vm \
-  --max_concurrent 5 \
-  -A model_name=gpt-4o
-```
+
+    ```bash
+    hal-eval --benchmark usaco \
+      --agent_dir agents/usaco_example_agent/ \
+      --agent_function main.run \
+      --agent_name "USACO Solver (gpt-4o)" \
+      --vm \
+      --max_concurrent 5 \
+      -A model_name=gpt-4o
+    ```
 
 1. **Running Inspect AI benchmark:**
-```bash
-hal-eval --benchmark inspect_evals/gaia \
-  --agent_dir agents/inspect/ \
-  --agent_function gaia.default_agent \
-  --agent_name "Gaia Agent (gpt-4o)" \
-  -A model_name=gpt-4o \
-  -I token_limit=4000 \
-  -I temperature=0.4
-```
+
+    ```bash
+    hal-eval --benchmark inspect_evals/gaia \
+      --agent_dir agents/inspect/ \
+      --agent_function gaia.default_agent \
+      --agent_name "Gaia Agent (gpt-4o)" \
+      -A model_name=gpt-4o \
+      -I token_limit=4000 \
+      -I temperature=0.4
+    ```
 
 ## Running Environment Options
 
