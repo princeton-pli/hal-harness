@@ -237,6 +237,7 @@ Now the harness should be able to run Cybench.
             docker compose version
             ```
     - Copy the test data `usaco_v3` dataset in the `hal/benchmarks/USACO/data/datasets/usaco_v3` folder. The dataset runs into several GBs and is available for direct download as a Zip archive [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link). You can download the dataset Zip archive and then find the `usaco_v3` folder in the extracted contents (also see the official [`USACO README`](https://github.com/princeton-nlp/USACO/blob/main/README.md#data)).
+    - Ensure that you have access to the models in Amazon Bedrock that you want to use. See [`instructions`](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html) for requesting model access in Amazon Bedrock.
     - Run the following command to run the benchmarking. The command shown below runs the USACO benchmark for the `Anthropic Claude 3.5 Sonnet` model. _Depending upon your service quota limits this may take anywhere from 30 minutes to several hours_.
 
       ```{.bashrc}
@@ -266,6 +267,7 @@ Now the harness should be able to run Cybench.
     | Amazon Nova Pro             | bedrock/amazon.nova-pro-v1:0                         |`nova.txt` |
     | Amazon Nova Lite            | bedrock/amazon.nova-lite-v1:0                        |`nova.txt` |
     | Amazon Nova Micro           | bedrock/amazon.nova-micro-v1:0                       |`nova.txt` |
+    | Meta Llama-3.3 70B          | bedrock/us.meta.llama3-3-70b-instruct-v1:0           |`claude.txt` |
 
 
 1. **Running USACO on Azure VM:**
