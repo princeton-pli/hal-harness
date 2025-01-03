@@ -25,6 +25,7 @@ dependencies = [
     "cryptography>=42.0.0",
     "litellm==1.55.0",
     "boto3",
+    "seaborn==0.13.2",
 ]
 
 [project.optional-dependencies]
