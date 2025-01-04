@@ -7,6 +7,7 @@ import os
 import sys
 import glob
 import json
+import shutil
 import logging
 import argparse
 import pandas as pd
@@ -123,7 +124,7 @@ def parse_arguments() -> argparse.Namespace:
     
     return parser.parse_args()
 
-def load_json_files(data_dir: str) -> list:
+def load_json_files(data_dir: str, metrics_dir: str) -> list:
     """
     Load all JSON files matching the pattern '*rdict*.json' from the specified directory.
     Although we say "All" there is only ever a single rdict.json file in the directory, the
@@ -143,6 +144,9 @@ def load_json_files(data_dir: str) -> list:
         
         # Find all matching files
         file_path, _ = get_most_recent_file_with_timestamp(file_pattern)
+
+        # copy the file locally for record purposes
+        shutil.copy2(file_path, metrics_dir)
         
         if not file_path:
             logger.warning(f"No files matching pattern '*rdict*.json' found in {data_dir}")
@@ -364,6 +368,7 @@ def main():
         # create model specific metrics dir
         metrics_dir = os.path.join(METRICS_DIR, args.model_id.replace(":", "-"))
         os.makedirs(metrics_dir, exist_ok=True)
+        args.metrics_dir = metrics_dir
         args.problem_counts_by_category_file_path = os.path.join(metrics_dir, "problem_counts_by_category.csv")
         args.passed_tests_file_path = os.path.join(metrics_dir, "passed.csv")
         args.passed_tests_by_category_file_path = os.path.join(metrics_dir, "passed_by_category.csv")
@@ -373,7 +378,7 @@ def main():
         args.result_type_by_problem_category_within_category_pct_plot_file_path = os.path.join(metrics_dir, "result_type_by_problem_category_within_category_pct_plot.png")
         
         # Load data from JSON files
-        data_list = load_json_files(args.data_dir)
+        data_list = load_json_files(args.data_dir, args.metrics_dir)
         
         if not data_list:
             logger.error("No data loaded. Exiting.")

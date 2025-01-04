@@ -244,10 +244,10 @@ Now the harness should be able to run Cybench.
       BENCHMARK_NAME=usaco
       AGENT_DIR=agents/usaco_bedrock_agents/
       AGENT_FUNCTION=main.run
-      MODEL_NAME=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0
+      MODEL_NAME=bedrock/amazon.nova-lite-v1:0 
       AGENT_NAME="USACO_${MODEL_NAME}"
       PWD=`pwd`
-      PROMPT_TEMPLATE_PATH=${PWD}/${AGENT_DIR}/prompt_templates/claude.txt
+      PROMPT_TEMPLATE_PATH=${PWD}/${AGENT_DIR}/prompt_templates/nova.txt
       # adjust the concurrency based on your service quota, higher concurrency could lead to rate limiting
       CONCURRENCY=10
       hal-eval --benchmark $BENCHMARK_NAME\
@@ -258,17 +258,24 @@ Now the harness should be able to run Cybench.
           -A prompt_template_path=$PROMPT_TEMPLATE_PATH \
           --max_concurrent $CONCURRENCY
       ```
-    Use the model ids listed in the table below for the `MODEL_NAME` variable to try out other foundation models available via Amazon Bedrock.
-    | Model Name                  | Model ID                                             |Model ID                                             |
-    |-----------------------------|-----------------------------------------------------|-----------------------------------------------------|
-    | Anthropic Claude 3.5 Haiku  | bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0  | `claude.txt` |
-    | Anthropic Claude 3.5 Sonnet | bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 |`claude.txt` |
-    | Anthropic Claude 3 Sonnet   | bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0   |`claude.txt` |
-    | Amazon Nova Pro             | bedrock/amazon.nova-pro-v1:0                         |`nova.txt` |
-    | Amazon Nova Lite            | bedrock/amazon.nova-lite-v1:0                        |`nova.txt` |
-    | Amazon Nova Micro           | bedrock/amazon.nova-micro-v1:0                       |`nova.txt` |
-    | Meta Llama-3.3 70B          | bedrock/us.meta.llama3-3-70b-instruct-v1:0           |`claude.txt` |
+      Use the model ids listed in the table below for the `MODEL_NAME` variable to try out other foundation models available via Amazon Bedrock.
+      | Model Name                  | Model ID                                             |Model ID                                             |
+      |-----------------------------|-----------------------------------------------------|-----------------------------------------------------|
+      | Anthropic Claude 3.5 Haiku  | bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0  | `claude.txt` |
+      | Anthropic Claude 3.5 Sonnet | bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 |`claude.txt` |
+      | Anthropic Claude 3 Sonnet   | bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0   |`claude.txt` |
+      | Amazon Nova Pro             | bedrock/amazon.nova-pro-v1:0                         |`nova.txt` |
+      | Amazon Nova Lite            | bedrock/amazon.nova-lite-v1:0                        |`nova.txt` |
+      | Amazon Nova Micro           | bedrock/amazon.nova-micro-v1:0                       |`nova.txt` |
+      | Meta Llama-3.3 70B          | bedrock/us.meta.llama3-3-70b-instruct-v1:0           |`claude.txt` |
 
+    - Once the benchmark tests are completed and you have the accuracy numbers printed out on the console, you can optionally run analytics on the results to get insights such as: _how many tests of each problem category (`bronze`, `silver`, `gold`, `platinum`) passed?_, _What was the `problem_id` of the tests that passed?_, _What percentage of tasks in any given category failed due to timeouts, wrong answers etc._. The analytics results generated are provided in the form of csv files and charts which can be used for gaining additional insights. Run the following command to generate the analytics data, the resulting csv files and plots are created in the `results/metrics/<model-id>` directory. The `analytics.py` script picks the latest `rdict.json` file from the `hal/benchmarks/USACO/results` directory.
+    
+        ```{.bashrc}
+        RESULTS_DIR=hal/benchmarks/USACO/results
+        #MODEL_NAME=your-model-id # this should be set already by the previous step but if running this command from a different shell then you can set it explicitly as well, for example: bedrock/amazon.nova-micro-v1:0
+        python hal/benchmarks/analytics.py --data-dir ${RESULTS_DIR} --model-id ${MODEL_NAME}
+        ```
 
 1. **Running USACO on Azure VM:**
 
