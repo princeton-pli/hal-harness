@@ -105,7 +105,9 @@ def calculate_costs(usage_calls: List[Dict[str, Any]]) -> Tuple[float, Dict[str,
                     MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["input_tokens"] +
                     MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["output_tokens"]
                 )
-    
+            else:
+                raise ValueError(f"Error in handling usage data! {call}")
+
     return total_cost, token_usage
 
 def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
