@@ -186,7 +186,7 @@ class InspectBenchmark(BaseBenchmark):
                 scorer_name = eval_score.name
                 metrics = eval_score.metrics
                 for _key, metric in metrics.items():
-                    score_name = f"{scorer_name}/{metric.name}"
+                    score_name = f"{scorer_name}_{metric.name}".replace("/", "_")
                     eval_results[score_name] = metric.value
                     if accuracy is None and (
                         metric.name == "accuracy" or metric.name == "mean"
