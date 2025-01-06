@@ -182,7 +182,11 @@ def inspect_evaluate(
             inspect_eval_results = json.load(f)
             
         # Compute the total cost from the model usage
-        total_cost = comput_cost_from_inspect_usage(inspect_eval_results['stats']['model_usage'])
+        if benchmark == "inspect_evals/agentharm":
+            # If agentharm, skip gpt-4o-2024-08-06 because it is used for scoring not the agent    TODO: make this more general
+            total_cost = comput_cost_from_inspect_usage(inspect_eval_results['stats']['model_usage'], skip_models=["openai/gpt-4o-2024-08-06"])
+        else:
+            total_cost = comput_cost_from_inspect_usage(inspect_eval_results['stats']['model_usage'])
         
         if "composio" in agent_dir.lower(): # todo remove
             # load the results from json file

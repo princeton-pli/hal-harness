@@ -133,10 +133,10 @@ def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
                 for model_name in set(model_name for call in calls for model_name in call.get('summary', {}).get('usage', {}))
             }
             
-def comput_cost_from_inspect_usage(usage: Dict[str, Dict[str, int]]) -> float:
+def comput_cost_from_inspect_usage(usage: Dict[str, Dict[str, int]], skip_models: List[str] = []) -> float:
     """Compute cost from token usage"""
     return sum(MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name]["input_tokens"] +
-               MODEL_PRICES_DICT[model_name]["completion_tokens"] * usage[model_name]["output_tokens"] for model_name in usage)
+               MODEL_PRICES_DICT[model_name]["completion_tokens"] * usage[model_name]["output_tokens"] for model_name in usage if model_name not in skip_models)
 
 def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     """Process a single Weave call output"""
