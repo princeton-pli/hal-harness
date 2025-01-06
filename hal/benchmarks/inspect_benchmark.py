@@ -100,6 +100,8 @@ class InspectBenchmark(BaseBenchmark):
                 for level in ['1', '2', '3']:
                     accuracy = level_correct[level] / len(level_samples[level]) if len(level_samples[level]) > 0 else None
                     eval_results[f'level_{level}_accuracy'] = accuracy
+            elif benchmark_name == "inspect_evals/agentharm":
+                eval_results["accuracy"] = eval_results["combined_scorer/inspect_evals/avg_score"]
         except Exception as e:
             print_warning(f"Computing additional metrics failed. Output will only contain standard metrics from Inspect harness...")
             log_error(f"Computing additional metrics failed: {e}")
