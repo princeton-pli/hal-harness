@@ -7,10 +7,10 @@ This guide explains how to add new benchmarks to the HAL evaluation framework. A
 Each benchmark should be a Python class inheriting from `BaseBenchmark` with this structure:
 
 ```
-benchmarks/
+hal/benchmarks/
+  ├── your_benchmark.py
   └── your_benchmark/
       ├── __init__.py
-      ├── benchmark.py    # Main benchmark class
       ├── setup.sh        # Optional setup script for VMs
       └── data/          # Optional benchmark data files
 ```
@@ -33,7 +33,7 @@ class YourBenchmark(BaseBenchmark):
         # Optional: Set if benchmark requires VM execution
         self.vm_only = False
         # Optional: Path to VM setup script
-        self.setup_script = "benchmarks/your_benchmark/setup.sh"
+        self.setup_script = "hal/benchmarks/your_benchmark/setup.sh"
         
         
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
