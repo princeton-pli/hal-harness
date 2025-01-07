@@ -144,7 +144,7 @@ class InspectBenchmark(BaseBenchmark):
                     print_warning(f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL...")
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
-        elif "agentharm" in eval_log.eval.task and "agentharm_benign" not in eval_log.eval.task:
+        elif "agentharm" in eval_log.eval.task:
             for sample in eval_log.samples:
                 if sample.scores['combined_scorer'].value['refusal']:
                     succ_tasks.append(sample.id)
