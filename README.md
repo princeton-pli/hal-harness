@@ -212,6 +212,30 @@ For Cybench, you'll need to configure Docker's default address pools to avoid IP
 
 Now the harness should be able to run Cybench.
 
+#### AgentHarm
+- Benchmark for evaluating agent behavior on both benign and potentially harmful tasks
+- Two variants available:
+  - `inspect_evals/agentharm`: Evaluates agent behavior on potentially harmful tasks
+  - `inspect_evals/agentharm_benign`: Evaluates agent behavior on benign tasks
+- When using the default inspect agent with benign tasks, requires setting `-A task_name=benign`
+- Example usage:
+```bash
+# For benign tasks
+hal-eval --benchmark inspect_evals/agentharm_benign \
+  --agent_dir agents/inspect/agentharm \
+  --agent_function agentharm.default_agent \
+  --agent_name "Agent (gpt-4o-mini-2024-07-18)" \
+  -A model_name=openai/gpt-4o-mini-2024-07-18 \
+  -A task_name=benign
+
+# For potentially harmful tasks
+hal-eval --benchmark inspect_evals/agentharm \
+  --agent_dir agents/inspect/agentharm \
+  --agent_function agentharm.default_agent \
+  --agent_name "Agent (gpt-4o-mini-2024-07-18)" \
+  -A model_name=openai/gpt-4o-mini-2024-07-18
+```
+
 ## Example Evaluations
 
 1. **Running SWE-bench locally:**
@@ -240,8 +264,8 @@ hal-eval --benchmark usaco \
 hal-eval --benchmark inspect_evals/gaia \
   --agent_dir agents/inspect/ \
   --agent_function gaia.default_agent \
-  --agent_name "Gaia Agent (gpt-4o)" \
-  -A model_name=gpt-4o \
+  --agent_name "Gaia Agent (gpt-4o-mini-2024-07-18)" \
+  -A model_name=openai/gpt-4o-mini-2024-07-18 \
   -I token_limit=4000 \
   -I temperature=0.4
 ```
