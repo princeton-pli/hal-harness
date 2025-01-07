@@ -208,6 +208,12 @@ def inspect_evaluate(
         eval_config = config_for_eval(
             run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
         )
+        
+        # replace / in metrics with underscore
+        inspect_eval_results_json = {
+            key.replace("/", "_"): value 
+            for key, value in inspect_eval_results_json.items()
+        }
 
         # Compose the final uploadable result
         eval_header_raw = eval_log
