@@ -24,7 +24,8 @@ class BenchmarkManager:
                            'inspect_evals/gaia',
                            'inspect_evals/cybench',
                            'inspect_evals/appworld',
-                           'inspect_evals/agentharm']
+                           'inspect_evals/agentharm',
+                           'inspect_evals/agentharm_benign']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""

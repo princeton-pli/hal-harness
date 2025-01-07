@@ -102,6 +102,8 @@ class InspectBenchmark(BaseBenchmark):
                     eval_results[f'level_{level}_accuracy'] = accuracy
             elif benchmark_name == "inspect_evals/agentharm":
                 eval_results["accuracy"] = eval_results["combined_scorer/inspect_evals/avg_score"]
+            elif benchmark_name == "inspect_evals/agentharm_benign":
+                eval_results["accuracy"] = eval_results["combined_scorer/inspect_evals/avg_score"]
         except Exception as e:
             print_warning(f"Computing additional metrics failed. Output will only contain standard metrics from Inspect harness...")
             log_error(f"Computing additional metrics failed: {e}")
@@ -142,7 +144,7 @@ class InspectBenchmark(BaseBenchmark):
                     print_warning(f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL...")
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
-        elif "agentharm" in eval_log.eval.task:
+        elif "agentharm" in eval_log.eval.task and "agentharm_benign" not in eval_log.eval.task:
             for sample in eval_log.samples:
                 if sample.scores['combined_scorer'].value['refusal']:
                     succ_tasks.append(sample.id)
