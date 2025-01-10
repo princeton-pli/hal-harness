@@ -46,7 +46,7 @@ This repository provides a standardized evaluation harness for evaluating differ
 5. [How to Reproduce Existing Agents on HAL?](#how-to-reproduce-existing-agents-on-hal)
 5. [How Do I Add a Benchmark?](#how-do-i-add-a-benchmark)
 6. [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards)
-7. [About](#about)
+7. [About](#about-hal)
 8. [Repository Structure](#repository-structure)
 
 ## Setup
@@ -328,7 +328,7 @@ Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-
 
    **Note:** When using `-F` to upload a single file, the file must be a JSON file.
 
-## About
+## About HAL
 
 The current landscape of AI agent evaluation faces several critical challenges. Benchmark evaluations tend to focus on accuracy while ignoring costs, leading to uninformative evaluations for downstream developers. What does it mean if an agent has 1% higher accuracy on a benchmark but is 10x more expensive? The lack of standardized evaluation practices makes it difficult to assess real-world capabilities and prevents meaningful comparisons between different approaches. As shown in "AI Agents That Matter" (arXiv:2407.01502), these issues have led to confusion about which advances actually improve performance.
 
