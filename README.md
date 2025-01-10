@@ -121,6 +121,11 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
 - **Requires VM execution** (`--vm` flag mandatory)
 
+### [CORE-bench](https://github.com/siegelz/core-bench)
+- Computational reproducibility benchmark for agents on real scientific papers
+- Supports fully parallelized evaluation on Azure VMs
+- For detailed instructions on running CORE-bench evaluations, see the [CORE-bench repository](https://github.com/CORE-Bench/CORE-Bench)
+
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
 - Two agent types supported:
