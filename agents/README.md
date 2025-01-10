@@ -1,6 +1,6 @@
 # Adding New Agents to HAL
 
-This guide explains how to implement agents for the HAL evaluation framework. An agent is a program that can solve tasks from one or more benchmarks.
+This guide explains how to develop agents that you can evaluate with the HAL's evaluation harness. It should be really simple and does put (almost) no constraints on the agent's implementation.
 
 ## Basic Agent Structure
 

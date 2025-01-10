@@ -43,6 +43,7 @@ This repository provides a standardized evaluation harness for evaluating differ
 2. [Which Benchmarks Are Supported?](#which-benchmarks-are-supported)
 3. [How Do I Run Evaluations?](#how-do-i-run-evaluations)
 4. [How Do I Develop My Own Agents?](#how-do-i-develop-my-own-agents)
+5. [How to reproduce existing agents on HAL?](#how-to-reproduce-existing-agents-on-hal)
 5. [How Do I Add a Benchmark?](#how-do-i-add-a-benchmark)
 6. [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards)
 7. [About](#about)
@@ -255,7 +256,31 @@ hal-eval --benchmark usaco \
   -A model_name=gpt-4o
 ```
 
-3. **Running Inspect AI benchmark:**
+3. **Running USACO with Amazon Bedrock models:**
+```bash
+hal-eval --benchmark usaco \
+  --agent_dir agents/usaco_bedrock_agents/ \
+  --agent_function main.run \
+  --agent_name "USACO Solver (Claude 3.5 Sonnet)" \
+  -A model_name=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 \
+  -A prompt_template_path=agents/usaco_bedrock_agents/prompt_templates/claude.txt \
+  --max_concurrent 10
+```
+
+More details on how to run the Amazon Bedrock agent can be found [here](agents/RUN_AGENTS.md).
+
+Available Bedrock models and their corresponding prompt templates:
+| Model Name | Model ID | Prompt Template |
+|-|-|-|
+| Claude 3.5 Haiku | bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0 | claude.txt |
+| Claude 3.5 Sonnet | bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 | claude.txt |
+| Claude 3 Sonnet | bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0 | claude.txt |
+| Amazon Nova Pro | bedrock/amazon.nova-pro-v1:0 | nova.txt |
+| Amazon Nova Lite | bedrock/amazon.nova-lite-v1:0 | nova.txt |
+| Amazon Nova Micro | bedrock/amazon.nova-micro-v1:0 | nova.txt |
+| Llama-3.3 70B | bedrock/us.meta.llama3-3-70b-instruct-v1:0 | claude.txt |
+
+4. **Running Inspect AI benchmark:**
 ```bash
 hal-eval --benchmark inspect_evals/gaia \
   --agent_dir agents/inspect/ \
@@ -265,6 +290,12 @@ hal-eval --benchmark inspect_evals/gaia \
   -I token_limit=4000 \
   -I temperature=0.4
 ```
+
+## How to reproduce existing agents on HAL?
+
+See [agents/RUN_AGENTS.md](agents/RUN_AGENTS.md) for detailed instructions on how to run existing agents across different benchmarks.
+
+**Note:** We are actively working on adding support for more agents to enable easy reproduction of benchmark results. Currently, we support agents outlined in [agents/RUN_AGENTS.md](agents/RUN_AGENTS.md).
 
 ## How Do I Develop My Own Agents?
 
