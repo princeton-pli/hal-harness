@@ -40,19 +40,13 @@ This repository provides a standardized evaluation harness for evaluating differ
 ## Table of Contents
 
 1. [Setup](#setup)
-2. [Running Evaluations](#running-evaluations)
-3. [Supported Benchmarks](#supported-benchmarks)
-    - [SWE-bench Verified](#swe-bench-benchmark)
-    - [USACO](#usaco-benchmark)
-    - [MLAgentBench](#mlagentbench-benchmark)
-    - [AppWorld](#appworld-benchmark)
-    - [Inspect AI Benchmarks](#inspect-ai-benchmarks)
-4. [Example Evaluations](#example-evaluations)
-5. [Running Environments](#running-environments)
-    - [Local Execution](#local-execution)
-    - [VM Execution](#vm-execution)
-6. [Uploading Results](#uploading-results)
-7. [Repository Structure](#repository-structure)
+2. [Which Benchmarks Are Supported?](#which-benchmarks-are-supported)
+3. [How Do I Run Evaluations?](#how-do-i-run-evaluations)
+4. [How Do I Develop My Own Agents?](#how-do-i-develop-my-own-agents)
+5. [How Do I Add a Benchmark?](#how-do-i-add-a-benchmark)
+6. [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards)
+7. [About](#about)
+8. [Repository Structure](#repository-structure)
 
 ## Setup
 
@@ -73,7 +67,7 @@ This repository provides a standardized evaluation harness for evaluating differ
    pip install -e .
    ```
 
-   **Note:** Some benchmarks require additional dependencies which can be installed using `pip install hal[benchmark_name]`. See [Supported Benchmarks](#supported-benchmarks) for details.
+   **Note:** Some benchmarks require additional dependencies which can be installed using `pip install hal[benchmark_name]`. See [Which Benchmarks Are Supported?](#which-benchmarks-are-supported) for details.
 
 5. **Create a `.env` file:**
    ```bash
@@ -104,42 +98,7 @@ This repository provides a standardized evaluation harness for evaluating differ
    NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    ```
 
-## Running Evaluations
-
-The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
-
-```bash
-hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_function <agent_function> --agent_name <agent_name> [OPTIONS]
-```
-
-### Core Options
-
-*   **`--benchmark <benchmark_name>`**: The name of the benchmark to run. Supported benchmarks:
-    - `swebench_verified`: Full SWE-bench Verified dataset
-    - `swebench_verified_mini`: Mini version with 50 randomly selected problems
-    - `usaco`: USACO programming competition problems
-    - `appworld_test_normal`: AppWorld normal test suite
-    - `appworld_test_challenge`: AppWorld challenge test suite
-    - `inspect_evals/gaia`: Gaia general AI assistants benchmark
-    - `inspect_evals/cybench`: Cybersecurity agent tasks
-    - `inspect_evals/agentharm`: Agent harm evaluation benchmark
-*   **`--agent_dir <agent_directory>`**: Path to the directory containing your agent's code
-*   **`--agent_function <agent_function>`**: The name of the agent's main function (e.g., `agent.run` if `agent.py` in agent directory contains `def run(): ...`)
-*   **`--agent_name <agent_name>`**: A descriptive name for your agent (used in logging/leaderboard) (e.g., `My Agent (gpt-4o)`)
-
-### Additional Options
-
-*   **`-A <key>=<value>`**: Agent arguments passed to your agent function
-*   **`-B <key>=<value>`**: Benchmark arguments passed to the benchmark
-*   **`-I <key>=<value>`**: Inspect-specific arguments (for Inspect AI benchmarks)
-*   **`--upload`**: Upload results to HuggingFace Hub
-*   **`--max_concurrent <number>`**: Number of parallel tasks (default: 1)
-*   **`--conda_env_name <env_name>`**: Conda environment for agent execution
-*   **`--vm`**: Run evaluation on Azure VMs
-*   **`--run_id <run_id>`**: Specify a run ID (useful for continuing runs)
-*   **`--continue_run`**: Continue from a previous run (requires run_id)
-
-## Supported Benchmarks
+## Which Benchmarks Are Supported?
 
 ### [SWE-bench Verified (Mini)](https://github.com/princeton-nlp/SWE-bench)
 - Evaluates code generation and bug fixing capabilities
@@ -212,7 +171,8 @@ For Cybench, you'll need to configure Docker's default address pools to avoid IP
 
 Now the harness should be able to run Cybench.
 
-#### AgentHarm
+#### [AgentHarm](https://arxiv.org/abs/2410.09024)
+
 - Benchmark for evaluating agent behavior on both benign and potentially harmful tasks
 - Two variants available:
   - `inspect_evals/agentharm`: Evaluates agent behavior on potentially harmful tasks
@@ -236,7 +196,43 @@ hal-eval --benchmark inspect_evals/agentharm \
   -A model_name=openai/gpt-4o-mini-2024-07-18
 ```
 
-## Example Evaluations
+## How Do I Run Evaluations?
+
+The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
+
+```bash
+hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_function <agent_function> --agent_name <agent_name> [OPTIONS]
+```
+
+### Core Options
+
+*   **`--benchmark <benchmark_name>`**: The name of the benchmark to run. Supported benchmarks:
+    - `swebench_verified`: Full SWE-bench Verified dataset
+    - `swebench_verified_mini`: Mini version with 50 randomly selected problems
+    - `usaco`: USACO programming competition problems
+    - `appworld_test_normal`: AppWorld normal test suite
+    - `appworld_test_challenge`: AppWorld challenge test suite
+    - `inspect_evals/gaia`: Gaia general AI assistants benchmark
+    - `inspect_evals/cybench`: Cybersecurity agent tasks
+    - `inspect_evals/agentharm`: AgentHarm
+    - `inspect_evals/agentharm_benign`: AgentHarm benign evaluation
+*   **`--agent_dir <agent_directory>`**: Path to the directory containing your agent's code
+*   **`--agent_function <agent_function>`**: The name of the agent's main function (e.g., `agent.run` if `agent.py` in agent directory contains `def run(): ...`)
+*   **`--agent_name <agent_name>`**: A descriptive name for your agent (used in logging/leaderboard) (e.g., `My Agent (gpt-4o)`)
+
+### Additional Options
+
+*   **`-A <key>=<value>`**: Agent arguments passed to your agent function
+*   **`-B <key>=<value>`**: Benchmark arguments passed to the benchmark
+*   **`-I <key>=<value>`**: Inspect-specific arguments (for Inspect AI benchmarks)
+*   **`--upload`**: Upload results to HuggingFace Hub
+*   **`--max_concurrent <number>`**: Number of parallel tasks (default: 1)
+*   **`--conda_env_name <env_name>`**: Conda environment for agent execution
+*   **`--vm`**: Run evaluation on Azure VMs
+*   **`--run_id <run_id>`**: Specify a run ID (useful for continuing runs)
+*   **`--continue_run`**: Continue from a previous run (requires run_id)
+
+### Example Evaluations
 
 1. **Running SWE-bench locally:**
 ```bash
@@ -270,58 +266,38 @@ hal-eval --benchmark inspect_evals/gaia \
   -I temperature=0.4
 ```
 
-## Running Environment Options
+## How Do I Develop My Own Agents?
 
-### Local Execution
-- Default execution mode
-- Uses conda environments and temporary directories for isolation 
-- Parallel execution via `--max_concurrent`
-- See above examples for usage
+See [agents/README.md](agents/README.md) for details.
 
-### VM Execution
-- Uses Azure VMs for isolated execution
-- Required for some benchmarks (e.g., AppWorld)
-- Automatic VM provisioning and cleanup
-- See above examples for usage
+## How Do I Add a Benchmark?
 
-## Uploading Results
+See [hal/benchmarks/README.md](hal/benchmarks/README.md) for details.
+
+## How Can I Submit My Results to the HAL Leaderboards?
 
 Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
 
-1. **During evaluation:**
-```bash
-hal-eval --benchmark <benchmark> ... --upload
-```
+1. **During Evaluation:**
+   ```bash
+   hal-eval --benchmark <benchmark> ... --upload
+   ```
 
-2. **After evaluation:**
-```bash
-# Upload all results for a benchmark
-hal-upload -B <benchmark_name>
+2. **After Evaluation:**
+   ```bash
+   # Upload all results for a benchmark
+   hal-upload -B <benchmark_name>
+   
+   # Upload a single file
+   hal-upload -F path/to/file.json
+   
+   # Upload all files in a directory
+   hal-upload -D path/to/directory
+   ```
 
-# Upload a single file
-hal-upload -F path/to/file.json
+   **Note:** When using `-F` to upload a single file, the file must be a JSON file.
 
-# Upload all files in a directory
-hal-upload -D path/to/directory
-```
-
-Note: When using `-F` to upload a single file, the file must be a JSON file.
-
-## Decrypting Results
-
-You can decrypt evaluation results that were encrypted during upload using the `hal-decrypt` command. This also appplies to trace files downloaded from the leaderboard.
-
-1. **Decrypt a single file:**
-```bash
-hal-decrypt -F path/to/file.zip
-```
-
-2. **Decrypt all zip files in a directory:**
-```bash
-hal-decrypt -D path/to/directory
-```
-
-## About HAL
+## About
 
 coming soon...
 
