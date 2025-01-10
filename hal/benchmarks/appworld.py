@@ -4,7 +4,7 @@ from typing import Dict, Any, TypedDict, List
 from typing_extensions import NotRequired
 from .base_benchmark import BaseBenchmark
 import docker
-from hal.utils import print_warning
+from hal.utils.logging_utils import print_warning
 
 class AppWorldBenchmark(BaseBenchmark):
     """AppWorld benchmark implementation"""
