@@ -41,9 +41,9 @@ This repository provides a standardized evaluation harness for evaluating differ
 
 1. [Setup](#setup)
 2. [Which Benchmarks Are Supported?](#which-benchmarks-are-supported)
-3. [How Do I Run Evaluations?](#how-do-i-run-evaluations)
+3. [How Do I Run Evaluations? (With Examples)](#how-do-i-run-evaluations)
 4. [How Do I Develop My Own Agents?](#how-do-i-develop-my-own-agents)
-5. [How to reproduce existing agents on HAL?](#how-to-reproduce-existing-agents-on-hal)
+5. [How to Reproduce Existing Agents on HAL?](#how-to-reproduce-existing-agents-on-hal)
 5. [How Do I Add a Benchmark?](#how-do-i-add-a-benchmark)
 6. [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards)
 7. [About](#about)
@@ -291,7 +291,7 @@ hal-eval --benchmark inspect_evals/gaia \
   -I temperature=0.4
 ```
 
-## How to reproduce existing agents on HAL?
+## How to Reproduce Existing Agents on HAL?
 
 See [agents/RUN_AGENTS.md](agents/RUN_AGENTS.md) for detailed instructions on how to run existing agents across different benchmarks.
 
