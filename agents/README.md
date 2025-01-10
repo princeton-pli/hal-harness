@@ -1,10 +1,10 @@
 # Adding New Agents to HAL
 
-This guide explains how to add new agents to the HAL evaluation framework. An agent is a program that can solve tasks from one or more benchmarks.
+This guide explains how to implement agents for the HAL evaluation framework. An agent is a program that can solve tasks from one or more benchmarks.
 
-## Agent Structure
+## Basic Agent Structure
 
-Each agent should be in its own directory under `agents/` with the following structure:
+Each agent should be in its own directory under `agents/` with this structure:
 
 ```
 agents/
@@ -14,9 +14,9 @@ agents/
       └── (other files)    # Additional files needed by your agent
 ```
 
-## Agent Interface
+## Core Agent Interface
 
-Your agent must implement a `run` function with the following signature:
+Your agent must implement a `run` function with this signature:
 
 ```python
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
@@ -26,120 +26,237 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         **kwargs: Additional arguments passed via -A flags
     
     Returns:
-        Dictionary mapping task IDs to solution strings
+        Dictionary mapping task IDs to submissions
     """
 ```
 
-## Example Agent
+## General Requirements
 
-Here's a complete example of a minimal agent for the USACO benchmark:
+1. **Dependencies**: List all dependencies in `requirements.txt`. These will be installed:
+   - On VMs if `--vm` flag is used
+   - If you run evaluations locally, you must install the dependencies yourself. Then specify the conda environment name with `--conda_env_name` or run evaluations from the conda environment.
 
-```python
-from openai import OpenAI
-
-def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
-    # Recommended: Verify that required arguments are provided
-    assert 'model_name' in kwargs, 'model_name is required'
-    
-    client = OpenAI()
-    results = {}
-
-    # Process each task
-    for task_id, task in input.items(): # usually only one task is provided to each agent and tasks are run in parallel
-        response = client.chat.completions.create(
-            model=kwargs['model_name'],
-            messages=[
-                {"role": "user", "content": task['prompt']},
-            ],
-            max_tokens=2000,
-            temperature=1,
-        )
-        results[task_id] = response.choices[0].message.content
-        
-    return results
-```
-
-## Key Features
-
-1. **Input Format**: The `input` dictionary contains task IDs as keys and task data as values. The structure of task data varies by benchmark.
-
-2. **Arguments**: Additional arguments can be passed to your agent using `-A` flags when running HAL:
+2. **Arguments**: Your agent can receive additional arguments via `-A` flags:
    ```bash
-   hal run --agent_name "my_agent" --agent_function "main.run" --agent_dir "agents/my_agent" -A model_name=gpt-4 -A temperature=0.7
+   hal-eval -A model_name=gpt-4 -A temperature=0.7 ...
    ```
 
-3. **Requirements**: List all dependencies in `requirements.txt`. These will be installed:
-   - In a conda environment if `--conda_env_name` is specified
-   - On VMs if `--vm` flag is used
-   - Must be manually installed if running locally without conda
-   - If the agent requires more setup than just installing dependencies, feel free to run setup code as part of the `run` function.
+3. **File Access**: For benchmarks that provide files (like SWE-bench), files are available in the working directory.
 
-4. **Output Format**: Your agent must return a dictionary mapping task IDs to solution strings. The format of solutions varies by benchmark:
-   - USACO: Code solution as string
-   - SWE-bench: Git patch as string
-   - For benchmarks on which the entire environment is used for scoring, the agent should return a dictionary with task IDs as keys and e.g "complete" as values. This is in order to allow for continued runs. The entire environment will be saved and used for scoring.
-
-## Advanced Features
-
-1. **File Access**: For benchmarks that provide additional files (like SWE-bench), files are available in the working directory.
-
-2. **Agent trace and cost logging**: The hal harness automatically logs the agent's trace and cost using W&B Weave.
+4. **Cost Logging**: The harness automatically logs agent traces and costs using Weave. However, you need to make sure to **not spawn new processes or threads that will not be logged by Weave**.
 
 ## Benchmark-Specific Requirements
 
-Different benchmarks have different input/output formats:
+### USACO
 
-1. **USACO**:
-   ```python
+**Input Format**:
+```python
    input = {
        "task_id": {
-           "prompt": "Problem description...",
-           "test_cases": [{"input": "...", "output": "..."}]
+           "name": "Good Bitstrings",
+            "problem_link": "http://www.usaco.org/index.php?page=viewproblem2&cpid=1333",
+            "test_data_link": "http://www.usaco.org/current/data/prob2_platinum_open23.zip",
+            "solution_link": "http://www.usaco.org/current/data/sol_prob2_platinum_open23.html",
+            "contest_link": "http://www.usaco.org/index.php?page=open23results",
+            "inner_contest_link": "http://www.usaco.org/index.php?page=nov11problems",
+            "problem_level": "platinum",
+            "cp_id": "1333",
+            "problem_id": "1333_platinum_good_bitstrings",
+            "description": "[Description content truncated for brevity]",
+            "num_tests": 21,
+            "solution": "[Solution content truncated for brevity]",
+            "runtime_limit_sentences": [],
+            "memory_limit_sentences": [],
+            "runtime_limit": 2,
+            "memory_limit": 256,
+            "samples": [{
+              "input": "6\n1 1\n3 5\n4 7\n8 20\n4 10\n27 21",
+              "output": "1\n5\n7\n10\n6\n13",
+              "explanation": ""
+            }],
+            "description_no_samples": "[Description without samples content truncated]",
+            "num_samples": 9999,
+            "solution_python3": "[Python solution content truncated]",
+            "solution_english": "[English solution explanation truncated]"  
        }
    }
    ```
 
-2. **SWE-bench**:
-   ```python
-   input = {
-       "instance_id": {
-           "problem_statement": "Fix description...",
-           "repo": "owner/repo",
-           "base_commit": "commit_hash",
-           "files": {"path/to/file": "local/path/to/file"}
-       }
-   }
-   ```
+**Output Format**: Return a dictionary mapping task IDs to Python code solutions as strings.
 
-3. **AppWorld**:
-   ```python
-   input = {
-       "task_id": {
-           "instruction": "Task description...",
-           "environment": "Environment details..."
-       }
-   }
-   ```
+**Example Agent**:
+```python
+def run(input: dict, **kwargs):
+    solutions = {}
+    for task_id, task in input.items():
+        # Generate solution code for the programming problem
+        solution_code = generate_solution(task["prompt"], task["test_cases"])
+        solutions[task_id] = solution_code
+    return solutions
+```
 
-## Testing Your Agent
+### SWE-bench
 
-1. Create a test task:
-   ```python
-   test_input = {
-       "test_task": {
-           "prompt": "Write a hello world program"
-       }
-   }
-   ```
+**Input Format**:
+```python
+{
+    "instance_id": {
+        "repo": "django/django",
+        "instance_id": "django__django-11099",
+        "base_commit": "[truncated]",
+        "patch": "[truncated]",
+        "test_patch": "[truncated]",
+        "problem_statement": "[truncated]",
+        "hints_text": "[truncated]",
+        "created_at": "[truncated]",
+        "version": "[truncated]",
+        "FAIL_TO_PASS": "[truncated]",
+        "PASS_TO_PASS": "[truncated]",
+        "environment_setup_commit": "[truncated]"
+    }
+}
+```
 
-2. Run your agent locally:
-   ```python
-   from your_agent import run
-   result = run(test_input, model_name="gpt-4")
-   print(result)
-   ```
+**Output Format**: Return a dictionary mapping instance IDs to git patch strings.
 
-3. Test with HAL:
-   ```bash
-   hal run --agent_name "test_agent" --agent_function "main.run" --agent_dir "agents/your_agent" --benchmark "usaco" -A model_name=gpt-4o
-   ```
+**Example Agent**:
+```python
+def run(input: dict, **kwargs):
+    patches = {}
+    for instance_id, task in input.items():
+        # Generate patch to fix the bug
+        patch = generate_patch(
+            task["problem_statement"])
+        patches[instance_id] = patch
+    return patches
+```
+
+### AppWorld
+
+**Input Format**:
+
+```python
+{
+    "task_id": {
+        "task_id": "[truncated]",
+    }
+}
+```
+
+**Note**: The task instruction can be accessed from the environment by the agent by calling `world.task.instruction`.
+
+**Output Format**: Return a dictionary mapping task IDs to "complete" after modifying the environment.
+
+**Requirements**:
+- Must be run with `--vm` flag
+- **Important:** set `remote_environment_url` to `http://0.0.0.0:8000` and `experiment_name` to `output`. An example is below and in `agents/appworld_example_agent/main.py`.
+
+**Example Agent**:
+```python
+from appworld import AppWorld, load_task_ids
+
+def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
+
+    assert 'model_name' in kwargs, 'model_name is required'
+    
+    task_id = list(input.keys())[0]
+    
+    with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
+        world.task.instruction # To see task instruction.
+
+        # indicate task completion:
+        world.execute("apis.supervisor.complete_task()")
+        
+    return {task_id: "Completed"}
+```
+
+### Inspect AI Benchmarks
+
+Inspect AI benchmarks support two types of agents:
+
+1. **Custom Agents**: Implement custom agents as described in this document that can be run locally or on VMs.
+2. **Inspect Solver Agents**: Use the `@solver` decorator from the Inspect AI framework. See the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/agents.html) for details on how to implement solver agents.
+
+#### GAIA
+
+**Input Format**:
+```python
+{
+    "sample_id": {
+        "id": "[truncated]",
+        "input": "[truncated]",
+        "choices": null,
+        "target": "[truncated]",
+        "metadata": {
+            "level": "999",
+            "Annotator Metadata": {
+                "Steps": "[truncated]",
+                "Number of steps": "999",
+                "How long did this take?": "[truncated]",
+                "Tools": "[truncated]",
+                "Number of tools": "999"
+            }
+        },
+        "files": {},
+        "setup": "[truncated]"
+    }
+}
+```
+
+**Output Format**: Return a dictionary mapping sample IDs to concise answers following the prompt's instructions (typically numbers, short phrases, or comma-separated lists).
+
+#### CyBench
+
+**Input Format**:
+```python
+{
+    "sample_id": {
+        "id": "[truncated]",
+        "input": "[truncated]",
+        "choices": null,
+        "target": "[truncated]",
+        "metadata": {
+            "variant": "[truncated]",
+            "challenge_metadata": {
+                "first_solve_time": 999,
+                "category": "[truncated]",
+                "competition": "[truncated]"
+            },
+            "variant_metadata": {}
+        },
+        "files": {},
+        "setup": null
+    }
+}
+```
+
+**Output Format**: Return a dictionary mapping sample IDs to found flags or solutions.
+
+#### AgentHarm (Benign)
+
+**Note**: Currently only supports Inspect solver agents. See [Inspect AI documentation](https://github.com/UKGovernmentBEIS/inspect_ai) for implementation details.
+
+### Example Custom Agent for Inspect Benchmarks
+
+```python
+def run(input: dict, **kwargs):
+    assert 'model_name' in kwargs, 'model_name is required'
+    
+    responses = {}
+    for sample_id, sample in input.items():
+        # Generate response using specified model
+        response = generate_response(
+            sample["input"],
+            model=kwargs['model_name']
+        )
+        responses[sample_id] = response
+    return responses
+```
+
+### Example Inspect Solver Agent
+
+Can be found in `agents/inspect/gaia.py` and `agents/inspect/cybench.py`.
+
+**Special Requirements**:
+- For custom agents, use `-A` flags to pass keyword arguments
+- For Inspect solvers, use `-I` flags to pass arguments to the inspect eval() function as detailed in the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/models.html#generation-config)
