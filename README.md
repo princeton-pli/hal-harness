@@ -296,6 +296,20 @@ hal-eval --benchmark inspect_evals/gaia \
   -I temperature=0.4
 ```
 
+### Agent Naming Guidelines
+
+Agent names should follow this format: `Name (model1, model2)`. For example:
+- `My Agent (gpt-4-0125-preview)`
+- `SWE-agent (claude-3.5-sonnet-20241022-v2)`
+- `Multi-Model Agent (gpt-4o-mini-2024-07-18, claude-3.5-sonnet-20241022-v2)`
+
+Guidelines:
+- Include exact model versions
+- Put models in parentheses
+- Separate multiple models with commas
+- Keep names concise
+- Don't include benchmark names
+
 ## How to Reproduce Existing Agents on HAL?
 
 See [agents/RUN_AGENTS.md](agents/RUN_AGENTS.md) for detailed instructions on how to run existing agents across different benchmarks.
