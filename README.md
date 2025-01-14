@@ -8,34 +8,32 @@ This repository provides a standardized evaluation harness for evaluating differ
 
 ## Features
 
-* **Unified hal-eval CLI across all benchmarks and agent types**
-  - HAL supports SWE-bench Verified, USACO, AppWorld, Inspect AI benchmarks (Gaia, Cybench), with support for more coming soon
+* **Unified `hal-eval` CLI across all benchmarks and agent types**
+  - HAL supports SWE-bench Verified, USACO, AppWorld, CORE-bench, AgentHarm, GAIA, Cybench, with support for more coming soon
   - Easy integration of new benchmarks
-  - See [Running Evaluations](#running-evaluations) for details on CLI usage
+  - See [Running Evaluations](#how-do-i-run-evaluations) for details on CLI usage
 
-* **Flexible Execution Environments**
+* **Evaluations locally or in the cloud AND fully parallelized**
   - Local execution with conda environment isolation
-  - Azure VM support for isolated and resource-intensive tasks
-  - Docker container support for AppWorld benchmark
-  - Parallel task execution with configurable concurrency
+  - Azure VM support for running evaluations in the cloud
+  - Configurable concurrency for parallel evaluation
 
-* **Comprehensive Logging and Monitoring**
+* **Logging and Monitoring**
   - Integration with [Weave](https://wandb.ai/site/weave/) for detailed cost tracking and usage metrics
-  - Automatic logging of agent traces and execution details
+  - Automatic logging of agent traces
 
-* **Fully flexible agent support**
+* **No constraints on agent implementation or agent framework**
+  - No constraints on specific agent implementation or agent framework (see [How Do I Develop My Own Agents?](#how-do-i-develop-my-own-agents))
   - Support for both custom agents and Inspect AI solvers
-  - Flexible agent configuration through command-line arguments
-  - Environment isolation for each agent run
-  - Automatic dependency management
+  - Flexible agent configuration through command-line arguments in `hal-eval`
+
+* **Share and access agent traces**
+  - Simple upload of agent traces to HuggingFace Hub via `hal-upload` CLI (see [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards))
+  - Automatic encryption of agent traces before uploading to avoid benchmark contamination
 
 * **HAL Leaderboard Integration**
   - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space)
-  - Detailed metrics and performance analysis
-
-* **Developer-Friendly Design**
-  - Clear command-line interface for all benchmark and agent types
-  - Modular architecture for easy extension
+  - Detailed metrics and in-depth performance analysis
 
 ## Table of Contents
 
