@@ -66,7 +66,7 @@ su - $USERNAME -c "bash -c '\
         echo \"Installing requirements...\" && \
         pip install -r requirements.txt && \
         echo \"Installing weave...\" && \
-        pip install weave==0.51 && \
+        pip install weave==0.51.22 && \
         echo \"Requirements installed\"; \
     else \
         echo \"No requirements.txt found\" && \
