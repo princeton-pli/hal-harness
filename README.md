@@ -60,32 +60,30 @@ This repository provides a standardized evaluation harness for evaluating differ
    conda activate hal
    ```
 
-4. **Install the package:**
+3. **Install the `hal` package:**
    ```bash
    pip install -e .
    ```
 
-   **Note:** Some benchmarks require additional dependencies which can be installed using `pip install hal[benchmark_name]`. See [Which Benchmarks Are Supported?](#which-benchmarks-are-supported) for details.
-
-5. **Create a `.env` file:**
+4. **Create a `.env` file:**
    ```bash
    cp .env.template .env
    ```
    Add your API keys (HuggingFace, Weave, OpenAI/other LLMs as needed) to the `.env` file. See `.env.template` for details.
 
-6. **Install Model Provider Dependencies:**
+5. **Install Model Provider Dependencies:**
    
    For **Inspect AI benchmarks**, you'll need to install the appropriate Python SDK for your chosen model provider:
 
    ```bash
-   # For OpenAI models (gpt-4, gpt-3.5-turbo, etc.)
+   # For OpenAI models
    pip install openai
 
-   # For Anthropic models (claude-3, etc.)
+   # For Anthropic models
    pip install anthropic
    ```
 
-7. **Optional: Azure VM Setup**
+6. **Optional: Azure VM Setup**
    If you plan to use Azure VMs for evaluation, add the following to your `.env`:
    ```
    AZURE_SUBSCRIPTION_ID=your_subscription_id
