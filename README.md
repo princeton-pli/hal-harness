@@ -1,6 +1,6 @@
 # HAL: The Holistic Agent Leaderboard for Reproducible Agent Evaluation
 
-[![HAL Leaderboard](https://img.shields.io/badge/🤗_HAL_Leaderboard-View_Results-blue)](https://agent-evals-leaderboard.hf.space)
+[![HAL Leaderboards](https://img.shields.io/badge/Leaderboards-HAL-blue)](https://hal.cs.princeton.edu/)
 [![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
 [![Inspect AI](https://img.shields.io/badge/Inspect_AI-green)](https://github.com/UKGovernmentBEIS/inspect_ai)
 
