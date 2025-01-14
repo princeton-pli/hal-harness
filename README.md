@@ -10,15 +10,14 @@ This repository provides a standardized evaluation harness for evaluating differ
 
 * **Unified `hal-eval` CLI across all benchmarks and agent types**
   - HAL supports SWE-bench Verified, USACO, AppWorld, CORE-bench, AgentHarm, GAIA, Cybench, with support for more coming soon
-  - Easy integration of new benchmarks
-  - See [Running Evaluations](#how-do-i-run-evaluations) for details on CLI usage
+  - Run your and existing agents on HAL with the same CLI across benchmarks (see [How Do I Run Evaluations?](#how-do-i-run-evaluations))
 
 * **Evaluations locally or in the cloud AND fully parallelized**
   - Local execution with conda environment isolation
   - Azure VM support for running evaluations in the cloud
   - Configurable concurrency for parallel evaluation
 
-* **Logging and Monitoring**
+* **Automatic logging and monitoring**
   - Integration with [Weave](https://wandb.ai/site/weave/) for detailed cost tracking and usage metrics
   - Automatic logging of agent traces
 
@@ -31,7 +30,7 @@ This repository provides a standardized evaluation harness for evaluating differ
   - Simple upload of agent traces to HuggingFace Hub via `hal-upload` CLI (see [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards))
   - Automatic encryption of agent traces before uploading to avoid benchmark contamination
 
-* **HAL Leaderboard Integration**
+* **HAL leaderboard integration**
   - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space)
   - Detailed metrics and in-depth performance analysis
 
