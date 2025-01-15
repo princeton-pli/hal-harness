@@ -6,7 +6,7 @@ This guide provides detailed instructions for rerunning existing agents across H
 
 ## USACO
 
-### Amazon Bedrock Agent
+### Amazon Bedrock Models
 
 Run USACO evaluations using foundation models available via Amazon Bedrock.
 
@@ -27,7 +27,7 @@ Run USACO evaluations using foundation models available via Amazon Bedrock.
 
    ```bash
    BENCHMARK_NAME=usaco
-   AGENT_DIR=agents/usaco_bedrock_agents/
+   AGENT_DIR=agents/usaco_bedrock_models/
    AGENT_FUNCTION=main.run
    MODEL_NAME=bedrock/amazon.nova-lite-v1:0 
    AGENT_NAME="USACO_${MODEL_NAME}"
