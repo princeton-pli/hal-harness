@@ -22,7 +22,7 @@ class AppWorldBenchmark(BaseBenchmark):
         self.splits = {
             'train': self._read_task_ids('train.txt'),
             'dev': self._read_task_ids('dev.txt'), 
-            'test_normal': self._read_task_ids('test_normal.txt')[:2],
+            'test_normal': self._read_task_ids('test_normal.txt'),
             'test_challenge': self._read_task_ids('test_challenge.txt')
         }
         
