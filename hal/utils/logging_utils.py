@@ -24,7 +24,6 @@ verbose_logger = logging.getLogger('agent_eval.verbose')
 # Store global paths
 _log_paths = {
     'main_log': None,
-    'error_log': None,
     'results_log': None,
     'verbose_log': None,
     'log_dir': None
@@ -83,7 +82,6 @@ def setup_logging(log_dir: str, run_id: str) -> None:
     
     # Create log files with clean paths
     _log_paths['main_log'] = os.path.join(log_dir, f"{os.path.basename(run_id)}.log")
-    _log_paths['error_log'] = os.path.join(log_dir, f"{os.path.basename(run_id)}_error.log")
     _log_paths['results_log'] = os.path.join(log_dir, f"{os.path.basename(run_id)}_results.jsonl")
     _log_paths['verbose_log'] = os.path.join(log_dir, f"{os.path.basename(run_id)}_verbose.log")
     _log_paths['log_dir'] = log_dir
@@ -114,11 +112,6 @@ def setup_logging(log_dir: str, run_id: str) -> None:
     verbose_file_handler.setLevel(logging.DEBUG)
     verbose_file_handler.setFormatter(detailed_formatter)
     
-    # Error log file handler
-    error_handler = logging.FileHandler(_log_paths['error_log'])
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(detailed_formatter)
-    
     # Console handler (only for pretty formatting, no regular logs)
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.WARNING)  # Only warnings and errors
@@ -127,7 +120,6 @@ def setup_logging(log_dir: str, run_id: str) -> None:
     
     # Add handlers
     main_logger.addHandler(main_file_handler)
-    main_logger.addHandler(error_handler)
     main_logger.addHandler(console_handler)
     
     verbose_logger.addHandler(verbose_file_handler)
