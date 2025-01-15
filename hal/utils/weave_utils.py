@@ -44,6 +44,22 @@ MODEL_PRICES_DICT = {
                 "google/gemini-1.5-flash": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
                 "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {"prompt_tokens": 3.5/1e6, "completion_tokens": 3.5/1e6},
                 "together/meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
+                "bedrock/amazon.nova-micro-v1:0": {"prompt_tokens": 0.000035/1e3, "completion_tokens": 0.00014/1e3},
+                "amazon.nova-micro-v1:0" : {"prompt_tokens": 0.000035/1e3, "completion_tokens": 0.00014/1e3},
+                "bedrock/amazon.nova-lite-v1:0": {"prompt_tokens": 0.00006/1e3, "completion_tokens": 0.00024/1e3},
+                "amazon.nova-lite-v1:0" : {"prompt_tokens": 0.00006/1e3, "completion_tokens": 0.00024/1e3},
+                "bedrock/amazon.nova-pro-v1:0": {"prompt_tokens": 0.0008/1e3, "completion_tokens": 0.0032/1e3},
+                "amazon.nova-pro-v1:0" : {"prompt_tokens": 0.0008/1e3, "completion_tokens": 0.0032/1e3},
+                "bedrock/us.anthropic.claude-3-opus-20240229-v1:0": {"prompt_tokens": 0.015/1e3, "completion_tokens": 0.075/1e3},
+                "us.anthropic.claude-3-opus-20240229-v1:0" : {"prompt_tokens": 0.015/1e3, "completion_tokens": 0.075/1e3},
+                "bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0": {"prompt_tokens": 0.003/1e3, "completion_tokens": 0.015/1e3},
+                "us.anthropic.claude-3-5-sonnet-20241022-v2:0" : {"prompt_tokens": 0.003/1e3, "completion_tokens": 0.015/1e3},
+                "bedrock/us.anthropic.claude-3-sonnet-20240229-v1:0": {"prompt_tokens": 0.003/1e3, "completion_tokens": 0.015/1e3},
+                "us.anthropic.anthropic.claude-3-sonnet-20240229-v1:0" : {"prompt_tokens": 0.003/1e3, "completion_tokens": 0.015/1e3},
+                "bedrock/us.anthropic.claude-3-5-haiku-20241022-v1:0": {"prompt_tokens": 0.0008/1e3, "completion_tokens": 0.004/1e3},
+                "us.anthropic.claude-3-5-haiku-20241022-v1:0" : {"prompt_tokens": 0.0008/1e3, "completion_tokens": 0.004/1e3}, 
+                "bedrock/us.meta.llama3-3-70b-instruct-v1:0": {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3},
+                "us.meta.llama3-3-70b-instruct-v1:0" : {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3}, 
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:

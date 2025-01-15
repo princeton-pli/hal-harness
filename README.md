@@ -259,15 +259,15 @@ hal-eval --benchmark usaco \
 3. **Running USACO with Amazon Bedrock models:**
 ```bash
 hal-eval --benchmark usaco \
-  --agent_dir agents/usaco_bedrock_agents/ \
+  --agent_dir agents/usaco_bedrock_models/ \
   --agent_function main.run \
   --agent_name "USACO Solver (Claude 3.5 Sonnet)" \
   -A model_name=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 \
-  -A prompt_template_path=agents/usaco_bedrock_agents/prompt_templates/claude.txt \
+  -A prompt_template_path=agents/usaco_bedrock_models/prompt_templates/claude.txt \
   --max_concurrent 10
 ```
 
-More details on how to run the Amazon Bedrock agent can be found [here](agents/RUN_AGENTS.md).
+More details on how to run the Amazon Bedrock models can be found [here](agents/RUN_AGENTS.md).
 
 Available Bedrock models and their corresponding prompt templates:
 | Model Name | Model ID | Prompt Template |
