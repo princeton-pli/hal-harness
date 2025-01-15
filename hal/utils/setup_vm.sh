@@ -8,10 +8,10 @@ HOME_DIR="/home/$USERNAME"
 echo "Starting setup for user: $USERNAME"
 
 # Install system dependencies
-echo "Installing system dependencies..."
-apt-get update -y
-apt-get install -y curl wget build-essential
-echo "System dependencies installed"
+# echo "Installing system dependencies..."
+# apt-get update -y
+# apt-get install -y curl wget build-essential
+# echo "System dependencies installed"
 
 # Install Miniconda
 echo "Installing Miniconda..."

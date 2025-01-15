@@ -423,7 +423,7 @@ class VirtualMachineManager:
         return result
     
     @get_retry_decorator()
-    def setup_vm_environment(self, vm_name: str, username: str, ssh_private_key_path: str, agent_dir: str, log_dir: str, benchmark) -> None:
+    def setup_vm_environment(self, vm_name: str, username: str, ssh_private_key_path: str, agent_dir: str, log_dir: str, benchmark, task_id: str) -> None:
         """
         Set up the VM environment using uv and a setup script.
         """
@@ -462,7 +462,7 @@ class VirtualMachineManager:
                 _, stdout, stderr = ssh_client.exec_command(f"sudo bash {remote_setup_path} {username}")
                 
                 # Create log file 
-                with open(f"{log_dir}/setup_vm_log.log", 'w') as f:
+                with open(f"{log_dir}/setup_vm_log_{task_id}.log", 'w') as f:
                     f.write(stdout.read().decode())
                     f.write(stderr.read().decode())
                     
@@ -478,7 +478,7 @@ class VirtualMachineManager:
                             bash setup_script.sh
                             """
                             _, stdout, stderr = ssh_client.exec_command(cmd)
-                            with open(f"{log_dir}/setup_script_log.log", 'w') as f:
+                            with open(f"{log_dir}/setup_script_log_{task_id}.log", 'w') as f:
                                 f.write(stdout.read().decode())
                                 f.write(stderr.read().decode())
                         except Exception as e:
@@ -499,7 +499,7 @@ class VirtualMachineManager:
         """
         try:
             # Setup conda environment if it exists
-            self.setup_vm_environment(vm_name, username, ssh_private_key_path, agent_dir, log_dir, benchmark)
+            self.setup_vm_environment(vm_name, username, ssh_private_key_path, agent_dir, log_dir, benchmark, task_id)
             
             # Get the public IP address of the VM
             public_ip_address = self.network_client.public_ip_addresses.get(

@@ -23,7 +23,7 @@ class VMRunner:
         self._active_vms: List[str] = []
         self.benchmark = benchmark
         
-    async def fetch_agent_trace(self, vm_name, username, ssh_private_key_path, task_id):
+    async def fetch_agent_logs(self, vm_name, username, ssh_private_key_path, task_id):
         """Fetch the latest agent trace log from a VM and store it locally."""
         try:
             result = self.vm_manager.get_agent_trace(
@@ -33,23 +33,23 @@ class VMRunner:
             )
             
             if result and self.log_dir:
-                trace_dir = os.path.join(self.log_dir, "agent_traces")
+                trace_dir = os.path.join(self.log_dir, "agent_logs")
                 os.makedirs(trace_dir, exist_ok=True)
                 
                 # Write/update the trace file
-                trace_path = os.path.join(trace_dir, f"{task_id}_trace.log")
+                trace_path = os.path.join(trace_dir, f"{task_id}_log.log")
                 with open(trace_path, "w") as f:
                     f.write(result)
                 
                 # Also write to a combined trace file
-                combined_path = os.path.join(trace_dir, "combined_trace.log")
+                combined_path = os.path.join(trace_dir, "combined_logs.log")
                 with open(combined_path, "a") as f:
                     f.write(f"\n=== {task_id} @ {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
                     f.write(result)
                     f.write("\n")
                 
         except Exception as e:
-            print(f"Error fetching trace for {task_id}: {e}")
+            print(f"Error fetching logs for {task_id}: {e}")
 
     async def run_agent(self,
                        dataset: Dict[str, Any],
@@ -161,7 +161,7 @@ class VMRunner:
                     try:
                         print(f"Checking task completion on VM {vm_name}")
                         # Fetch and store trace logs
-                        await self.fetch_agent_trace(
+                        await self.fetch_agent_logs(
                             vm_name=vm_name,
                             username="agent",
                             ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
