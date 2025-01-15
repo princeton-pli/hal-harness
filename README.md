@@ -278,7 +278,7 @@ Available Bedrock models and their corresponding prompt templates:
 | Amazon Nova Pro | bedrock/amazon.nova-pro-v1:0 | nova.txt |
 | Amazon Nova Lite | bedrock/amazon.nova-lite-v1:0 | nova.txt |
 | Amazon Nova Micro | bedrock/amazon.nova-micro-v1:0 | nova.txt |
-| Llama-3.3 70B | bedrock/us.meta.llama3-3-70b-instruct-v1:0 | claude.txt |
+| Llama-3.3 70B | bedrock/us.meta.llama3-3-70b-instruct-v1:0 | llama.txt |
 
 4. **Running Inspect AI benchmark:**
 ```bash
