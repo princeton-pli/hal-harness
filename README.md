@@ -240,8 +240,8 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
 hal-eval --benchmark swebench_verified_mini \
   --agent_dir agents/swebench_example_agent/ \
   --agent_function main.run \
-  --agent_name "My Agent (gpt-4o-mini)" \
-  -A model_name=gpt-4o-mini \
+  --agent_name "My Agent (gpt-4o-mini-2024-07-18)" \
+  -A model_name=gpt-4o-mini-2024-07-18 \
   --max_concurrent 5
 ```
 
@@ -250,10 +250,10 @@ hal-eval --benchmark swebench_verified_mini \
 hal-eval --benchmark usaco \
   --agent_dir agents/usaco_example_agent/ \
   --agent_function main.run \
-  --agent_name "USACO Solver (gpt-4o)" \
+  --agent_name "USACO Solver (gpt-4o-2024-11-20)" \
   --vm \
   --max_concurrent 5 \
-  -A model_name=gpt-4o
+  -A model_name=gpt-4o-2024-11-20
 ```
 
 3. **Running USACO with Amazon Bedrock models:**
@@ -261,7 +261,7 @@ hal-eval --benchmark usaco \
 hal-eval --benchmark usaco \
   --agent_dir agents/usaco_bedrock_models/ \
   --agent_function main.run \
-  --agent_name "USACO Solver (Claude 3.5 Sonnet)" \
+  --agent_name "USACO Solver (claude-3-5-sonnet-20241022)" \
   -A model_name=bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0 \
   -A prompt_template_path=agents/usaco_bedrock_models/prompt_templates/claude.txt \
   --max_concurrent 10
