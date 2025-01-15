@@ -102,6 +102,8 @@ This repository provides a standardized evaluation harness for evaluating differ
 - Mini version is a subset of 50 randomly selected problems from the full dataset
 - Supports both local and VM execution
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
+- **Does not support arm64 machines**
+
 
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
