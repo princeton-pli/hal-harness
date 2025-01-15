@@ -23,6 +23,7 @@ MODEL_PRICES_DICT = {
                 "Meta-Llama-3-1-70B-Instruct-htzs": {"prompt_tokens": 0.00268/1000, "completion_tokens": 0.00354/1000},
                 "Meta-Llama-3-1-8B-Instruct-nwxcg": {"prompt_tokens": 0.0003/1000, "completion_tokens": 0.00061/1000},
                 "gpt-4o": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
+                "gpt-4o-2024-11-20": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "Mistral-small-zgjes": {"prompt_tokens": 0.001/1000, "completion_tokens": 0.003/1000},
                 "Mistral-large-ygkys": {"prompt_tokens": 0.004/1000, "completion_tokens": 0.012/1000},
                 "o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},

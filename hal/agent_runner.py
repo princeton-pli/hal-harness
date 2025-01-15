@@ -163,7 +163,7 @@ class AgentRunner:
         else:
             # Run agent on all tasks
             with create_progress() as progress:
-                task = progress.add_task("Running evaluation... (check logs in results directory for more details)", total=len(dataset))
+                task = progress.add_task("Running agents... (check logs in results directory for more details)", total=len(dataset))
                 agent_output = await self.runner.run_agent(
                     dataset=dataset,
                     agent_function=self.agent_function,
