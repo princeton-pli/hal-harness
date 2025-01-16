@@ -82,7 +82,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
    }
    ```
 
-**Output Format**: Return a dictionary mapping task IDs to Python code solutions as strings.
+**Output Format**: Return input dictionary with additional `response` key for each task ID that contains the python code solution.
 
 **Example Agent**:
 ```python
