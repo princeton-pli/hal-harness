@@ -86,13 +86,31 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
 **Example Agent**:
 ```python
-def run(input: dict, **kwargs):
-    solutions = {}
-    for task_id, task in input.items():
-        # Generate solution code for the programming problem
-        solution_code = generate_solution(task["prompt"], task["test_cases"])
-        solutions[task_id] = solution_code
-    return solutions
+def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
+
+    assert 'model_name' in kwargs, 'model_name is required'
+    assert len(input) == 1, 'input must contain only one task'
+    
+    task_id, task = list(input.items())[0]
+    
+    client = OpenAI()
+
+    results = {}
+
+    response = client.chat.completions.create(
+        model=kwargs['model_name'],
+        messages=[
+            {"role": "user", "content": "Solve the following problem: " + task['description']},
+            ],
+        max_tokens=2000,
+        n=1,
+        temperature=1,
+    )
+    
+    results[task_id] = response.choices[0].message.content
+    input[task_id]['response'] = results[task_id]
+        
+    return input
 ```
 
 ### SWE-bench
@@ -230,13 +248,13 @@ Inspect AI benchmarks support two types of agents:
 }
 ```
 
-**Output Format**: Return a dictionary mapping sample IDs to found flags or solutions.
+**Output Format**: Return a dictionary mapping sample IDs to solutions.
 
 #### AgentHarm (Benign)
 
-**Note**: Currently only supports Inspect solver agents. See [Inspect AI documentation](https://github.com/UKGovernmentBEIS/inspect_ai) for implementation details.
+**Note**: Currently only supports Inspect solver agents. See [Inspect AI documentation](https://github.com/UKGovernmentBEIS/inspect_ai) for implementation details. Example inspect solver agent is in `agents/inspect/agentharm`.
 
-### Example Custom Agent for Inspect Benchmarks
+### Example Custom Agent for Inspect Benchmarks (GAIA and Cybench)
 
 ```python
 def run(input: dict, **kwargs):
