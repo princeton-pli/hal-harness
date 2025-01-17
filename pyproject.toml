@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "hal"
 version = "0.1.0"
 description = "Agent evaluation harness with optional benchmark support"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "datasets",
     "weave==0.51.0",
