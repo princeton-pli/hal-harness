@@ -368,3 +368,17 @@ HAL addresses these challenges through two key components: 1) A central leaderbo
     *   `inspect/`: Inspect AI specific code
 *   `agents/`: Example agent implementations
 *   `results/`: Evaluation results and logs
+
+
+## Citing smolagents
+
+If you use HAL or the HAL harness in your research, please cite it by using the following BibTeX entry.
+
+```bibtex
+@Misc{hal,
+  title =        {HAL: A Holistic Agent Leaderboard for Centralized and Reproducible Agent Evaluation.},
+  author =       {Benedikt Stroebl and Sayash Kapoor and Arvind Narayanan},
+  howpublished = {\url{https://github.com/benediktstroebl/hal-harness}},
+  year =         {2025}
+}
+```
