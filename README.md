@@ -370,7 +370,7 @@ HAL addresses these challenges through two key components: 1) A central leaderbo
 *   `results/`: Evaluation results and logs
 
 
-## Citing smolagents
+## Citing HAL
 
 If you use HAL or the HAL harness in your research, please cite it by using the following BibTeX entry.
 
