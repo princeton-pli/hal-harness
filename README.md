@@ -45,7 +45,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 6. [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards)
 7. [About](#about-hal)
 8. [Repository Structure](#repository-structure)
-
+9. [Citing HAL](#citing-hal)
 ## Setup
 
 1. **Clone the repository:**
