@@ -14,7 +14,7 @@ dependencies = [
     "python-dotenv",
     "setuptools>=48.0.0",
     "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@4c189e53f30a06b740df2b2ce5b3aa2dd79c57ee",
-    "inspect-evals @ git+https://github.com/UKGovernmentBEIS/inspect_evals@5341ed9e6b1af43d8534b1d3c310115f092f16bc",
+    "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals",
     "azure-mgmt-compute>=29.1.0",
     "azure-mgmt-network>=25.1.0",
     "azure-mgmt-resource>=23.0.1",
