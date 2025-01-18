@@ -376,9 +376,9 @@ If you use HAL or the HAL harness in your research, please cite it by using the 
 
 ```bibtex
 @Misc{hal,
-  title =        {HAL: A Holistic Agent Leaderboard for Centralized and Reproducible Agent Evaluation.},
+  title =        {HAL: A Holistic Agent Leaderboard for Centralized and Reproducible Agent Evaluation},
   author =       {Benedikt Stroebl and Sayash Kapoor and Arvind Narayanan},
-  howpublished = {\url{https://github.com/benediktstroebl/hal-harness}},
+  howpublished = {\url{https://github.com/princeton-pli/hal-harness}},
   year =         {2025}
 }
 ```
