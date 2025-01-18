@@ -277,6 +277,8 @@ def parse_cli_args(args: tuple[str] | list[str] | None) -> Dict[str, Any]:
                         elif value.lower() in ['true', 'false']:
                             parsed_value = value.lower() == 'true'
                         # Handle numeric values
+                        elif value.lower() in ['none', 'null', 'nan']:
+                            parsed_value = None
                         else:
                             try:
                                 parsed_value = int(value)
