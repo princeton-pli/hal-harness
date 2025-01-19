@@ -134,9 +134,9 @@ task = {
         "files": {
             # Keys: destination paths in agent environment
             # Values: source paths in benchmark directory
-            "/root/workspace/main.py": "/path/to/benchmark/data/task123/main.py",
-            "/root/workspace/test.py": "/path/to/benchmark/data/task123/test.py",
-            "/root/data/sample_input.txt": "/path/to/benchmark/data/task123/input.txt"
+            "workspace/main.py": "/path/to/benchmark/data/task123/main.py",
+            "workspace/test.py": "/path/to/benchmark/data/task123/test.py",
+            "data/sample_input.txt": "/path/to/benchmark/data/task123/input.txt"
         }
     }
 }
