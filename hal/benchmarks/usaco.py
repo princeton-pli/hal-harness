@@ -35,10 +35,10 @@ class USACOBenchmark(BaseBenchmark):
             self.benchmark = json.load(f)
             
         # For testing, limit to 1 task
-        # self.benchmark = {
-        #     k: v for k, v in self.benchmark.items() 
-        #     if k in list(self.benchmark.keys())[:1]
-        # }
+        self.benchmark = {
+            k: v for k, v in self.benchmark.items() 
+            if k in list(self.benchmark.keys())[:1]
+        }
         
         # Set benchmark directory
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), 'USACO')
@@ -46,13 +46,9 @@ class USACOBenchmark(BaseBenchmark):
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Run USACO evaluation harness on agent outputs in Docker container"""
-        temp_file_path = None
         try:
-            # Write outputs to temp file
-            with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
-                json.dump(agent_output, temp_file)
-                temp_file_path = temp_file.name
-
+            temp_file_path = None
+            
             # Create docker client
             client = docker.from_env()
 
@@ -66,16 +62,21 @@ class USACOBenchmark(BaseBenchmark):
                         'mode': 'rw',
                         'chmod': '777'
                     },
-                    temp_file_path: {
-                        'bind': f'/app/responses_{run_id}.json',
-                        'mode': 'ro'
-                    }
                 },
                 working_dir='/app',
                 detach=True,
             )
 
             try:
+                # write agent output to temp file
+                with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
+                    json.dump(agent_output, temp_file)
+                    temp_file_path = temp_file.name
+                
+                # write agent output to inside container
+                cmd = f"docker cp {temp_file_path} {container.id}:/app/responses_{run_id}.json"
+                subprocess.run(cmd, shell=True, check=True)
+                
                 # Install dependencies
                 result = container.exec_run("pip install -r requirements.txt", stream=True)
                 

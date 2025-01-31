@@ -159,36 +159,36 @@ class LocalRunner:
                         verbose_logger.debug(error_msg)
 
             # Copy and run setup script if it exists
-            if self.benchmark and self.benchmark.setup_script:
-                setup_script_src = Path(self.benchmark.setup_script)
-                if setup_script_src.exists():
-                    setup_script_dest = temp_dir / "setup_script.sh"
-                    shutil.copy2(setup_script_src, setup_script_dest)
-                    setup_script_dest.chmod(0o755)
+            # if self.benchmark and self.benchmark.setup_script:
+            #     setup_script_src = Path(self.benchmark.setup_script)
+            #     if setup_script_src.exists():
+            #         setup_script_dest = temp_dir / "setup_script.sh"
+            #         shutil.copy2(setup_script_src, setup_script_dest)
+            #         setup_script_dest.chmod(0o755)
 
-                    verbose_logger.debug(f"Running setup script for task {task_id}")
-                    cmd = ["bash", str(setup_script_dest)]
-                    if self.conda_env:
-                        cmd = ["conda", "run", "-n", self.conda_env] + cmd
+            #         verbose_logger.debug(f"Running setup script for task {task_id}")
+            #         cmd = ["bash", str(setup_script_dest)]
+            #         if self.conda_env:
+            #             cmd = ["conda", "run", "-n", self.conda_env] + cmd
                     
-                    process = await asyncio.create_subprocess_exec(
-                        *cmd,
-                        cwd=str(temp_dir),
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    stdout, stderr = await process.communicate()
+            #         process = await asyncio.create_subprocess_exec(
+            #             *cmd,
+            #             cwd=str(temp_dir),
+            #             stdout=asyncio.subprocess.PIPE,
+            #             stderr=asyncio.subprocess.PIPE
+            #         )
+            #         stdout, stderr = await process.communicate()
                     
-                    # Log setup script output
-                    if stdout:
-                        verbose_logger.debug(f"Setup script stdout for task {task_id}:\n{stdout.decode()}")
-                    if stderr:
-                        verbose_logger.debug(f"Setup script stderr for task {task_id}:\n{stderr.decode()}")
+            #         # Log setup script output
+            #         if stdout:
+            #             verbose_logger.debug(f"Setup script stdout for task {task_id}:\n{stdout.decode()}")
+            #         if stderr:
+            #             verbose_logger.debug(f"Setup script stderr for task {task_id}:\n{stderr.decode()}")
                     
-                    if process.returncode != 0:
-                        error_msg = stderr.decode() if stderr else "Unknown error"
-                        verbose_logger.debug(f"Error running setup script for task {task_id}: {error_msg}")
-                        return {task_id: f"ERROR: Setup script failed: {error_msg}"}
+            #         if process.returncode != 0:
+            #             error_msg = stderr.decode() if stderr else "Unknown error"
+            #             verbose_logger.debug(f"Error running setup script for task {task_id}: {error_msg}")
+            #             return {task_id: f"ERROR: Setup script failed: {error_msg}"}
 
             # Create runner script
             script = self._create_runner_script(
@@ -202,14 +202,26 @@ class LocalRunner:
                 f.write(script)
 
             # Build command
-            cmd = ["python", str(script_path)]
+            run_agent_cmd = ["python", str(script_path)]
             if self.conda_env:
-                cmd = ["conda", "run", "-n", self.conda_env] + cmd
+                # Install weave in conda environment
+                verbose_logger.debug(f"Running agent for task {task_id}")
+                process = await asyncio.create_subprocess_exec(
+                    *["conda", "run", "-n", self.conda_env, "pip", "install", "weave==0.51.22"],
+                    cwd=str(temp_dir),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+
+                stdout, stderr = await process.communicate()
+                
+                # new command to run the agent
+                run_agent_cmd = ["conda", "run", "-n", self.conda_env] + run_agent_cmd
                 
             # Run agent
             verbose_logger.debug(f"Running agent for task {task_id}")
             process = await asyncio.create_subprocess_exec(
-                *cmd,
+                *run_agent_cmd,
                 cwd=str(temp_dir),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
