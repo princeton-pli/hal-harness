@@ -21,6 +21,8 @@ class BenchmarkManager:
                            'swebench_verified_mini', 
                            'appworld_test_normal',
                            'appworld_test_challenge',
+                           'taubench_retail',
+                           'taubench_airline',
                            'inspect_evals/gaia',
                            'inspect_evals/cybench',
                            'inspect_evals/appworld',
@@ -46,6 +48,9 @@ class BenchmarkManager:
         elif benchmark_name in ['appworld_test_normal', 'appworld_test_challenge']:
             from .benchmarks.appworld import AppWorldBenchmark
             benchmark = AppWorldBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name in ['taubench_retail', 'taubench_airline']:
+            from .benchmarks.taubench import TauBenchBenchmark
+            benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         
