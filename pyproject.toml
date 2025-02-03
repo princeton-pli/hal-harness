@@ -27,13 +27,7 @@ dependencies = [
 
 [project.optional-dependencies]
 taubench = [
-    "openai>=1.13.3",
-    "anthropic>=0.26.1",
-    "google-generativeai>=0.5.4",
-    "tenacity>=8.3.0",
-    "termcolor>=2.4.0",
-    "numpy>=1.26.4",
-    "litellm>=1.41.0",
+    "tau-bench @ git+https://github.com/sierra-research/tau-bench@14bf0ef52e595922d597a38f32d3e8c0dce3a8f8",
 ]
 
 [project.scripts]

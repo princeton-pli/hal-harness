@@ -24,7 +24,6 @@ verbose_logger = logging.getLogger('agent_eval.verbose')
 # Store global paths
 _log_paths = {
     'main_log': None,
-    'results_log': None,
     'verbose_log': None,
     'log_dir': None
 }
@@ -82,7 +81,6 @@ def setup_logging(log_dir: str, run_id: str) -> None:
     
     # Create log files with clean paths
     _log_paths['main_log'] = os.path.join(log_dir, f"{os.path.basename(run_id)}.log")
-    _log_paths['results_log'] = os.path.join(log_dir, f"{os.path.basename(run_id)}_results.jsonl")
     _log_paths['verbose_log'] = os.path.join(log_dir, f"{os.path.basename(run_id)}_verbose.log")
     _log_paths['log_dir'] = log_dir
     
@@ -230,10 +228,6 @@ def _print_results_table(results: dict[str, Any]) -> None:
 
 def log_results_table(results: dict[str, Any]) -> None:
     """Log results to both console and file"""
-    if not _log_paths['results_log']:
-        log_warning("Results logging not initialized. Results will only be displayed, not logged.")
-        _print_results_table(results)
-        return
         
     # Print formatted table to console
     with terminal_print():
@@ -256,11 +250,6 @@ def log_results_table(results: dict[str, Any]) -> None:
                 log_data["results"]["successful_tasks"] = len(value)
             elif key == "failed_tasks" and value:
                 log_data["results"]["failed_tasks"] = len(value)
-    
-    # Log to results file
-    with open(_log_paths['results_log'], 'a') as f:
-        json.dump(log_data, f)
-        f.write('\n')
     
     # Also log to main log file
     main_logger.info(f"Results: {json.dumps(log_data['results'], indent=2)}")
