@@ -69,13 +69,37 @@ def fetch_weave_calls(client) -> List[Dict[str, Any]]:
     headers = {'Content-Type': 'application/json'}
     payload = {"project_id": client._project_id()}
 
-    response = requests.post(
-        url, 
-        headers=headers, 
-        json=payload, 
-        auth=('api', os.getenv('WANDB_API_KEY'))
-    )
-    return [json.loads(line) for line in response.text.strip().splitlines()]
+    # response = requests.post(
+    #     url, 
+    #     headers=headers, 
+    #     json=payload, 
+    #     auth=('api', os.getenv('WANDB_API_KEY'))
+    # )
+    # return [json.loads(line) for line in response.text.strip().splitlines()]
+    
+    calls = list(client.server.calls_query_stream({
+        "project_id": client._project_id(),
+        "filter": {"trace_roots_only": True},
+        "sort_by": [{"field":"started_at","direction":"desc"}],
+    }))
+    
+    return calls
+
+
+def find_usage_dict_recursive(data):
+    """Recursively searches for all values associated with the key 'usage' and returns them in a list."""
+    found = []
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == 'usage':
+                found.append(value)
+            # Recursively check the value in case it contains more dictionaries/lists.
+            found.extend(find_usage_dict_recursive(value))
+    elif isinstance(data, list):
+        for item in data:
+            found.extend(find_usage_dict_recursive(item))
+    # For other data types, there's nothing to search.
+    return found
 
 def process_usage_data(calls: List[Dict[str, Any]], progress: Progress) -> Tuple[float, Dict[str, Dict[str, int]]]:
     """Process usage data from Weave calls"""
@@ -86,18 +110,47 @@ def process_usage_data(calls: List[Dict[str, Any]], progress: Progress) -> Tuple
     
     for call in calls:
         try:
-            if 'summary' in call and 'usage' in call['summary']:
-                usage_calls.append(call['summary']['usage'])
+            # find the usage in call
+            call_dump = call.dict()
+
+            usage_dicts = find_usage_dict_recursive(call_dump)
+            for usage_dict in usage_dicts:
+                usage_calls.append(usage_dict)
+            
         except (KeyError, TypeError) as e:
             print_warning(f"Error processing call: {str(e)}")
         progress.update(task, advance=1)
     
     return calculate_costs(usage_calls)
 
+
+@weave.op()
+def get_costs_for_project(client):
+    total_cost = 0
+    requests = 0
+
+    # Fetch all the calls in the project
+    calls = list(
+        client.get_calls(filter={"trace_roots_only": True}, include_costs=True)
+    )
+
+    for call in calls:
+        # If the call has costs, we add them to the total cost
+        if call.summary["weave"] is not None and call.summary["weave"].get("costs", None) is not None:
+            print(call.summary["weave"])
+            for k, cost in call.summary["weave"]["costs"].items():
+                requests += cost["requests"]
+                total_cost += cost["prompt_tokens_total_cost"]
+                total_cost += cost["completion_tokens_total_cost"]
+
+    # We return the total cost, requests, and calls
+    return total_cost
+
 def calculate_costs(usage_calls: List[Dict[str, Any]]) -> Tuple[float, Dict[str, Dict[str, int]]]:
     """Calculate total costs and token usage from processed calls"""
     unique_model_names = set(model_name for call in usage_calls for model_name in call)
     
+    print("USAGE CALLS 153", usage_calls)
     # Validate models
     for model_name in unique_model_names:
         if model_name not in MODEL_PRICES_DICT:
@@ -107,6 +160,7 @@ def calculate_costs(usage_calls: List[Dict[str, Any]]) -> Tuple[float, Dict[str,
     token_usage = {model: {"prompt_tokens": 0, "completion_tokens": 0} for model in unique_model_names}
     
     for call in usage_calls:
+        
         for model_name in call:
             if 'prompt_tokens' in call[model_name] and 'completion_tokens' in call[model_name]:
                 # Standard call
@@ -129,28 +183,65 @@ def calculate_costs(usage_calls: List[Dict[str, Any]]) -> Tuple[float, Dict[str,
 
     return total_cost, token_usage
 
-def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
-    """Get total cost and token usage for all Weave calls"""
-    print_step("Calculating total cost...")
-    
+
+@weave.op()
+def get_total_cost(client):
+    total_cost = 0
+    token_usage = {}
+    requests = 0
+
+    # Fetch all the calls in the project
+    calls = list(
+        client.get_calls(filter={"trace_roots_only": True}, include_costs=True)
+    )
+
     with create_progress() as progress:
-        # Fetch calls
-        task1 = progress.add_task("Fetching Weave calls...", total=1)
-        calls = fetch_weave_calls(client)
-        progress.update(task1, completed=1)
+        task = progress.add_task("Processing usage data...", total=len(calls))
+        for call in calls:
+            # If the call has costs, we add them to the total cost
+            if call.summary["weave"] is not None and call.summary["weave"].get("costs", None) is not None:
+                for k, cost in call.summary["weave"]["costs"].items():
+                    
+                    if k not in token_usage:
+                        token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
+                    
+                    requests += cost["requests"]
+                    total_cost += cost["prompt_tokens_total_cost"]
+                    total_cost += cost["completion_tokens_total_cost"]
+                    if "prompt_tokens" in cost:
+                        token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
+                    elif "input_tokens" in cost:    
+                        token_usage[k]["prompt_tokens"] += cost["input_tokens"]
+                    if "completion_tokens" in cost:
+                        token_usage[k]["completion_tokens"] += cost["completion_tokens"]
+                    elif "output_tokens" in cost:
+                        token_usage[k]["completion_tokens"] += cost["output_tokens"]
+            progress.update(task, advance=1)
+    return total_cost, token_usage
+
+
+# def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
+#     """Get total cost and token usage for all Weave calls"""
+#     print_step("Calculating total cost...")
+    
+#     with create_progress() as progress:
+#         # Fetch calls
+#         task1 = progress.add_task("Fetching Weave calls...", total=1)
+#         calls = fetch_weave_calls(client)
+#         progress.update(task1, completed=1)
         
-        try:
-            # Process calls and calculate costs
-            total_cost, token_usage = process_usage_data(calls, progress)
-            console.print(f"[green]Total cost: ${total_cost:.6f}[/]")
-            return total_cost, token_usage
+#         try:
+#             # Process calls and calculate costs
+#             total_cost, token_usage = process_usage_data(calls, progress)
+#             console.print(f"[green]Total cost: ${total_cost:.6f}[/]")
+#             return total_cost, token_usage
             
-        except KeyError as e:
-            print_warning(f"Error calculating costs: {str(e)}")
-            return None, {
-                model_name: {"prompt_tokens": None, "completion_tokens": None}
-                for model_name in set(model_name for call in calls for model_name in call.get('summary', {}).get('usage', {}))
-            }
+#         except KeyError as e:
+#             print_warning(f"Error calculating costs: {str(e)}")
+#             return None, {
+#                 model_name: {"prompt_tokens": None, "completion_tokens": None}
+#                 for model_name in set(model_name for call in calls for model_name in call.dict().get('summary', {}).get('usage', {}))
+#             }
             
 def comput_cost_from_inspect_usage(usage: Dict[str, Dict[str, int]], skip_models: List[str] = []) -> float:
     """Compute cost from token usage"""
@@ -159,36 +250,18 @@ def comput_cost_from_inspect_usage(usage: Dict[str, Dict[str, int]], skip_models
 
 def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     """Process a single Weave call output"""
-    if call['output']:
-        if isinstance(call['output'], str):
-            ChatCompletion = weave.ref(call['output']).get()
-            try:
-                choices = [choice.message.content for choice in ChatCompletion.choices]
-                created = ChatCompletion.created
-            except AttributeError:
-                choices = [content.text for content in ChatCompletion.content]
-                created = call['started_at']
-        elif 'choices' in call['output']:
-            choices = call['output']['choices']
-            created = call['output']['created']
-        elif call['output']['content']: # tooluse
-                choices = call['output']['content']
-                created = None
-        
-        return {
-            'weave_task_id': call['attributes']['weave_task_id'],
-            'trace_id': call['trace_id'],
-            'project_id': call['project_id'],
-            'created_timestamp': created,
-            'inputs': call['inputs'],
-            'id': call['id'],
-            'outputs': choices,
-            'exception': call['exception'],
-            'summary': call['summary'],
-            'display_name': call['display_name'],
-            'attributes': call['attributes'],
-        }
-    return {}
+    # convert started_at from datetime to string
+    started_at = call.started_at.isoformat()
+    ended_at = call.ended_at.isoformat()
+    
+    
+    json_call = call.dict()
+    json_call['started_at'] = started_at
+    json_call['ended_at'] = ended_at
+    json_call['weave_task_id'] = call.attributes['weave_task_id']
+    json_call['created_timestamp'] = started_at
+    
+    return json_call
 
 def get_weave_calls(client) -> List[Dict[str, Any]]:
     """Get processed Weave calls with progress tracking"""

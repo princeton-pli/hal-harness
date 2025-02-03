@@ -43,7 +43,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
 3. **File Access**: For benchmarks that provide files (like SWE-bench), files are available in the working directory.
 
-4. **Cost Logging**: The harness automatically logs agent traces and costs using Weave. However, you need to make sure to **not spawn new processes or threads that will not be logged by Weave**. Also make sure that your dependencies are compatible with `weave==0.51.22`.
+4. **Cost Logging**: The harness automatically logs agent traces and costs using Weave. However, you need to make sure to **not spawn new processes or threads that will not be logged by Weave**. Also make sure that your dependencies are compatible with `weave==0.51.32`.
 
 ## Benchmark-Specific Requirements
 
