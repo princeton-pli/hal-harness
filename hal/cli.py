@@ -100,6 +100,8 @@ def main(
             set_run_id = False
             benchmark_name = benchmark.split("/")[-1]
             run_id = f"{benchmark_name}_{int(time.time())}"
+        else:
+            set_run_id = True
         
         # Setup logging first, before any other operations
         log_dir = os.path.join("results", benchmark, run_id)
