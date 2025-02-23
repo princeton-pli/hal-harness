@@ -191,7 +191,7 @@ def get_total_cost(client):
     requests = 0
 
     # Fetch all the calls in the project
-    print_step("Fetching Weave calls...")
+    print_step("Fetching Weave calls (this can take a while)...")
     calls = list(
         client.get_calls(filter={"trace_roots_only": True}, include_costs=True)
     )
