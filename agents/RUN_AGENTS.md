@@ -134,6 +134,7 @@ hal-eval --benchmark taubench_retail \
     --agent_function tool_calling.run \
     --agent_name "Taubench ToolCalling (gpt-4o-2024-11-20)" \
     -A model_name=gpt-4o-2024-11-20 \
+    -A provider=openai \
     --max_concurrent 10
 ```
 
@@ -147,5 +148,6 @@ hal-eval --benchmark taubench_retail \
     --agent_function react.run \
     --agent_name "Taubench ReAct (gpt-4o-2024-11-20)" \
     -A model_name=gpt-4o-2024-11-20 \
+    -A provider=openai \
     --max_concurrent 10
 ```

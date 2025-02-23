@@ -8,6 +8,7 @@ from openai import OpenAI
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
+    assert 'provider' in kwargs, 'provider is required. choose from openai or anthropic'
     client = OpenAI()
     task_id = list(input.keys())[0]
     
@@ -29,9 +30,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             tools_info=isolated_env.tools_info,
             wiki=isolated_env.wiki,
             model=kwargs['model_name'],
-            provider="openai",
+            provider=kwargs['provider'],
             use_reasoning=True,
-            temperature=0.5,
+            temperature=0.0,
         )
     
     output = agent.solve(isolated_env, task_index=input[task_id]['task_index'])
