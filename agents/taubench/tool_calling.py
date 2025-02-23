@@ -18,11 +18,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         input[task_id]['user_model'],
         input[task_id]['task_split'],
         input[task_id]['user_provider'],
-        input[task_id]['task_index'],
-            )
-    # get instruction from environment
-    instruction = isolated_env.reset(input[task_id]['task_index']).observation
+        input[task_id]['task_index']
+    )
     
+    # get instruction from environment
+    instruction = isolated_env.reset(input[task_id]['task_index']).observation    
     
     ### YOUR AGENT CODE HERE ###
     agent = ToolCallingAgent(
@@ -30,7 +30,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         wiki=isolated_env.wiki,
         model=kwargs['model_name'],
         provider="openai",
-        temperature=0.5,
+        temperature=0.0,
     )
     
     output = agent.solve(isolated_env, task_index=input[task_id]['task_index'])
