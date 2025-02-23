@@ -27,7 +27,7 @@ dependencies = [
 
 [project.optional-dependencies]
 taubench = [
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@cd28da397d4d5fe779bd3a5cbbca56181d555d6c",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@000e9aed3b7ab03aed7f070433ff21e2e5fc7da1",
 ]
 
 [project.scripts]

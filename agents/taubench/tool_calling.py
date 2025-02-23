@@ -36,5 +36,5 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     output = agent.solve(isolated_env, task_index=input[task_id]['task_index'])
         
     ### WHEN DONE WE RETURN THE ENV STATE ###
-    return {task_id: isolated_env.calculate_reward().model_dump()}
+    return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
 
