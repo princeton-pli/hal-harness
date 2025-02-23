@@ -9,7 +9,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 ## Features
 
 * **Unified `hal-eval` CLI across all benchmarks and agent types**
-  - HAL supports SWE-bench Verified, USACO, AppWorld, CORE-bench, AgentHarm, GAIA, Cybench, with support for more coming soon
+  - HAL supports SWE-bench Verified, USACO, AppWorld, CORE-bench, AgentHarm, GAIA, Cybench, tau-bench, with support for more coming soon
   - Run your and existing agents on HAL with the same CLI across benchmarks (see [How Do I Run Evaluations?](#how-do-i-run-evaluations))
 
 * **Evaluations locally or in the cloud AND fully parallelized**
@@ -123,6 +123,10 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 - Supports fully parallelized evaluation on Azure VMs
 - For detailed instructions on running CORE-bench evaluations, see the [CORE-bench repository](https://github.com/CORE-Bench/CORE-Bench)
 
+### [tau-bench](https://github.com/tau-bench/tau-bench)
+- Benchmark for Tool-Agent-User Interaction in real-world domains
+- Supports fully parallelized evaluation on Azure VMs
+
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
 - Two agent types supported:
@@ -215,6 +219,8 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
     - `usaco`: USACO programming competition problems
     - `appworld_test_normal`: AppWorld normal test suite
     - `appworld_test_challenge`: AppWorld challenge test suite
+    - `taubench_retail`: tau-bench retail domain
+    - `taubench_airline`: tau-bench airline domain
     - `inspect_evals/gaia`: Gaia general AI assistants benchmark
     - `inspect_evals/cybench`: Cybersecurity agent tasks
     - `inspect_evals/agentharm`: AgentHarm
@@ -360,6 +366,7 @@ HAL addresses these challenges through two key components: 1) A central leaderbo
         - `usaco.py`: USACO implementation
         - `mlagentbench.py`: MLAgentBench implementation
         - `appworld.py`: AppWorld implementation
+        - `taubench.py`: tau-bench implementation
         - `inspect_benchmark.py`: Inspect AI benchmark support
     *   `utils/`: Utility functions
         - `local_runner.py`: Local execution support

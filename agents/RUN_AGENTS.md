@@ -106,3 +106,46 @@ hal-eval --benchmark inspect_evals/agentharm_benign \
     -A model_name=openai/gpt-4o \
     -A task_name=benign
 ```
+
+## tau-bench
+
+The following agents are available for the tau-bench benchmark. Both `taubench_retail` and `taubench_airline` are available. Run evaluations using the following commands:
+
+### Minimal Agent
+
+Run evaluations using a minimal agent that simply forwards the instruction to the LLM:
+
+```bash
+hal-eval --benchmark taubench_retail \
+    --agent_dir agents/taubench/ \
+    --agent_function minimal.run \
+    --agent_name "Agent (gpt-4o-2024-11-20)" \
+    -A model_name=gpt-4o-2024-11-20 \
+    --max_concurrent 10
+```
+
+### Tool-Calling Agent
+
+Run evaluations using an agent that leverages tool-calling capabilities:
+
+```bash
+hal-eval --benchmark taubench_retail \
+    --agent_dir agents/taubench/ \
+    --agent_function tool_calling.run \
+    --agent_name "Taubench ToolCalling (gpt-4o-2024-11-20)" \
+    -A model_name=gpt-4o-2024-11-20 \
+    --max_concurrent 10
+```
+
+### ReAct Agent
+
+Run evaluations using a ReAct agent that uses chain-of-thought reasoning:
+
+```bash
+hal-eval --benchmark taubench_retail \
+    --agent_dir agents/taubench/ \
+    --agent_function react.run \
+    --agent_name "Taubench ReAct (gpt-4o-2024-11-20)" \
+    -A model_name=gpt-4o-2024-11-20 \
+    --max_concurrent 10
+```
