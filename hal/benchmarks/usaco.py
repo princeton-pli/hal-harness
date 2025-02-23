@@ -11,7 +11,6 @@ from typing_extensions import NotRequired, TypedDict
 from datetime import datetime
 
 from .base_benchmark import BaseBenchmark
-from ..utils.weave_utils import get_total_cost, assert_task_id_logging
 
 
 
