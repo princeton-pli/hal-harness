@@ -31,7 +31,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         wiki=isolated_env.wiki,
         model=kwargs['model_name'],
         provider=kwargs['provider'],
-        temperature=0.0,
+        temperature=kwargs['temperature'] if 'temperature' in kwargs else 0.0,
     )
     
     output = agent.solve(isolated_env, task_index=input[task_id]['task_index'])
