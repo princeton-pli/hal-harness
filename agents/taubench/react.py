@@ -32,7 +32,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             model=kwargs['model_name'],
             provider=kwargs['provider'],
             use_reasoning=True,
-            temperature=0.0,
+            temperature=kwargs['temperature'] if 'temperature' in kwargs else 0.0,
         )
     
     output = agent.solve(isolated_env, task_index=input[task_id]['task_index'])
