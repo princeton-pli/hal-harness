@@ -13,7 +13,7 @@ dependencies = [
     "huggingface-hub",
     "python-dotenv",
     "setuptools>=48.0.0",
-    "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@4c189e53f30a06b740df2b2ce5b3aa2dd79c57ee",
+    "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@d3a242f74c8a4f42a86d1219eaca12ab620c3be2",
     "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals",
     "azure-mgmt-compute>=29.1.0",
     "azure-mgmt-network>=25.1.0",
