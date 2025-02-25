@@ -63,6 +63,8 @@ MODEL_PRICES_DICT = {
                 "us.anthropic.claude-3-5-haiku-20241022-v1:0" : {"prompt_tokens": 0.0008/1e3, "completion_tokens": 0.004/1e3}, 
                 "bedrock/us.meta.llama3-3-70b-instruct-v1:0": {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3},
                 "us.meta.llama3-3-70b-instruct-v1:0" : {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3}, 
+                "claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:

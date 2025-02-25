@@ -34,10 +34,10 @@ class USACOBenchmark(BaseBenchmark):
             self.benchmark = json.load(f)
             
         # For testing, limit to 1 task
-        self.benchmark = {
-            k: v for k, v in self.benchmark.items() 
-            if k in list(self.benchmark.keys())[:1]
-        }
+        # self.benchmark = {
+        #     k: v for k, v in self.benchmark.items() 
+        #     if k in list(self.benchmark.keys())[:1]
+        # }
         
         # Set benchmark directory
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), 'USACO')
