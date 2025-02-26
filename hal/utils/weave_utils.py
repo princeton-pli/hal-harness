@@ -165,11 +165,16 @@ def get_total_cost(client):
                 requests += cost["requests"]
                 if "prompt_tokens" in cost:
                     token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
-                elif "input_tokens" in cost:    
+                if "input_tokens" in cost:    
                     token_usage[k]["prompt_tokens"] += cost["input_tokens"]
+                if "cache_creation_input_tokens" in cost:
+                    token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
+                if "cache_read_input_tokens" in cost:
+                    token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
+                    
                 if "completion_tokens" in cost:
                     token_usage[k]["completion_tokens"] += cost["completion_tokens"]
-                elif "output_tokens" in cost:
+                if "output_tokens" in cost:
                     token_usage[k]["completion_tokens"] += cost["output_tokens"]
             progress.update(task, advance=1)
             
