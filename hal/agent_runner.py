@@ -27,7 +27,6 @@ class AgentRunner:
                  max_concurrent: int = 1,
                  conda_env: Optional[str] = None,
                  continue_run: bool = False):
-        
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
             raise ValueError("Invalid agent_function format. Must be in format 'module.function' (e.g., 'my_agent.run_agent')")
@@ -46,7 +45,7 @@ class AgentRunner:
             raise ValueError("Conda environment and VM execution cannot be set together. If you want to run the agent on a VM, please do not set the conda_env flag but create requirements.txt instead in agent directory instead.")
         
         # Initialize benchmark first
-        self.benchmark_manager = BenchmarkManager(agent_dir, config)
+        self.benchmark_manager = BenchmarkManager(agent_dir, config, agent_args)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
                 
