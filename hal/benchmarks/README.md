@@ -101,14 +101,14 @@ class SimpleMathBenchmark(BaseBenchmark):
         
         return {
             "accuracy": correct / total,
-            "successful_tasks": {
+            "successful_tasks": [
                 task_id for task_id, result in eval_results.items()
                 if result.get("correct", False)
-            },
-            "failed_tasks": {
+            ],
+            "failed_tasks": [
                 task_id for task_id, result in eval_results.items()
                 if not result.get("correct", False)
-            }
+            ]
         }
 ```
 
