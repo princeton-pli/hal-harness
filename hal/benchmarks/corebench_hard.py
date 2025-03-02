@@ -6,16 +6,22 @@ from .base_benchmark import BaseBenchmark
 class CoreBenchHard(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         self.benchmark_name = "corebench_hard"
-        self.benchmark = {
-            "task1": {
-                "prompt": "What is 2 + 2?",
-                "answer": 4
-            },
-            "task2": {
-                "prompt": "What is 3 * 4?",
-                "answer": 12
-            }
-        }
+        
+        # Load tasks from core_test.json
+        core_test_path = os.path.join(os.path.dirname(__file__), "corebench", "core_test.json")
+        with open(core_test_path, 'r') as f:
+            core_test_data = json.load(f)
+        
+        # Create benchmark_tasks with capsule_id as key and task_prompt as value
+        self.benchmark = {}
+        # Create benchmark_answers with capsule_id as key and results list as value
+        self.benchmark_answers = {}
+        
+        for task in core_test_data:
+            capsule_id = task["capsule_id"]
+            self.benchmark[capsule_id] = task["task_prompt"]
+            self.benchmark_answers[capsule_id] = task["results"]
+            
         super().__init__(agent_dir, config)
         
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
