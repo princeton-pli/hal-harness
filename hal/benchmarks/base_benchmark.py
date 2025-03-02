@@ -7,6 +7,7 @@ from inspect_ai.log import EvalLog, write_eval_log
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
 from ..utils.logging_utils import print_warning
+from ..utils.utils import make_json_serializable
 
 
 class BaseBenchmark(ABC):
