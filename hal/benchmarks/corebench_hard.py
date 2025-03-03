@@ -24,40 +24,55 @@ class CoreBenchHard(BaseBenchmark):
         if not os.path.exists(capsules_dir):
             os.makedirs(capsules_dir)
             
-        with create_progress() as progress:
-            task_loading = progress.add_task("Loading/downloading tasks...", total=len(dataset))
-            for task in dataset:
-                progress.update(task_loading, advance=1)
-                
-                capsule_id = task["capsule_id"]
-                capsule_dir = os.path.join(capsules_dir, capsule_id)
+        total_tasks = len(dataset)
+        for i, task in enumerate(dataset, 1):
+            capsule_id = task["capsule_id"]
+            capsule_dir = os.path.join(capsules_dir, capsule_id)
 
-                # Check if capsule directory exists, if not download and extract it
-                if not os.path.exists(capsule_dir):
-                    self.__download_and_extract_capsule(capsules_dir, capsule_id)
-                
-                # Create task entry with prompt
-                self.benchmark[capsule_id] = {
-                    "prompt": task["task_prompt"],
-                    "files": {"/root/environment/": capsule_dir}
-                }
-                
-                # Store results
-                self.benchmark_answers[capsule_id] = task["results"]
+            # Check if capsule directory exists, if not download and extract it
+            if not os.path.exists(capsule_dir):
+                self.__download_and_extract_capsule(capsules_dir, capsule_id, task_number=i, total_tasks=total_tasks)
+            
+            # Create task entry with prompt
+            self.benchmark[capsule_id] = {
+                "prompt": task["task_prompt"],
+                "files": {"/root/environment/": capsule_dir}
+            }
+            
+            # Store results
+            self.benchmark_answers[capsule_id] = task["results"]
             
         super().__init__(agent_dir, config)
     
-    def __download_and_extract_capsule(self, capsules_dir: str, capsule_id: str, max_retries=5, backoff_factor=1):
+    def __download_and_extract_capsule(self, capsules_dir: str, capsule_id: str, task_number=None, total_tasks=None, max_retries=5, backoff_factor=1):
         """Downloads and extracts a capsule archive from the CoreBench repository."""
         capsule_dir = os.path.join(capsules_dir, capsule_id)
         capsule_url = f"https://corebench.cs.princeton.edu/capsules/{capsule_id}.tar.gz"
         tar_path = os.path.join(capsules_dir, f"{capsule_id}.tar.gz")
         
-        # Download with retry
+        # Download with retry and progress tracking
         for attempt in range(1, max_retries + 1):
             try:
-                print(f"Downloading capsule {capsule_id} (attempt {attempt}/{max_retries})...")
-                urllib.request.urlretrieve(capsule_url, tar_path)
+                # Create a progress bar for the download
+                with create_progress() as progress:
+                    task_info = f"({task_number}/{total_tasks})" if task_number and total_tasks else ""
+                    download_task = progress.add_task(f"Downloading capsule {capsule_id} {task_info}...", total=None)
+                    
+                    # First, make a HEAD request to get the content length
+                    with urllib.request.urlopen(urllib.request.Request(capsule_url, method='HEAD')) as response:
+                        file_size = int(response.headers.get('Content-Length', 0))
+                        if file_size > 0:
+                            progress.update(download_task, total=file_size)
+                    
+                    # Define a progress hook for urlretrieve
+                    def report_progress(block_num, block_size, total_size):
+                        downloaded = block_num * block_size
+                        if downloaded > total_size:  # Avoid progress bar overflow
+                            downloaded = total_size
+                        progress.update(download_task, completed=downloaded)
+                    
+                    # Download the file with progress reporting
+                    urllib.request.urlretrieve(capsule_url, tar_path, reporthook=report_progress)
                 break
             except Exception as e:
                 if attempt == max_retries:
@@ -67,12 +82,34 @@ class CoreBenchHard(BaseBenchmark):
                 print(f"Download failed, retrying in {sleep_time}s...")
                 time.sleep(sleep_time)
         
-        # Extract and cleanup
+        # Extract and cleanup with granular progress bar
         try:
-            print(f"Extracting capsule {capsule_id}...")
-            with tarfile.open(tar_path, "r:gz") as tar:
-                tar.extractall(path=capsules_dir)
-            os.remove(tar_path)  # Remove tar file after successful extraction
+            with create_progress() as progress:
+                task_info = f"({task_number}/{total_tasks})" if task_number and total_tasks else ""
+                
+                # Open the tar file to get member information
+                with tarfile.open(tar_path, "r:gz") as tar:
+                    # Get all members in the archive
+                    members = tar.getmembers()
+                    total_files = len(members)
+                    
+                    # Create progress bar with total files count
+                    extract_task = progress.add_task(
+                        f"Extracting capsule {capsule_id} {task_info} ...", 
+                        total=total_files
+                    )
+                    
+                    # Extract each file individually and update progress
+                    for i, member in enumerate(members, 1):
+                        tar.extract(member, path=capsules_dir)
+                        progress.update(
+                            extract_task, 
+                            completed=i,
+                            description=f"Extracting capsule {capsule_id} {task_info} ..."
+                        )
+                
+                # Remove tar file after successful extraction
+                os.remove(tar_path)
         except Exception as e:
             if os.path.exists(tar_path):
                 os.remove(tar_path)  # Clean up tar file even if extraction fails
