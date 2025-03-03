@@ -10,16 +10,26 @@ class CoreBenchHard(BaseBenchmark):
         # Load tasks from core_test.json
         core_test_path = os.path.join(os.path.dirname(__file__), "corebench", "core_test.json")
         with open(core_test_path, 'r') as f:
-            core_test_data = json.load(f)
+            dataset = json.load(f)
         
-        # Create benchmark_tasks with capsule_id as key and task_prompt as value
         self.benchmark = {}
-        # Create benchmark_answers with capsule_id as key and results list as value
         self.benchmark_answers = {}
         
-        for task in core_test_data:
+        capsules_dir = os.path.join(os.path.dirname(__file__), "corebench", "capsules")
+        for task in dataset:
             capsule_id = task["capsule_id"]
-            self.benchmark[capsule_id] = task["task_prompt"]
+            capsule_dir = os.path.join(capsules_dir, capsule_id)
+
+            if not os.path.exists(capsule_dir):
+                raise FileNotFoundError(f"Directory for capsule {capsule_id} not found at {capsule_dir}")
+            
+            # Create task entry with prompt
+            self.benchmark[capsule_id] = {
+                "prompt": task["task_prompt"],
+                "files": {"/root/environment/": capsule_dir}
+            }
+            
+            # Store results
             self.benchmark_answers[capsule_id] = task["results"]
             
         super().__init__(agent_dir, config)
