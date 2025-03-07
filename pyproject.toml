@@ -23,6 +23,8 @@ dependencies = [
     "tenacity>=8.2.0",
     "docker>=7.1.0",
     "cryptography>=42.0.0",
+    "boto3>=1.36.23",
+    "litellm>=1.61.17",
 ]
 
 [project.optional-dependencies]
