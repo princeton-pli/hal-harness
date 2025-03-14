@@ -39,13 +39,35 @@ class CoreBenchHard(BaseBenchmark):
             # Create task entry with prompt
             self.benchmark[capsule_id] = {
                 "prompt": task["task_prompt"],
-                "files": {"/root/environment/": capsule_dir}
+                "files": self.__get_capsule_files_dict(capsule_dir)
             }
             
             # Store results
             self.benchmark_answers[capsule_id] = task["results"]
             
         super().__init__(agent_dir, config)
+    
+    def __get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
+        """
+        Creates a dictionary mapping target paths to source paths for all files in the capsule directory.
+        
+        Args:
+            capsule_dir: Path to the capsule directory
+            
+        Returns:
+            Dictionary where keys are target paths in /root/environment/ and values are source paths
+        """
+        files_dict = {}
+        for root, _, files in os.walk(capsule_dir):
+            for file in files:
+                source_path = os.path.join(root, file)
+                # Calculate the relative path from capsule_dir
+                rel_path = os.path.relpath(source_path, capsule_dir)
+                # Create the target path
+                target_path = os.path.join("/root/environment/", rel_path)
+                # Add to dictionary
+                files_dict[target_path] = source_path
+        return files_dict
     
     def __download_and_extract_capsule(self, capsules_dir: str, capsule_id: str, task_number=None, total_tasks=None, max_retries=5, backoff_factor=1):
         """Downloads and extracts a capsule archive from the CoreBench repository."""
