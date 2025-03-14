@@ -4,18 +4,18 @@ from typing import Dict, Any
 
 from .corebench import CoreBench
 
-class CoreBenchHard(CoreBench):
-    """CoreBench benchmark with hard difficulty level"""
+class CoreBenchMedium(CoreBench):
+    """CoreBench benchmark with medium difficulty level"""
     
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        self.benchmark_name = "corebench_hard"
+        self.benchmark_name = "corebench_medium"
         super().__init__(agent_dir, config)
     
     def __get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
         Creates a dictionary mapping target paths to source paths for all files in the capsule directory.
-        For the hard difficulty level, the results directory, REPRODUCING.md, environment directory,
-        and run scripts are removed.
+        For the medium difficulty level, the results directory is removed, but REPRODUCING.md, 
+        environment directory, and run scripts are kept.
         
         Args:
             capsule_dir: Path to the capsule directory
@@ -26,25 +26,13 @@ class CoreBenchHard(CoreBench):
         # Get the complete files dictionary from the base implementation
         files_dict = super().__get_capsule_files_dict(capsule_dir)
         
-        # Filter out files based on hard difficulty criteria
+        # Filter out files in the results directory
         filtered_dict = {}
         for target_path, source_path in files_dict.items():
             normalized_path = target_path.replace("\\", "/")
             
             # Skip files in results directory
             if "/results/" in normalized_path:
-                continue
-                
-            # Skip REPRODUCING.md file
-            if normalized_path.endswith("/REPRODUCING.md"):
-                continue
-                
-            # Skip files in environment directory
-            if "/environment/" in normalized_path:
-                continue
-                
-            # Skip run scripts
-            if normalized_path.endswith("/code/run.sh") or normalized_path.endswith("/code/run"):
                 continue
                 
             # Include all other files

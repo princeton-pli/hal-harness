@@ -28,6 +28,8 @@ class BenchmarkManager:
                            'inspect_evals/appworld',
                            'inspect_evals/agentharm',
                            'inspect_evals/agentharm_benign',
+                           'corebench_easy',
+                            'corebench_medium',
                            'corebench_hard']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
@@ -52,6 +54,12 @@ class BenchmarkManager:
         elif benchmark_name in ['taubench_retail', 'taubench_airline']:
             from .benchmarks.taubench import TauBenchBenchmark
             benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == 'corebench_easy':
+            from .benchmarks.corebench_easy import CoreBenchEasy
+            benchmark = CoreBenchEasy(self.agent_dir, self.config)
+        elif benchmark_name == 'corebench_medium':
+            from .benchmarks.corebench_medium import CoreBenchMedium
+            benchmark = CoreBenchMedium(self.agent_dir, self.config)
         elif benchmark_name == 'corebench_hard':
             from .benchmarks.corebench_hard import CoreBenchHard
             benchmark = CoreBenchHard(self.agent_dir, self.config)
