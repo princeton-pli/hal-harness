@@ -11,7 +11,7 @@ class CoreBenchMedium(CoreBench):
         self.benchmark_name = "corebench_medium"
         super().__init__(agent_dir, config)
     
-    def __get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
+    def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
         Creates a dictionary mapping target paths to source paths for all files in the capsule directory.
         For the medium difficulty level, the results directory is removed, but REPRODUCING.md, 
@@ -24,7 +24,7 @@ class CoreBenchMedium(CoreBench):
             Dictionary where keys are target paths in /root/environment/ and values are source paths
         """
         # Get the complete files dictionary from the base implementation
-        files_dict = super().__get_capsule_files_dict(capsule_dir)
+        files_dict = super()._get_capsule_files_dict(capsule_dir)
         
         # Filter out files in the results directory
         filtered_dict = {}

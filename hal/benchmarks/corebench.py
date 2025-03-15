@@ -42,7 +42,7 @@ class CoreBench(BaseBenchmark):
             # Create task entry with prompt
             self.benchmark[capsule_id] = {
                 "prompt": task["task_prompt"],
-                "files": self.__get_capsule_files_dict(capsule_dir)
+                "files": self._get_capsule_files_dict(capsule_dir)
             }
             
             # Store results
@@ -50,7 +50,7 @@ class CoreBench(BaseBenchmark):
             
         super().__init__(agent_dir, config)
     
-    def __get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
+    def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
         Creates a dictionary mapping target paths to source paths for all files in the capsule directory.
         This base implementation includes all files.

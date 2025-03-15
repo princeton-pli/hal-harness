@@ -11,7 +11,7 @@ class CoreBenchEasy(CoreBench):
         self.benchmark_name = "corebench_easy"
         super().__init__(agent_dir, config)
     
-    def __get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
+    def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
         Creates a dictionary mapping target paths to source paths for all files in the capsule directory.
         For the easy difficulty level, all files are kept.
@@ -23,4 +23,4 @@ class CoreBenchEasy(CoreBench):
             Dictionary where keys are target paths in /root/environment/ and values are source paths
         """
         # For easy difficulty, we keep all files, so we can just use the base implementation
-        return super().__get_capsule_files_dict(capsule_dir)
+        return super()._get_capsule_files_dict(capsule_dir)
