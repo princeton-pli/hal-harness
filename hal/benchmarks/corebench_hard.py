@@ -40,7 +40,7 @@ class CoreBenchHard(CoreBench):
                 continue
                 
             # Skip files in environment directory
-            if "/environment/" in normalized_path:
+            if "/environment/environment/" in normalized_path:
                 continue
                 
             # Skip run scripts
