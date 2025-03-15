@@ -10,6 +10,20 @@ class CoreBenchHard(CoreBench):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         self.benchmark_name = "corebench_hard"
         super().__init__(agent_dir, config)
+        
+    def _construct_prompt(self, task):
+        """
+        Constructs the prompt for the hard difficulty level.
+        
+        Args:
+            task: The task dictionary containing task_prompt and results
+            
+        Returns:
+            The constructed prompt string
+        """
+        task_prompt = task["task_prompt"]
+        json_fields = str(task["results"][0].keys())
+        return f"Task: codeocean_hard\n\nYour goal is to test the computational reproducibility of the repository cloned to your current directory, which is code from a scientific paper. Specifically, you need to {task_prompt}. Save your report to a file named report.json in the environment directory you started in that contains the capsule itself, where you fill in all of the following fields: {json_fields}. You should install all of the requirements found in the Readme file and then run the commands necessary to answer the questions."
     
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """

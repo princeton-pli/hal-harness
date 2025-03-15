@@ -40,8 +40,10 @@ class CoreBench(BaseBenchmark):
                 self.__download_and_extract_capsule(capsules_dir, capsule_id, task_number=i, total_tasks=total_tasks)
             
             # Create task entry with prompt
+            # Use the _construct_prompt method if it exists in the subclass, otherwise use the default prompt
+            prompt = self._construct_prompt(task)
             self.benchmark[capsule_id] = {
-                "prompt": task["task_prompt"],
+                "prompt": prompt,
                 "files": self._get_capsule_files_dict(capsule_dir)
             }
             

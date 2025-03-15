@@ -10,6 +10,20 @@ class CoreBenchMedium(CoreBench):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         self.benchmark_name = "corebench_medium"
         super().__init__(agent_dir, config)
+        
+    def _construct_prompt(self, task):
+        """
+        Constructs the prompt for the medium difficulty level.
+        
+        Args:
+            task: The task dictionary containing task_prompt and results
+            
+        Returns:
+            The constructed prompt string
+        """
+        task_prompt = task["task_prompt"]
+        json_fields = str(task["results"][0].keys())
+        return f"Task: codeocean_medium\n\nYour goal is to test the computational reproducibility of the repository cloned to your current directory, which is code from a scientific paper. Specifically, you need to {task_prompt}. Save your report to a file named report.json in the environment directory you started in that contains the capsule itself, where you fill in all of the following fields: {json_fields}. You should read the instructions on how to reproduce the capsule in REPRODUCING.md."
     
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """

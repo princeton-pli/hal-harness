@@ -10,6 +10,19 @@ class CoreBenchEasy(CoreBench):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         self.benchmark_name = "corebench_easy"
         super().__init__(agent_dir, config)
+        
+    def _construct_prompt(self, task):
+        """
+        Constructs the prompt for the easy difficulty level.
+        
+        Args:
+            task: The task dictionary containing task_prompt and results
+            
+        Returns:
+            The constructed prompt string
+        """
+        json_fields = str(task["results"][0].keys())
+        return f"Task: codeocean_easy\n\nYour goal is to answer questions about the output of scientific code. You should read through the files in the `results` directory to answer the following questions: {json_fields}. Save your answers to a file named report.json in the environment directory you started in that contains the capsule directory itself whose keys are the questions and values are the answers. **You should not actually run or execute any code.** All answers can be obtained by reading through the results directory."
     
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
