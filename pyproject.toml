@@ -29,6 +29,7 @@ dependencies = [
 taubench = [
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@3e187bda4dfa3e8936aebd44a579f6d1238ce55e",
 ]
+["scicode @ git+https://github.com/peterkirgis/SciCode"]
 
 [project.scripts]
 hal-eval = "hal.cli:main"

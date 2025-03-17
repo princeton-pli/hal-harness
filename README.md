@@ -104,7 +104,6 @@ This repository provides a standardized evaluation harness for reproducible agen
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
 - **Does not support arm64 machines**
 
-
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
 - Supports both local and VM execution
@@ -126,6 +125,15 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 ### [tau-bench](https://github.com/tau-bench/tau-bench)
 - Benchmark for Tool-Agent-User Interaction in real-world domains
 - Supports fully parallelized evaluation on Azure VMs
+
+### [SciCode](https://github.com/scicode-bench/SciCode)
+- Programming realistic scientific research problems
+- Supports both local and VM execution
+
+For SciCode, you will need to download and extract the SciCode unit tests. This can be done with the following steps:
+
+1. Download the unit tests [here](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR)
+2. Move the file to `hal/benchmarks/SciCode/eval/data/`.
 
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
