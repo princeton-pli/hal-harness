@@ -18,3 +18,4 @@ write_upload_file.ipynb
 run_models.sh
 data/*
 hal/benchmarks/corebench/capsules
+.vscode

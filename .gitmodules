@@ -22,3 +22,7 @@
 [submodule "agents/CORE-Agent/core-bench"]
 	path = agents/CORE-Agent/core-bench
 	url = https://github.com/siegelz/core-bench.git
+[submodule "agents/Enigma-Agent"]
+	path = agents/Enigma-Agent
+	url = git@github.com:boyiwei/Enigma-Agent.git
+	branch = enigma-agent-hal
