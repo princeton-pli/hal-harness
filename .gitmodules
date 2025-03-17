@@ -19,3 +19,6 @@
 [submodule "agents/usaco_bedrock_models"]
 	path = agents/usaco_bedrock_models
 	url = https://github.com/aarora79/usaco_bedrock_models.git
+[submodule "agents/CORE-Agent/core-bench"]
+	path = agents/CORE-Agent/core-bench
+	url = https://github.com/siegelz/core-bench.git
