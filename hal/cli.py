@@ -155,53 +155,53 @@ def main(
         )
         
         if is_inspect_benchmark(benchmark):
-            if agent_function and is_inspect_solver(agent_function, agent_dir):
-                # Use original inspect_evaluate for solver agents
-                print_step("Running evaluation for inspect solver and harness (see logs for more details and monitoring)...")
-                inspect_evaluate(
-                    benchmark=benchmark,
-                    benchmark_args=benchmark_args,
-                    agent_name=agent_name,
-                    agent_function=agent_function,
-                    agent_dir=agent_dir,
-                    agent_args=agent_args,
-                    model=agent_args['model_name'],
-                    run_id=run_id,
-                    continue_run=continue_run,
-                    upload=upload or False,
-                    max_concurrent=max_concurrent,
-                    conda_env_name=conda_env_name,
-                    vm=vm,
-                    inspect_eval_args=inspect_eval_args
-                )
-            else:
-                # Use AgentRunner with InspectBenchmark for non-solver agents
-                print_step("Running inspect evaluation for custom agent and inspect harness...")
-                runner = AgentRunner(
-                    agent_function=agent_function,
-                    agent_dir=agent_dir,
-                    agent_args=agent_args,
-                    benchmark_name=benchmark,
-                    config=config,
-                    run_id=run_id,
-                    use_vm=vm,
-                    max_concurrent=max_concurrent,
-                    conda_env=conda_env_name,
-                    continue_run=continue_run
-                )
-                results = asyncio.run(runner.run(
-                    agent_name=agent_name,
-                    upload=upload or False
-                ))
+            # if agent_function and is_inspect_solver(agent_function, agent_dir):
+            # Use original inspect_evaluate for solver agents
+            print_step("Running evaluation for inspect solver and harness (see logs for more details and monitoring)...")
+            inspect_evaluate(
+                benchmark=benchmark,
+                benchmark_args=benchmark_args,
+                agent_name=agent_name,
+                agent_function=agent_function,
+                agent_dir=agent_dir,
+                agent_args=agent_args,
+                model=agent_args['model_name'],
+                run_id=run_id,
+                continue_run=continue_run,
+                upload=upload or False,
+                max_concurrent=max_concurrent,
+                conda_env_name=conda_env_name,
+                vm=vm,
+                inspect_eval_args=inspect_eval_args
+            )
+            # else:
+            #     # Use AgentRunner with InspectBenchmark for non-solver agents
+            #     print_step("Running inspect evaluation for custom agent and inspect harness...")
+            #     runner = AgentRunner(
+            #         agent_function=agent_function,
+            #         agent_dir=agent_dir,
+            #         agent_args=agent_args,
+            #         benchmark_name=benchmark,
+            #         config=config,
+            #         run_id=run_id,
+            #         use_vm=vm,
+            #         max_concurrent=max_concurrent,
+            #         conda_env=conda_env_name,
+            #         continue_run=continue_run
+            #     )
+            #     results = asyncio.run(runner.run(
+            #         agent_name=agent_name,
+            #         upload=upload or False
+            #     ))
                 
-                print_success("Evaluation completed successfully")
-                print_results_table(results)
+            #     print_success("Evaluation completed successfully")
+            #     print_results_table(results)
                 
-                # Only print run summary if we have a valid benchmark and run_id
-                if runner.benchmark and runner.benchmark.get_run_dir(run_id):
-                    print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
-                else:
-                    print_warning("Could not generate run summary - missing benchmark or run directory")
+            #     # Only print run summary if we have a valid benchmark and run_id
+            #     if runner.benchmark and runner.benchmark.get_run_dir(run_id):
+            #         print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
+            #     else:
+            #         print_warning("Could not generate run summary - missing benchmark or run directory")
         else:
             # Initialize agent runner
             print_step("Initializing agent runner...")
@@ -308,7 +308,7 @@ def is_inspect_solver(agent_function: str, agent_dir: str) -> bool:
         module = importlib.import_module(module_name)
         loaded_agent = getattr(module, function_name)
         return_type = getattr(get_annotations(loaded_agent)["return"], "__name__", None)
-        
+                
         # remove the agent dir from the path
         sys.path.remove(agent_dir)
         return return_type == "Solver"
