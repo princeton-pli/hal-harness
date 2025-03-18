@@ -4,7 +4,7 @@ import importlib
 import inspect
 import os
 from inspect_ai.solver import solver
-from typing import Callable, cast, Dict
+from typing import Callable, cast, Dict, Any
 import shutil
 from contextlib import contextmanager
 import uuid
@@ -16,7 +16,7 @@ import traceback
 from inspect_ai.model import ChatMessage
 from inspect_ai.dataset import Dataset
 from inspect_ai.solver import Generate, Solver, TaskState
-
+import weave
 def load_agent(agent_function: str) -> Callable:
     # parse the agent name
     module_name, function_name = agent_function.rsplit(".", 1)
@@ -24,6 +24,7 @@ def load_agent(agent_function: str) -> Callable:
     # attempt to load it from the module
     module = importlib.import_module(module_name)
     loaded_agent = getattr(module, function_name)
+    
     return loaded_agent
 
 
@@ -44,14 +45,14 @@ def validate_agent(agent: Callable) -> None:
     param_name, param_info = next(iter(parameters.items()))
 
     # Validate the parameter type
-    if param_info.annotation != dict[str, dict]:
+    if param_info.annotation != dict[str, Any]:
         raise RuntimeError(
-            f"Parameter '{param_name}' must be of type 'dict[str, dict]'."
+            f"Parameter '{param_name}' must be of type 'dict[str, Any]'."
         )
 
-    # Validate the return type
-    if return_annotation != dict[str, str]:
-        raise RuntimeError("The return type must be 'dict[str, str]'.")
+    # # Validate the return type
+    # if return_annotation != dict[str, str]:
+    #     raise RuntimeError("The return type must be 'dict[str, str]'.")
     
 
 # Track created directories
