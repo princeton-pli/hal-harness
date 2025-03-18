@@ -278,3 +278,4 @@ Can be found in `agents/inspect/gaia.py` and `agents/inspect/cybench.py`.
 **Special Requirements**:
 - For custom agents, use `-A` flags to pass keyword arguments
 - For Inspect solvers, use `-I` flags to pass arguments to the inspect eval() function as detailed in the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/models.html#generation-config)
+- For SWE-Agent / Enigma-Agent, please add `keys.cfg` in the SWE-Agent / Enigma-Agent directory.
