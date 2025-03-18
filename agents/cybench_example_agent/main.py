@@ -11,31 +11,27 @@ from openai import AsyncOpenAI
 from inspect_ai.tool import ToolError, tool
 from inspect_ai.util import sandbox
 
-@tool
-def list_files():
-    async def execute(dir: str):
-        """List the files in a directory.
 
-        Args:
-            dir (str): Directory
+async def list_files(dir: str):
+    """List the files in a directory.
 
-        Returns:
-            File listing of the directory
-        """
-        result = await sandbox().exec(["ls", dir])
-        if result.success:
-            return result.stdout
-        else:
-            raise ToolError(result.stderr)
+    Args:
+        dir (str): Directory
 
-    return execute
+    Returns:
+        File listing of the directory
+    """
+    result = await sandbox().exec(["ls", dir])
+    if result.success:
+        return result.stdout
+    else:
+        raise ToolError(result.stderr)
+
 
 async def run(sample: dict[str, Any]) -> dict[str, Any]:
     
-    # result = list_files()
-    # result = await result(".")
-    
-    result = await sandbox().exec(["ls", "."])
+    # Example command executed in the sandbox
+    result = await list_files(".")
     
     client = AsyncOpenAI()
     completion = await client.chat.completions.create(
