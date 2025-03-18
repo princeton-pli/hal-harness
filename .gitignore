@@ -19,3 +19,4 @@ run_models.sh
 data/*
 uv.lock
 .compose.yaml
+.vscode
