@@ -23,6 +23,7 @@ class BenchmarkManager:
                            'appworld_test_challenge',
                            'taubench_retail',
                            'taubench_airline',
+                           'gaia',
                            'inspect_evals/gaia',
                            'inspect_evals/cybench',
                            'inspect_evals/appworld',
@@ -51,6 +52,9 @@ class BenchmarkManager:
         elif benchmark_name in ['taubench_retail', 'taubench_airline']:
             from .benchmarks.taubench import TauBenchBenchmark
             benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == 'gaia':
+            from .benchmarks.gaia import GaiaBenchmark
+            benchmark = GaiaBenchmark(self.agent_dir, self.config, benchmark_name)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         
