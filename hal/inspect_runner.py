@@ -6,6 +6,7 @@ import datetime
 import weave  # type: ignore
 from inspect_ai import eval, eval_retry
 from pydantic_core import to_jsonable_python
+from inspect_ai.solver import bridge
 
 from typing import Any
 
@@ -25,6 +26,9 @@ from .utils.utils import safe_filename
 from .utils.weave_utils import comput_cost_from_inspect_usage
 
 from .utils.logging_utils import print_success, print_results_table, print_warning
+
+from openai import AsyncOpenAI
+
 
 def inspect_evaluate(
     benchmark: str,
@@ -105,68 +109,78 @@ def inspect_evaluate(
         if agent_function is not None:
             # load the agent function
             agent = load_agent(agent_function)
+            
+            # wrap the content of the run function in a weave.attributes the wrapped function should also be async
+            async def patched_agent(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
+                with weave.attributes({"weave_task_id": sample["sample_id"]}):
+                    return await agent(sample, **kwargs)
 
             # is the agent a solver?
             solver = resolve_solver(agent, agent_args=agent_args)
-
+            
             if solver is None:
                 # Ensure this is a valid custom agent function
                 validate_agent(agent)
-
+                
                 # Load the task
                 resolved_task = load_task(task, model, task_args=benchmark_args)
-
-                # Run the custom agent
-                log_start(f"Running Inspect custom agent {agent_function}")
                 
-                solver = run_agent(
-                    resolved_task.dataset, 
-                    agent, 
-                    agent_args=agent_args, 
-                    agent_function=agent_function, 
-                    agent_dir=agent_dir, 
-                    max_concurrent=max_concurrent, 
-                    run_id=run_id, 
-                    log_dir=log_dir, 
-                    task_name=task,
-                    conda_env_name=conda_env_name,
-                    )
-                log_end()
+                            
+
+                # # Run the custom agent
+                # log_start(f"Running Inspect custom agent {agent_function}")
+                
+                # solver = run_agent(
+                #     resolved_task.dataset, 
+                #     agent, 
+                #     agent_args=agent_args, 
+                #     agent_function=agent_function, 
+                #     agent_dir=agent_dir, 
+                #     max_concurrent=max_concurrent, 
+                #     run_id=run_id, 
+                #     log_dir=log_dir, 
+                #     task_name=task,
+                #     conda_env_name=conda_env_name,
+                #     )
+                # log_end()
 
                 # run the task (this will be fast since it mostly just scoring)
                 log_start(f"Scoring custom agent {agent_function}")
-                eval_logs = eval(
-                    tasks=resolved_task,
-                    task_args=benchmark_args,                    
-                    solver=solver,
-                    model=model,
-                    log_dir=log_dir,
-                    sandbox="docker",
-                    **filtered_eval_args  # Use filtered args
-                )
+                if not continue_run:
+                    eval_logs = eval(
+                        tasks=resolved_task,
+                        task_args=benchmark_args,                    
+                        solver=bridge(patched_agent),
+                        model=model,
+                        log_dir=log_dir,
+                        log_format="json",
+                        sandbox="docker",
+                        **filtered_eval_args  # Use filtered args
+                    )
+                else:
+                    latest_file = [f for f in os.listdir(log_dir) if f.endswith('.json')][-1]
+                    eval_logs = eval_retry(os.path.join(log_dir, latest_file))
                 log_end()
 
             else:
-    
-                with weave.attributes({"weave_task_id": task}):
-                    if not continue_run:
-                        log_start(f"Running Inspect task {task}")
-                        eval_logs = eval(
-                            tasks=tasks,
-                            task_args=benchmark_args,
-                            solver=solver,                        
-                            model=model,
-                            log_dir=log_dir,
-                            log_format="json",
-                            **filtered_eval_args  # Use filtered args
-                        )
-                    
-                    else:
-                        log_start(f"Continuing Inspect task {task}")
-                        # get last .json file created in log_dir
-                        latest_file = [f for f in os.listdir(log_dir) if f.endswith('.json')][-1]
-                        eval_logs = eval_retry(os.path.join(log_dir, latest_file))
-                    log_end()
+                if not continue_run:
+                    log_start(f"Running Inspect task {task}")
+                    eval_logs = eval(
+                        tasks=tasks,
+                        task_args=benchmark_args,
+                        solver=solver,                        
+                        model=model,
+                        log_dir=log_dir,
+                        log_format="json",
+                        **filtered_eval_args  # Use filtered args
+                    )
+                
+                else:
+                    log_start(f"Continuing Inspect task {task}")
+                    # get last .json file created in log_dir
+                    latest_file = [f for f in os.listdir(log_dir) if f.endswith('.json')][-1]
+                    eval_logs = eval_retry(os.path.join(log_dir, latest_file))
+                log_end()
 
         # unexpected if this is called for a log that hasn't completed
         eval_log = eval_logs[0]
@@ -190,17 +204,6 @@ def inspect_evaluate(
             inspect_eval_results['stats']['model_usage'] = {k: v for k, v in inspect_eval_results['stats']['model_usage'].items() if k != "openai/gpt-4o-2024-08-06"}
         else:
             total_cost = comput_cost_from_inspect_usage(inspect_eval_results['stats']['model_usage'])
-        
-        if "composio" in agent_dir.lower(): # todo remove
-            # load the results from json file
-            with open(f"{log_dir}/{run_id}_USAGE.json", "r") as f:
-                usage = json.load(f)
-            
-            total_cost = sum([usage[task]['total_cost'] for task, value in usage.items()])
-            total_usage = {
-                "prompt_tokens": sum([usage[task]['prompt_tokens'] for task, value in usage.items()]),
-                "completion_tokens": sum([usage[task]['completion_tokens'] for task, value in usage.items()]),
-            }
 
         # Compute the evaluation results and configuration
         inspect_eval_results_json = results_for_eval(eval_log=eval_log, total_cost=total_cost)
