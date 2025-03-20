@@ -203,7 +203,7 @@ hal-eval --benchmark inspect_evals/agentharm \
   -A model_name=openai/gpt-4o-mini-2024-07-18
 ```
 
-### [CORE-Bench] (https://arxiv.org/abs/2409.11363)
+### [CORE-Bench](https://arxiv.org/abs/2409.11363)
 
 - Benchmark for evaluating how agents can reproduce the results of scientific papers when provided with their code.
 - Tasks involve setting up the environment, running the code, and answering questions about the results.
