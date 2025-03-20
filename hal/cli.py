@@ -117,6 +117,9 @@ def main(
         benchmark_args = parse_cli_args(b)
         inspect_eval_args = parse_cli_args(i)
         
+        # add benchmark name to agent_args
+        agent_args['benchmark_name'] = benchmark
+        
         # Validate model pricing if model_name is provided in agent_args
         if "model_name" in agent_args:
             validate_model_pricing(agent_args["model_name"])
