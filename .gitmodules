@@ -19,6 +19,9 @@
 [submodule "agents/usaco_bedrock_models"]
 	path = agents/usaco_bedrock_models
 	url = https://github.com/aarora79/usaco_bedrock_models.git
+[submodule "hal/benchmarks/SciCode"]
+	path = hal/benchmarks/SciCode
+	url = https://github.com/peterkirgis/SciCode.git
 [submodule "agents/Enigma-Agent"]
 	path = agents/Enigma-Agent
 	url = git@github.com:boyiwei/Enigma-Agent.git

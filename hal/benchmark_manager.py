@@ -16,7 +16,8 @@ class BenchmarkManager:
         self.config = config
         self.agent_dir = agent_dir
         self.agent_args = agent_args
-        self.benchmarks = ['usaco', 
+        self.benchmarks = ['scicode',
+                           'usaco', 
                            'swebench_verified', 
                            'swebench_verified_mini', 
                            'appworld_test_normal',
@@ -33,6 +34,9 @@ class BenchmarkManager:
         """Get benchmark instance for given name"""
         if benchmark_name.startswith("inspect:") or benchmark_name.startswith("inspect_evals/"):
             return InspectBenchmark(self.agent_dir, self.config, benchmark_name, self.agent_args)
+        elif benchmark_name == "scicode":
+            from .benchmarks.scicode import SciCodeBenchmark
+            benchmark = SciCodeBenchmark(self.agent_dir, self.config)
         elif benchmark_name == "usaco":
             from .benchmarks.usaco import USACOBenchmark
             benchmark = USACOBenchmark(self.agent_dir, self.config)
