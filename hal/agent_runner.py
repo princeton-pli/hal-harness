@@ -6,6 +6,7 @@ from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
 from .utils.vm_runner import VMRunner
 from .utils.local_runner import LocalRunner
+from .utils.docker_runner import DockerRunner
 from .utils.logging_utils import print_step, print_success, print_error, create_progress, console, log_warning, print_warning
 import sys
 from rich.table import Table
@@ -24,6 +25,7 @@ class AgentRunner:
                  config: Dict[str, Any],
                  run_id: Optional[str] = None,
                  use_vm: bool = False,
+                 use_docker: bool = False,
                  max_concurrent: int = 1,
                  conda_env: Optional[str] = None,
                  continue_run: bool = False):
@@ -38,12 +40,12 @@ class AgentRunner:
         
         # Check for requirements.txt
         requirements_path = os.path.join(agent_dir, 'requirements.txt')
-        if not os.path.exists(requirements_path) and not conda_env:
+        if not os.path.exists(requirements_path) and not conda_env and not use_docker and not use_vm:
             raise ValueError(f"No requirements.txt found in agent directory: {agent_dir}")
         
-        # add check such that conda env and run on vm is not set together
-        if conda_env and use_vm:
-            raise ValueError("Conda environment and VM execution cannot be set together. If you want to run the agent on a VM, please do not set the conda_env flag but create requirements.txt instead in agent directory instead.")
+        # Validate runner options
+        if sum([bool(conda_env), use_vm, use_docker]) > 1:
+            raise ValueError("Only one of conda_env, use_vm, or use_docker can be set at a time.")
         
         # Initialize benchmark first
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
@@ -51,8 +53,8 @@ class AgentRunner:
         self.benchmark.agent_args = agent_args
                 
         # Check if benchmark requires VM
-        if self.benchmark.vm_only and not use_vm:
-            raise ValueError(f"Benchmark {benchmark_name} requires VM execution. Please use --vm flag.")
+        if self.benchmark.vm_only and not use_vm and not use_docker:
+            raise ValueError(f"Benchmark {benchmark_name} requires VM execution. Please use --vm or --docker flag.")
         
         
         # Set run ID
@@ -61,6 +63,12 @@ class AgentRunner:
         # Initialize appropriate runner with benchmark
         if use_vm:
             self.runner = VMRunner(
+                max_concurrent=max_concurrent,
+                log_dir=self.benchmark.get_run_dir(self.run_id),
+                benchmark=self.benchmark
+            )
+        elif use_docker:
+            self.runner = DockerRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
                 benchmark=self.benchmark
@@ -80,6 +88,7 @@ class AgentRunner:
         self.max_concurrent = max_concurrent
         self.conda_env = conda_env
         self.use_vm = use_vm
+        self.use_docker = use_docker
         self.continue_run = continue_run
         
         
