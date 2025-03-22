@@ -7,6 +7,7 @@ import tempfile
 import subprocess
 import logging
 import docker
+import time
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from ..benchmarks.base_benchmark import BaseBenchmark
@@ -97,7 +98,8 @@ class DockerRunner:
                        run_id: str,
                        benchmark: Optional[BaseBenchmark] = None,
                        progress: Optional[Progress] = None,
-                       task: Optional[TaskID] = None) -> Dict[str, Any]:
+                       task: Optional[TaskID] = None,
+                       timeout: int = 7200) -> Dict[str, Any]:
         """
         Run agent on all tasks with concurrency control
         """
@@ -185,10 +187,9 @@ class DockerRunner:
                              agent_function: str,
                              agent_dir: str,
                              agent_args: Dict[str, Any],
-                             run_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Run agent on a single task in a Docker container
-        """
+                             run_id: str,
+                             timeout: int = 7200) -> Optional[Dict[str, Any]]:
+        """Process a single task in a Docker container with timeout"""
         # Create temporary directory for mounting into container
         temp_dir = Path(tempfile.mkdtemp())
         container_id = f"agent--{uuid.uuid4()}"[:32].lower().replace("_", "-")
@@ -207,30 +208,16 @@ class DockerRunner:
             # Copy task-specific files if they exist in input_data
             if isinstance(input_data, dict) and 'files' in input_data:
                 for dest_path, src_path in input_data['files'].items():
-                    # Remove 'root' prefix and leading slash if present
                     dest_path = dest_path.replace('/root/', '').lstrip('/')
-                    
-                    # Create destination directory structure
                     dest_full_path = temp_dir / dest_path
                     dest_full_path.parent.mkdir(parents=True, exist_ok=True)
-                    
-                    # Copy the file
                     try:
                         if os.path.isdir(src_path):
                             shutil.copytree(src_path, dest_full_path)
                         else:
                             shutil.copy2(src_path, dest_full_path)
                     except Exception as e:
-                        error_msg = f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}"
-                        verbose_logger.debug(error_msg)
-
-            # Copy and run setup script if it exists
-            if self.benchmark and self.benchmark.setup_script:
-                setup_script_src = Path(self.benchmark.setup_script)
-                if setup_script_src.exists():
-                    setup_script_dest = temp_dir / "setup_script.sh"
-                    shutil.copy2(setup_script_src, setup_script_dest)
-                    setup_script_dest.chmod(0o755)
+                        verbose_logger.debug(f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}")
 
             # Create runner script
             script = self._create_runner_script(
@@ -243,10 +230,6 @@ class DockerRunner:
             with open(script_path, "w") as f:
                 f.write(script)
             
-            print("TMP DIR: ", temp_dir)
-            print("TMP DIR absolute: ", os.path.abspath(temp_dir))
-            print("TMP DIR CONTENTS: ", os.listdir(temp_dir))
-            
             # create container from image and mount temp dir
             container = self.docker_client.containers.run(
                 image=DOCKER_IMAGE_NAME,
@@ -256,44 +239,76 @@ class DockerRunner:
             )
             
             # copy all the contents of temp dir into container
-            subprocess.run(["docker", "cp", f"{temp_dir}/.", f"{container_id}:/workspace"])
+            result = subprocess.run(["docker", "cp", f"{temp_dir}/.", f"{container_id}:/workspace"], capture_output=True, text=True)
+            if result.stdout:
+                verbose_logger.debug(f"Container {container_id}: {result.stdout}")
+            if result.stderr:
+                verbose_logger.debug(f"Container {container_id}: {result.stderr}")
             
             # install requirements
-            subprocess.run(["docker", "exec", container_id, "pip", "install", "-r", "/workspace/agent/requirements.txt"])
+            result = subprocess.run(["docker", "exec", container_id, "pip", "install", "-r", "/workspace/agent/requirements.txt"], capture_output=True, text=True)
+            if result.stdout:
+                verbose_logger.debug(f"Container {container_id}: {result.stdout}")
+            if result.stderr:
+                verbose_logger.debug(f"Container {container_id}: {result.stderr}")
             
             # run setup script if it exists
             if self.benchmark and self.benchmark.setup_script:
                 setup_script_src = Path(self.benchmark.setup_script)
                 if setup_script_src.exists():
-                    subprocess.run(["docker", "exec", container_id, "bash", "/workspace/setup_script.sh"])
+                    result = subprocess.run(["docker", "exec", container_id, "bash", "/workspace/setup_script.sh"], capture_output=True, text=True)
+                    if result.stdout:
+                        verbose_logger.debug(f"Container {container_id}: {result.stdout}")
+                    if result.stderr:
+                        verbose_logger.debug(f"Container {container_id}: {result.stderr}")
             
             # Get current environment variables
             env_vars = os.environ.copy()
             
-            # Run the script and capture output
-            result = container.exec_run(
-                ["python", "run_agent.py"],
-                environment=env_vars,
-                stream=True
-            )
+            # Run the script and capture output with timeout handling
+            start_time = time.time()
+            result = None
             
-            # Stream and log the output
-            for output in result.output:
-                log_line = output.decode().strip()
-                if log_line:
-                    verbose_logger.debug(f"Container {container_id}: {log_line}")
+            while time.time() - start_time < timeout:
+                try:
+                    # Run the script
+                    exec_result = container.exec_run(
+                        ["python", "run_agent.py"],
+                        environment=env_vars,
+                        stream=True
+                    )
+                    
+                    # Stream and log the output
+                    for output in exec_result.output:
+                        log_line = output.decode().strip()
+                        if log_line:
+                            verbose_logger.debug(f"Container {container_id}: {log_line}")
+                    
+                    # Check if output.json exists
+                    check_result = container.exec_run(["test", "-f", "/workspace/output.json"])
+                    if check_result.exit_code == 0:
+                        # copy files from container back to host
+                        result = subprocess.run(["docker", "cp", f"{container_id}:/workspace/.", f"{temp_dir}"], capture_output=True, text=True)
+                        if result.stdout:
+                            verbose_logger.debug(f"Container {container_id}: {result.stdout}")
+                        if result.stderr:
+                            verbose_logger.debug(f"Container {container_id}: {result.stderr}")
+                        
+                        # Load and return results
+                        with open(temp_dir / "output.json") as f:
+                            result = json.load(f)
+                            break
+                
+                except Exception as e:
+                    verbose_logger.debug(f"Error checking completion on container {container_id}: {e}")
+                
+                await asyncio.sleep(30)  # Check every 30 seconds
             
-            # copy files from container back to host
-            subprocess.run(["docker", "cp", f"{container_id}:/workspace/.", f"{temp_dir}"])
+            if result is None:
+                verbose_logger.debug(f"Task {task_id} timed out after {timeout} seconds")
+                return {task_id: f"TIMEOUT after {timeout} seconds"}
             
-            # Load results
-            try:
-                with open(temp_dir / "output.json") as f:
-                    return json.load(f)
-            except FileNotFoundError:
-                error_msg = "ERROR: No output file generated"
-                verbose_logger.debug(f"{error_msg} for task {task_id}")
-                return {task_id: error_msg}
+            return result
 
         except Exception as e:
             error_msg = f"Error processing task {task_id}: {e}"
@@ -303,21 +318,23 @@ class DockerRunner:
         finally:
             # Cleanup
             try:
-                # Copy directory to log_dir
-                task_log_dir = os.path.join(self.log_dir, task_id)
-                shutil.copytree(temp_dir, task_log_dir, dirs_exist_ok=True)
+                # Copy directory to log_dir if specified
+                if self.log_dir:
+                    task_log_dir = os.path.join(self.log_dir, task_id)
+                    shutil.copytree(temp_dir, task_log_dir, dirs_exist_ok=True)
+                
                 # Remove temp directory
                 shutil.rmtree(temp_dir)
                 
-                # Remove container if it still exists
+                # Remove container
                 try:
                     container = self.docker_client.containers.get(container_id)
                     container.remove(force=True)
-                except (docker.errors.NotFound, NameError):
-                    pass  # Container already removed or not defined
+                except Exception:
+                    pass  # Container may already be removed
                 
             except Exception as e:
-                error_msg = f"Warning: Failed to cleanup {temp_dir}: {e}"
+                error_msg = f"Warning: Failed to cleanup for task {task_id}: {e}"
                 verbose_logger.debug(error_msg)
 
     def _create_runner_script(self, agent_function: str, task_id: str, run_id: str) -> str:
