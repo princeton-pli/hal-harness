@@ -4,10 +4,13 @@ from typing import Optional, List
 import requests
 
 # from smolagents.agents import ToolCallingAgent
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, PythonInterpreterTool
+from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool
 import subprocess
 from pathlib import Path
 import re
+
+from prompts import USACO_PROMPT
+
 
 @tool
 def execute_bash(command: str) -> str:
@@ -210,23 +213,31 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     
     model = LiteLLMModel(model_id=kwargs['model_name'])
 
-    agent = CodeAgent(
+    agent = ToolCallingAgent(
     tools=[
         DuckDuckGoSearchTool(),
         search_wikipedia,
-        PythonInterpreterTool(),
         execute_bash,
         edit_file,
         file_search,
     ],
-    model=model,
-    )
+    add_base_tools=True,
+    model=model)
 
     if kwargs['benchmark_name'] == 'usaco':
-        response = agent.run("Solve the following coding problem: " + task['description'])
+        prompt = USACO_PROMPT.format(task['description'])
+        response = agent.run(prompt)
+        
+        # extract code from response
+        if '```python' in response:
+            response = response.split('```python')[1].split('```')[0]
     elif kwargs['benchmark_name'] == 'swebench_verified':
         pass
     elif kwargs['benchmark_name'] == 'swebench_verified_mini':
+        # clone github repo at certain commit b16c7d12ccbc7b2d20364b89fb44285bcbfede54
+        subprocess.run(['git', 'clone', f'https://github.com/{task["repo"]}.git'])
+        subprocess.run(['git', 'reset', '--hard', task['base_commit']])
+        
         pass
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
         pass
