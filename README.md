@@ -14,6 +14,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 
 * **Evaluations locally or in the cloud AND fully parallelized**
   - Local execution with conda environment isolation
+  - Docker container support for isolated local execution
   - Azure VM support for running evaluations in the cloud
   - Configurable concurrency for parallel evaluation
 
@@ -94,20 +95,23 @@ This repository provides a standardized evaluation harness for reproducible agen
    NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    ```
 
+7. **Optional: Docker Setup**
+   If you plan to use Docker containers for isolated evaluation, make sure Docker is installed on your system. The harness will automatically build the required Docker image.
+
 ## Which Benchmarks Are Supported?
 
 ### [SWE-bench Verified (Mini)](https://github.com/princeton-nlp/SWE-bench)
 - Evaluates code generation and bug fixing capabilities
 - Full dataset (`swebench_verified`) or mini version (`swebench_verified_mini`)
 - Mini version is a subset of 50 randomly selected problems from the full dataset
-- Supports both local and VM execution
+- Supports local, Docker, and VM execution
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
 - **Does not support arm64 machines**
 
 
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
-- Supports both local and VM execution
+- Supports local, Docker, and VM execution
 
 For USACO, you will need to download and extract the USACO dataset. This can be done with the following steps:
 
@@ -238,6 +242,7 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
 *   **`--max_concurrent <number>`**: Number of parallel tasks (default: 1)
 *   **`--conda_env_name <env_name>`**: Conda environment for agent execution
 *   **`--vm`**: Run evaluation on Azure VMs
+*   **`--docker`**: Run evaluation in Docker containers for isolation
 *   **`--run_id <run_id>`**: Specify a run ID (useful for continuing runs)
 *   **`--continue_run`**: Continue from a previous run (requires run_id)
 
@@ -253,7 +258,18 @@ hal-eval --benchmark swebench_verified_mini \
   --max_concurrent 5
 ```
 
-2. **Running USACO on Azure VM:**
+2. **Running USACO in Docker containers:**
+```bash
+hal-eval --benchmark usaco \
+  --agent_dir agents/usaco_example_agent/ \
+  --agent_function main.run \
+  --agent_name "USACO Solver (gpt-4o-mini-2024-07-18)" \
+  --docker \
+  --max_concurrent 5 \
+  -A model_name=gpt-4o-mini-2024-07-18
+```
+
+3. **Running USACO on Azure VM:**
 ```bash
 hal-eval --benchmark usaco \
   --agent_dir agents/usaco_example_agent/ \
@@ -264,7 +280,7 @@ hal-eval --benchmark usaco \
   -A model_name=gpt-4o-2024-11-20
 ```
 
-3. **Running USACO with Amazon Bedrock models:**
+4. **Running USACO with Amazon Bedrock models:**
 ```bash
 hal-eval --benchmark usaco \
   --agent_dir agents/usaco_bedrock_models/ \
@@ -288,7 +304,7 @@ Available Bedrock models and their corresponding prompt templates:
 | Amazon Nova Micro | bedrock/amazon.nova-micro-v1:0 | nova.txt |
 | Llama-3.3 70B | bedrock/us.meta.llama3-3-70b-instruct-v1:0 | llama.txt |
 
-4. **Running Inspect AI benchmark:**
+5. **Running Inspect AI benchmark:**
 ```bash
 hal-eval --benchmark inspect_evals/gaia \
   --agent_dir agents/inspect/ \
@@ -371,6 +387,7 @@ HAL addresses these challenges through two key components: 1) A central leaderbo
     *   `utils/`: Utility functions
         - `local_runner.py`: Local execution support
         - `vm_runner.py`: Azure VM execution support
+        - `docker_runner.py`: Docker container execution support
         - `weave_utils.py`: Weave logging utilities
     *   `inspect/`: Inspect AI specific code
 *   `agents/`: Example agent implementations
