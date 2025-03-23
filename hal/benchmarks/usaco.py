@@ -46,6 +46,15 @@ class USACOBenchmark(BaseBenchmark):
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Run USACO evaluation harness on agent outputs in Docker container"""
         try:
+            
+            # pass entire task with agent output
+            eval_tasks = {}
+            for task_id, task in agent_output.items():
+                eval_tasks[task_id] = {
+                    **self.benchmark[task_id],
+                    'response': agent_output[task_id]
+                }
+            
             temp_file_path = None
             
             # Create docker client
@@ -69,7 +78,7 @@ class USACOBenchmark(BaseBenchmark):
             try:
                 # write agent output to temp file
                 with tempfile.NamedTemporaryFile(mode='w+', delete=False) as temp_file:
-                    json.dump(agent_output, temp_file)
+                    json.dump(eval_tasks, temp_file)
                     temp_file_path = temp_file.name
                 
                 # write agent output to inside container

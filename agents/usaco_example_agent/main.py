@@ -25,6 +25,5 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     )
     
     results[task_id] = response.choices[0].message.content
-    input[task_id]['response'] = results[task_id]
         
-    return input
+    return results
