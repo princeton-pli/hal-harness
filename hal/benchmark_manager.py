@@ -34,9 +34,9 @@ class BenchmarkManager:
         """Get benchmark instance for given name"""
         if benchmark_name.startswith("inspect:") or benchmark_name.startswith("inspect_evals/"):
             return InspectBenchmark(self.agent_dir, self.config, benchmark_name, self.agent_args)
-        elif benchmark_name == "scicode":
+        elif benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
             from .benchmarks.scicode import SciCodeBenchmark
-            benchmark = SciCodeBenchmark(self.agent_dir, self.config)
+            benchmark = SciCodeBenchmark(self.agent_dir, self.config, benchmark_name)
         elif benchmark_name == "usaco":
             from .benchmarks.usaco import USACOBenchmark
             benchmark = USACOBenchmark(self.agent_dir, self.config)

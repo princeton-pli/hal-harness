@@ -114,6 +114,11 @@ class SciCodeBenchmark(BaseBenchmark):
                         return 0
                     else:
                         print(f"Error running script [{script_path.name}]: exit code {result.exit_code}")
+                        stdout, stderr = result.output
+                        error_message = stderr.decode("utf-8") if stderr and isinstance(stderr, bytes) else stderr
+                        print(f"Error running script [{script_path.name}]: exit code {result.exit_code}")
+                        if error_message:
+                            print("Error message:", error_message)
                         return 1
                 except Exception as e:
                     print(f"Exception running script [{script_path.name}]: {e}")

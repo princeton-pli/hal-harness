@@ -128,9 +128,13 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 
 ### [SciCode](https://github.com/scicode-bench/SciCode)
 - Programming realistic scientific research problems
+- Supports three versions: 
+  1. `scicode` : standard version from the paper where agent solves subtasks iteratively
+  2. `scicode_easy` : agent solves subtasks iteratively but has access to additional background information
+  3. `scicode_hard` : agent solves each full problem in a zero-shot format
 - Supports both local and VM execution
 
-For SciCode, you will need to download and extract the SciCode unit tests. This can be done with the following steps:
+For all SciCode benchmarks, you will need to download and extract the SciCode unit tests. This can be done with the following steps:
 
 1. Download the unit tests [here](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR)
 2. Move the file to `hal/benchmarks/SciCode/eval/data/`.
