@@ -55,13 +55,13 @@ class BenchmarkManager:
             from .benchmarks.taubench import TauBenchBenchmark
             benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
         elif benchmark_name == 'corebench_easy':
-            from .benchmarks.corebench_easy import CoreBenchEasy
+            from .benchmarks.corebench import CoreBenchEasy
             benchmark = CoreBenchEasy(self.agent_dir, self.config)
         elif benchmark_name == 'corebench_medium':
-            from .benchmarks.corebench_medium import CoreBenchMedium
+            from .benchmarks.corebench import CoreBenchMedium
             benchmark = CoreBenchMedium(self.agent_dir, self.config)
         elif benchmark_name == 'corebench_hard':
-            from .benchmarks.corebench_hard import CoreBenchHard
+            from .benchmarks.corebench import CoreBenchHard
             benchmark = CoreBenchHard(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
