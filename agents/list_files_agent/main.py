@@ -9,6 +9,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     Returns:
         Dictionary mapping task IDs to submissions
     """
+
+    assert 'model_name' in kwargs, 'model_name is required'
+    assert len(input) == 1, 'input must contain only one task'
+    
     # Print all tasks
     print("\n=== TASKS ===")
     for instance_id, task_data in input.items():
