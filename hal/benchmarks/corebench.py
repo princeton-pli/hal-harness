@@ -20,6 +20,13 @@ class CoreBench(BaseBenchmark):
         
         # Load tasks from core_test.json
         core_test_path = os.path.join(os.path.dirname(__file__), "corebench", "core_test.json")
+        
+        # Check if core_test.json exists, if not, throw an error with instructions to decrypt
+        if not os.path.exists(core_test_path):
+            encrypted_file = os.path.join(os.path.dirname(__file__), "corebench", "core_test.json.gpg")
+            decrypt_command = f"gpg --output {core_test_path} --decrypt {encrypted_file}"
+            raise FileNotFoundError(f"Have you decrypted core_test.json.gpg? Use the following command:\n{decrypt_command}. The password is \"reproducibility\".")
+            
         with open(core_test_path, 'r') as f:
             dataset = json.load(f)
         

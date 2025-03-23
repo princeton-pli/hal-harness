@@ -205,6 +205,10 @@ hal-eval --benchmark inspect_evals/agentharm \
 
 ### [CORE-Bench](https://arxiv.org/abs/2409.11363)
 
+- Begin by decrypting `hal/benchmarks/corebench/core_test.json.gpg` to access the `CORE-Bench` test set. The password for the GPG file is `reproducibility`. To decrypt the file, run the following command:
+```bash
+gpg --output hal/benchmarks/corebench/core_test.json --decrypt hal/benchmarks/corebench/core_test.json.gpg
+```
 - Benchmark for evaluating how agents can reproduce the results of scientific papers when provided with their code.
 - Tasks involve setting up the environment, running the code, and answering questions about the results.
 - Capsules and task files will automatically be downloaded upon running the benchmark.
