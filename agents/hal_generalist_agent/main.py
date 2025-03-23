@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 import re
 
-from prompts import USACO_PROMPT
+from prompts import USACO_PROMPT, PATCH_EXAMPLE
 
 
 @tool
@@ -104,8 +104,12 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
         elif command == "insert":
             if not path.is_file():
                 return f"Error: {path} is not a file"
+            if line_number is None:
+                return f"Error: Line number is required for insert operation"
             with open(path, 'r') as f:
                 lines = f.readlines()
+            if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines) + 1:
+                return f"Error: Invalid line number {line_number}"
             lines.insert(line_number - 1, content + '\n')
             with open(path, 'w') as f:
                 f.writelines(lines)
@@ -114,8 +118,12 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
         elif command == "delete":
             if not path.is_file():
                 return f"Error: {path} is not a file"
+            if line_number is None:
+                return f"Error: Line number is required for delete operation"
             with open(path, 'r') as f:
                 lines = f.readlines()
+            if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines):
+                return f"Error: Invalid line number {line_number}"
             del lines[line_number - 1]
             with open(path, 'w') as f:
                 f.writelines(lines)
@@ -134,6 +142,9 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
     Returns:
         str: Matching passages with file paths and line numbers
     """
+    if not query.strip():
+        return "Error: Empty search pattern. Please provide a valid search term."
+        
     results = []
     matches_found = 0
     files_searched = 0
@@ -142,7 +153,7 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
     max_matches = 10
     max_files = 50
     
-    exclude_patterns = exclude_pattern.split(',')
+    exclude_patterns = exclude_pattern.split(',') if exclude_pattern else []
     
     try:
         all_files = list(Path('.').rglob('*'))
@@ -234,11 +245,30 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     elif kwargs['benchmark_name'] == 'swebench_verified':
         pass
     elif kwargs['benchmark_name'] == 'swebench_verified_mini':
-        # clone github repo at certain commit b16c7d12ccbc7b2d20364b89fb44285bcbfede54
-        subprocess.run(['git', 'clone', f'https://github.com/{task["repo"]}.git'])
-        subprocess.run(['git', 'reset', '--hard', task['base_commit']])
+        process = subprocess.run(['git', 'clone', f'https://github.com/{task["repo"]}.git'], capture_output=True, text=True)
+        print(process.stdout)
+        if process.returncode != 0:
+            raise Exception(f"Failed to clone repository: {process.stderr}")
         
-        pass
+        process = subprocess.run(['git', 'reset', '--hard', task['base_commit']], capture_output=True, text=True)
+        print(process.stdout)
+        if process.returncode != 0:
+            raise Exception(f"Failed to reset repository: {process.stderr}")
+        
+        
+        
+        response = agent.run(
+            f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
+            
+Patch example:
+
+{PATCH_EXAMPLE}
+            
+Problem: {task['problem_statement']}
+            
+The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
+        )
+        
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
         pass
     elif kwargs['benchmark_name'] == 'appworld_test_challenge':
