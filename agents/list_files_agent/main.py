@@ -10,9 +10,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         Dictionary mapping task IDs to submissions
     """
 
-    assert 'model_name' in kwargs, 'model_name is required'
-    assert len(input) == 1, 'input must contain only one task'
-    
     # Print all tasks
     print("\n=== TASKS ===")
     for instance_id, task_data in input.items():
@@ -26,4 +23,5 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             print(os.path.join(root, file))
     
     # Return empty patches since we're just listing files
-    return {instance_id: "{\"Report the accuracy of the multitask learning model at the end of training on the test set.\": 96.12499135323452}" for instance_id in input.keys()}
+    # return {instance_id: "{\"Report the accuracy of the multitask learning model at the end of training on the test set.\": 96.12499135323452}" for instance_id in input.keys()}
+    return {instance_id: "Sample answer" for instance_id in input.keys()}
