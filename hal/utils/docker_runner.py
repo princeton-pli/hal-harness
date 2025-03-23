@@ -192,7 +192,7 @@ class DockerRunner:
         """Process a single task in a Docker container with timeout"""
         # Create temporary directory for mounting into container
         temp_dir = Path(tempfile.mkdtemp())
-        container_id = f"agent--{uuid.uuid4()}"[:32].lower().replace("_", "-")
+        container_id = f"agentrun--{uuid.uuid4()}"[:32].lower().replace("_", "-")
         
         try:
             # Copy agent code to temp directory
