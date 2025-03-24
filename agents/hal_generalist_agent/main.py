@@ -234,70 +234,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     
     results = {}
     
-    ### ENV SETUP (usually this should be untouched) ###
-    isolated_env = get_env(
-        input[task_id]['env'],
-        input[task_id]['user_strategy'],
-        input[task_id]['user_model'],
-        input[task_id]['task_split'],
-        input[task_id]['user_provider'],
-        input[task_id]['task_index']
-    )
-    
-    ## taubench airline tools
-    @tool
-    def book_reservation(
-        user_id: str,
-        origin: str,
-        destination: str,
-        flight_type: str,
-        cabin: str,
-        flights: List[Dict[str, str]],
-        passengers: List[Dict[str, str]],
-        payment_methods: List[Dict[str, str]],
-        total_baggages: int,
-        nonfree_baggages: int,
-        insurance: str,
-    ) -> str:
-        """
-        Books a flight reservation for a user with given details and updates the system accordingly.
-
-        Args:
-            user_id: The ID of the user booking the reservation.
-            origin: IATA code of the departure airport.
-            destination: IATA code of the arrival airport.
-            flight_type: Type of the trip ('one_way' or 'round_trip').
-            cabin: Cabin class for the reservation ('basic_economy', 'economy', 'business').
-            flights: A list of flight segments, each with 'flight_number' and 'date'.
-            passengers: A list of passenger details including 'first_name', 'last_name', and 'dob'.
-            payment_methods: Payment details including 'payment_id' and 'amount'.
-            total_baggages: Total number of baggage items for the reservation.
-            nonfree_baggages: Number of baggage items that are not free (and cost extra).
-            insurance: Indicates whether travel insurance is added ('yes' or 'no').
-
-        Returns:
-            str: A JSON string of the reservation details if booking is successful, or an error message if it fails.
-        """
-        
-        action = Action(
-            tool_name='book_reservation',
-            tool_args={
-                'user_id': user_id,
-                'origin': origin,
-                'destination': destination,
-                'flight_type': flight_type,
-                'cabin': cabin,
-                'flights': flights,
-                'passengers': passengers,
-                'payment_methods': payment_methods,
-                'total_baggages': total_baggages,
-                'nonfree_baggages': nonfree_baggages,
-                'insurance': insurance
-            }
-        )
-        observation = isolated_env.step(action)
-        return observation.observation
-    
     model = LiteLLMModel(model_id=kwargs['model_name'])
 
     agent = ToolCallingAgent(
@@ -307,7 +243,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         execute_bash,
         edit_file,
         file_search,
-        book_reservation,
     ],
     add_base_tools=True,
     model=model)
@@ -347,10 +282,130 @@ The code of the project is cloned to your current directory. Please respond with
         )
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
-        pass
+        from appworld import AppWorld, load_task_ids
+    
+        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
+            instruction = world.task.instruction # To see task instruction.
+            
+            @tool
+            def execute_in_world(command: str) -> str:
+                """
+                Execute a command in the appworld environment.
+                Args:
+                    command: The command to execute
+                Returns:
+                    str: The response of the environment
+                """
+                return world.execute(command)
+            
+            agent = ToolCallingAgent(
+                tools=[
+                    execute_in_world,
+                    DuckDuckGoSearchTool(),
+                    search_wikipedia,
+                    execute_bash,
+                    edit_file,
+                    file_search,
+                ],
+                add_base_tools=True,
+                model=model)
+            
+            response = agent.run(instruction)
+        
+        return {task_id: "Completed"}
     elif kwargs['benchmark_name'] == 'appworld_test_challenge':
-        pass
+        from appworld import AppWorld
+        
+        @tool
+        def execute_in_world(command: str) -> str:
+            """
+            Execute a command in the appworld environment.
+            """
+            return world.execute(command)
+        
+        agent = ToolCallingAgent(
+            tools=[
+                execute_in_world,
+                DuckDuckGoSearchTool(),
+                search_wikipedia,
+                execute_bash,
+                edit_file,
+                file_search,
+            ],
+            add_base_tools=True,
+            model=model)
+        
+        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
+            instruction = world.task.instruction # To see task instruction.
+            
+            response = agent.run(instruction)
+        
+        return {task_id: "Completed"}
     elif kwargs['benchmark_name'] == 'taubench_airline':
+        
+        ### ENV SETUP (usually this should be untouched) ###
+        isolated_env = get_env(
+            input[task_id]['env'],
+            input[task_id]['user_strategy'],
+            input[task_id]['user_model'],
+            input[task_id]['task_split'],
+            input[task_id]['user_provider'],
+            input[task_id]['task_index']
+        )
+        
+        ## taubench airline tools
+        @tool
+        def book_reservation(
+            user_id: str,
+            origin: str,
+            destination: str,
+            flight_type: str,
+            cabin: str,
+            flights: List[Dict[str, str]],
+            passengers: List[Dict[str, str]],
+            payment_methods: List[Dict[str, str]],
+            total_baggages: int,
+            nonfree_baggages: int,
+            insurance: str,
+        ) -> str:
+            """
+            Books a flight reservation for a user with given details and updates the system accordingly.
+
+            Args:
+                user_id: The ID of the user booking the reservation.
+                origin: IATA code of the departure airport.
+                destination: IATA code of the arrival airport.
+                flight_type: Type of the trip ('one_way' or 'round_trip').
+                cabin: Cabin class for the reservation ('basic_economy', 'economy', 'business').
+                flights: A list of flight segments, each with 'flight_number' and 'date'.
+                passengers: A list of passenger details including 'first_name', 'last_name', and 'dob'.
+                payment_methods: Payment details including 'payment_id' and 'amount'.
+                total_baggages: Total number of baggage items for the reservation.
+                nonfree_baggages: Number of baggage items that are not free (and cost extra).
+                insurance: Indicates whether travel insurance is added ('yes' or 'no').
+
+            Returns:
+                str: A JSON string of the reservation details if booking is successful, or an error message if it fails.
+            """
+            
+            action = Action(
+                tool_name='book_reservation',
+                tool_args={
+                    'user_id': user_id,
+                    'origin': origin,
+                    'destination': destination,
+                    'flight_type': flight_type,
+                    'cabin': cabin,
+                    'flights': flights,
+                    'passengers': passengers,
+                    'payment_methods': payment_methods,
+                    'total_baggages': total_baggages,
+                    'nonfree_baggages': nonfree_baggages,
+                    'insurance': insurance
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation
         
             
 
@@ -409,20 +464,26 @@ The code of the project is cloned to your current directory. Please respond with
         # get instruction from environment
         instruction = isolated_env.reset(input[task_id]['task_index']).observation    
         
+        agent = ToolCallingAgent(
+        tools=[
+            DuckDuckGoSearchTool(),
+            search_wikipedia,
+            execute_bash,
+            edit_file,
+            file_search,
+            book_reservation
+        ],
+        add_base_tools=True,
+        model=model)
+        
         ### YOUR AGENT CODE HERE ###
         agent.run(instruction)
             
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
     
-    elif kwargs['benchmark_name'] == 'inspect_evals/cybench':
-        pass
-    elif kwargs['benchmark_name'] == 'inspect_evals/appworld':
-        pass
-    elif kwargs['benchmark_name'] == 'inspect_evals/agentharm':
-        pass
-    elif kwargs['benchmark_name'] == 'inspect_evals/agentharm_benign':
-        pass
+    else:
+        raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
     
     results[task_id] = response
         
@@ -435,8 +496,6 @@ import asyncio
 async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     
     model = LiteLLMModel(model_id='openai/gpt-4o-mini-2024-07-18')
-    
-    
         
     @tool
     async def execute_bash(command: str) -> str:
@@ -452,8 +511,8 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
             return result.stdout
         else:
             raise result.stderr
-    
-
+        
+        
     agent = ToolCallingAgent(
     tools=[
         DuckDuckGoSearchTool(),
@@ -464,10 +523,15 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     ],
     add_base_tools=True,
     model=model)
-    
-    # Example command executed in the sandbox
-    # response = await agent.arun(sample["input"][0]["content"])
-    response = await agent.arun("run a simple bash command")
+        
+        
+    if kwargs['benchmark_name'] == 'inspect_evals/gaia':
+        response = await agent.arun(sample["input"][0]["content"])
+        
+    elif kwargs['benchmark_name'] == 'inspect_evals/cybench':
+        response = await agent.arun(sample["input"][0]["content"])
+    else:
+        raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
     
     return {
         "output": str(response)
