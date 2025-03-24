@@ -1,5 +1,5 @@
 # Disclaimer: this is not a functional agent and is only for demonstration purposes. This implementation is just a single model call.
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 import requests
 
@@ -10,7 +10,9 @@ from pathlib import Path
 import re
 
 from prompts import USACO_PROMPT, PATCH_EXAMPLE
-
+from tau_bench.envs.airline.tools import ALL_TOOLS
+from tau_bench.envs import get_env
+from tau_bench.types import Action
 
 @tool
 def execute_bash(command: str) -> str:
@@ -149,7 +151,7 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
     matches_found = 0
     files_searched = 0
     
-    context_lines = 100
+    context_lines = 3  # Reduced from 100 to keep output manageable
     max_matches = 10
     max_files = 50
     
@@ -196,6 +198,10 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
                         end = min(len(lines), i + context_lines + 1)
                         
                         context = ''.join(lines[start:end])
+                        # Truncate very long contexts
+                        if len(context) > 500:
+                            context = context[:250] + "\n... (truncated) ...\n" + context[-250:]
+                            
                         results.append(f"File: {file_path} (line {i+1}):\n{context}\n---")
                         matches_found += 1
                         
@@ -207,10 +213,16 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
             return f"No matches found for '{query}' in {files_searched} files."
         
         summary = f"Found {matches_found} matches for '{query}' in {files_searched} files.\n\n"
-        return summary + "\n".join(results)
+        full_output = summary + "\n".join(results)
+        
+        return full_output
     
     except Exception as e:
         return f"Error searching files: {str(e)}"
+    
+
+
+
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
@@ -222,6 +234,70 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     
     results = {}
     
+    ### ENV SETUP (usually this should be untouched) ###
+    isolated_env = get_env(
+        input[task_id]['env'],
+        input[task_id]['user_strategy'],
+        input[task_id]['user_model'],
+        input[task_id]['task_split'],
+        input[task_id]['user_provider'],
+        input[task_id]['task_index']
+    )
+    
+    ## taubench airline tools
+    @tool
+    def book_reservation(
+        user_id: str,
+        origin: str,
+        destination: str,
+        flight_type: str,
+        cabin: str,
+        flights: List[Dict[str, str]],
+        passengers: List[Dict[str, str]],
+        payment_methods: List[Dict[str, str]],
+        total_baggages: int,
+        nonfree_baggages: int,
+        insurance: str,
+    ) -> str:
+        """
+        Books a flight reservation for a user with given details and updates the system accordingly.
+
+        Args:
+            user_id: The ID of the user booking the reservation.
+            origin: IATA code of the departure airport.
+            destination: IATA code of the arrival airport.
+            flight_type: Type of the trip ('one_way' or 'round_trip').
+            cabin: Cabin class for the reservation ('basic_economy', 'economy', 'business').
+            flights: A list of flight segments, each with 'flight_number' and 'date'.
+            passengers: A list of passenger details including 'first_name', 'last_name', and 'dob'.
+            payment_methods: Payment details including 'payment_id' and 'amount'.
+            total_baggages: Total number of baggage items for the reservation.
+            nonfree_baggages: Number of baggage items that are not free (and cost extra).
+            insurance: Indicates whether travel insurance is added ('yes' or 'no').
+
+        Returns:
+            str: A JSON string of the reservation details if booking is successful, or an error message if it fails.
+        """
+        
+        action = Action(
+            tool_name='book_reservation',
+            tool_args={
+                'user_id': user_id,
+                'origin': origin,
+                'destination': destination,
+                'flight_type': flight_type,
+                'cabin': cabin,
+                'flights': flights,
+                'passengers': passengers,
+                'payment_methods': payment_methods,
+                'total_baggages': total_baggages,
+                'nonfree_baggages': nonfree_baggages,
+                'insurance': insurance
+            }
+        )
+        observation = isolated_env.step(action)
+        return observation.observation
+    
     model = LiteLLMModel(model_id=kwargs['model_name'])
 
     agent = ToolCallingAgent(
@@ -231,6 +307,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         execute_bash,
         edit_file,
         file_search,
+        book_reservation,
     ],
     add_base_tools=True,
     model=model)
@@ -273,12 +350,71 @@ The code of the project is cloned to your current directory. Please respond with
         pass
     elif kwargs['benchmark_name'] == 'appworld_test_challenge':
         pass
-    elif kwargs['benchmark_name'] == 'taubench_retail':
-        pass
     elif kwargs['benchmark_name'] == 'taubench_airline':
-        pass
-    elif kwargs['benchmark_name'] == 'inspect_evals/gaia':
-        pass
+        
+            
+
+        # @tool
+        # def calculate():
+        #     pass
+
+        # @tool
+        # def cancel_reservation():
+        #     pass
+
+        # @tool
+        # def get_reservation_details():
+        #     pass
+
+        # @tool
+        # def get_user_details():
+        #     pass
+
+        # @tool
+        # def list_all_airports():
+        #     pass
+
+        # @tool
+        # def search_direct_flight():
+        #     pass
+
+        # @tool
+        # def search_onestop_flight():
+        #     pass
+
+        # @tool
+        # def send_certificate():
+        #     pass
+
+        # @tool
+        # def think():
+        #     pass
+
+        # @tool
+        # def transfer_to_human_agents():
+        #     pass
+
+        # @tool
+        # def update_reservation_baggages():
+        #     pass
+
+        # @tool
+        # def update_reservation_flights():
+        #     pass
+
+        # @tool
+        # def update_reservation_passengers():
+        #     pass
+        
+        # get instruction from environment
+        instruction = isolated_env.reset(input[task_id]['task_index']).observation    
+        
+        ### YOUR AGENT CODE HERE ###
+        agent.run(instruction)
+            
+        ### WHEN DONE WE RETURN THE ENV STATE ###
+        return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
+    
     elif kwargs['benchmark_name'] == 'inspect_evals/cybench':
         pass
     elif kwargs['benchmark_name'] == 'inspect_evals/appworld':
@@ -291,3 +427,48 @@ The code of the project is cloned to your current directory. Please respond with
     results[task_id] = response
         
     return results
+
+from inspect_ai.util import sandbox
+
+import asyncio
+
+async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
+    
+    model = LiteLLMModel(model_id='openai/gpt-4o-mini-2024-07-18')
+    
+    
+        
+    @tool
+    async def execute_bash(command: str) -> str:
+        """
+        Description: Execute a bash command and return its output.
+        Will not execute commands requiring internet access.
+        Common linux and python packages are available via apt and pip.
+        Args:
+            command: The bash command to execute
+        """
+        result = await sandbox().exec(command.split(' '))
+        if result.success:
+            return result.stdout
+        else:
+            raise result.stderr
+    
+
+    agent = ToolCallingAgent(
+    tools=[
+        DuckDuckGoSearchTool(),
+        search_wikipedia,
+        execute_bash,
+        edit_file,
+        file_search,
+    ],
+    add_base_tools=True,
+    model=model)
+    
+    # Example command executed in the sandbox
+    # response = await agent.arun(sample["input"][0]["content"])
+    response = await agent.arun("run a simple bash command")
+    
+    return {
+        "output": str(response)
+    }
