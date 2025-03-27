@@ -21,7 +21,7 @@ Your benchmark must implement this interface:
 
 ```python
 from typing import Dict, Any, Optional
-from ..base_benchmark import BaseBenchmark
+from .base_benchmark import BaseBenchmark
 
 class YourBenchmark(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
