@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, Any, TypedDict, List
+from typing import Dict, Any, TypedDict, List, Optional
 from typing_extensions import NotRequired
 from .base_benchmark import BaseBenchmark
 import docker
@@ -9,32 +9,39 @@ from hal.utils.logging_utils import print_warning
 class TauBenchBenchmark(BaseBenchmark):
     """TauBench benchmark implementation"""
     
-    def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'taubench_retail'):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'taubench_retail', agent_args: Optional[Dict] = None):
         self.benchmark_name = benchmark_name
         self.split = 'retail' if benchmark_name == 'taubench_retail' else 'airline'
         self.setup_script = 'hal/benchmarks/taubench/taubench_setup.sh'
         self.vm_only = False
         super().__init__(agent_dir, config, vm_only=self.vm_only, setup_script=self.setup_script)
-    
         
+        # default to GPT4o and OpenAI
+        user_model = "gpt-4o"
+        if agent_args:
+            user_model = agent_args.get("model_name", user_model)
+        user_provider = "openai"
+        if agent_args:
+            user_provider = agent_args.get("provider", user_provider)
+        print(f"TauBenchBenchmark, user_model={user_model}, user_provider={user_provider}")
         # Create benchmark dictionary
         self.benchmark = {}
         if self.split == 'retail':
             self.benchmark = {str(task_index): {
                 'env': 'retail',
                 'user_strategy': 'llm',
-                'user_model': 'gpt-4o',
+                'user_model': user_model,
                 'task_split': 'test',
-                'user_provider': 'openai',
+                'user_provider': user_provider,
                 'task_index': task_index,
             } for task_index in range(115)}
         elif self.split == 'airline':
             self.benchmark = {str(task_index): {
                 'env': 'airline',
                 'user_strategy': 'llm',
-                'user_model': 'gpt-4o',
+                'user_model': user_model,
                 'task_split': 'test',
-                'user_provider': 'openai',
+                'user_provider': user_provider,
                 'task_index': task_index,
             } for task_index in range(50)}
       

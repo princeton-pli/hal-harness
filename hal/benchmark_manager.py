@@ -50,7 +50,7 @@ class BenchmarkManager:
             benchmark = AppWorldBenchmark(self.agent_dir, self.config, benchmark_name)
         elif benchmark_name in ['taubench_retail', 'taubench_airline']:
             from .benchmarks.taubench import TauBenchBenchmark
-            benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+            benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name, self.agent_args)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         

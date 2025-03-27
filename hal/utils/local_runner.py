@@ -2,13 +2,13 @@ import os
 import json
 import shutil
 import uuid
-import subprocess
 import asyncio
 import logging
-from typing import Dict, Any, Optional
 from pathlib import Path
-from hal.benchmarks.base_benchmark import BaseBenchmark
 from rich.progress import Progress, TaskID
+from typing import Dict, Any, Optional, Tuple
+from hal.benchmarks.base_benchmark import BaseBenchmark
+
 
 # Get logger for verbose output
 verbose_logger = logging.getLogger('agent_eval.verbose')
@@ -113,6 +113,78 @@ class LocalRunner:
             print(f"Completed task {task_id}")
             return result
 
+    async def create_process_with_retry(
+        self,
+        task_id: str,
+        run_agent_cmd: list,
+        temp_dir: str,
+        wait_for_process: int = 600, # really give a large amount of the time for the task to finish before we retry
+        max_retries: int = 5,
+        base_delay: float = 10.0
+    ) -> Tuple[Optional[bytes], Optional[bytes]]:
+            
+        for attempt in range(max_retries):
+            try:
+                # Create the subprocess
+                verbose_logger.debug(f"create_process_with_retry for task {task_id}, going to call create_subprocess_exec, run_agent_cmd={run_agent_cmd}")
+                process = await asyncio.create_subprocess_exec(
+                    *run_agent_cmd,
+                    cwd=str(temp_dir),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )                
+                
+                # Check if process started successfully
+                if process.pid is None:
+                    raise RuntimeError("Process failed to start - no PID assigned")
+                
+                # Wait a brief moment and check if process died immediately
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=0.1)
+                    early_exit_code = process.returncode
+                    if early_exit_code is not None:
+                        stderr = await process.stderr.read()
+                        raise RuntimeError(f"Process terminated immediately with code {early_exit_code}. Stderr: {stderr.decode()}")
+                except asyncio.TimeoutError:
+                    # Process is still running after 0.1s - this is good!
+                    pass
+                
+                # Add a timeout to communicate
+                try:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(),
+                        timeout=wait_for_process
+                    )
+                    
+                    
+                    # Check if process actually started and completed
+                    if process.returncode is None:
+                        raise RuntimeError("task_id={task_id}, process failed to start properly")
+                    return stdout, stderr, process
+                    
+                except asyncio.TimeoutError:
+                    verbose_logger.error(f"task_id={task_id}, process timed out after {wait_for_process}s on attempt {attempt + 1}")
+                    # Try to terminate the process
+                    try:
+                        process.terminate()
+                        await asyncio.wait_for(process.wait(), timeout=5.0)
+                    except (ProcessLookupError, asyncio.TimeoutError):
+                        # Process already terminated or termination timed out
+                        pass
+                    raise
+                    
+            except (asyncio.TimeoutError, RuntimeError, OSError) as e:
+                if attempt == max_retries - 1:
+                    verbose_logger.error(f"task_id={task_id}, failed to start process after {max_retries} attempts: {str(e)}")
+                    raise
+                
+                # Calculate exponential backoff
+                delay = base_delay * (2 ** attempt)
+                verbose_logger.error(f"task_id={task_id}, process creation failed on attempt {attempt + 1}, retrying in {delay} seconds...")
+                await asyncio.sleep(delay)
+                
+        return None, None, None  # Should never reach here due to raise in final attempt
+    
     async def _run_single_task(self,
                              task_id: str,
                              input_data: Any,
@@ -220,15 +292,14 @@ class LocalRunner:
                 
             # Run agent
             verbose_logger.debug(f"Running agent for task {task_id}")
-            process = await asyncio.create_subprocess_exec(
-                *run_agent_cmd,
-                cwd=str(temp_dir),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            try:
+                verbose_logger.debug(f"create_process_with_retry for task {task_id}")
+                stdout, stderr, process = await self.create_process_with_retry(task_id, run_agent_cmd, temp_dir)
+                # Process stdout/stderr
+            except Exception as e:
+                # Handle any errors that occurred during all retries
+                verbose_logger.error(f"Process creation ultimately failed, task {task_id}: {str(e)}")
 
-            stdout, stderr = await process.communicate()
-            
             # Log agent output
             if stdout:
                 verbose_logger.debug(f"Agent stdout for task {task_id}:\n{stdout.decode()}")
@@ -237,7 +308,7 @@ class LocalRunner:
             
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
-                verbose_logger.debug(f"Error running task {task_id}: {error_msg}")
+                verbose_logger.error(f"Error running task {task_id}: {error_msg}")
                 return {task_id: f"ERROR: {error_msg}"}
 
             # Load results
@@ -246,12 +317,12 @@ class LocalRunner:
                     return json.load(f)
             except FileNotFoundError:
                 error_msg = "ERROR: No output file generated"
-                verbose_logger.debug(f"{error_msg} for task {task_id}")
+                verbose_logger.error(f"{error_msg} for task {task_id}")
                 return {task_id: error_msg}
 
         except Exception as e:
             error_msg = f"Error processing task {task_id}: {e}"
-            verbose_logger.debug(error_msg)
+            verbose_logger.error(error_msg)
             return {task_id: f"ERROR: {str(e)}"}
 
         finally:
@@ -265,7 +336,7 @@ class LocalRunner:
                 shutil.rmtree(temp_dir)
             except Exception as e:
                 error_msg = f"Warning: Failed to cleanup {temp_dir}: {e}"
-                verbose_logger.debug(error_msg)
+                verbose_logger.error(error_msg)
 
     def _create_runner_script(self, agent_function: str, task_id: str, run_id: str) -> str:
         """
@@ -283,7 +354,6 @@ import traceback
 try:
     # Initialize weave
     weave.init("{run_id}")
-    
     # Load input data
     with open("input.json", "r") as f:
         input_data = json.load(f)
