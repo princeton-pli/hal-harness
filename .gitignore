@@ -17,6 +17,7 @@ write_swebench_upload_file.py
 write_upload_file.ipynb
 run_models.sh
 data/*
+hal/benchmarks/corebench/capsules
 uv.lock
 .compose.yaml
 .vscode

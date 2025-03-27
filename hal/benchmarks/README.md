@@ -25,7 +25,6 @@ from .base_benchmark import BaseBenchmark
 
 class YourBenchmark(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        super().__init__(agent_dir, config)
         self.benchmark_name = "your_benchmark"
         # Benchmark dataset
         self.benchmark: Dict[str, Any]
@@ -34,6 +33,7 @@ class YourBenchmark(BaseBenchmark):
         self.vm_only = False
         # Optional: Path to VM setup script
         self.setup_script = "hal/benchmarks/your_benchmark/setup.sh"
+        super().__init__(agent_dir, config)
         
         
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
@@ -101,14 +101,14 @@ class SimpleMathBenchmark(BaseBenchmark):
         
         return {
             "accuracy": correct / total,
-            "successful_tasks": {
+            "successful_tasks": [
                 task_id for task_id, result in eval_results.items()
                 if result.get("correct", False)
-            },
-            "failed_tasks": {
+            ],
+            "failed_tasks": [
                 task_id for task_id, result in eval_results.items()
                 if not result.get("correct", False)
-            }
+            ]
         }
 ```
 
