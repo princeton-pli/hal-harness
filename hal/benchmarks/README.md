@@ -53,7 +53,7 @@ Here's a complete example benchmark:
 import json
 import os
 from typing import Dict, Any
-from ..base_benchmark import BaseBenchmark
+from .base_benchmark import BaseBenchmark
 
 class SimpleMathBenchmark(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
