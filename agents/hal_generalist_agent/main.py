@@ -249,7 +249,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     if kwargs['benchmark_name'] == 'usaco':
         prompt = USACO_PROMPT.format(task['description'])
-        response = agent.run(prompt)
+        response = asyncio.run(agent.arun(prompt))
         
         # extract code from response
         if '```python' in response:
@@ -269,7 +269,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         
         
         
-        response = agent.run(
+        response = asyncio.run(agent.arun(
             f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
             
 Patch example:
@@ -279,7 +279,7 @@ Patch example:
 Problem: {task['problem_statement']}
             
 The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
-        )
+        ))
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
         from appworld import AppWorld, load_task_ids
@@ -310,7 +310,7 @@ The code of the project is cloned to your current directory. Please respond with
                 add_base_tools=True,
                 model=model)
             
-            response = agent.run(instruction)
+            response = asyncio.run(agent.arun(instruction))
         
         return {task_id: "Completed"}
     elif kwargs['benchmark_name'] == 'appworld_test_challenge':
@@ -338,7 +338,7 @@ The code of the project is cloned to your current directory. Please respond with
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
             instruction = world.task.instruction # To see task instruction.
             
-            response = agent.run(instruction)
+            response = asyncio.run(agent.arun(instruction))
         
         return {task_id: "Completed"}
     elif kwargs['benchmark_name'] == 'taubench_airline':
@@ -369,28 +369,36 @@ The code of the project is cloned to your current directory. Please respond with
             insurance: str,
         ) -> str:
             """
-            Books a flight reservation for a user with given details and updates the system accordingly.
+            Book a reservation.
 
             Args:
-                user_id: The ID of the user booking the reservation.
-                origin: IATA code of the departure airport.
-                destination: IATA code of the arrival airport.
+                user_id: The ID of the user to book the reservation, such as 'sara_doe_496'.
+                origin: The IATA code for the origin city, such as 'SFO'.
+                destination: The IATA code for the destination city, such as 'JFK'.
                 flight_type: Type of the trip ('one_way' or 'round_trip').
                 cabin: Cabin class for the reservation ('basic_economy', 'economy', 'business').
-                flights: A list of flight segments, each with 'flight_number' and 'date'.
-                passengers: A list of passenger details including 'first_name', 'last_name', and 'dob'.
-                payment_methods: Payment details including 'payment_id' and 'amount'.
-                total_baggages: Total number of baggage items for the reservation.
-                nonfree_baggages: Number of baggage items that are not free (and cost extra).
+                flights: An array of objects containing details about each piece of flight.
+                        Each flight should have 'flight_number' (such as 'HAT001') and 
+                        'date' (in the format 'YYYY-MM-DD', such as '2024-05-01').
+                passengers: An array of objects containing details about each passenger.
+                        Each passenger should have 'first_name' (such as 'Noah'),
+                        'last_name' (such as 'Brown'), and 'dob' (date of birth in the 
+                        format 'YYYY-MM-DD', such as '1990-01-01').
+                payment_methods: An array of objects containing details about each payment method.
+                                Each payment method should have 'payment_id' (such as 'credit_card_7815826',
+                                'gift_card_7815826', 'certificate_7815826') and 'amount' (the amount to be paid).
+                total_baggages: The total number of baggage items included in the reservation.
+                nonfree_baggages: The number of non-free baggage items included in the reservation.
                 insurance: Indicates whether travel insurance is added ('yes' or 'no').
 
             Returns:
                 str: A JSON string of the reservation details if booking is successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
             """
             
             action = Action(
-                tool_name='book_reservation',
-                tool_args={
+                name='book_reservation',
+                kwargs={
                     'user_id': user_id,
                     'origin': origin,
                     'destination': destination,
@@ -405,61 +413,324 @@ The code of the project is cloned to your current directory. Please respond with
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation
+            return observation.observation, observation.done
         
+        @tool
+        def calculate(expression: str) -> str:
+            """
+            Calculate the result of a mathematical expression.
             
+            Args:
+                expression: The mathematical expression to calculate, such as '2 + 2'. 
+                        The expression can contain numbers, operators (+, -, *, /), parentheses, and spaces.
+            
+            Returns:
+                str: The result of the calculation or an error message if the calculation fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='calculate',
+                kwargs={
+                    'expression': expression
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def calculate():
-        #     pass
+        @tool
+        def cancel_reservation(reservation_id: str) -> str:
+            """
+            Cancel the whole reservation.
+            
+            Args:
+                reservation_id: The reservation ID, such as 'ZFA04Y'.
+            
+            Returns:
+                str: Confirmation message if cancellation is successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='cancel_reservation',
+                kwargs={
+                    'reservation_id': reservation_id
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def cancel_reservation():
-        #     pass
+        @tool
+        def get_reservation_details(reservation_id: str) -> str:
+            """
+            Get the details of a reservation.
+            
+            Args:
+                reservation_id: The reservation id, such as '8JX2WO'.
+            
+            Returns:
+                str: A JSON string of the reservation details if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='get_reservation_details',
+                kwargs={
+                    'reservation_id': reservation_id
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def get_reservation_details():
-        #     pass
+        @tool
+        def get_user_details(user_id: str) -> str:
+            """
+            Get the details of an user, including their reservations.
+            
+            Args:
+                user_id: The user id, such as 'sara_doe_496'.
+            
+            Returns:
+                str: A JSON string of the user details if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='get_user_details',
+                kwargs={
+                    'user_id': user_id
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def get_user_details():
-        #     pass
+        @tool
+        def list_all_airports() -> str:
+            """
+            List all airports and their cities.
+            
+            Returns:
+                str: A JSON string containing all airports and their cities if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='list_all_airports',
+                kwargs={}
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def list_all_airports():
-        #     pass
+        @tool
+        def search_direct_flight(origin: str, destination: str, date: str) -> str:
+            """
+            Search direct flights between two cities on a specific date.
+            
+            Args:
+                origin: The origin city airport in three letters, such as 'JFK'.
+                destination: The destination city airport in three letters, such as 'LAX'.
+                date: The date of the flight in the format 'YYYY-MM-DD', such as '2024-01-01'.
+            
+            Returns:
+                str: A JSON string of available direct flights if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='search_direct_flight',
+                kwargs={
+                    'origin': origin,
+                    'destination': destination,
+                    'date': date
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def search_direct_flight():
-        #     pass
+        @tool
+        def search_onestop_flight(origin: str, destination: str, date: str) -> str:
+            """
+            Search direct flights between two cities on a specific date.
+            
+            Args:
+                origin: The origin city airport in three letters, such as 'JFK'.
+                destination: The destination city airport in three letters, such as 'LAX'.
+                date: The date of the flight in the format 'YYYY-MM-DD', such as '2024-05-01'.
+            
+            Returns:
+                str: A JSON string of available one-stop flights if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='search_onestop_flight',
+                kwargs={
+                    'origin': origin,
+                    'destination': destination,
+                    'date': date
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def search_onestop_flight():
-        #     pass
+        @tool
+        def send_certificate(user_id: str, amount: float) -> str:
+            """
+            Send a certificate to a user. Be careful!
+            
+            Args:
+                user_id: The ID of the user to book the reservation, such as 'sara_doe_496'.
+                amount: Certificate amount to send.
+            
+            Returns:
+                str: Confirmation message if the certificate is sent successfully, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='send_certificate',
+                kwargs={
+                    'user_id': user_id,
+                    'amount': amount
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def send_certificate():
-        #     pass
+        @tool
+        def think(thought: str) -> str:
+            """
+            Use the tool to think about something. It will not obtain new information or change the database, 
+            but just append the thought to the log. Use it when complex reasoning is needed.
+            
+            Args:
+                thought: A thought to think about.
+            
+            Returns:
+                str: Confirmation that the thought was logged.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='think',
+                kwargs={
+                    'thought': thought
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def think():
-        #     pass
+        @tool
+        def transfer_to_human_agents(summary: str) -> str:
+            """
+            Transfer the user to a human agent, with a summary of the user's issue. 
+            Only transfer if the user explicitly asks for a human agent, or if the user's issue 
+            cannot be resolved by the agent with the available tools.
+            
+            Args:
+                summary: A summary of the user's issue.
+            
+            Returns:
+                str: Confirmation that the user was transferred to a human agent.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='transfer_to_human_agents',
+                kwargs={
+                    'summary': summary
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def transfer_to_human_agents():
-        #     pass
+        @tool
+        def update_reservation_baggages(reservation_id: str, total_baggages: int, nonfree_baggages: int, payment_id: str) -> str:
+            """
+            Update the baggage information of a reservation.
+            
+            Args:
+                reservation_id: The reservation ID, such as 'ZFA04Y'.
+                total_baggages: The updated total number of baggage items included in the reservation.
+                nonfree_baggages: The updated number of non-free baggage items included in the reservation.
+                payment_id: The payment id stored in user profile, such as 'credit_card_7815826', 'gift_card_7815826', 'certificate_7815826'.
+            
+            Returns:
+                str: Updated reservation details if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='update_reservation_baggages',
+                kwargs={
+                    'reservation_id': reservation_id,
+                    'total_baggages': total_baggages,
+                    'nonfree_baggages': nonfree_baggages,
+                    'payment_id': payment_id
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def update_reservation_baggages():
-        #     pass
+        @tool
+        def update_reservation_flights(reservation_id: str, cabin: str, flights: List[Dict[str, str]], payment_id: str) -> str:
+            """
+            Update the flight information of a reservation.
+            
+            Args:
+                reservation_id: The reservation ID, such as 'ZFA04Y'.
+                cabin: Cabin class for the reservation ('basic_economy', 'economy', 'business').
+                flights: An array of objects containing details about each piece of flight in the ENTIRE new reservation. 
+                        Even if the a flight segment is not changed, it should still be included in the array.
+                payment_id: The payment id stored in user profile, such as 'credit_card_7815826', 'gift_card_7815826', 'certificate_7815826'.
+            
+            Returns:
+                str: Updated reservation details if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='update_reservation_flights',
+                kwargs={
+                    'reservation_id': reservation_id,
+                    'cabin': cabin,
+                    'flights': flights,
+                    'payment_id': payment_id
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
 
-        # @tool
-        # def update_reservation_flights():
-        #     pass
-
-        # @tool
-        # def update_reservation_passengers():
-        #     pass
+        @tool
+        def update_reservation_passengers(reservation_id: str, passengers: List[Dict[str, str]]) -> str:
+            """
+            Update the passenger information of a reservation.
+            
+            Args:
+                reservation_id: The reservation ID, such as 'ZFA04Y'.
+                passengers: An array of objects containing details about each passenger including 'first_name', 'last_name', and 'dob'.
+            
+            Returns:
+                str: Updated reservation details if successful, or an error message if it fails.
+                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+            """
+            action = Action(
+                name='update_reservation_passengers',
+                kwargs={
+                    'reservation_id': reservation_id,
+                    'passengers': passengers
+                }
+            )
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
+        
+        @tool 
+        def ask_user(question: str) -> str:
+            """
+            Ask the user a question.
+            
+            Args:
+                question: The question to ask the user.
+                
+            Returns:
+                str: The user's response.
+            """
+            action = Action(
+                name='respond',
+                kwargs={
+                    'content': question
+                })
+            observation = isolated_env.step(action)
+            return observation.observation, observation.done
+            
         
         # get instruction from environment
         instruction = isolated_env.reset(input[task_id]['task_index']).observation    
@@ -471,13 +742,27 @@ The code of the project is cloned to your current directory. Please respond with
             execute_bash,
             edit_file,
             file_search,
-            book_reservation
+            book_reservation,
+            calculate,
+            cancel_reservation,
+            get_reservation_details,
+            get_user_details,
+            list_all_airports,
+            search_direct_flight,
+            search_onestop_flight,
+            send_certificate,
+            think,
+            transfer_to_human_agents,
+            update_reservation_baggages,
+            update_reservation_flights,
+            update_reservation_passengers,
+            ask_user
         ],
         add_base_tools=True,
         model=model)
         
         ### YOUR AGENT CODE HERE ###
-        agent.run(instruction)
+        asyncio.run(agent.arun(instruction))
             
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
@@ -488,6 +773,10 @@ The code of the project is cloned to your current directory. Please respond with
     results[task_id] = response
         
     return results
+
+
+
+# INSPECT BENCHMARKS BELOW
 
 from inspect_ai.util import sandbox
 
