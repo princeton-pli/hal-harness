@@ -32,6 +32,9 @@ taubench = [
 hal-agent = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@0103ee9ef17d16a8fc7c8693c03f6dffc5d2dbe8",
 ]
+corebench = [
+    "scipy>=1.15.2"
+]
 
 [project.scripts]
 hal-eval = "hal.cli:main"
