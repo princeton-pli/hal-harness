@@ -203,6 +203,27 @@ hal-eval --benchmark inspect_evals/agentharm \
   -A model_name=openai/gpt-4o-mini-2024-07-18
 ```
 
+### [CORE-Bench](https://arxiv.org/abs/2409.11363)
+
+- Begin by decrypting `hal/benchmarks/corebench/core_test.json.gpg` to access the `CORE-Bench` test set. The password for the GPG file is `reproducibility`. To decrypt the file, run the following command:
+```bash
+gpg --output hal/benchmarks/corebench/core_test.json --decrypt hal/benchmarks/corebench/core_test.json.gpg
+```
+- Benchmark for evaluating how agents can reproduce the results of scientific papers when provided with their code.
+- Tasks involve setting up the environment, running the code, and answering questions about the results.
+- Capsules and task files will automatically be downloaded upon running the benchmark.
+- Three variants available:
+  - `corebench_easy` - Agent provided with results and must answer task questions.
+  - `corebench_medium` - Agent provided with Docker container to install dependencies and run code, and must answer task questions.
+  - `corebench_hard` - Agent must install dependencies and run code from scratch, and answer task questions.
+- Example usage:
+```bash
+hal-eval --benchmark corebench_easy \
+  --agent_dir agents/list_files_agent \
+  --agent_function main.run \
+  --agent_name "Test Agent" \
+```
+
 ## How Do I Run Evaluations?
 
 The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
