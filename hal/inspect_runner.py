@@ -111,9 +111,9 @@ def inspect_evaluate(
             agent = load_agent(agent_function)
             
             # wrap the content of the run function in a weave.attributes the wrapped function should also be async
-            async def patched_agent(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
+            async def patched_agent(sample: dict[str, Any]) -> dict[str, Any]:
                 with weave.attributes({"weave_task_id": sample["sample_id"]}):
-                    return await agent(sample, **kwargs)
+                    return await agent(sample, **agent_args)
 
             # is the agent a solver?
             solver = resolve_solver(agent, agent_args=agent_args)
