@@ -121,7 +121,6 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 ### [CORE-bench](https://github.com/siegelz/core-bench)
 - Computational reproducibility benchmark for agents on real scientific papers
 - Supports fully parallelized evaluation on Azure VMs
-- For detailed instructions on running CORE-bench evaluations, see the [CORE-bench repository](https://github.com/CORE-Bench/CORE-Bench)
 
 ### [tau-bench](https://github.com/tau-bench/tau-bench)
 - Benchmark for Tool-Agent-User Interaction in real-world domains
@@ -221,7 +220,7 @@ gpg --output hal/benchmarks/corebench/core_test.json --decrypt hal/benchmarks/co
 hal-eval --benchmark corebench_easy \
   --agent_dir agents/list_files_agent \
   --agent_function main.run \
-  --agent_name "Test Agent" \
+  --agent_name "Test Agent"
 ```
 
 ## How Do I Run Evaluations?
