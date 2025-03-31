@@ -29,8 +29,10 @@ class BenchmarkManager:
                            'inspect_evals/agentharm',
                            'inspect_evals/agentharm_benign',
                            'corebench_easy',
-                            'corebench_medium',
-                           'corebench_hard']
+                           'corebench_medium',
+                           'corebench_hard',
+                           'scienceagentbench',
+                           ]
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
@@ -63,6 +65,9 @@ class BenchmarkManager:
         elif benchmark_name == 'corebench_hard':
             from .benchmarks.corebench import CoreBenchHard
             benchmark = CoreBenchHard(self.agent_dir, self.config)
+        elif benchmark_name == 'scienceagentbench':
+            from .benchmarks.scienceagentbench import ScienceAgentBench
+            benchmark = ScienceAgentBench(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         
