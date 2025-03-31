@@ -121,7 +121,6 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 ### [CORE-bench](https://github.com/siegelz/core-bench)
 - Computational reproducibility benchmark for agents on real scientific papers
 - Supports fully parallelized evaluation on Azure VMs
-- For detailed instructions on running CORE-bench evaluations, see the [CORE-bench repository](https://github.com/CORE-Bench/CORE-Bench)
 
 ### [tau-bench](https://github.com/tau-bench/tau-bench)
 - Install benchmark specific dependencies:
