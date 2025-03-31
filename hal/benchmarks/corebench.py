@@ -170,7 +170,12 @@ class CoreBench(BaseBenchmark):
                 gt_result = self.benchmark_answers[task_id]
                 
                 # Parse the agent's answer as a dictionary
-                reported_result = json.loads(solution)
+                if type(solution) is str:
+                    reported_result = json.loads(solution)
+                elif type(solution) is dict:
+                    reported_result = solution
+                else:
+                    raise ValueError(f"Invalid solution format for task {task_id}: {solution}")
                 
                 # Evaluate the result using the prediction interval logic
                 evaluation = self.__eval_result_json(gt_result, reported_result)
