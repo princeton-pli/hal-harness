@@ -21,3 +21,4 @@ hal/benchmarks/corebench/capsules
 uv.lock
 .compose.yaml
 .vscode
+hal/benchmarks/corebench/core_test.json

@@ -170,7 +170,12 @@ class CoreBench(BaseBenchmark):
                 gt_result = self.benchmark_answers[task_id]
                 
                 # Parse the agent's answer as a dictionary
-                reported_result = json.loads(solution)
+                if type(solution) is str:
+                    reported_result = json.loads(solution)
+                elif type(solution) is dict:
+                    reported_result = solution
+                else:
+                    raise ValueError(f"Invalid solution format for task {task_id}: {solution}")
                 
                 # Evaluate the result using the prediction interval logic
                 evaluation = self.__eval_result_json(gt_result, reported_result)
@@ -318,7 +323,7 @@ class CoreBenchEasy(CoreBench):
             The constructed prompt string
         """
         json_fields = str(task["results"][0].keys())
-        return f"Task: codeocean_easy\n\nYour goal is to answer questions about the output of scientific code. You should read through the files in the `results` directory to answer the following questions: {json_fields}. Save your answers to a file named report.json in the environment directory you started in that contains the capsule directory itself whose keys are the questions and values are the answers. **You should not actually run or execute any code.** All answers can be obtained by reading through the results directory."
+        return f"Task: codeocean_easy\n\nYour goal is to answer questions about the output of scientific code. You should read through the files in the `environment/results` directory to answer the following questions: {json_fields}. Your submitted answer should be a Python dictionary whose keys are exactly those questions and values are the answers. **You should not actually run or execute any code.** All answers can be obtained by reading through the results directory."
     
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
@@ -354,7 +359,7 @@ class CoreBenchMedium(CoreBench):
         """
         task_prompt = task["task_prompt"]
         json_fields = str(task["results"][0].keys())
-        return f"Task: codeocean_medium\n\nYour goal is to test the computational reproducibility of the repository cloned to your current directory, which is code from a scientific paper. Specifically, you need to {task_prompt}. Save your report to a file named report.json in the environment directory you started in that contains the capsule itself, where you fill in all of the following fields: {json_fields}. You should read the instructions on how to reproduce the capsule in REPRODUCING.md."
+        return f"Task: codeocean_medium\n\nYour goal is to test the computational reproducibility of the repository cloned to your current directory, which is code from a scientific paper. Specifically, you need to {task_prompt} to answer the following questions: {json_fields}. Your submitted answer should be a Python dictionary whose keys are exactly those questions and values are the answers. You should read the instructions on how to reproduce the capsule in REPRODUCING.md."
     
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
@@ -405,7 +410,7 @@ class CoreBenchHard(CoreBench):
         """
         task_prompt = task["task_prompt"]
         json_fields = str(task["results"][0].keys())
-        return f"Task: codeocean_hard\n\nYour goal is to test the computational reproducibility of the repository cloned to your current directory, which is code from a scientific paper. Specifically, you need to {task_prompt}. Save your report to a file named report.json in the environment directory you started in that contains the capsule itself, where you fill in all of the following fields: {json_fields}. You should install all of the requirements found in the Readme file and then run the commands necessary to answer the questions."
+        return f"Task: codeocean_hard\n\nYour goal is to test the computational reproducibility of the repository cloned to your current directory, which is code from a scientific paper. Specifically, you need to {task_prompt} to answer the following questions: {json_fields}. Your submitted answer should be a Python dictionary whose keys are exactly those questions and values are the answers. You should install all of the requirements found in the Readme file and then run the commands necessary to answer the questions."
     
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
