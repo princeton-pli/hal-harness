@@ -35,10 +35,6 @@ hal-agent = [
 corebench = [
     "scipy>=1.15.2"
 ]
-open-deep-research = [
-    "mammoth",
-    "pdfminer"
-]
 
 [project.scripts]
 hal-eval = "hal.cli:main"
