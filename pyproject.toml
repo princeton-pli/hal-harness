@@ -29,6 +29,9 @@ dependencies = [
 taubench = [
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@3e187bda4dfa3e8936aebd44a579f6d1238ce55e",
 ]
+scicode = [
+  "scicode @ git+https://github.com/peterkirgis/SciCode"
+]
 hal-agent = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@f361e0940c86d1092251589cb628cec9650972d0",
 ]
