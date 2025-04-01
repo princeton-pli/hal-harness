@@ -26,9 +26,6 @@
 	path = agents/Enigma-Agent
 	url = git@github.com:boyiwei/Enigma-Agent.git
 	branch = enigma-agent-hal
-[submodule "agents/open_deep_research"]
-	path = agents/open_deep_research
-	url = https://github.com/benediktstroebl/smolagents/tree/open_deep_research.git
 [submodule "agents/SWE-agent-v1.0"]
 	path = agents/SWE-agent-v1.0
 	url = git@github.com:boyiwei/SWE-agent.git
