@@ -23,3 +23,6 @@
 	path = agents/Enigma-Agent
 	url = git@github.com:boyiwei/Enigma-Agent.git
 	branch = enigma-agent-hal
+[submodule "agents/open_deep_research"]
+	path = agents/open_deep_research
+	url = https://github.com/huggingface/smolagents.git
