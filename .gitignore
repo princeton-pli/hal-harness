@@ -19,3 +19,5 @@ run_models.sh
 data/*
 .compose.yaml
 uv.lock
+hal/benchmarks/corebench/capsules/*
+hal/benchmarks/corebench/core_test.json
