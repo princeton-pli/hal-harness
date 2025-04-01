@@ -26,10 +26,22 @@ class SWEBenchBenchmark(BaseBenchmark):
         if mini:
             for task in ds:
                 if task['instance_id'] in self.mini_instance_ids:
-                    self.benchmark[task['instance_id']] = task
+                    self.benchmark[task['instance_id']] = {
+                        'instance_id': task['instance_id'],
+                        'problem_statement': task['problem_statement'],
+                        'repo': task['repo'],
+                        'base_commit': task['base_commit'],
+                        'environment_setup_commit': task['environment_setup_commit']
+                    }
         else:
             for task in ds:
-                self.benchmark[task['instance_id']] = task
+                self.benchmark[task['instance_id']] = {
+                    'instance_id': task['instance_id'],
+                    'problem_statement': task['problem_statement'],
+                    'repo': task['repo'],
+                    'base_commit': task['base_commit'],
+                    'environment_setup_commit': task['environment_setup_commit']
+                }
                 
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:

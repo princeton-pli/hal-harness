@@ -16,7 +16,8 @@ class BenchmarkManager:
         self.config = config
         self.agent_dir = agent_dir
         self.agent_args = agent_args
-        self.benchmarks = ['usaco', 
+        self.benchmarks = ['scicode',
+                           'usaco', 
                            'swebench_verified', 
                            'swebench_verified_mini', 
                            'appworld_test_normal',
@@ -28,12 +29,18 @@ class BenchmarkManager:
                            'inspect_evals/cybench',
                            'inspect_evals/appworld',
                            'inspect_evals/agentharm',
-                           'inspect_evals/agentharm_benign']
+                           'inspect_evals/agentharm_benign',
+                           'corebench_easy',
+                            'corebench_medium',
+                           'corebench_hard']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
         if benchmark_name.startswith("inspect:") or benchmark_name.startswith("inspect_evals/"):
             return InspectBenchmark(self.agent_dir, self.config, benchmark_name, self.agent_args)
+        elif benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
+            from .benchmarks.scicode import SciCodeBenchmark
+            benchmark = SciCodeBenchmark(self.agent_dir, self.config, benchmark_name)
         elif benchmark_name == "usaco":
             from .benchmarks.usaco import USACOBenchmark
             benchmark = USACOBenchmark(self.agent_dir, self.config)
@@ -55,6 +62,15 @@ class BenchmarkManager:
         elif benchmark_name == 'gaia':
             from .benchmarks.gaia import GaiaBenchmark
             benchmark = GaiaBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == 'corebench_easy':
+            from .benchmarks.corebench import CoreBenchEasy
+            benchmark = CoreBenchEasy(self.agent_dir, self.config)
+        elif benchmark_name == 'corebench_medium':
+            from .benchmarks.corebench import CoreBenchMedium
+            benchmark = CoreBenchMedium(self.agent_dir, self.config)
+        elif benchmark_name == 'corebench_hard':
+            from .benchmarks.corebench import CoreBenchHard
+            benchmark = CoreBenchHard(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         

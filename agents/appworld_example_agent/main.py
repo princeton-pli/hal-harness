@@ -1,4 +1,4 @@
-from appworld import AppWorld, load_task_ids
+from appworld import AppWorld
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 

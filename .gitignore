@@ -17,7 +17,9 @@ write_swebench_upload_file.py
 write_upload_file.ipynb
 run_models.sh
 data/*
-.compose.yaml
+hal/benchmarks/corebench/capsules
 uv.lock
 hal/benchmarks/corebench/capsules/*
+.compose.yaml
+.vscode
 hal/benchmarks/corebench/core_test.json
