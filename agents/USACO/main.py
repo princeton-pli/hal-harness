@@ -45,10 +45,8 @@ def run_usaco_zeroshot(problem_dict, episodic_retrieval=False, semantic_retrieva
     results, ss = run_solve(model_fn, model_name, problem_dict, attempts)
 
     # add result to the dict for each key in the problem_dict
-    for key in problem_dict:
-        problem_dict[key]['response'] = results[key]
-
-    return problem_dict
+    assert len(results) == 1, "Only one problem should be provided"
+    return results
 
 
 def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True, semantic_retrieval=True, reflexion=False, attempts=1, num_reflexion=2, num_retrieved=2 , **kwargs):
@@ -74,10 +72,8 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
     results, ss = run_retrieval(model_fn, model_name, problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC)
 
     # add result to the dict for each key in the problem_dict
-    for key in problem_dict:
-        problem_dict[key]['response'] = results[key]
-
-    return problem_dict
+    assert len(results) == 1, "Only one problem should be provided"
+    return results
 
 
 def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True, semantic_retrieval=True, reflexion=False, attempts=1, num_reflexion=2, num_retrieved=2 , **kwargs):
@@ -103,10 +99,8 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
     results, ss = run_retrieval(model_fn, model_name, problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC)
 
     # add result to the dict for each key in the problem_dict
-    for key in problem_dict:
-        problem_dict[key]['response'] = results[key]
-
-    return problem_dict
+    assert len(results) == 1, "Only one problem should be provided"
+    return results
 
 
 def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retrieval=True, semantic_retrieval=True, reflexion=False, attempts=1, num_reflexion=2, num_retrieved=2 , **kwargs):
@@ -141,7 +135,5 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
     
     results = (rdict, sdict, rs, ss)
     
-    for key in problem_dict:
-        problem_dict[key]['response'] = results[key]
-        
-    return problem_dict
+    assert len(results) == 1, "Only one problem should be provided"
+    return results
