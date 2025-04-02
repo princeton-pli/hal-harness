@@ -7,6 +7,7 @@ import importlib
 import argparse
 import json
 import sys
+from pathlib import Path
 
 # get the relative path of the directory where this file is located
 this_file_dir = os.path.dirname(os.path.relpath(__file__)).replace('\\', '/')
@@ -22,7 +23,7 @@ spec.loader.exec_module(recover_utils)
 # import this_file_dir.scienceagentbench.ScienceAgentBench.evaluation.harness as a package
 submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
 sys.path.insert(0, submodule_path)
-from evaluation.harness import run_evaluation as docker_eval
+from evaluation.harness import run_evaluation as docker_eval, docker_build as docker_build
 
 
 class ScienceAgentBench(BaseBenchmark):
@@ -47,11 +48,20 @@ class ScienceAgentBench(BaseBenchmark):
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent solutions"""
         self._recover_pred_from_log(agent_output, run_id)
-        self._call_docker_eval(run_id)  # Not working right now, need to change working dir for docker image build.
+        result_path = self._call_docker_eval(run_id)
+        with open(result_path, "r") as f:
+            result = {}
+            for idx, line in enumerate(f, start=1):
+                if line.strip() == '':
+                    continue
+                instance_result = json.loads(line)
+                result[str(idx)] = instance_result
+        return result
         
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """Extract metrics from evaluation results"""
-        pass
+        print(eval_results)
+        # TODO: call calculate_metrics.py
 
     def _recover_pred_from_log(self, agent_output, run_id):
         args = argparse.Namespace()
@@ -71,10 +81,19 @@ class ScienceAgentBench(BaseBenchmark):
 
     def _call_docker_eval(self, run_id: str):
         """Call docker eval script"""
-        docker_eval.main(
+        # Change logs dir
+        run_path = Path(self.get_run_dir(run_id))
+        docker_build.BASE_IMAGE_BUILD_DIR = run_path / docker_build.BASE_IMAGE_BUILD_DIR
+        docker_build.INSTANCE_IMAGE_BUILD_DIR = run_path / docker_build.INSTANCE_IMAGE_BUILD_DIR
+        docker_eval.INSTANCE_IMAGE_BUILD_DIR = run_path / docker_eval.INSTANCE_IMAGE_BUILD_DIR
+        docker_eval.RUN_EVALUATION_LOG_DIR = run_path / docker_eval.RUN_EVALUATION_LOG_DIR
+
+        log_fname = os.path.join(self.get_run_dir(run_id), f"{run_id}_eval.jsonl")
+
+        docker_eval.main(  # TODO: These arguments are not configurable right now
             benchmark_path=benchmark_path,
             pred_program_path=os.path.join(self.get_run_dir(run_id), "pred_programs"),
-            log_fname=os.path.join(self.get_run_dir(run_id), f"{run_id}_eval.jsonl"),
+            log_fname=log_fname,
             dataset_name='osunlp/ScienceAgentBench',
             split='validation',
             instance_ids=["1", "2", "3"],  # TODO: remove this after debugging
@@ -87,3 +106,5 @@ class ScienceAgentBench(BaseBenchmark):
             timeout=1800,
             openai_api_key=None,  # TODO: get from .env
         )
+
+        return log_fname
