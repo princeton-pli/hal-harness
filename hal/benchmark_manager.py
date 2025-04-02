@@ -31,11 +31,12 @@ class BenchmarkManager:
                            'inspect_evals/agentharm_benign',
                            'corebench_easy',
                             'corebench_medium',
-                           'corebench_hard']
+                           'corebench_hard',
+                           'cvebench']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
-        if benchmark_name.startswith("inspect:") or benchmark_name.startswith("inspect_evals/"):
+        if benchmark_name.startswith("inspect:") or benchmark_name.startswith("inspect_evals/") or benchmark_name == "cvebench":
             return InspectBenchmark(self.agent_dir, self.config, benchmark_name, self.agent_args)
         elif benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
             from .benchmarks.scicode import SciCodeBenchmark

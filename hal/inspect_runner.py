@@ -172,6 +172,7 @@ def inspect_evaluate(
                         model=model,
                         log_dir=log_dir,
                         log_format="json",
+                        sandbox="docker",
                         **filtered_eval_args  # Use filtered args
                     )
                 
