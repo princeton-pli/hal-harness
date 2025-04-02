@@ -14,10 +14,10 @@ def format_task_dict(example):
     return task
 
 
-def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
+def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
-    assert len(input) == 1, 'input must contain only one task'
+    assert len(input_dict) == 1, 'input must contain only one task'
 
     agent = ScienceAgent(
         kwargs['model_name'], #"us.meta.llama3-3-70b-instruct-v1:0",
@@ -26,8 +26,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         use_knowledge=kwargs['use_knowledge']
     )
 
-    task = format_task_dict(list(input.values())[0])
+    task_id = list(input_dict.keys())[0]
+    task = format_task_dict(list(input_dict.values())[0])
     out_fname = "pred_programs/pred_" + task["gold_program_name"]
     trajectory = agent.solve_task(task, out_fname=out_fname)
 
-    return trajectory
+    return {task_id: trajectory}  # The output must be {task_id: result}

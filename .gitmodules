@@ -26,3 +26,6 @@
 	path = agents/Enigma-Agent
 	url = git@github.com:boyiwei/Enigma-Agent.git
 	branch = enigma-agent-hal
+[submodule "hal/benchmarks/scienceagentbench/ScienceAgentBench"]
+	path = hal/benchmarks/scienceagentbench/ScienceAgentBench
+	url = https://github.com/OSU-NLP-Group/ScienceAgentBench.git
