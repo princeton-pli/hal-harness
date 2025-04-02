@@ -94,6 +94,13 @@ This repository provides a standardized evaluation harness for reproducible agen
    NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    ```
 
+   Then run the following command to install the optional azure dependencies:
+   ```bash
+   pip install -e .[azure]
+   ```
+
+
+
 ## Which Benchmarks Are Supported?
 
 ### [SWE-bench Verified (Mini)](https://github.com/princeton-nlp/SWE-bench)
