@@ -69,6 +69,7 @@ load_dotenv()
     help="Path to configuration file. (currently not used)",
 )
 @click.option("--vm", is_flag=True, help="Run the agent on azure VMs")
+@click.option("--docker", is_flag=True, help="Run the agent in Docker containers for isolation. Requires Docker to be installed on the system. Resources are limited to 4GB memory and 2 CPU cores per container.")
 @click.option("--continue_run", is_flag=True, help="Continue from a previous run, only running failed or incomplete tasks. You must provide the same run_id to continue a run.")
 @click.option(
     "-I",
@@ -91,6 +92,7 @@ def main(
     b,
     i,
     vm,
+    docker,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
@@ -123,11 +125,17 @@ def main(
         # Validate model pricing if model_name is provided in agent_args
         if "model_name" in agent_args:
             validate_model_pricing(agent_args["model_name"])
+        
+        # Validate runner options
+        if sum([bool(conda_env_name), vm, docker]) > 1:
+            print_error("Only one of --conda_env_name, --vm, or --docker can be specified. Exiting...")
+            sys.exit(1)
                 
-        # Check if VM execution is attempted with inspect solver
-        if vm and is_inspect_benchmark(benchmark):
+        # Check if VM/Docker execution is attempted with inspect solver
+        if (vm or docker) and is_inspect_benchmark(benchmark):
             if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_error("VM execution is not supported for inspect solvers. Please run without --vm flag. Exiting...")
+                run_type = "VM" if vm else "Docker"
+                print_error(f"{run_type} execution is not supported for inspect solvers. Please run without --{run_type.lower()} flag. Exiting...")
                 sys.exit(1)
                 
         # Check if conda environment is specified for inspect solver
@@ -154,6 +162,7 @@ def main(
             conda_env_name=conda_env_name,
             log_dir=log_dir,
             vm=vm,
+            docker=docker,
             continue_run=continue_run
         )
         
@@ -175,6 +184,7 @@ def main(
                 max_concurrent=max_concurrent,
                 conda_env_name=conda_env_name,
                 vm=vm,
+                docker=docker,
                 inspect_eval_args=inspect_eval_args
             )
             # else:
@@ -217,6 +227,7 @@ def main(
                     config=config,
                     run_id=run_id,  # Now guaranteed to have a value
                     use_vm=vm,
+                    use_docker=docker,
                     max_concurrent=max_concurrent,
                     conda_env=conda_env_name,
                     continue_run=continue_run
