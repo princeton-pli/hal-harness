@@ -3,27 +3,39 @@ from .base_benchmark import BaseBenchmark
 
 from datasets import load_dataset
 import os
-import importlib
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 # get the relative path of the directory where this file is located
 this_file_dir = os.path.dirname(os.path.relpath(__file__)).replace('\\', '/')
 benchmark_path = os.path.join(this_file_dir, 'scienceagentbench', 'benchmark')
 
-# import this_file_dir.scienceagentbench.ScienceAgentBench.recover_pred_from_log
-module_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench", "recover_pred_from_log.py")
-module_name = "recover_pred_from_log"
-spec = importlib.util.spec_from_file_location(module_name, module_path)
-recover_utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(recover_utils)
-
-# import this_file_dir.scienceagentbench.ScienceAgentBench.evaluation.harness as a package
 submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
 sys.path.insert(0, submodule_path)
+
+# import this_file_dir.scienceagentbench.ScienceAgentBench.recover_pred_from_log
+# module_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench", "recover_pred_from_log.py")
+# module_name = "recover_pred_from_log"
+# spec = importlib.util.spec_from_file_location(module_name, module_path)
+# recover_utils = importlib.util.module_from_spec(spec)
+# spec.loader.exec_module(recover_utils)
+import recover_pred_from_log as recover_utils
+
+# import this_file_dir.scienceagentbench.ScienceAgentBench.evaluation.harness as a package
+# submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
+# sys.path.insert(0, submodule_path)
 from evaluation.harness import run_evaluation as docker_eval, docker_build as docker_build
+
+# import this_file_dir.scienceagentbench.ScienceAgentBench.calculate_metrics
+# module_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench", "recover_pred_from_log.py")
+# module_name = "recover_pred_from_log"
+# spec = importlib.util.spec_from_file_location(module_name, module_path)
+# recover_utils = importlib.util.module_from_spec(spec)
+# spec.loader.exec_module(recover_utils)
+from calculate_metrics import evaluate_best_run
 
 
 class ScienceAgentBench(BaseBenchmark):
@@ -53,15 +65,26 @@ class ScienceAgentBench(BaseBenchmark):
             result = {}
             for idx, line in enumerate(f, start=1):
                 if line.strip() == '':
-                    continue
+                    raise ValueError("Empty line in evaluation results. This may be because the docker evaluation is not complete.")
                 instance_result = json.loads(line)
                 result[str(idx)] = instance_result
-        return result
+        
+        return {'agent_output': agent_output, 'eval_result': result}
         
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """Extract metrics from evaluation results"""
-        print(eval_results)
-        # TODO: call calculate_metrics.py
+        agent_output = eval_results['agent_output']
+        eval_result = eval_results['eval_result']
+
+        run_log = []
+        eval_log = []
+        for idx in range(1, len(self.benchmark) + 1):
+            run_log.append(agent_output[str(idx)])
+            eval_log.append(eval_result[str(idx)])
+        
+        metrics = evaluate_best_run([run_log], [eval_log])
+        return metrics
+
 
     def _recover_pred_from_log(self, agent_output, run_id):
         args = argparse.Namespace()
@@ -96,15 +119,19 @@ class ScienceAgentBench(BaseBenchmark):
             log_fname=log_fname,
             dataset_name='osunlp/ScienceAgentBench',
             split='validation',
-            instance_ids=["1", "2", "3"],  # TODO: remove this after debugging
-            max_workers=os.cpu_count()//2,
-            force_rebuild=False,  # TODO: not supported yet
-            cache_level="base",
+            instance_ids=None,
+            max_workers=os.cpu_count() // 2,
+            force_rebuild=True,
+            cache_level="none",
             clean=False,
             open_file_limit=4096,
-            run_id=run_id,
+            run_id=run_id + '_' + time.strftime("%Y%m%d-%H%M%S"),
             timeout=1800,
-            openai_api_key=None,  # TODO: get from .env
+            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+            azure_openai_key=os.getenv("AZURE_OPENAI_KEY", ""),
+            azure_openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
+            azure_openai_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
+            azure_openai_deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", ""),
         )
 
         return log_fname
