@@ -94,9 +94,15 @@ This repository provides a standardized evaluation harness for reproducible agen
    SSH_PRIVATE_KEY_PATH=/path/to/your/ssh/key
    NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    ```
-
+   
+   Then run the following command to install the optional azure dependencies:
+   ```bash
+   pip install -e .[azure]
+   ```
+   
 7. **Optional: Docker Setup**
    If you plan to use Docker containers for isolated evaluation, make sure Docker is installed on your system. The harness will automatically build the required Docker image.
+   
 
 ## Which Benchmarks Are Supported?
 
@@ -107,7 +113,6 @@ This repository provides a standardized evaluation harness for reproducible agen
 - Supports local, Docker, and VM execution
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
 - **Does not support arm64 machines**
-
 
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
@@ -125,11 +130,27 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 ### [CORE-bench](https://github.com/siegelz/core-bench)
 - Computational reproducibility benchmark for agents on real scientific papers
 - Supports fully parallelized evaluation on Azure VMs
-- For detailed instructions on running CORE-bench evaluations, see the [CORE-bench repository](https://github.com/CORE-Bench/CORE-Bench)
 
 ### [tau-bench](https://github.com/tau-bench/tau-bench)
+- Install benchmark specific dependencies:
+```bash
+pip install -e .[taubench]
+```
 - Benchmark for Tool-Agent-User Interaction in real-world domains
 - Supports fully parallelized evaluation on Azure VMs
+
+### [SciCode](https://github.com/scicode-bench/SciCode)
+- Programming realistic scientific research problems
+- Supports three versions: 
+  1. `scicode` : standard version from the paper where agent solves subtasks iteratively
+  2. `scicode_easy` : agent solves subtasks iteratively but has access to additional background information
+  3. `scicode_hard` : agent solves each full problem in a zero-shot format
+- Supports both local and VM execution
+
+For all SciCode benchmarks, you will need to download and extract the SciCode unit tests. This can be done with the following steps:
+
+1. Download the unit tests [here](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR)
+2. Move the file to `hal/benchmarks/SciCode/eval/data/`.
 
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
@@ -205,6 +226,31 @@ hal-eval --benchmark inspect_evals/agentharm \
   --agent_function agentharm.default_agent \
   --agent_name "Agent (gpt-4o-mini-2024-07-18)" \
   -A model_name=openai/gpt-4o-mini-2024-07-18
+```
+
+### [CORE-Bench](https://arxiv.org/abs/2409.11363)
+
+- Begin by decrypting `hal/benchmarks/corebench/core_test.json.gpg` to access the `CORE-Bench` test set. The password for the GPG file is `reproducibility`. To decrypt the file, run the following command:
+```bash
+gpg --output hal/benchmarks/corebench/core_test.json --decrypt hal/benchmarks/corebench/core_test.json.gpg
+```
+- Install benchmark specific dependencies:
+```bash
+pip install -e .[corebench]
+```
+- Benchmark for evaluating how agents can reproduce the results of scientific papers when provided with their code.
+- Tasks involve setting up the environment, running the code, and answering questions about the results.
+- Capsules and task files will automatically be downloaded upon running the benchmark.
+- Three variants available:
+  - `corebench_easy` - Agent provided with results and must answer task questions.
+  - `corebench_medium` - Agent provided with Docker container to install dependencies and run code, and must answer task questions.
+  - `corebench_hard` - Agent must install dependencies and run code from scratch, and answer task questions.
+- Example usage:
+```bash
+hal-eval --benchmark corebench_easy \
+  --agent_dir agents/list_files_agent \
+  --agent_function main.run \
+  --agent_name "Test Agent"
 ```
 
 ## How Do I Run Evaluations?
