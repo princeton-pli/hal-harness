@@ -253,6 +253,21 @@ hal-eval --benchmark corebench_easy \
   --agent_name "Test Agent"
 ```
 
+### [ScienceAgentBench](https://github.com/osunlp/ScienceAgentBench)
+- Benchmark for evaluating agents' capabilities to solve computational science tasks
+- Evaluates programs in a Docker container environment for consistent evaluation
+- Supports both local and VM execution
+
+For ScienceAgentBench, you will need to download and extract the ScienceAgentBench dataset. ScienceAgentBench will be automatically downloaded via the Hugging Face datasets library.
+
+Requirements for the example agent (agents/sab_example_agent):
+```
+backoff==2.2.1
+boto3==1.37.1
+botocore==1.37.1
+litellm==1.52.8
+```
+
 ## How Do I Run Evaluations?
 
 The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
@@ -359,6 +374,17 @@ hal-eval --benchmark inspect_evals/gaia \
   -A model_name=openai/gpt-4o-mini-2024-07-18 \
   -I token_limit=4000 \
   -I temperature=0.4
+```
+
+3. **Running ScienceAgentBench locally:**
+```bash
+hal-eval --benchmark scienceagentbench \
+  --agent_dir agents/sab_example_agent/ \
+  --agent_function main.run \
+  --agent_name "Science Agent (gpt-4o-mini-2024-07-18)" \
+  -A model_name=gpt-4o-mini-2024-07-18 \
+  -A use_self_debug=False \
+  -A use_knowledge=False
 ```
 
 ### Agent Naming Guidelines
