@@ -1,10 +1,10 @@
 # Disclaimer: this is not a functional agent and is only for demonstration purposes. This implementation is just a single model call.
 from typing import Optional, List, Dict, Any
-
+import tiktoken
 import requests
 
 # from smolagents.agents import ToolCallingAgent
-from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool
+from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 import subprocess
 from pathlib import Path
 import re
@@ -13,6 +13,183 @@ from prompts import USACO_PROMPT, PATCH_EXAMPLE
 from tau_bench.envs.airline.tools import ALL_TOOLS
 from tau_bench.envs import get_env
 from tau_bench.types import Action
+import json
+import os
+
+from typing import Optional
+
+from smolagents import Tool
+from smolagents.models import MessageRole, Model
+
+from mdconvert import MarkdownConverter
+
+
+class TextInspectorTool(Tool):
+    name = "inspect_file_as_text"
+    description = """
+You cannot load files yourself: instead call this tool to read a file as markdown text and ask questions about it.
+This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pptx", ".wav", ".mp3", ".m4a", ".flac", ".pdf", ".docx"], and all other types of text files. IT DOES NOT HANDLE IMAGES."""
+
+    inputs = {
+        "file_path": {
+            "description": "The path to the file you want to read as text. Must be a '.something' file, like '.pdf'. If it is an image, use the visualizer tool instead! DO NOT use this tool for an HTML webpage: use the web_search tool instead!",
+            "type": "string",
+        },
+        "question": {
+            "description": "[Optional]: Your question, as a natural language sentence. Provide as much context as possible. Do not pass this parameter if you just want to directly return the content of the file.",
+            "type": "string",
+            "nullable": True,
+        },
+    }
+    output_type = "string"
+    md_converter = MarkdownConverter()
+
+    def __init__(self, model: Model, text_limit: int):
+        super().__init__()
+        self.model = model
+        self.text_limit = text_limit
+
+    def forward_initial_exam_mode(self, file_path, question):
+        result = self.md_converter.convert(file_path)
+
+        if file_path[-4:] in [".png", ".jpg"]:
+            raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
+
+        if ".zip" in file_path:
+            return result.text_content
+
+        if not question:
+            return result.text_content
+
+        if len(result.text_content) < 4000:
+            return "Document content: " + result.text_content
+
+        messages = [
+            {
+                "role": MessageRole.SYSTEM,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Here is a file:\n### "
+                        + str(result.title)
+                        + "\n\n"
+                        + result.text_content[: self.text_limit],
+                    }
+                ],
+            },
+            {
+                "role": MessageRole.USER,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Now please write a short, 5 sentence caption for this document, that could help someone asking this question: "
+                        + question
+                        + "\n\nDon't answer the question yourself! Just provide useful notes on the document",
+                    }
+                ],
+            },
+        ]
+        return self.model(messages).content
+
+    def forward(self, file_path, question: Optional[str] = None) -> str:
+        result = self.md_converter.convert(file_path)
+
+        if file_path[-4:] in [".png", ".jpg"]:
+            raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
+
+        if ".zip" in file_path:
+            return result.text_content
+
+        if not question:
+            return result.text_content
+
+        messages = [
+            {
+                "role": MessageRole.SYSTEM,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "You will have to write a short caption for this file, then answer this question:"
+                        + question,
+                    }
+                ],
+            },
+            {
+                "role": MessageRole.USER,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Here is the complete file:\n### "
+                        + str(result.title)
+                        + "\n\n"
+                        + result.text_content[: self.text_limit],
+                    }
+                ],
+            },
+            {
+                "role": MessageRole.USER,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Now answer the question below. Use these three headings: '1. Short answer', '2. Extremely detailed answer', '3. Additional Context on the document and question asked'."
+                        + question,
+                    }
+                ],
+            },
+        ]
+        return self.model(messages).content
+
+
+@tool
+def query_vision_language_model(query: str, image_path: str) -> str:
+    """
+    Query a vision language model with text and an image.
+    Args:
+        query: The text query or question to ask about the image
+        image_path: Path to the image file to analyze
+    Returns:
+        str: The vision language model's response about the image
+    """
+    try:
+        import base64
+        from litellm import completion
+        
+        # Check if the image file exists
+        if not os.path.exists(image_path):
+            return f"Error: Image file not found at {image_path}"
+        
+        # Read and encode the image
+        with open(image_path, "rb") as image_file:
+            image_content = image_file.read()
+            base64_image = base64.b64encode(image_content).decode("utf-8")
+        
+        # Create the message with text and image
+        response = completion(
+            model="gpt-4o-2024-11-20",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": query
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ],
+        )
+        
+        # Return the model's response
+        return response.choices[0].message.content
+    
+    except Exception as e:
+        return f"Error processing vision query: {str(e)}"
 
 @tool
 def execute_bash(command: str) -> str:
@@ -25,36 +202,18 @@ def execute_bash(command: str) -> str:
     """
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        return f"Exit Code: {result.returncode}\nStdout:\n{result.stdout}\nStderr:\n{result.stderr}"
+        output = f"Exit Code: {result.returncode}\nStdout:\n{result.stdout}\nStderr:\n{result.stderr}"
+        
+        # Limit output to 1000 tokens
+        encoding = tiktoken.get_encoding("cl100k_base")
+        tokens = encoding.encode(output)
+        if len(tokens) > 1000:
+            output = encoding.decode(tokens[:1000]) + "\n... (output truncated to 1000 tokens)"
+        
+        return output
     except Exception as e:
         return f"Error executing command: {str(e)}"
-
-
-@tool
-def search_wikipedia(query: str) -> str:
-    """
-    Fetches a summary of a Wikipedia page for a given query.
-    Args:
-        query: The search term to look up on Wikipedia.
-    Returns:
-        str: A summary of the Wikipedia page if successful, or an error message if the request fails.
-    Raises:
-        requests.exceptions.RequestException: If there is an issue with the HTTP request.
-    """
-    url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}"
-
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-
-        data = response.json()
-        title = data["title"]
-        extract = data["extract"]
-
-        return f"Summary for {title}: {extract}"
-
-    except requests.exceptions.RequestException as e:
-        return f"Error fetching Wikipedia data: {str(e)}"
+    
     
     
 @tool
@@ -74,14 +233,14 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
     path = Path(path)
     try:
         if command == "view":
-            if path.is_file():
+            if not path.exists():
+                return f"Path {path} does not exist"
+            elif path.is_dir():
+                return f"Path {path} is a directory"
+            else:
                 with open(path, 'r') as f:
                     content = f.read()
-                    return content[:1000] + ('...' if len(content) > 1000 else '')
-            elif path.is_dir():
-                files = list(path.rglob('*'))[:100]
-                return "\n".join(str(f.relative_to(path)) for f in files)
-            return f"Path {path} does not exist"
+                    return content[:5000] + ('...' if len(content) > 5000 else '')
 
         elif command == "create":
             if path.exists():
@@ -172,6 +331,10 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
                 if file_path.match(pattern):
                     skip = True
                     break
+                
+            # skip input.json, agent_args.json, and steps.json
+            if file_path.name in ["input.json", "agent_args.json", "steps.json", "main.py"]:
+                skip = True
             
             if not skip:
                 files_to_search.append(file_path)
@@ -199,8 +362,8 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
                         
                         context = ''.join(lines[start:end])
                         # Truncate very long contexts
-                        if len(context) > 500:
-                            context = context[:250] + "\n... (truncated) ...\n" + context[-250:]
+                        if len(context) > 1000:
+                            context = context[:500] + "\n... (truncated) ...\n" + context[-500:]
                             
                         results.append(f"File: {file_path} (line {i+1}):\n{context}\n---")
                         matches_found += 1
@@ -220,7 +383,16 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
     except Exception as e:
         return f"Error searching files: {str(e)}"
     
-
+CORE_TOOLS = [
+    DuckDuckGoSearchTool(),
+    VisitWebpageTool(),
+    PythonInterpreterTool(),
+    execute_bash,
+    TextInspectorTool(),
+    edit_file,
+    file_search,
+    query_vision_language_model,
+]
 
 
 
@@ -237,23 +409,45 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     model = LiteLLMModel(model_id=kwargs['model_name'])
 
     agent = ToolCallingAgent(
-    tools=[
-        DuckDuckGoSearchTool(),
-        search_wikipedia,
-        execute_bash,
-        edit_file,
-        file_search,
-    ],
-    add_base_tools=True,
+    tools=CORE_TOOLS,
+    planning_interval=4,
+    max_steps=80,
     model=model)
 
     if kwargs['benchmark_name'] == 'usaco':
         prompt = USACO_PROMPT.format(task['description'])
         response = asyncio.run(agent.arun(prompt))
+        steps = agent.to_json()
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
         
         # extract code from response
         if '```python' in response:
             response = response.split('```python')[1].split('```')[0]
+            
+    elif kwargs['benchmark_name'] == 'corebench_easy':
+        
+        response = asyncio.run(agent.arun(task['prompt']))
+        steps = agent.to_json()
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
+        return {task_id: response}
+
+    elif kwargs['benchmark_name'] == 'corebench_medium':
+        response = asyncio.run(agent.arun(task['prompt']))
+        steps = agent.to_json()
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
+            
+        return {task_id: response}
+    
+    elif kwargs['benchmark_name'] == 'corebench_hard':
+        response = asyncio.run(agent.arun(task['prompt']))
+        steps = agent.to_json()
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
+        return {task_id: response}
+        
     elif kwargs['benchmark_name'] == 'swebench_verified':
         pass
     elif kwargs['benchmark_name'] == 'swebench_verified_mini':
@@ -280,6 +474,9 @@ Problem: {task['problem_statement']}
             
 The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
         ))
+        steps = agent.to_json()
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
         from appworld import AppWorld, load_task_ids
@@ -299,18 +496,15 @@ The code of the project is cloned to your current directory. Please respond with
                 return world.execute(command)
             
             agent = ToolCallingAgent(
-                tools=[
-                    execute_in_world,
-                    DuckDuckGoSearchTool(),
-                    search_wikipedia,
-                    execute_bash,
-                    edit_file,
-                    file_search,
-                ],
-                add_base_tools=True,
+                tools=CORE_TOOLS,
+                planning_interval=4,
+                max_steps=80,
                 model=model)
             
             response = asyncio.run(agent.arun(instruction))
+            steps = agent.to_json()
+            with open("steps.json", "w") as f:
+                json.dump(steps, f)
         
         return {task_id: "Completed"}
     elif kwargs['benchmark_name'] == 'appworld_test_challenge':
@@ -324,23 +518,22 @@ The code of the project is cloned to your current directory. Please respond with
             return world.execute(command)
         
         agent = ToolCallingAgent(
-            tools=[
-                execute_in_world,
-                DuckDuckGoSearchTool(),
-                search_wikipedia,
-                execute_bash,
-                edit_file,
-                file_search,
-            ],
-            add_base_tools=True,
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=80,
             model=model)
         
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
             instruction = world.task.instruction # To see task instruction.
             
             response = asyncio.run(agent.arun(instruction))
+            steps = agent.to_json()
+            with open("steps.json", "w") as f:
+                json.dump(steps, f)
         
         return {task_id: "Completed"}
+            
+        
     elif kwargs['benchmark_name'] == 'taubench_airline':
         
         ### ENV SETUP (usually this should be untouched) ###
@@ -736,12 +929,7 @@ The code of the project is cloned to your current directory. Please respond with
         instruction = isolated_env.reset(input[task_id]['task_index']).observation    
         
         agent = ToolCallingAgent(
-        tools=[
-            DuckDuckGoSearchTool(),
-            search_wikipedia,
-            execute_bash,
-            edit_file,
-            file_search,
+        tools=CORE_TOOLS + [
             book_reservation,
             calculate,
             cancel_reservation,
@@ -758,11 +946,15 @@ The code of the project is cloned to your current directory. Please respond with
             update_reservation_passengers,
             ask_user
         ],
-        add_base_tools=True,
+        planning_interval=4,
+        max_steps=80,
         model=model)
         
         ### YOUR AGENT CODE HERE ###
         asyncio.run(agent.arun(instruction))
+        steps = agent.to_json()
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
             
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
@@ -795,22 +987,36 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         Args:
             command: The bash command to execute
         """
-        result = await sandbox().exec(command.split(' '))
-        if result.success:
-            return result.stdout
-        else:
-            raise result.stderr
         
+        try:
+            result = await sandbox().exec(command.split(' '))
+            if result.success:
+                # Limit output to 1000 tokens
+                output = result.stdout
+                encoding = tiktoken.get_encoding("cl100k_base")
+                tokens = encoding.encode(output)
+                if len(tokens) > 1000:
+                    output = encoding.decode(tokens[:1000]) + "\n... (output truncated to 1000 tokens)"
+                return output
+            else:
+                return result.stderr
+        except Exception as e:
+            return "Execution failed: " + str(e)
+        
+    CORE_TOOLS_INSPECT = [
+        DuckDuckGoSearchTool(),
+        VisitWebpageTool(),
+        PythonInterpreterTool(),
+        TextInspectorTool(),
+        execute_bash,
+        file_search,
+        query_vision_language_model
+    ]
         
     agent = ToolCallingAgent(
-    tools=[
-        DuckDuckGoSearchTool(),
-        search_wikipedia,
-        execute_bash,
-        edit_file,
-        file_search,
-    ],
-    add_base_tools=True,
+    tools=CORE_TOOLS_INSPECT,
+    planning_interval=4,
+    max_steps=80,
     model=model)
         
         
@@ -822,6 +1028,12 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     else:
         raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
     
-    return {
-        "output": str(response)
-    }
+    steps = agent.to_json()
+    with open("steps.json", "w") as f:
+        json.dump(steps, f)
+        
+    try:
+        return {"output": str(response)}
+    except Exception as e:
+        return  {"output": str(e)}
+

@@ -15,17 +15,19 @@ dependencies = [
     "setuptools>=48.0.0",
     "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@d3a242f74c8a4f42a86d1219eaca12ab620c3be2",
     "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals",
-    "azure-mgmt-compute>=29.1.0",
-    "azure-mgmt-network>=25.1.0",
-    "azure-mgmt-resource>=23.0.1",
-    "azure-identity>=1.12.0",
-    "paramiko==3.5.0",
     "tenacity>=8.2.0",
     "docker>=7.1.0",
     "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]
+azure = [
+    "azure-mgmt-compute>=29.1.0",
+    "azure-mgmt-network>=25.1.0",
+    "azure-mgmt-resource>=23.0.1",
+    "azure-identity>=1.12.0",
+    "paramiko==3.5.0",
+]
 taubench = [
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@3e187bda4dfa3e8936aebd44a579f6d1238ce55e",
 ]
@@ -34,6 +36,7 @@ scicode = [
 ]
 hal-agent = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@0103ee9ef17d16a8fc7c8693c03f6dffc5d2dbe8",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@3e187bda4dfa3e8936aebd44a579f6d1238ce55e",
 ]
 corebench = [
     "scipy>=1.15.2"

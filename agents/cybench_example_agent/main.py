@@ -28,7 +28,7 @@ async def list_files(dir: str):
         raise ToolError(result.stderr)
 
 
-async def run(sample: dict[str, Any]) -> dict[str, Any]:
+async def run(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     
     # Example command executed in the sandbox
     result = await list_files(".")
