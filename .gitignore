@@ -23,3 +23,4 @@ hal/benchmarks/corebench/capsules/*
 .compose.yaml
 .vscode
 hal/benchmarks/corebench/core_test.json
+hal/benchmarks/scienceagentbench/benchmark
