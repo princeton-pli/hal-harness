@@ -65,9 +65,11 @@ class ScienceAgentBench(BaseBenchmark):
             result = {}
             for idx, line in enumerate(f, start=1):
                 if line.strip() == '':
-                    raise ValueError("Empty line in evaluation results. This may be because the docker evaluation is not complete.")
-                instance_result = json.loads(line)
-                result[str(idx)] = instance_result
+                    #raise ValueError("Empty line in evaluation results. This may be because the docker evaluation is not complete.")
+                    result[str(idx)] = {'valid_program': 0, 'codebert_score': 0, 'success_rate': 0, 'log_info': ''}
+                else:
+                    instance_result = json.loads(line)
+                    result[str(idx)] = instance_result
         
         return {'agent_output': agent_output, 'eval_result': result}
         
