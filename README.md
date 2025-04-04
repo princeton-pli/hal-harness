@@ -57,7 +57,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 
 2. **Create conda environment:**
    ```bash
-   conda create -n hal python=3.11
+   conda create -n hal python=3.12
    conda activate hal
    ```
 
