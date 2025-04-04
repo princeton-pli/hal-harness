@@ -416,7 +416,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     if kwargs['benchmark_name'] == 'usaco':
         prompt = USACO_PROMPT.format(task['description'])
-        response = asyncio.run(agent.arun(prompt))
+        response = agent.run(prompt)
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -427,14 +427,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
         
-        response = asyncio.run(agent.arun(task['prompt']))
+        response = agent.run(task['prompt'])
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = asyncio.run(agent.arun(task['prompt']))
+        response = agent.run(task['prompt'])
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -442,7 +442,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = asyncio.run(agent.arun(task['prompt']))
+        response = agent.run(task['prompt'])
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -463,17 +463,13 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         
         
         
-        response = asyncio.run(agent.arun(
+        response = agent.run(
             f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
-            
-Patch example:
-
-{PATCH_EXAMPLE}
             
 Problem: {task['problem_statement']}
             
 The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
-        ))
+        )
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -496,12 +492,12 @@ The code of the project is cloned to your current directory. Please respond with
                 return world.execute(command)
             
             agent = ToolCallingAgent(
-                tools=CORE_TOOLS,
+                tools=CORE_TOOLS + [execute_in_world],
                 planning_interval=4,
                 max_steps=80,
                 model=model)
             
-            response = asyncio.run(agent.arun(instruction))
+            response = agent.run(instruction)
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
@@ -526,14 +522,32 @@ The code of the project is cloned to your current directory. Please respond with
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
             instruction = world.task.instruction # To see task instruction.
             
-            response = asyncio.run(agent.arun(instruction))
+            response = agent.run(instruction)
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
         
         return {task_id: "Completed"}
             
-        
+            
+    elif kwargs['benchmark_name'] == 'gaia':
+        prompt = f"""Please answer the question below. You should:                                                                                                                   
+                                                                                                                                                                 
+- Return only your answer, which should be a number, or a short phrase with as few words as possible, or a comma separated list of numbers and/or strings.      
+- If the answer is a number, return only the number without any units unless specified otherwise.                                                               
+- If the answer is a string, don't include articles, and don't use abbreviations (e.g. for states).                                                             
+- If the answer is a comma separated list, apply the above rules to each element in the list.                                                                                                                                                                                                                    
+                                                                                                                                                                 
+Here is the question:
+
+{task['Question']}"""
+        response = agent.run(prompt)
+        steps = agent.to_json()
+            with open("steps.json", "w") as f:
+                json.dump(steps, f)
+        return {task_id: response}
+    
+    
     elif kwargs['benchmark_name'] == 'taubench_airline':
         
         ### ENV SETUP (usually this should be untouched) ###
@@ -951,7 +965,7 @@ The code of the project is cloned to your current directory. Please respond with
         model=model)
         
         ### YOUR AGENT CODE HERE ###
-        asyncio.run(agent.arun(instruction))
+        response = agent.run(instruction)
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
