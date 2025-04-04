@@ -20,7 +20,7 @@ def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
     assert len(input_dict) == 1, 'input must contain only one task'
 
     agent = ScienceAgent(
-        kwargs['model_name'], #"us.meta.llama3-3-70b-instruct-v1:0",
+        kwargs['model_name'],
         context_cutoff=28000,
         use_self_debug=kwargs['use_self_debug'],
         use_knowledge=kwargs['use_knowledge']
