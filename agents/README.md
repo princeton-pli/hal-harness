@@ -279,3 +279,49 @@ Can be found in `agents/inspect/gaia.py` and `agents/inspect/cybench.py`.
 - For custom agents, use `-A` flags to pass keyword arguments
 - For Inspect solvers, use `-I` flags to pass arguments to the inspect eval() function as detailed in the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/models.html#generation-config)
 - For SWE-Agent-v0.7 / Enigma-Agent, please add `keys.cfg` in the SWE-Agent / Enigma-Agent directory. For SWE-Agent-v1.0, please add `.env` in the SWE-Agent-v1.0 directory.
+
+### ScienceAgentBench
+
+**Input Format**:
+```python
+{
+    "task_id": {
+        "task_inst": "Task instruction text",
+        "dataset_path": "Path to the dataset",
+        "dataset_folder_tree": "Folder structure of the dataset",
+        "dataset_preview": "Preview of the dataset contents",
+        "output_fname": "Expected output filename",
+        "domain_knowledge": "Additional domain knowledge",
+        "gold_program_name": "Name of the gold standard program",
+        "instance_id": "Unique identifier for the instance"
+    }
+}
+```
+
+**Output Format**: Return a dictionary mapping task IDs to solution trajectories that contain the agent's reasoning steps.
+
+**Example Agent**:
+```python
+def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
+    assert 'model_name' in kwargs, 'model_name is required'
+    assert len(input_dict) == 1, 'input must contain only one task'
+
+    agent = ScienceAgent(
+        kwargs['model_name'],
+        context_cutoff=28000,
+        use_self_debug=kwargs['use_self_debug'],
+        use_knowledge=kwargs['use_knowledge']
+    )
+
+    task_id = list(input_dict.keys())[0]
+    task = format_task_dict(list(input_dict.values())[0])
+    out_fname = "pred_programs/pred_" + task["gold_program_name"]
+    trajectory = agent.solve_task(task, out_fname=out_fname)
+
+    return {task_id: trajectory}
+```
+
+**Special Requirements**:
+- Include `use_self_debug` and `use_knowledge` flags to control agent behavior
+- Output programs are stored in "pred_programs/" directory
+- Docker is required for evaluation

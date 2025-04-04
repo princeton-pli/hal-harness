@@ -23,3 +23,5 @@ hal/benchmarks/corebench/capsules/*
 .compose.yaml
 .vscode
 hal/benchmarks/corebench/core_test.json
+agents/appworld_example_agent/data/*
+hal/benchmarks/scienceagentbench/benchmark

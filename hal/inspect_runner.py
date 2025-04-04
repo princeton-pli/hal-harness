@@ -43,6 +43,7 @@ def inspect_evaluate(
     max_concurrent: int = 10,
     conda_env_name: str = None,
     vm: bool = False,
+    docker: bool = False,
     continue_run: bool = False,
     inspect_eval_args: dict[str, Any] = None,
 ) -> None:
