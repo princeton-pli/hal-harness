@@ -20,7 +20,7 @@ def is_inspect_benchmark(benchmark: str) -> bool:
     Returns:
         bool: True if this is an Inspect benchmark, otherwise False
     """
-    return benchmark.startswith("inspect:") or benchmark.startswith("inspect_evals/")
+    return benchmark.startswith("inspect:") or benchmark.startswith("inspect_evals/") or benchmark == "cvebench"
 
 
 def task_name(benchmark: str) -> str:
