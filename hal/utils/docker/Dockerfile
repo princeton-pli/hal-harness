@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -6,17 +6,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     ca-certificates \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies that are commonly used
-RUN pip install --no-cache-dir \
-    weave==0.51.32 \
-    numpy \
-    pandas \
-    requests \
-    rich \
-    tqdm \
-    pydantic
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh \
+    && bash /tmp/miniconda.sh -b -p /opt/conda \
+    && rm /tmp/miniconda.sh \
+    && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh \
+    && echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc \
+    && echo "conda activate base" >> ~/.bashrc \
+    && /opt/conda/bin/conda clean -afy
+
+# Add conda to PATH
+ENV PATH /opt/conda/bin:$PATH
+
+# Install weave
+RUN pip install weave==0.51.32
 
 # Set working directory
 WORKDIR /workspace
