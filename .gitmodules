@@ -24,7 +24,7 @@
 	url = https://github.com/peterkirgis/SciCode.git
 [submodule "agents/Enigma-Agent"]
 	path = agents/Enigma-Agent
-	url = git@github.com:boyiwei/Enigma-Agent.git
+	url = git@github.com:boyiwei/SWE-agent.git
 	branch = enigma-agent-hal
 [submodule "agents/SWE-agent-v1.0"]
 	path = agents/SWE-agent-v1.0
