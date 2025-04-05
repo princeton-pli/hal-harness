@@ -238,26 +238,45 @@ class DockerRunner:
                 command=["tail", "-f", "/dev/null"],  # Keep container running
             )
             
+            # Add container to active list
+            self._active_containers.append(container_id)
+            
+            # Using asyncio subprocess instead of subprocess.run
             # copy all the contents of temp dir into container
-            result = subprocess.run(["docker", "cp", f"{temp_dir}/.", f"{container_id}:/workspace"], capture_output=True, text=True)
-            if result.stdout:
-                verbose_logger.debug(f"Container {container_id}: {result.stdout}")
-            if result.stderr:
-                verbose_logger.debug(f"Container {container_id}: {result.stderr}")
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "cp", f"{temp_dir}/.", f"{container_id}:/workspace",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+            if stdout:
+                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if stderr:
+                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
             
             # create env
-            result = subprocess.run(["docker", "exec", container_id, "bash", "-c", "conda create -y -n agent_env python=3.12"], capture_output=True, text=True)
-            if result.stdout:
-                verbose_logger.debug(f"Container {container_id}: {result.stdout}")
-            if result.stderr:
-                verbose_logger.debug(f"Container {container_id}: {result.stderr}")
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "exec", container_id, "bash", "-c", "conda create -y -n agent_env python=3.12",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+            if stdout:
+                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if stderr:
+                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                 
             # install requirements
-            results = subprocess.run(["docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install -r /workspace/agent/requirements.txt"], capture_output=True, text=True)
-            if results.stdout:
-                verbose_logger.debug(f"Container {container_id}: {results.stdout}")
-            if results.stderr:
-                verbose_logger.debug(f"Container {container_id}: {results.stderr}")
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install -r /workspace/agent/requirements.txt",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+            if stdout:
+                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if stderr:
+                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
             
             # Get current environment variables
             env_vars = os.environ.copy()
@@ -268,29 +287,40 @@ class DockerRunner:
                 setup_script_src = Path(self.benchmark.setup_script)
                 if setup_script_src.exists():
                     # copy setup script to container
-                    result = subprocess.run(["docker", "cp", f"{setup_script_src}", f"{container_id}:/workspace/setup_script.sh"], capture_output=True, text=True)
-                    if result.stdout:
-                        verbose_logger.debug(f"Container {container_id}: {result.stdout}")
-                    if result.stderr:
-                        verbose_logger.debug(f"Container {container_id}: {result.stderr}")
+                    proc = await asyncio.create_subprocess_exec(
+                        "docker", "cp", f"{setup_script_src}", f"{container_id}:/workspace/setup_script.sh",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await proc.communicate()
+                    if stdout:
+                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if stderr:
+                        verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                     
                     # run setup script and wait for it to complete
-                    result = subprocess.run(["docker", "exec", container_id, "bash", "/workspace/setup_script.sh"], capture_output=True, text=True)
-                    if result.stdout:
-                        verbose_logger.debug(f"Container {container_id}: {result.stdout}")
-                    if result.stderr:
-                        verbose_logger.debug(f"Container {container_id}: {result.stderr}")   
+                    proc = await asyncio.create_subprocess_exec(
+                        "docker", "exec", container_id, "bash", "/workspace/setup_script.sh",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await proc.communicate()
+                    if stdout:
+                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if stderr:
+                        verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")   
                         
-            # run setup script and wait for it to complete
-            results = subprocess.run(["docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install weave==0.51.32"], capture_output=True, text=True)
-            if result.stdout:
-                verbose_logger.debug(f"Container {container_id}: {result.stdout}")
-            if result.stderr:
-                verbose_logger.debug(f"Container {container_id}: {result.stderr}")                    
-                    
-            # env_args = []
-            # for k, v in env_vars.items():
-            #     env_args.extend(["-e", f"{k}={v}"])
+            # install weave
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install weave==0.51.32",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+            if stdout:
+                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if stderr:
+                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")                    
             
             # Run the script and capture output with timeout handling
             start_time = time.time() 
@@ -299,11 +329,17 @@ class DockerRunner:
             env_vars = dotenv_values(".env")
             env_vars_str = " ".join([f"{k}={v}" for k, v in env_vars.items()])
             print(f"Running script with env: {env_vars_str}")
-            results = subprocess.run(["docker", "exec", container_id, "bash", "-c", f"{env_vars_str} conda run -n agent_env python run_agent.py"], capture_output=True, text=True)
-            if results.stdout:
-                verbose_logger.debug(f"Container {container_id}: {results.stdout}")
-            if results.stderr:
-                verbose_logger.debug(f"Container {container_id}: {result.stderr}")        
+            
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "exec", container_id, "bash", "-c", f"{env_vars_str} conda run -n agent_env python run_agent.py",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+            if stdout:
+                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if stderr:
+                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")        
             
             # Poll for output.json with timeout
             result = None
@@ -312,11 +348,16 @@ class DockerRunner:
                 check_result = container.exec_run(["test", "-f", "/workspace/output.json"])
                 if check_result.exit_code == 0:
                     # copy files from container back to host
-                    result = subprocess.run(["docker", "cp", f"{container_id}:/workspace/.", f"{temp_dir}"], capture_output=True, text=True)
-                    if result.stdout:
-                        verbose_logger.debug(f"Container {container_id}: {result.stdout}")
-                    if result.stderr:
-                        verbose_logger.debug(f"Container {container_id}: {result.stderr}")
+                    proc = await asyncio.create_subprocess_exec(
+                        "docker", "cp", f"{container_id}:/workspace/.", f"{temp_dir}",
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await proc.communicate()
+                    if stdout:
+                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if stderr:
+                        verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                     
                     # Load and return results
                     with open(temp_dir / "output.json") as f:
@@ -351,6 +392,9 @@ class DockerRunner:
                 try:
                     container = self.docker_client.containers.get(container_id)
                     container.remove(force=True)
+                    # Remove from active containers list
+                    if container_id in self._active_containers:
+                        self._active_containers.remove(container_id)
                 except Exception:
                     pass  # Container may already be removed
                 
