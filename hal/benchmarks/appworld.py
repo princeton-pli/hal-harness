@@ -14,7 +14,7 @@ class AppWorldBenchmark(BaseBenchmark):
         self.split = 'test_normal' if benchmark_name == 'appworld_test_normal' else 'test_challenge'
         self.requirements_file = 'appworld'
         self.setup_script = 'hal/benchmarks/appworld/appworld_setup.sh'
-        self.vm_only = True
+        self.vm_only = False
         super().__init__(agent_dir, config, vm_only=self.vm_only, setup_script=self.setup_script)
         
         # Load dataset splits
