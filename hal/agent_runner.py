@@ -27,7 +27,8 @@ class AgentRunner:
                  use_docker: bool = False,
                  max_concurrent: int = 1,
                  conda_env: Optional[str] = None,
-                 continue_run: bool = False):
+                 continue_run: bool = False,
+                 run_command: str = None):
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -50,6 +51,9 @@ class AgentRunner:
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
+        
+        
+        self.run_command = run_command
                 
         # Check if benchmark requires VM
         if self.benchmark.vm_only and not use_vm and not use_docker:
@@ -232,6 +236,7 @@ class AgentRunner:
             agent_name=agent_name,
             run_id=self.run_id,
             agent_args=self.agent_args,
+            run_command=self.run_command,
             eval_results=eval_results,
             weave_client=weave_client,
             upload=upload

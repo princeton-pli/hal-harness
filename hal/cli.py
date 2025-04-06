@@ -30,6 +30,7 @@ from rich.box import ROUNDED
 import traceback
 from datetime import datetime
 from pathlib import Path
+import sys
 
 load_dotenv()
 
@@ -166,6 +167,10 @@ def main(
             continue_run=continue_run
         )
         
+        # get exact command used to run the evaluation from click 
+        run_command = " ".join(["hal-eval"] + sys.argv[1:])
+        
+        
         if is_inspect_benchmark(benchmark):
             # if agent_function and is_inspect_solver(agent_function, agent_dir):
             # Use original inspect_evaluate for solver agents
@@ -185,7 +190,8 @@ def main(
                 conda_env_name=conda_env_name,
                 vm=vm,
                 docker=docker,
-                inspect_eval_args=inspect_eval_args
+                inspect_eval_args=inspect_eval_args,
+                run_command=run_command
             )
             # else:
             #     # Use AgentRunner with InspectBenchmark for non-solver agents
@@ -230,7 +236,8 @@ def main(
                     use_docker=docker,
                     max_concurrent=max_concurrent,
                     conda_env=conda_env_name,
-                    continue_run=continue_run
+                    continue_run=continue_run,
+                    run_command=run_command
                 )
 
                 # Run evaluation

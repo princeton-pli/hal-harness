@@ -23,11 +23,11 @@ from .inspect.inspect import (
 from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename
-from .utils.weave_utils import comput_cost_from_inspect_usage
+from .utils.weave_utils import comput_cost_from_inspect_usage, get_weave_calls
 
 from .utils.logging_utils import print_success, print_results_table, print_warning
 
-from openai import AsyncOpenAI
+import datetime
 
 
 def inspect_evaluate(
@@ -46,6 +46,7 @@ def inspect_evaluate(
     docker: bool = False,
     continue_run: bool = False,
     inspect_eval_args: dict[str, Any] = None,
+    run_command: str = None
 ) -> None:
     """
     Evaluates a task using a specified model and agent, logs results, and optionally uploads them.
@@ -213,21 +214,29 @@ def inspect_evaluate(
             run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
         )
         
+        # get weave calls
+        raw_logging, first_call_timestamp, last_call_timestamp = get_weave_calls(weave_client)
+        
         # replace / in metrics with underscore
         inspect_eval_results_json = {
             key.replace("/", "_"): value 
             for key, value in inspect_eval_results_json.items()
         }
+        inspect_eval_results_json['total_time'] = (datetime.fromisoformat(last_call_timestamp) - datetime.fromisoformat(first_call_timestamp)).total_seconds()
+        
+        
 
         # Compose the final uploadable result
         eval_header_raw = eval_log
         del eval_header_raw.samples
         final_result = {
-            "config": {**eval_config, 'agent_args': agent_args},
+            "config": {**eval_config, 'agent_args': agent_args, 'run_command': run_command},
             "results": inspect_eval_results_json,
             "raw_eval_results": inspect_eval_results,            
-            "raw_logging_results": "Inspect logs are contained in raw_eval_results",
+            "raw_logging_results": raw_logging,
             "total_usage": inspect_eval_results['stats']['model_usage'],
+            "first_call_timestamp": first_call_timestamp,
+            "last_call_timestamp": last_call_timestamp
         }
 
         # Store the upload results locally

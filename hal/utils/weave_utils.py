@@ -67,6 +67,8 @@ MODEL_PRICES_DICT = {
                 "us.meta.llama3-3-70b-instruct-v1:0" : {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3}, 
                 "claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "anthropic/claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "together_ai/deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
+                "together_ai/deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
@@ -213,9 +215,12 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     
     return json_call
 
-def get_weave_calls(client) -> List[Dict[str, Any]]:
+def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
     print_step("Retrieving Weave traces...")
+    
+    first_call_timestamp = None
+    last_call_timestamp = None
     
     with create_progress() as progress:
         # Fetch calls
@@ -231,10 +236,14 @@ def get_weave_calls(client) -> List[Dict[str, Any]]:
             processed_call = process_weave_output(call)
             if processed_call:
                 processed_calls.append(processed_call)
+                if first_call_timestamp is None or processed_call['started_at'] < first_call_timestamp:
+                    first_call_timestamp = processed_call['started_at']
+                if last_call_timestamp is None or processed_call['started_at'] > last_call_timestamp:
+                    last_call_timestamp = processed_call['started_at']
             progress.update(task2, advance=1)
     
     console.print(f"[green]Total Weave traces: {len(processed_calls)}[/]")
-    return processed_calls
+    return processed_calls, first_call_timestamp, last_call_timestamp
 
 # def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
 #     """Get total cost and token usage for all Weave calls"""

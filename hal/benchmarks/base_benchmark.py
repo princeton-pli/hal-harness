@@ -44,6 +44,7 @@ class BaseBenchmark(ABC):
                        agent_name: str,
                        run_id: str, 
                        agent_args: Dict[str, Any],
+                       run_command: str,
                        eval_results: Dict[str, Any],
                        weave_client,
                        upload: bool = False) -> Dict[str, Any]:
@@ -66,7 +67,7 @@ class BaseBenchmark(ABC):
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
-        raw_logging = get_weave_calls(weave_client)
+        raw_logging, first_call_timestamp, last_call_timestamp = get_weave_calls(weave_client)
 
         # Prepare results summary
         results_summary = {
@@ -75,13 +76,19 @@ class BaseBenchmark(ABC):
                 'benchmark_name': self.benchmark_name,
                 'date': datetime.now().strftime("%Y-%m-%d"),
                 'run_id': run_id,
-                'agent_args': agent_args
+                'agent_args': agent_args,
+                'run_command': run_command
             },
-            "results": {**self.get_metrics(eval_results), 'total_cost': total_cost},
+            "results": {**self.get_metrics(eval_results), 
+                        'total_cost': total_cost, 
+                        'total_time': (datetime.fromisoformat(last_call_timestamp) - datetime.fromisoformat(first_call_timestamp)).total_seconds()
+            },
             "raw_eval_results": inspect_eval_results if isinstance(eval_results, EvalLog) else eval_results,
             "raw_logging_results": raw_logging,
             "total_usage": total_usage,
-            'total_cost': total_cost
+            'total_cost': total_cost,
+            'first_call_timestamp': first_call_timestamp,
+            'last_call_timestamp': last_call_timestamp
         }
         
         # Save full results
