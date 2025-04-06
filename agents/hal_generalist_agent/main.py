@@ -1,16 +1,13 @@
-# Disclaimer: this is not a functional agent and is only for demonstration purposes. This implementation is just a single model call.
+
 from typing import Optional, List, Dict, Any
 import tiktoken
-import requests
+from functools import partial
 
-# from smolagents.agents import ToolCallingAgent
-from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 import subprocess
 from pathlib import Path
 import re
 
-from prompts import USACO_PROMPT, PATCH_EXAMPLE
-from tau_bench.envs.airline.tools import ALL_TOOLS
+from prompts import USACO_PROMPT
 from tau_bench.envs import get_env
 from tau_bench.types import Action
 import json
@@ -18,6 +15,7 @@ import os
 
 from typing import Optional
 
+from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 from smolagents import Tool
 from smolagents.models import MessageRole, Model
 
@@ -394,19 +392,25 @@ CORE_TOOLS = [
     query_vision_language_model,
 ]
 
-
-
-
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
     
+    import litellm
+    litellm.drop_params = True
+    model_params = {}
+    model_params['model_id'] = kwargs['model_name']
+    if 'reasoning_effort' in kwargs:
+        model_params['reasoning_effort'] = kwargs['reasoning_effort']
+    if 'temperature' in kwargs:
+        model_params['temperature'] = kwargs['temperature']
+        
     task_id, task = list(input.items())[0]
     
     results = {}
     
-    model = LiteLLMModel(model_id=kwargs['model_name'])
+    model = LiteLLMModel(**model_params)
 
     agent = ToolCallingAgent(
     tools=CORE_TOOLS,
@@ -543,8 +547,8 @@ Here is the question:
 {task['Question']}"""
         response = agent.run(prompt)
         steps = agent.to_json()
-            with open("steps.json", "w") as f:
-                json.dump(steps, f)
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
         return {task_id: response}
     
     
