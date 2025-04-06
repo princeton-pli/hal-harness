@@ -1,17 +1,21 @@
-from tau_bench.envs import get_env
-from tau_bench.agents.base import Agent
-from tau_bench.types import EnvRunResult, RunConfig, Action
-
-from tau_bench.agents.few_shot_agent import FewShotToolCallingAgent
 import json
-from openai import OpenAI
+from functools import partial
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert 'provider' in kwargs, 'provider is required. choose from openai or anthropic'
-    client = OpenAI()
     task_id = list(input.keys())[0]
+    
+    import litellm
+    litellm.drop_params = True
+    if 'reasoning_effort' in kwargs:
+        print(f"Setting reasoning_effort to {kwargs['reasoning_effort']}")
+        litellm.completion = partial(litellm.completion, reasoning_effort=kwargs['reasoning_effort'])
+        litellm.acompletion = partial(litellm.acompletion, reasoning_effort=kwargs['reasoning_effort'])
+        
+    from tau_bench.envs import get_env
+    from tau_bench.agents.few_shot_agent import FewShotToolCallingAgent
     
     ### ENV SETUP (usually this should be untouched) ###
     isolated_env = get_env(
@@ -22,9 +26,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         input[task_id]['user_provider'],
         input[task_id]['task_index']
     )
-    
-    # get instruction from environment
-    instruction = isolated_env.reset(input[task_id]['task_index']).observation    
     
     ### YOUR AGENT CODE HERE ###
     if kwargs['benchmark_name'] == 'taubench_airline':
