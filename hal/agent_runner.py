@@ -4,7 +4,6 @@ import weave
 import time
 from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
-from .utils.vm_runner import VMRunner
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
 from .utils.logging_utils import print_step, print_success, print_error, create_progress, console, log_warning, print_warning
@@ -62,6 +61,7 @@ class AgentRunner:
         
         # Initialize appropriate runner with benchmark
         if use_vm:
+            from .utils.vm_runner import VMRunner
             self.runner = VMRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
