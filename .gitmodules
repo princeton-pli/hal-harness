@@ -25,10 +25,6 @@
 [submodule "hal/benchmarks/scienceagentbench/ScienceAgentBench"]
 	path = hal/benchmarks/scienceagentbench/ScienceAgentBench
 	url = https://github.com/OSU-NLP-Group/ScienceAgentBench.git
-[submodule "agents/SWE-agent-v1.0"]
-	path = agents/SWE-agent-v1.0
-	url = git@github.com:boyiwei/SWE-agent.git
-	branch = swe-agent-v1.0-hal
 [submodule "agents/open_deep_research"]
 	path = agents/open_deep_research
 	url = https://github.com/benediktstroebl/smolagents.git
