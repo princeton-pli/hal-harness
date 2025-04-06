@@ -29,3 +29,6 @@
 	path = agents/open_deep_research
 	url = https://github.com/benediktstroebl/smolagents.git
 	branch = open_deep_research
+[submodule "agents/SWE-agent-v1.0"]
+	path = agents/SWE-agent-v1.0
+	url = https://github.com/boyiwei/SWE-agent.git
