@@ -215,14 +215,14 @@ def inspect_evaluate(
         )
         
         # get weave calls
-        raw_logging, first_call_timestamp, last_call_timestamp = get_weave_calls(weave_client)
+        raw_logging, latency_dict = get_weave_calls(weave_client)
         
         # replace / in metrics with underscore
         inspect_eval_results_json = {
             key.replace("/", "_"): value 
             for key, value in inspect_eval_results_json.items()
         }
-        inspect_eval_results_json['total_time'] = (datetime.fromisoformat(last_call_timestamp) - datetime.fromisoformat(first_call_timestamp)).total_seconds()
+        inspect_eval_results_json['latencies'] = latency_dict
         
         
 
@@ -235,8 +235,6 @@ def inspect_evaluate(
             "raw_eval_results": inspect_eval_results,            
             "raw_logging_results": raw_logging,
             "total_usage": inspect_eval_results['stats']['model_usage'],
-            "first_call_timestamp": first_call_timestamp,
-            "last_call_timestamp": last_call_timestamp
         }
 
         # Store the upload results locally

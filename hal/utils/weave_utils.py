@@ -6,6 +6,7 @@ import json
 from typing import Dict, Any, Tuple, List, Optional
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from .logging_utils import print_step, print_warning, console, create_progress
+from datetime import datetime
 
 MODEL_PRICES_DICT = {
                 "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
@@ -219,8 +220,8 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
     print_step("Retrieving Weave traces...")
     
-    first_call_timestamp = None
-    last_call_timestamp = None
+    # dict to store latency for each task
+    latency_dict = {}
     
     with create_progress() as progress:
         # Fetch calls
@@ -233,17 +234,26 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
         task2 = progress.add_task("Processing calls... (this can take a while)", total=len(calls))
         
         for call in calls:
+            task_id = call.attributes['weave_task_id']
             processed_call = process_weave_output(call)
             if processed_call:
                 processed_calls.append(processed_call)
-                if first_call_timestamp is None or processed_call['started_at'] < first_call_timestamp:
-                    first_call_timestamp = processed_call['started_at']
-                if last_call_timestamp is None or processed_call['started_at'] > last_call_timestamp:
-                    last_call_timestamp = processed_call['started_at']
+                
+                if task_id not in latency_dict:
+                    latency_dict[task_id] = {'first_call_timestamp': processed_call['started_at'], 'last_call_timestamp': processed_call['started_at']}
+                else:
+                    if processed_call['started_at'] < latency_dict[task_id]['first_call_timestamp']:
+                        latency_dict[task_id]['first_call_timestamp'] = processed_call['started_at']
+                    if processed_call['started_at'] > latency_dict[task_id]['last_call_timestamp']:
+                        latency_dict[task_id]['last_call_timestamp'] = processed_call['started_at']
+                    
             progress.update(task2, advance=1)
+            
+    for task_id in latency_dict:
+        latency_dict[task_id]['total_time'] = (datetime.fromisoformat(latency_dict[task_id]['last_call_timestamp']) - datetime.fromisoformat(latency_dict[task_id]['first_call_timestamp'])).total_seconds()
     
     console.print(f"[green]Total Weave traces: {len(processed_calls)}[/]")
-    return processed_calls, first_call_timestamp, last_call_timestamp
+    return processed_calls, latency_dict
 
 # def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
 #     """Get total cost and token usage for all Weave calls"""

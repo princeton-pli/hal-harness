@@ -67,7 +67,7 @@ class BaseBenchmark(ABC):
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
-        raw_logging, first_call_timestamp, last_call_timestamp = get_weave_calls(weave_client)
+        raw_logging, latency_dict = get_weave_calls(weave_client)
 
         # Prepare results summary
         results_summary = {
@@ -81,14 +81,12 @@ class BaseBenchmark(ABC):
             },
             "results": {**self.get_metrics(eval_results), 
                         'total_cost': total_cost, 
-                        'total_time': (datetime.fromisoformat(last_call_timestamp) - datetime.fromisoformat(first_call_timestamp)).total_seconds()
+                        'latencies': latency_dict
             },
             "raw_eval_results": inspect_eval_results if isinstance(eval_results, EvalLog) else eval_results,
             "raw_logging_results": raw_logging,
             "total_usage": total_usage,
             'total_cost': total_cost,
-            'first_call_timestamp': first_call_timestamp,
-            'last_call_timestamp': last_call_timestamp
         }
         
         # Save full results
