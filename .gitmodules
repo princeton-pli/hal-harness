@@ -32,3 +32,7 @@
 [submodule "agents/SWE-agent-v1.0"]
 	path = agents/SWE-agent-v1.0
 	url = https://github.com/boyiwei/SWE-agent.git
+[submodule "agents/Enigma"]
+	path = agents/Enigma
+	url = https://github.com/boyiwei/SWE-agent.git
+	branch = enigma-agent-hal
