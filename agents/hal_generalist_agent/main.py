@@ -940,8 +940,10 @@ Here is the question:
             
         
         # get instruction from environment
-        instruction = isolated_env.reset(input[task_id]['task_index']).observation    
-        
+        user_question = isolated_env.reset(input[task_id]['task_index']).observation    
+        wiki = isolated_env.wiki
+        with open('wiki.md', 'w') as f:
+            f.write(wiki)
         agent = ToolCallingAgent(
         tools=CORE_TOOLS + [
             book_reservation,
@@ -965,6 +967,10 @@ Here is the question:
         model=model)
         
         ### YOUR AGENT CODE HERE ###
+        instruction = f"""I added some useful information to the wiki in `wiki.md`. Please read it and then answer the user's question.
+
+User's question: {user_question}
+        """
         response = agent.run(instruction)
         steps = agent.to_json()
         with open("steps.json", "w") as f:
