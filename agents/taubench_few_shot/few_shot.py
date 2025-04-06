@@ -2,7 +2,7 @@ from tau_bench.envs import get_env
 from tau_bench.agents.base import Agent
 from tau_bench.types import EnvRunResult, RunConfig, Action
 
-from tau_bench.agents.tool_calling_agent import FewShotToolCallingAgent
+from tau_bench.agents.few_shot_agent import FewShotToolCallingAgent
 import json
 from openai import OpenAI
 
@@ -34,9 +34,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         with open('MockRetailDomainEnv-few_shot.jsonl', "r") as f:
             few_shot_displays = [json.loads(line)["messages_display"] for line in f]
 
-    return FewShotToolCallingAgent(
-        tools_info=tools_info,
-        wiki=wiki,
+    agent = FewShotToolCallingAgent(
+        tools_info=isolated_env.tools_info,
+        wiki=isolated_env.wiki,
         few_shot_displays=few_shot_displays,
         model=kwargs['model_name'],
         provider=kwargs['provider'],
