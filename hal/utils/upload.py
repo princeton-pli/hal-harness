@@ -98,7 +98,7 @@ def upload_results(benchmark, file, directory):
                     api.upload_file(
                         path_or_fileobj=temp_zip_path,
                         path_in_repo=f"{zip_name}.zip",
-                        repo_id="agent-evals/agent_traces",
+                        repo_id="agent-evals/hal_traces",
                         repo_type="dataset",
                         commit_message=f"Add encrypted results for {zip_name}.",
                     )
