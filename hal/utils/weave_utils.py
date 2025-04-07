@@ -86,6 +86,16 @@ def fetch_weave_calls(client) -> List[Dict[str, Any]]:
     
     return calls
 
+def get_call_ids(task_id, client):
+    """Get all call ids for calls given a task id"""
+    calls = client.get_calls()
+    task_calls = [c for c in calls if c.attributes['weave_task_id'] == task_id]
+    return [c.id for c in task_calls]
+
+def delete_calls(call_ids, client):
+    """Delete calls given a list of call ids"""
+    client.delete_calls(call_ids=call_ids)
+
 
 def find_usage_dict_recursive(data):
     """Recursively searches for all values associated with the key 'usage' and returns them in a list."""

@@ -22,7 +22,7 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 ENV PATH /opt/conda/bin:$PATH
 
 # Install weave
-RUN pip install weave==0.51.32
+RUN pip install weave==0.51.41
 
 # Set working directory
 WORKDIR /workspace
