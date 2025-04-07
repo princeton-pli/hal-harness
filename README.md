@@ -268,6 +268,10 @@ botocore==1.37.1
 litellm==1.52.8
 ```
 
+### [AssistantBench](https://github.com/oriyor/assistantbench)
+- Benchmark for agents' ability to solve realistic and time-consuming web tasks
+- Our benchmark implementation uses the scoring system implemented in Browsergym, see more information at: (https://github.com/ServiceNow/BrowserGym/tree/c3336ef61781ce39166ee6a9551dbfc8fac32ddc/browsergym/assistantbench)
+
 ## How Do I Run Evaluations?
 
 The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:

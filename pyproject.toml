@@ -34,6 +34,9 @@ taubench = [
 scicode = [
   "scicode @ git+https://github.com/peterkirgis/SciCode"
 ]
+assistantbench = [
+    browsergym-assistantbench
+]
 hal-agent = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
