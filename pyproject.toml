@@ -35,8 +35,16 @@ scicode = [
   "scicode @ git+https://github.com/peterkirgis/SciCode"
 ]
 hal-agent = [
-    "smolagents @ git+https://github.com/benediktstroebl/smolagents@0103ee9ef17d16a8fc7c8693c03f6dffc5d2dbe8",
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@3e187bda4dfa3e8936aebd44a579f6d1238ce55e",
+    "smolagents @ git+https://github.com/benediktstroebl/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "mammoth",
+    "python_pptx>=1.0.2",
+    "pdfminer>=20191125",
+    "pdfminer.six>=20240706",
+    "puremagic>=1.28",
+    "pydub",
+    "youtube_transcript_api>=0.6.2",
+    "SpeechRecognition",
 ]
 corebench = [
     "scipy>=1.15.2"
