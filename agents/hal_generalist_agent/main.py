@@ -22,6 +22,8 @@ from smolagents.models import MessageRole, Model
 from mdconvert import MarkdownConverter
 
 
+
+
 class TextInspectorTool(Tool):
     name = "inspect_file_as_text"
     description = """
@@ -292,9 +294,9 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
         return f"Error performing {command} operation: {str(e)}"
 
 @tool
-def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pycache__,*.bin,*.exe,*.dll,*.so") -> str:
+def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pycache__,*.bin,*.exe,*.dll,*.so") -> str:
     """
-    Search files in the current directory and subdirectories for specific content.
+    Search files in the current directory and subdirectories for specific content. This will only search the content of the files, not the files themselves.
     Args:
         query: The search term or regex pattern to look for
         exclude_pattern: Comma-separated file patterns to exclude from search (default: binaries and cache files)
@@ -380,17 +382,7 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
     
     except Exception as e:
         return f"Error searching files: {str(e)}"
-    
-CORE_TOOLS = [
-    DuckDuckGoSearchTool(),
-    VisitWebpageTool(),
-    PythonInterpreterTool(),
-    execute_bash,
-    TextInspectorTool(),
-    edit_file,
-    file_search,
-    query_vision_language_model,
-]
+
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
@@ -411,6 +403,17 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     results = {}
     
     model = LiteLLMModel(**model_params)
+    
+    CORE_TOOLS = [
+        DuckDuckGoSearchTool(),
+        VisitWebpageTool(),
+        PythonInterpreterTool(),
+        execute_bash,
+        TextInspectorTool(model=model, text_limit=500),
+        edit_file,
+        file_content_search,
+        query_vision_language_model,
+    ]
 
     agent = ToolCallingAgent(
     tools=CORE_TOOLS,
@@ -420,7 +423,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     if kwargs['benchmark_name'] == 'usaco':
         prompt = USACO_PROMPT.format(task['description'])
-        response = agent.run(prompt)
+        response = asyncio.run(agent.run(prompt))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -431,14 +434,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
         
-        response = agent.run(task['prompt'])
+        response = asyncio.run(agent.run(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = agent.run(task['prompt'])
+        response = asyncio.run(agent.run(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -446,7 +449,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = agent.run(task['prompt'])
+        response = asyncio.run(agent.run(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -467,13 +470,13 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         
         
         
-        response = agent.run(
+        response = asyncio.run(agent.run(
             f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
             
 Problem: {task['problem_statement']}
             
 The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
-        )
+        ))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -501,7 +504,7 @@ The code of the project is cloned to your current directory. Please respond with
                 max_steps=80,
                 model=model)
             
-            response = agent.run(instruction)
+            response = asyncio.run(agent.run(instruction))
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
@@ -526,7 +529,7 @@ The code of the project is cloned to your current directory. Please respond with
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
             instruction = world.task.instruction # To see task instruction.
             
-            response = agent.run(instruction)
+            response = asyncio.run(agent.run(instruction))
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
@@ -545,7 +548,7 @@ The code of the project is cloned to your current directory. Please respond with
 Here is the question:
 
 {task['Question']}"""
-        response = agent.run(prompt)
+        response = asyncio.run(agent.run(prompt))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -941,6 +944,21 @@ Here is the question:
                 })
             observation = isolated_env.step(action)
             return observation.observation, observation.done
+        
+        class FinalAnswerTool(Tool):
+            name = "final_answer"
+            description = "Provides a final answer to the given problem."
+            inputs = {"answer": {"type": "any", "description": "The final answer to the problem"}}
+            output_type = "any"
+
+            def forward(self, answer: Any) -> Any:
+                action = Action(
+                name='respond',
+                kwargs={
+                    'content': answer
+                })
+                observation = isolated_env.step(action)
+                return observation
             
         
         # get instruction from environment
@@ -970,12 +988,22 @@ Here is the question:
         max_steps=80,
         model=model)
         
+        # agent.tools.setdefault(FinalAnswerTool())
+        
         ### YOUR AGENT CODE HERE ###
         instruction = f"""I added some useful information to the wiki in `wiki.md`. Please read it and then answer the user's question.
 
 User's question: {user_question}
         """
-        response = agent.run(instruction)
+        response = asyncio.run(agent.arun(instruction))
+        action = Action(
+                name='respond',
+                kwargs={
+                    'content': response
+                })
+        observation = isolated_env.step(action)
+        print("Final user's response: ", observation)
+        
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -1031,7 +1059,7 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         DuckDuckGoSearchTool(),
         VisitWebpageTool(),
         PythonInterpreterTool(),
-        TextInspectorTool(),
+        TextInspectorTool(model=model, text_limit=5000),
         execute_bash,
         file_search,
         query_vision_language_model
