@@ -398,6 +398,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if 'temperature' in kwargs:
         model_params['temperature'] = kwargs['temperature']
         
+    if 'gemini' in kwargs['model_name']:
+        model_params['model_id'] = kwargs['model_name'].replace('gemini/', 'openai/')
+        model_params['api_key'] = os.getenv('GEMINI_API_KEY')
+        model_params['api_base'] = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        
+    if 'together_ai' in kwargs['model_name']:
+        model_params['model_id'] = kwargs['model_name'].replace('together_ai/', 'openai/')
+        model_params['api_key'] = os.environ.get("TOGETHERAI_API_KEY")
+        model_params['api_base'] = "https://api.together.xyz/v1"
+        
     task_id, task = list(input.items())[0]
     
     results = {}
@@ -409,7 +419,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         VisitWebpageTool(),
         PythonInterpreterTool(),
         execute_bash,
-        TextInspectorTool(model=model, text_limit=500),
+        TextInspectorTool(model=model, text_limit=5000),
         edit_file,
         file_content_search,
         query_vision_language_model,
@@ -1061,7 +1071,7 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         PythonInterpreterTool(),
         TextInspectorTool(model=model, text_limit=5000),
         execute_bash,
-        file_search,
+        file_content_search,
         query_vision_language_model
     ]
         
