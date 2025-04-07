@@ -67,7 +67,7 @@ def upload_results(benchmark, file, directory):
             file_paths = [file]
             
         else:  # directory option
-            file_paths = list(find_upload_files(directory, require_upload_suffix=False))
+            file_paths = list(find_upload_files(directory, require_upload_suffix=True))
         
         if not file_paths:
             print_error(f"No upload files found")
