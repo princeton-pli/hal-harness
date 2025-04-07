@@ -433,7 +433,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     if kwargs['benchmark_name'] == 'usaco':
         prompt = USACO_PROMPT.format(task['description'])
-        response = asyncio.run(agent.run(prompt))
+        response = asyncio.run(agent.arun(prompt))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -444,14 +444,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
         
-        response = asyncio.run(agent.run(task['prompt']))
+        response = asyncio.run(agent.arun(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = asyncio.run(agent.run(task['prompt']))
+        response = asyncio.run(agent.arun(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -459,7 +459,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = asyncio.run(agent.run(task['prompt']))
+        response = asyncio.run(agent.arun(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -480,7 +480,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         
         
         
-        response = asyncio.run(agent.run(
+        response = asyncio.run(agent.arun(
             f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
             
 Problem: {task['problem_statement']}
@@ -514,7 +514,7 @@ The code of the project is cloned to your current directory. Please respond with
                 max_steps=80,
                 model=model)
             
-            response = asyncio.run(agent.run(instruction))
+            response = asyncio.run(agent.arun(instruction))
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
@@ -539,7 +539,7 @@ The code of the project is cloned to your current directory. Please respond with
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
             instruction = world.task.instruction # To see task instruction.
             
-            response = asyncio.run(agent.run(instruction))
+            response = asyncio.run(agent.arun(instruction))
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
@@ -558,7 +558,7 @@ The code of the project is cloned to your current directory. Please respond with
 Here is the question:
 
 {task['Question']}"""
-        response = asyncio.run(agent.run(prompt))
+        response = asyncio.run(agent.arun(prompt))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
