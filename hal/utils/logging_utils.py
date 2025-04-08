@@ -223,6 +223,12 @@ def _print_results_table(results: dict[str, Any]) -> None:
                 table.add_row("successful_tasks", str(len(value)))
             elif key == "failed_tasks" and value:
                 table.add_row("failed_tasks", str(len(value)))
+            elif key == "latencies" and value:
+                # compute average total_time across all tasks
+                total_time = 0
+                for task_id, latency in value.items():
+                    total_time += latency['total_time']
+                table.add_row("average_total_time", str(total_time / len(value)))
     
     console.print(table)
 
@@ -250,6 +256,12 @@ def log_results_table(results: dict[str, Any]) -> None:
                 log_data["results"]["successful_tasks"] = len(value)
             elif key == "failed_tasks" and value:
                 log_data["results"]["failed_tasks"] = len(value)
+            elif key == "latencies" and value:
+                # compute average total_time across all tasks
+                total_time = 0
+                for task_id, latency in value.items():
+                    total_time += latency['total_time']
+                log_data["results"]["average_total_time"] = total_time / len(value)
     
     # Also log to main log file
     main_logger.info(f"Results: {json.dumps(log_data['results'], indent=2)}")

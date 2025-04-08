@@ -1,16 +1,13 @@
-# Disclaimer: this is not a functional agent and is only for demonstration purposes. This implementation is just a single model call.
+
 from typing import Optional, List, Dict, Any
 import tiktoken
-import requests
+from functools import partial
 
-# from smolagents.agents import ToolCallingAgent
-from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 import subprocess
 from pathlib import Path
 import re
 
-from prompts import USACO_PROMPT, PATCH_EXAMPLE
-from tau_bench.envs.airline.tools import ALL_TOOLS
+from prompts import USACO_PROMPT
 from tau_bench.envs import get_env
 from tau_bench.types import Action
 import json
@@ -18,10 +15,13 @@ import os
 
 from typing import Optional
 
+from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 from smolagents import Tool
 from smolagents.models import MessageRole, Model
 
 from mdconvert import MarkdownConverter
+
+
 
 
 class TextInspectorTool(Tool):
@@ -294,9 +294,9 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
         return f"Error performing {command} operation: {str(e)}"
 
 @tool
-def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pycache__,*.bin,*.exe,*.dll,*.so") -> str:
+def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pycache__,*.bin,*.exe,*.dll,*.so") -> str:
     """
-    Search files in the current directory and subdirectories for specific content.
+    Search files in the current directory and subdirectories for specific content. This will only search the content of the files, not the files themselves.
     Args:
         query: The search term or regex pattern to look for
         exclude_pattern: Comma-separated file patterns to exclude from search (default: binaries and cache files)
@@ -382,19 +382,6 @@ def file_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pyc
     
     except Exception as e:
         return f"Error searching files: {str(e)}"
-    
-CORE_TOOLS = [
-    DuckDuckGoSearchTool(),
-    VisitWebpageTool(),
-    PythonInterpreterTool(),
-    execute_bash,
-    TextInspectorTool(),
-    edit_file,
-    file_search,
-    query_vision_language_model,
-]
-
-
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
@@ -402,13 +389,43 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
     
+    import litellm
+    litellm.drop_params = True
+    model_params = {}
+    model_params['model_id'] = kwargs['model_name']
+    if 'reasoning_effort' in kwargs:
+        model_params['reasoning_effort'] = kwargs['reasoning_effort']
+    if 'temperature' in kwargs:
+        model_params['temperature'] = kwargs['temperature']
+        
+    if 'gemini' in kwargs['model_name']:
+        model_params['model_id'] = kwargs['model_name'].replace('gemini/', 'openai/')
+        model_params['api_key'] = os.getenv('GEMINI_API_KEY')
+        model_params['api_base'] = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        
+    if 'together_ai' in kwargs['model_name']:
+        model_params['model_id'] = kwargs['model_name'].replace('together_ai/', 'openai/')
+        model_params['api_key'] = os.environ.get("TOGETHERAI_API_KEY")
+        model_params['api_base'] = "https://api.together.xyz/v1"
+        
     task_id, task = list(input.items())[0]
     
     results = {}
     
-    model = LiteLLMModel(model_id=kwargs['model_name'])
+    model = LiteLLMModel(**model_params)
+    
+    CORE_TOOLS = [
+        DuckDuckGoSearchTool(),
+        VisitWebpageTool(),
+        PythonInterpreterTool(),
+        execute_bash,
+        TextInspectorTool(model=model, text_limit=5000),
+        edit_file,
+        file_content_search,
+        query_vision_language_model,
+    ]
 
-    agent = ToolCallingAgent(
+    agent = CodeAgent(
     tools=CORE_TOOLS,
     planning_interval=4,
     max_steps=80,
@@ -416,7 +433,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     if kwargs['benchmark_name'] == 'usaco':
         prompt = USACO_PROMPT.format(task['description'])
-        response = agent.run(prompt)
+        response = asyncio.run(agent.arun(prompt))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -427,14 +444,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
         
-        response = agent.run(task['prompt'])
+        response = asyncio.run(agent.arun(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = agent.run(task['prompt'])
+        response = asyncio.run(agent.arun(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -442,7 +459,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = agent.run(task['prompt'])
+        response = asyncio.run(agent.arun(task['prompt']))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -463,13 +480,13 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         
         
         
-        response = agent.run(
+        response = asyncio.run(agent.arun(
             f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
             
 Problem: {task['problem_statement']}
             
 The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
-        )
+        ))
         steps = agent.to_json()
         with open("steps.json", "w") as f:
             json.dump(steps, f)
@@ -491,13 +508,13 @@ The code of the project is cloned to your current directory. Please respond with
                 """
                 return world.execute(command)
             
-            agent = ToolCallingAgent(
+            agent = CodeAgent(
                 tools=CORE_TOOLS + [execute_in_world],
                 planning_interval=4,
                 max_steps=80,
                 model=model)
             
-            response = agent.run(instruction)
+            response = asyncio.run(agent.arun(instruction))
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
@@ -513,7 +530,7 @@ The code of the project is cloned to your current directory. Please respond with
             """
             return world.execute(command)
         
-        agent = ToolCallingAgent(
+        agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
             max_steps=80,
@@ -522,7 +539,7 @@ The code of the project is cloned to your current directory. Please respond with
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
             instruction = world.task.instruction # To see task instruction.
             
-            response = agent.run(instruction)
+            response = asyncio.run(agent.arun(instruction))
             steps = agent.to_json()
             with open("steps.json", "w") as f:
                 json.dump(steps, f)
@@ -541,10 +558,10 @@ The code of the project is cloned to your current directory. Please respond with
 Here is the question:
 
 {task['Question']}"""
-        response = agent.run(prompt)
+        response = asyncio.run(agent.arun(prompt))
         steps = agent.to_json()
-            with open("steps.json", "w") as f:
-                json.dump(steps, f)
+        with open("steps.json", "w") as f:
+            json.dump(steps, f)
         return {task_id: response}
     
     
@@ -600,7 +617,7 @@ Here is the question:
 
             Returns:
                 str: A JSON string of the reservation details if booking is successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             
             action = Action(
@@ -620,7 +637,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
         
         @tool
         def calculate(expression: str) -> str:
@@ -633,7 +650,7 @@ Here is the question:
             
             Returns:
                 str: The result of the calculation or an error message if the calculation fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='calculate',
@@ -642,7 +659,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def cancel_reservation(reservation_id: str) -> str:
@@ -654,7 +671,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation message if cancellation is successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='cancel_reservation',
@@ -663,7 +680,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def get_reservation_details(reservation_id: str) -> str:
@@ -675,7 +692,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of the reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='get_reservation_details',
@@ -684,7 +701,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def get_user_details(user_id: str) -> str:
@@ -696,7 +713,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of the user details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='get_user_details',
@@ -705,7 +722,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def list_all_airports() -> str:
@@ -714,14 +731,14 @@ Here is the question:
             
             Returns:
                 str: A JSON string containing all airports and their cities if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='list_all_airports',
                 kwargs={}
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def search_direct_flight(origin: str, destination: str, date: str) -> str:
@@ -735,7 +752,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of available direct flights if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='search_direct_flight',
@@ -746,7 +763,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def search_onestop_flight(origin: str, destination: str, date: str) -> str:
@@ -760,7 +777,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of available one-stop flights if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='search_onestop_flight',
@@ -771,7 +788,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def send_certificate(user_id: str, amount: float) -> str:
@@ -784,7 +801,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation message if the certificate is sent successfully, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='send_certificate',
@@ -794,7 +811,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def think(thought: str) -> str:
@@ -807,7 +824,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation that the thought was logged.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='think',
@@ -816,7 +833,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def transfer_to_human_agents(summary: str) -> str:
@@ -830,7 +847,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation that the user was transferred to a human agent.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='transfer_to_human_agents',
@@ -839,7 +856,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_baggages(reservation_id: str, total_baggages: int, nonfree_baggages: int, payment_id: str) -> str:
@@ -854,7 +871,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_baggages',
@@ -866,7 +883,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_flights(reservation_id: str, cabin: str, flights: List[Dict[str, str]], payment_id: str) -> str:
@@ -882,7 +899,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_flights',
@@ -894,7 +911,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_passengers(reservation_id: str, passengers: List[Dict[str, str]]) -> str:
@@ -907,7 +924,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_passengers',
@@ -917,7 +934,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
         
         @tool 
         def ask_user(question: str) -> str:
@@ -929,6 +946,7 @@ Here is the question:
                 
             Returns:
                 str: The user's response.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='respond',
@@ -936,13 +954,15 @@ Here is the question:
                     'content': question
                 })
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
             
         
         # get instruction from environment
-        instruction = isolated_env.reset(input[task_id]['task_index']).observation    
-        
-        agent = ToolCallingAgent(
+        user_question = isolated_env.reset(input[task_id]['task_index']).observation    
+        wiki = isolated_env.wiki
+        with open('wiki.md', 'w') as f:
+            f.write(wiki)
+        agent = CodeAgent(
         tools=CORE_TOOLS + [
             book_reservation,
             calculate,
@@ -964,11 +984,24 @@ Here is the question:
         max_steps=80,
         model=model)
         
+        
         ### YOUR AGENT CODE HERE ###
+        instruction = f"""I added some useful information to the wiki in `wiki.md`. Please read it and then answer the user's question.
+
+User's question: {user_question}
+        """
         response = agent.run(instruction)
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        action = Action(
+                name='respond',
+                kwargs={
+                    'content': response
+                })
+        observation = isolated_env.step(action)
+        print("Final user's response: ", observation)
+        
+        # steps = agent.to_json()
+        # with open("steps.json", "w") as f:
+        #     json.dump(steps, f)
             
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
@@ -1021,13 +1054,13 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         DuckDuckGoSearchTool(),
         VisitWebpageTool(),
         PythonInterpreterTool(),
-        TextInspectorTool(),
+        TextInspectorTool(model=model, text_limit=5000),
         execute_bash,
-        file_search,
+        file_content_search,
         query_vision_language_model
     ]
         
-    agent = ToolCallingAgent(
+    agent = CodeAgent(
     tools=CORE_TOOLS_INSPECT,
     planning_interval=4,
     max_steps=80,

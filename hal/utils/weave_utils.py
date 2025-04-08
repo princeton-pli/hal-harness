@@ -6,6 +6,7 @@ import json
 from typing import Dict, Any, Tuple, List, Optional
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from .logging_utils import print_step, print_warning, console, create_progress
+from datetime import datetime
 
 MODEL_PRICES_DICT = {
                 "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
@@ -67,6 +68,13 @@ MODEL_PRICES_DICT = {
                 "us.meta.llama3-3-70b-instruct-v1:0" : {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3}, 
                 "claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "anthropic/claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
+                "deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
+                "together_ai/deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
+                "together_ai/deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
+                "gemini/gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
+                "gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
+                "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
@@ -78,6 +86,16 @@ def fetch_weave_calls(client) -> List[Dict[str, Any]]:
     }))
     
     return calls
+
+def get_call_ids(task_id, client):
+    """Get all call ids for calls given a task id"""
+    calls = client.get_calls()
+    task_calls = [c for c in calls if c.attributes['weave_task_id'] == task_id]
+    return [c.id for c in task_calls]
+
+def delete_calls(call_ids, client):
+    """Delete calls given a list of call ids"""
+    client.delete_calls(call_ids=call_ids)
 
 
 def find_usage_dict_recursive(data):
@@ -213,9 +231,12 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     
     return json_call
 
-def get_weave_calls(client) -> List[Dict[str, Any]]:
+def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
     print_step("Retrieving Weave traces...")
+    
+    # dict to store latency for each task
+    latency_dict = {}
     
     with create_progress() as progress:
         # Fetch calls
@@ -228,13 +249,26 @@ def get_weave_calls(client) -> List[Dict[str, Any]]:
         task2 = progress.add_task("Processing calls... (this can take a while)", total=len(calls))
         
         for call in calls:
+            task_id = call.attributes['weave_task_id']
             processed_call = process_weave_output(call)
             if processed_call:
                 processed_calls.append(processed_call)
+                
+                if task_id not in latency_dict:
+                    latency_dict[task_id] = {'first_call_timestamp': processed_call['started_at'], 'last_call_timestamp': processed_call['started_at']}
+                else:
+                    if processed_call['started_at'] < latency_dict[task_id]['first_call_timestamp']:
+                        latency_dict[task_id]['first_call_timestamp'] = processed_call['started_at']
+                    if processed_call['started_at'] > latency_dict[task_id]['last_call_timestamp']:
+                        latency_dict[task_id]['last_call_timestamp'] = processed_call['started_at']
+                    
             progress.update(task2, advance=1)
+            
+    for task_id in latency_dict:
+        latency_dict[task_id]['total_time'] = (datetime.fromisoformat(latency_dict[task_id]['last_call_timestamp']) - datetime.fromisoformat(latency_dict[task_id]['first_call_timestamp'])).total_seconds()
     
     console.print(f"[green]Total Weave traces: {len(processed_calls)}[/]")
-    return processed_calls
+    return processed_calls, latency_dict
 
 # def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
 #     """Get total cost and token usage for all Weave calls"""

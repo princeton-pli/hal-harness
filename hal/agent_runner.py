@@ -4,7 +4,6 @@ import weave
 import time
 from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
-from .utils.vm_runner import VMRunner
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
 from .utils.logging_utils import print_step, print_success, print_error, create_progress, console, log_warning, print_warning
@@ -13,7 +12,7 @@ from rich.table import Table
 from rich.box import ROUNDED
 from .utils.logging_utils import terminal_print
 from .inspect.inspect import is_inspect_benchmark
-
+from .utils.weave_utils import get_call_ids, delete_calls
 class AgentRunner:
     """Handles running agents either locally or on VMs"""
 
@@ -28,7 +27,8 @@ class AgentRunner:
                  use_docker: bool = False,
                  max_concurrent: int = 1,
                  conda_env: Optional[str] = None,
-                 continue_run: bool = False):
+                 continue_run: bool = False,
+                 run_command: str = None):
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -51,6 +51,9 @@ class AgentRunner:
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
+        
+        
+        self.run_command = run_command
                 
         # Check if benchmark requires VM
         if self.benchmark.vm_only and not use_vm and not use_docker:
@@ -62,6 +65,7 @@ class AgentRunner:
         
         # Initialize appropriate runner with benchmark
         if use_vm:
+            from .utils.vm_runner import VMRunner
             self.runner = VMRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
@@ -146,6 +150,13 @@ class AgentRunner:
         dataset = self.benchmark.get_dataset()
         if self.continue_run:
             dataset = self.get_remaining_tasks(dataset)
+            
+        # delete previous calls from previous run if continuing for remaining tasks
+        if self.continue_run:
+            print_step("Cleaning up calls from previous run...")
+            for task_id in dataset:
+                call_ids = get_call_ids(task_id, weave_client)
+                delete_calls(call_ids, weave_client)
         
         if not dataset:
             print_warning("No remaining tasks to run")
@@ -232,6 +243,7 @@ class AgentRunner:
             agent_name=agent_name,
             run_id=self.run_id,
             agent_args=self.agent_args,
+            run_command=self.run_command,
             eval_results=eval_results,
             weave_client=weave_client,
             upload=upload
