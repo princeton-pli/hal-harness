@@ -114,6 +114,11 @@ This repository provides a standardized evaluation harness for reproducible agen
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
 - **Does not support arm64 machines**
 
+For SWE-bench Verified, you will need to install the SWE-bench benchmark specific dependencies:
+```bash
+pip install -e .[swebench]
+```
+
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
 - Supports local, Docker, and VM execution
