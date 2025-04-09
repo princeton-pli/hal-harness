@@ -132,6 +132,11 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
 - **Requires VM execution** (`--vm` flag mandatory)
 
+For AppWorld, you will need to install the AppWorld benchmark specific dependencies:
+```bash
+pip install -e .[appworld]
+```
+
 ### [CORE-bench](https://github.com/siegelz/core-bench)
 - Computational reproducibility benchmark for agents on real scientific papers
 - Supports fully parallelized evaluation on Azure VMs
@@ -156,6 +161,10 @@ For all SciCode benchmarks, you will need to download and extract the SciCode un
 
 1. Download the unit tests [here](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR)
 2. Move the file to `hal/benchmarks/SciCode/eval/data/`.
+3. Install benchmark specific dependencies:
+```bash
+pip install -e .[scicode]
+```
 
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
