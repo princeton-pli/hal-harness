@@ -63,7 +63,7 @@ class BaseBenchmark(ABC):
         else:
             results_path = os.path.join(run_dir, f"{run_id}.json")
             with open(results_path, 'w') as f:
-                json.dump(eval_results, f)
+                json.dump(eval_results, f, indent=2)
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
