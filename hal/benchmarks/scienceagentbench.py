@@ -60,8 +60,8 @@ class ScienceAgentBench(BaseBenchmark):
         # Optional: Set if benchmark requires VM execution
         self.vm_only = False
         # Optional: Path to VM setup script
-        self.setup_script = "hal/benchmarks/your_benchmark/setup.sh"
-        super().__init__(agent_dir, config)
+        self.setup_script = "hal/benchmarks/scienceagentbench/setup.sh"
+        super().__init__(agent_dir, config, setup_script=self.setup_script)
         
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent solutions"""
