@@ -11,7 +11,7 @@ from pathlib import Path
 
 # get the relative path of the directory where this file is located
 this_file_dir = os.path.dirname(os.path.relpath(__file__)).replace('\\', '/')
-benchmark_path = os.path.join(this_file_dir, 'scienceagentbench', 'benchmark')
+benchmark_path = os.path.join(this_file_dir, 'scienceagentbench', 'ScienceAgentBench', 'benchmark')
 
 submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
 sys.path.insert(0, submodule_path)
@@ -50,6 +50,12 @@ class ScienceAgentBench(BaseBenchmark):
             self.benchmark[task_id] = {}
             for key in task:
                 self.benchmark[task_id][key] = task[key]
+
+            dataset_path = os.path.join("benchmark/datasets/", task["dataset_folder_tree"].split("\n")[0][4:])
+            src_dataset_path = os.path.join(submodule_path, dataset_path)
+            self.benchmark[task_id]['files'] = {
+                dataset_path: src_dataset_path,
+            }
 
         # Optional: Set if benchmark requires VM execution
         self.vm_only = False
