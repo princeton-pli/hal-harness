@@ -28,7 +28,8 @@ class AgentRunner:
                  max_concurrent: int = 1,
                  conda_env: Optional[str] = None,
                  continue_run: bool = False,
-                 run_command: str = None):
+                 run_command: str = None,
+                 ignore_errors: bool = False):
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -94,6 +95,7 @@ class AgentRunner:
         self.use_vm = use_vm
         self.use_docker = use_docker
         self.continue_run = continue_run
+        self.ignore_errors = ignore_errors
         
         
 
@@ -148,11 +150,13 @@ class AgentRunner:
         
         # Get dataset and filter for remaining tasks if continuing
         dataset = self.benchmark.get_dataset()
-        if self.continue_run:
+        if self.continue_run and not self.ignore_errors:
             dataset = self.get_remaining_tasks(dataset)
+        elif self.continue_run and self.ignore_errors:
+            dataset = {}
             
         # delete previous calls from previous run if continuing for remaining tasks
-        if self.continue_run:
+        if self.continue_run and not self.ignore_errors:
             print_step("Cleaning up calls from previous run...")
             for task_id in dataset:
                 call_ids = get_call_ids(task_id, weave_client)
@@ -215,7 +219,7 @@ class AgentRunner:
         remaining = self.get_remaining_tasks(dataset)
         if len(remaining) > 0:
             # Create a more informative error message
-            print_error(f"Evaluation cannot proceed - {len(remaining)} tasks are incomplete")
+            print_warning(f"Warning - {len(remaining)} tasks are incomplete")
             
             # Create and display table of remaining tasks
             table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
@@ -227,8 +231,8 @@ class AgentRunner:
             with terminal_print():
                 console.print(table)
             
-            print_step("Use --continue-run flag to complete the remaining tasks. Exiting...")
-            sys.exit(1)
+            print_step("Use --continue-run flag to retry the remaining tasks. Exiting...")
+            # sys.exit(1)
             
         # stop weave logging before harness is run to avoid lm as judge to produce additional cost 
         weave.finish()
