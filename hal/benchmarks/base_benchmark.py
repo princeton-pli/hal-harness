@@ -13,7 +13,7 @@ from ..utils.utils import make_json_serializable
 class BaseBenchmark(ABC):
     """Base class for all benchmarks"""
     
-    def __init__(self, agent_dir: str, config: Dict[str, Any], vm_only: bool = False, setup_script: Optional[str] = None):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], requires_sandbox: bool = False, setup_script: Optional[str] = None):
         self.agent_dir = agent_dir
         self.config = config
         self.benchmark_name: str
@@ -22,7 +22,7 @@ class BaseBenchmark(ABC):
         self.base_results_dir = "results"
         self.benchmark_results_dir = os.path.join(self.base_results_dir, self.benchmark_name)
         self.agent_args: Dict[str, Any] = {}  # Store agent args
-        self.vm_only = vm_only # Whether benchmark requires VM execution
+        self.requires_sandbox = requires_sandbox # Whether benchmark requires VM execution
         
 
     @abstractmethod

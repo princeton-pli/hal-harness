@@ -14,8 +14,8 @@ class GaiaBenchmark(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'gaia'):
         self.benchmark_name = benchmark_name
         self.setup_script = None
-        self.vm_only = False
-        super().__init__(agent_dir, config, vm_only=self.vm_only, setup_script=self.setup_script)
+        self.requires_sandbox = False
+        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
     
         
         # Create benchmark dictionary

@@ -13,8 +13,8 @@ class TauBenchBenchmark(BaseBenchmark):
         self.benchmark_name = benchmark_name
         self.split = 'retail' if benchmark_name == 'taubench_retail' else 'airline'
         self.setup_script = 'hal/benchmarks/taubench/taubench_setup.sh'
-        self.vm_only = False
-        super().__init__(agent_dir, config, vm_only=self.vm_only, setup_script=self.setup_script)
+        self.requires_sandbox = False
+        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
     
         
         # Create benchmark dictionary

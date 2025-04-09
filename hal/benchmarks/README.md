@@ -30,7 +30,7 @@ class YourBenchmark(BaseBenchmark):
         self.benchmark: Dict[str, Any]
 
         # Optional: Set if benchmark requires VM execution
-        self.vm_only = False
+        self.requires_sandbox = False
         # Optional: Path to VM setup script
         self.setup_script = "hal/benchmarks/your_benchmark/setup.sh"
         super().__init__(agent_dir, config)
@@ -118,7 +118,7 @@ class SimpleMathBenchmark(BaseBenchmark):
 
 2. **Metrics**: `get_metrics()` calculates final metrics. This should always return a dictionary with at least the keys `accuracy`, `successful_tasks`, and `failed_tasks`.
 
-3. **VM Support**: Set `vm_only = True` if benchmark requires VM execution.
+3. **Sandbox Support**: Set `requires_sandbox = True` if benchmark requires sandbox execution.
 
 4. **Setup Script**: Provide `setup_script` for installing benchmark-specific dependencies on VMs.
 

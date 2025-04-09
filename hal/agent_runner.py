@@ -56,9 +56,9 @@ class AgentRunner:
         
         self.run_command = run_command
                 
-        # Check if benchmark requires VM
-        if self.benchmark.vm_only and not use_vm and not use_docker:
-            raise ValueError(f"Benchmark {benchmark_name} requires VM execution. Please use --vm or --docker flag.")
+        # Check if benchmark requires sandbox
+        if self.benchmark.requires_sandbox and not use_vm and not use_docker:
+            raise ValueError(f"Benchmark {benchmark_name} requires sandbox execution. Please use --vm or --docker flag.")
         
         
         # Set run ID
