@@ -15,7 +15,7 @@ import os
 
 from typing import Optional
 
-from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
+from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 from smolagents import Tool
 from smolagents.models import MessageRole, Model
 
@@ -425,7 +425,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         query_vision_language_model,
     ]
 
-    agent = ToolCallingAgent(
+    agent = CodeAgent(
     tools=CORE_TOOLS,
     planning_interval=4,
     max_steps=80,
@@ -508,7 +508,7 @@ The code of the project is cloned to your current directory. Please respond with
                 """
                 return world.execute(command)
             
-            agent = ToolCallingAgent(
+            agent = CodeAgent(
                 tools=CORE_TOOLS + [execute_in_world],
                 planning_interval=4,
                 max_steps=80,
@@ -530,7 +530,7 @@ The code of the project is cloned to your current directory. Please respond with
             """
             return world.execute(command)
         
-        agent = ToolCallingAgent(
+        agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
             max_steps=80,
@@ -617,7 +617,7 @@ Here is the question:
 
             Returns:
                 str: A JSON string of the reservation details if booking is successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             
             action = Action(
@@ -637,7 +637,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
         
         @tool
         def calculate(expression: str) -> str:
@@ -650,7 +650,7 @@ Here is the question:
             
             Returns:
                 str: The result of the calculation or an error message if the calculation fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='calculate',
@@ -659,7 +659,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def cancel_reservation(reservation_id: str) -> str:
@@ -671,7 +671,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation message if cancellation is successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='cancel_reservation',
@@ -680,7 +680,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def get_reservation_details(reservation_id: str) -> str:
@@ -692,7 +692,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of the reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='get_reservation_details',
@@ -701,7 +701,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def get_user_details(user_id: str) -> str:
@@ -713,7 +713,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of the user details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='get_user_details',
@@ -722,7 +722,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def list_all_airports() -> str:
@@ -731,14 +731,14 @@ Here is the question:
             
             Returns:
                 str: A JSON string containing all airports and their cities if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='list_all_airports',
                 kwargs={}
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def search_direct_flight(origin: str, destination: str, date: str) -> str:
@@ -752,7 +752,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of available direct flights if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='search_direct_flight',
@@ -763,7 +763,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def search_onestop_flight(origin: str, destination: str, date: str) -> str:
@@ -777,7 +777,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of available one-stop flights if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='search_onestop_flight',
@@ -788,7 +788,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def send_certificate(user_id: str, amount: float) -> str:
@@ -801,7 +801,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation message if the certificate is sent successfully, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='send_certificate',
@@ -811,7 +811,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def think(thought: str) -> str:
@@ -824,7 +824,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation that the thought was logged.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='think',
@@ -833,7 +833,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def transfer_to_human_agents(summary: str) -> str:
@@ -847,7 +847,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation that the user was transferred to a human agent.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='transfer_to_human_agents',
@@ -856,7 +856,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_baggages(reservation_id: str, total_baggages: int, nonfree_baggages: int, payment_id: str) -> str:
@@ -871,7 +871,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_baggages',
@@ -883,7 +883,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_flights(reservation_id: str, cabin: str, flights: List[Dict[str, str]], payment_id: str) -> str:
@@ -899,7 +899,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_flights',
@@ -911,7 +911,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_passengers(reservation_id: str, passengers: List[Dict[str, str]]) -> str:
@@ -924,7 +924,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_passengers',
@@ -934,7 +934,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
         
         @tool 
         def ask_user(question: str) -> str:
@@ -946,6 +946,7 @@ Here is the question:
                 
             Returns:
                 str: The user's response.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='respond',
@@ -953,22 +954,7 @@ Here is the question:
                     'content': question
                 })
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
-        
-        class FinalAnswerTool(Tool):
-            name = "final_answer"
-            description = "Provides a final answer to the given problem."
-            inputs = {"answer": {"type": "any", "description": "The final answer to the problem"}}
-            output_type = "any"
-
-            def forward(self, answer: Any) -> Any:
-                action = Action(
-                name='respond',
-                kwargs={
-                    'content': answer
-                })
-                observation = isolated_env.step(action)
-                return observation
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
             
         
         # get instruction from environment
@@ -976,7 +962,7 @@ Here is the question:
         wiki = isolated_env.wiki
         with open('wiki.md', 'w') as f:
             f.write(wiki)
-        agent = ToolCallingAgent(
+        agent = CodeAgent(
         tools=CORE_TOOLS + [
             book_reservation,
             calculate,
@@ -998,14 +984,13 @@ Here is the question:
         max_steps=80,
         model=model)
         
-        # agent.tools.setdefault(FinalAnswerTool())
         
         ### YOUR AGENT CODE HERE ###
         instruction = f"""I added some useful information to the wiki in `wiki.md`. Please read it and then answer the user's question.
 
 User's question: {user_question}
         """
-        response = asyncio.run(agent.arun(instruction))
+        response = agent.run(instruction)
         action = Action(
                 name='respond',
                 kwargs={
@@ -1014,9 +999,9 @@ User's question: {user_question}
         observation = isolated_env.step(action)
         print("Final user's response: ", observation)
         
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        # steps = agent.to_json()
+        # with open("steps.json", "w") as f:
+        #     json.dump(steps, f)
             
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
@@ -1075,7 +1060,7 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         query_vision_language_model
     ]
         
-    agent = ToolCallingAgent(
+    agent = CodeAgent(
     tools=CORE_TOOLS_INSPECT,
     planning_interval=4,
     max_steps=80,
