@@ -74,7 +74,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 
 5. **Install Model Provider Dependencies:**
    
-   For **Inspect AI benchmarks**, you'll need to install the appropriate Python SDK for your chosen model provider:
+   You'll need to install the appropriate Python SDK for your chosen model provider:
 
    ```bash
    # For OpenAI models
