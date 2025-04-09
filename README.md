@@ -44,9 +44,10 @@ This repository provides a standardized evaluation harness for reproducible agen
 5. [How to Reproduce Existing Agents on HAL?](#how-to-reproduce-existing-agents-on-hal)
 5. [How Do I Add a Benchmark?](#how-do-i-add-a-benchmark)
 6. [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards)
-7. [About](#about-hal)
-8. [Repository Structure](#repository-structure)
-9. [Citing HAL](#citing-hal)
+7. [How Can I Use the Agent Traces from the HAL Leaderboard?](#how-can-i-use-the-agent-traces-from-the-hal-leaderboard)
+8. [About](#about-hal)
+9. [Repository Structure](#repository-structure)
+10. [Citing HAL](#citing-hal)
 ## Setup
 
 1. **Clone the repository:**
@@ -456,6 +457,23 @@ Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-
    ```
 
    **Note:** When using `-F` to upload a single file, the file must be a JSON file.
+
+## How can I use the agent traces from the HAL Leaderboard?
+
+For each benchmark and agent on [HAL](hal.cs.princeton.edu), you can download the agent traces and use them for further analysis.
+
+1. Download the agent traces from the [HAL Leaderboard](hal.cs.princeton.edu)
+2. Use the `hal-decrypt` command to decrypt the traces. You can either decrypt and entire directory of traces or a single trace. For example:
+
+Entire directory:
+```bash
+hal-decrypt -D path/to/directory
+```
+
+Single trace:
+```bash
+hal-decrypt -F taubench_airline_1743961943_UPLOAD.zip
+```
 
 ## About HAL
 
