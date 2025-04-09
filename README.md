@@ -119,6 +119,8 @@ For SWE-bench Verified, you will need to install the SWE-bench benchmark specifi
 pip install -e .[swebench]
 ```
 
+You will also need to **install docker** following the instructions [here](https://docs.docker.com/engine/install/). Docker is used during evaluation to run the SWE-bench tasks.
+
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
 - Supports local, Docker, and VM execution
@@ -128,6 +130,8 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 1. Download the USACO dataset from [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link)
 2. Unzip the dataset and move the `data` directory to `hal/benchmarks/USACO/`. Hence there should be a `data/` directory in `hal/benchmarks/USACO/`
 
+You will also need to **install docker** following the instructions [here](https://docs.docker.com/engine/install/). Docker is used during evaluation to run the USACO tasks.
+ 
 ### [AppWorld](https://appworld.dev/)
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
 - **Requires VM execution** (`--vm` flag mandatory)
