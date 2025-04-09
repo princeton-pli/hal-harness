@@ -60,6 +60,11 @@ class GaiaBenchmark(BaseBenchmark):
             'level_2': 0,
             'level_3': 0
         }
+        level_count = {
+            'level_1': 0,
+            'level_2': 0,
+            'level_3': 0
+        }
         
         for task_id, task_output in eval_results.items():
             if int(task_output['score']) > 0:
@@ -70,15 +75,18 @@ class GaiaBenchmark(BaseBenchmark):
                     level_correct_count['level_2'] += 1
                 elif str(self.benchmark[task_id]['Level']) == '3':
                     level_correct_count['level_3'] += 1
+            else:
+                level_count[f'level_{str(self.benchmark[task_id]["Level"])}'] += 1
+
                 
         successful_tasks = [task_id for task_id, task_output in eval_results.items() if int(task_output['score']) > 0]
         failed_tasks = [task_id for task_id, task_output in eval_results.items() if int(task_output['score']) == 0]
                 
         results = {
             'overall_accuracy': overall_correct_count / len(eval_results),
-            'level_1_accuracy': level_correct_count['level_1'] / len(eval_results),
-            'level_2_accuracy': level_correct_count['level_2'] / len(eval_results),
-            'level_3_accuracy': level_correct_count['level_3'] / len(eval_results),
+            'level_1_accuracy': level_correct_count['level_1'] / level_count['level_1'] if level_count['level_1'] > 0 else None,
+            'level_2_accuracy': level_correct_count['level_2'] / level_count['level_2'] if level_count['level_2'] > 0 else None,
+            'level_3_accuracy': level_correct_count['level_3'] / level_count['level_3'] if level_count['level_3'] > 0 else None,
             'successful_tasks': successful_tasks,
             'failed_tasks': failed_tasks
         }
