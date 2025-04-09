@@ -10,9 +10,9 @@ class SWEBenchBenchmark(BaseBenchmark):
     
     def __init__(self, agent_dir: str, config: Dict[str, Any], mini: bool = False):
         self.benchmark_name = 'swebench_verified_mini' if mini else 'swebench_verified'
-        self.vm_only = False
+        self.requires_sandbox = False
         self.mini = mini
-        super().__init__(agent_dir, config, vm_only=self.vm_only)
+        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
         
         # Read mini instance ids
         with open('hal/benchmarks/swebench_verified_mini_task_ids.txt', 'r') as f:
