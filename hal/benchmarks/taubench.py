@@ -56,15 +56,27 @@ class TauBenchBenchmark(BaseBenchmark):
         """
         reward = 0
         for task_id, task_output in eval_results.items():
-            reward += task_output['reward']
+            try:
+                reward += task_output['reward']
+            except TypeError:
+                print(f"Task {task_id} does not have a reward. Skipping...")
             
             
         number_of_tasks = len(self.benchmark)
             
             
-        successful_tasks = [task_id for task_id, task_output in eval_results.items() if task_output['reward'] > 0]
+        successful_tasks = []
+        for task_id, task_output in eval_results.items():
+            if not isinstance(task_output, str):
+                if task_output['reward'] > 0:
+                    successful_tasks.append(task_id)
         
-        failed_tasks = [task_id for task_id, task_output in eval_results.items() if task_output['reward'] == 0]
+        failed_tasks = []
+        for task_id, task_output in eval_results.items():
+            if isinstance(task_output, str):
+                failed_tasks.append(task_id)
+            elif task_output['reward'] == 0:
+                failed_tasks.append(task_id)
         
         results = {'accuracy': reward/number_of_tasks, 
                    'successful_tasks': successful_tasks, 

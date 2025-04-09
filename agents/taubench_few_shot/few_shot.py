@@ -13,6 +13,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         print(f"Setting reasoning_effort to {kwargs['reasoning_effort']}")
         litellm.completion = partial(litellm.completion, reasoning_effort=kwargs['reasoning_effort'])
         litellm.acompletion = partial(litellm.acompletion, reasoning_effort=kwargs['reasoning_effort'])
+        kwargs['temperature'] = 1
         
     from tau_bench.envs import get_env
     from tau_bench.agents.few_shot_agent import FewShotToolCallingAgent

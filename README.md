@@ -74,7 +74,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 
 5. **Install Model Provider Dependencies:**
    
-   For **Inspect AI benchmarks**, you'll need to install the appropriate Python SDK for your chosen model provider:
+   You'll need to install the appropriate Python SDK for your chosen model provider:
 
    ```bash
    # For OpenAI models
@@ -114,6 +114,14 @@ This repository provides a standardized evaluation harness for reproducible agen
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
 - **Does not support arm64 machines**
 
+For SWE-bench Verified, you will need to install the SWE-bench benchmark specific dependencies:
+```bash
+pip install -e .[swebench]
+```
+
+You will also need to **install docker** following the instructions [here](https://docs.docker.com/engine/install/). Docker is used during evaluation to run the SWE-bench tasks. For linux users, you will also need to complete the linux post-installation steps [here](https://docs.docker.com/engine/install/linux-postinstall/).
+ 
+
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
 - Supports local, Docker, and VM execution
@@ -123,9 +131,16 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 1. Download the USACO dataset from [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link)
 2. Unzip the dataset and move the `data` directory to `hal/benchmarks/USACO/`. Hence there should be a `data/` directory in `hal/benchmarks/USACO/`
 
+You will also need to **install docker** following the instructions [here](https://docs.docker.com/engine/install/). Docker is used during evaluation to run the USACO tasks. For linux users, you will also need to complete the linux post-installation steps [here](https://docs.docker.com/engine/install/linux-postinstall/).
+ 
 ### [AppWorld](https://appworld.dev/)
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
 - **Requires VM execution** (`--vm` flag mandatory)
+
+For AppWorld, you will need to install the AppWorld benchmark specific dependencies:
+```bash
+pip install -e .[appworld]
+```
 
 ### [CORE-bench](https://github.com/siegelz/core-bench)
 - Computational reproducibility benchmark for agents on real scientific papers
@@ -151,6 +166,10 @@ For all SciCode benchmarks, you will need to download and extract the SciCode un
 
 1. Download the unit tests [here](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR)
 2. Move the file to `hal/benchmarks/SciCode/eval/data/`.
+3. Install benchmark specific dependencies:
+```bash
+pip install -e .[scicode]
+```
 
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
