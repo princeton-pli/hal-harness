@@ -196,8 +196,7 @@ class DockerRunner:
         
         try:
             # Copy agent code to temp directory
-            # Ron: should remove the additional "agent" folder and be the same as local runner
-            temp_agent_dir = temp_dir #/ "agent"
+            temp_agent_dir = temp_dir
             shutil.copytree(agent_dir, temp_agent_dir, dirs_exist_ok=True)
 
             # Write input and args files
@@ -269,8 +268,7 @@ class DockerRunner:
                 
             # install requirements
             proc = await asyncio.create_subprocess_exec(
-                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install -r /workspace/requirements.txt", # Ron: keep it the same as local runner
-                #"docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install -r /workspace/agent/requirements.txt",
+                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install -r /workspace/requirements.txt",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )

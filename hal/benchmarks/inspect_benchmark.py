@@ -18,9 +18,9 @@ class InspectBenchmark(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any], task_name: str, agent_args: Dict[str, Any]):
         self.benchmark_name = task_name
         self.requirements_file = 'inspect'
-        self.vm_only = False
+        self.requires_sandbox = False
         self.agent_args = agent_args
-        super().__init__(agent_dir, config, vm_only=self.vm_only)
+        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
         
         # Remove 'inspect:' prefix if present
         self.task_name = task_name.removeprefix("inspect:")

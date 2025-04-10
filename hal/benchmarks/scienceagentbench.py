@@ -58,7 +58,7 @@ class ScienceAgentBench(BaseBenchmark):
             }
 
         # Optional: Set if benchmark requires VM execution
-        self.vm_only = False
+        self.requires_sandbox = False
         # Optional: Path to VM setup script
         self.setup_script = "hal/benchmarks/scienceagentbench/setup.sh"
         super().__init__(agent_dir, config, setup_script=self.setup_script)
