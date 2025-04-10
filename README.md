@@ -445,18 +445,18 @@ Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-
    ```
 
 2. **After Evaluation:**
+For submitting results to the leaderboard, upload the files ending with `_UPLOAD.json` located in the generatedrun directories `results/<benchmark_name>/<run_id>/`. There are multiple ways to do this. 
+
    ```bash
-   # Upload all results for a benchmark
+   # Upload all results for a benchmark (this will upload all files ending with `_UPLOAD.json` in the run directories for the benchmark)
    hal-upload -B <benchmark_name>
    
    # Upload a single file
-   hal-upload -F path/to/file.json
+   hal-upload -F path/to/<run_id>_UPLOAD.json
    
-   # Upload all files in a directory
+   # Upload all files in a directory you point to (you can move the files you want to this directory and then upload)
    hal-upload -D path/to/directory
    ```
-
-   **Note:** When using `-F` to upload a single file, the file must be a JSON file.
 
 ## How can I use the agent traces from the HAL Leaderboard?
 
@@ -482,6 +482,8 @@ The current landscape of AI agent evaluation faces several critical challenges. 
 HAL addresses these challenges through two key components: 1) A central leaderboard platform that incorporates cost-controlled evaluations by default, providing clear insights into the cost-performance tradeoffs of different agents, and 2) A standardized evaluation harness that enables reproducible agent evaluations across various benchmarks while tracking token usage and traces and **without** requiring any changes to the agent code or constraining agent developers to follow a certain agent framework. Evaluations can be run locally or in the cloud and fully parallelized.
 
 **TLDR:** We aim to standardize AI agent evaluations by providing a third-party platform for comparing agents across various benchmarks. Our goal with HAL is to serve as a one-stop shop for agent evaluations, taking into account both accuracy and cost by default. The accompanying HAL harness offers a simple and scalable way to run agent evals - locally or in the cloud.
+
+Check out this [issue](https://github.com/princeton-pli/hal-harness/issues/16) for more details on the motivation behind HAL and what differentiates it from other agent eval frameworks.
 
 ## Repository Structure
 
