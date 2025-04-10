@@ -156,7 +156,8 @@ class AgentRunner:
             print_step("Cleaning up calls from previous run...")
             for task_id in dataset:
                 call_ids = get_call_ids(task_id, weave_client)
-                delete_calls(call_ids, weave_client)
+                if len(call_ids) > 0:
+                    delete_calls(call_ids, weave_client)
         
         if not dataset:
             print_warning("No remaining tasks to run")
