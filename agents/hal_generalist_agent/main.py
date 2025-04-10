@@ -1,27 +1,35 @@
 
 from typing import Optional, List, Dict, Any
 import tiktoken
-from functools import partial
 
 import subprocess
 from pathlib import Path
 import re
 
-from prompts import USACO_PROMPT
-from tau_bench.envs import get_env
-from tau_bench.types import Action
 import json
 import os
 
 from typing import Optional
 
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
-from smolagents import Tool
 from smolagents.models import MessageRole, Model
+from smolagents.agents import ActionStep
 
 from mdconvert import MarkdownConverter
 
 
+def save_agent_steps(agent, kwargs, response, sample):
+    for step in agent.memory.steps:
+        if isinstance(step, ActionStep):
+            step.agent_memory = None
+    intermediate_steps = str(agent.memory.steps)
+    with open("steps.json", "w") as f:
+        json.dump({
+            "agent_args": kwargs,
+            "intermediate_steps": intermediate_steps,
+            "response": str(response),
+            "sample": sample
+            }, f, indent=2)
 
 
 class TextInspectorTool(Tool):
@@ -432,37 +440,42 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     model=model)
 
     if kwargs['benchmark_name'] == 'usaco':
+        USACO_PROMPT = """Please reply with a Python 3 solution to the below problem. Make sure
+to wrap your code in '```python' and '```' Markdown delimiters, and
+include exactly one block of code with the entire solution.
+Reason through the problem and conceptualize a solution first,
+then write pseudocode, and finally output the Python
+with your solution steps in comments.
+No outside libraries are allowed.
+
+[BEGIN PROBLEM]
+{}
+[END PROBLEM]
+"""
         prompt = USACO_PROMPT.format(task['description'])
-        response = asyncio.run(agent.arun(prompt))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(prompt)
+        save_agent_steps(agent, kwargs, response, task)
         
         # extract code from response
         if '```python' in response:
             response = response.split('```python')[1].split('```')[0]
             
+        return {task_id: response}
+            
     elif kwargs['benchmark_name'] == 'corebench_easy':
         
-        response = asyncio.run(agent.arun(task['prompt']))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(task['prompt'])
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = asyncio.run(agent.arun(task['prompt']))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
-            
+        response = agent.run(task['prompt'])
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = asyncio.run(agent.arun(task['prompt']))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(task['prompt'])
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
         
     elif kwargs['benchmark_name'] == 'swebench_verified':
@@ -480,69 +493,95 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         
         
         
-        response = asyncio.run(agent.arun(
+        response = agent.run(
             f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
             
 Problem: {task['problem_statement']}
             
 The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
-        ))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        )
+        save_agent_steps(agent, kwargs, response, task)
+        return {task_id: response}
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
-        from appworld import AppWorld, load_task_ids
+        from appworld import AppWorld
     
-        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
+        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
             instruction = world.task.instruction # To see task instruction.
+            supervisor = world.task.supervisor
+            
+            prompt = f"""Using the available APIs you can interact with on my behalf through the "interact_with_apis" tool, generate code to solve the following task.
+            
+Here are three key APIs that you need to know to get more information
+            
+# To get a list of apps that are available to you.
+print(apis.api_docs.show_app_descriptions())
+
+# To get the list of apis under any app listed above, e.g. supervisor
+print(apis.api_docs.show_api_descriptions(app_name='supervisor'))
+
+# To get the specification of a particular api, e.g. supervisor app's show_account_passwords
+print(apis.api_docs.show_api_doc(app_name='supervisor', api_name='show_account_passwords'))
+
+Now please generate code to solve the following task:
+
+My name is: {supervisor.first_name} {supervisor.last_name}. My personal email is {supervisor.email} and phone number is {supervisor.phone_number}.
+
+Task:
+
+{instruction}
+"""
             
             @tool
-            def execute_in_world(command: str) -> str:
+            def execute_code_to_interact_with_apis(code: str) -> str:
                 """
-                Execute a command in the appworld environment.
+                Execute code to interact with the APIs. You can access variables from previous code blocks you executed.
                 Args:
-                    command: The command to execute
+                    code: The code to execute
                 Returns:
-                    str: The response of the environment
+                    str: The output of the code
+                    str: Whether the task is completed
                 """
-                return world.execute(command)
+                return world.execute(code), "Task completed" if world.task_completed() else "Task not yet completed"
             
             agent = CodeAgent(
-                tools=CORE_TOOLS + [execute_in_world],
+                tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
                 planning_interval=4,
                 max_steps=80,
                 model=model)
             
-            response = asyncio.run(agent.arun(instruction))
-            steps = agent.to_json()
-            with open("steps.json", "w") as f:
-                json.dump(steps, f)
-        
+            response = agent.run(instruction)
+            save_agent_steps(agent, kwargs, response, task)
+            
         return {task_id: "Completed"}
+    
+    
     elif kwargs['benchmark_name'] == 'appworld_test_challenge':
         from appworld import AppWorld
         
         @tool
-        def execute_in_world(command: str) -> str:
+        def execute_code_to_interact_with_apis(code: str) -> str:
             """
-            Execute a command in the appworld environment.
+            Execute code to interact with the APIs. You can access variables from previous code blocks you executed.
+            Args:
+                code: The code to execute
+            Returns:
+                str: The output of the code
+                str: Whether the task is completed
             """
-            return world.execute(command)
+            return world.execute(code), "Task completed" if world.task_completed() else "Task not yet completed"
         
         agent = CodeAgent(
-            tools=CORE_TOOLS,
+            tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
             planning_interval=4,
             max_steps=80,
             model=model)
         
-        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
+        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
             instruction = world.task.instruction # To see task instruction.
             
-            response = asyncio.run(agent.arun(instruction))
-            steps = agent.to_json()
-            with open("steps.json", "w") as f:
-                json.dump(steps, f)
+            response = agent.run(instruction)
+            save_agent_steps(agent, kwargs, response, task)
         
         return {task_id: "Completed"}
             
@@ -558,14 +597,14 @@ The code of the project is cloned to your current directory. Please respond with
 Here is the question:
 
 {task['Question']}"""
-        response = asyncio.run(agent.arun(prompt))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(prompt)
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
     
     
     elif kwargs['benchmark_name'] == 'taubench_airline':
+        from tau_bench.envs import get_env
+        from tau_bench.types import Action
         
         ### ENV SETUP (usually this should be untouched) ###
         isolated_env = get_env(
@@ -999,9 +1038,7 @@ User's question: {user_question}
         observation = isolated_env.step(action)
         print("Final user's response: ", observation)
         
-        # steps = agent.to_json()
-        # with open("steps.json", "w") as f:
-        #     json.dump(steps, f)
+        save_agent_steps(agent, kwargs, response, task)
             
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
@@ -1074,12 +1111,9 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         response = await agent.arun(sample["input"][0]["content"])
     else:
         raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
-    
-    steps = agent.to_json()
-    with open("steps.json", "w") as f:
-        json.dump(steps, f)
-        
+
     try:
+        save_agent_steps(agent, kwargs, response, sample)
         return {"output": str(response)}
     except Exception as e:
         return  {"output": str(e)}
