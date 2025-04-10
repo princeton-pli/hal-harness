@@ -44,9 +44,10 @@ This repository provides a standardized evaluation harness for reproducible agen
 5. [How to Reproduce Existing Agents on HAL?](#how-to-reproduce-existing-agents-on-hal)
 5. [How Do I Add a Benchmark?](#how-do-i-add-a-benchmark)
 6. [How Can I Submit My Results to the HAL Leaderboards?](#how-can-i-submit-my-results-to-the-hal-leaderboards)
-7. [About](#about-hal)
-8. [Repository Structure](#repository-structure)
-9. [Citing HAL](#citing-hal)
+7. [How Can I Use the Agent Traces from the HAL Leaderboard?](#how-can-i-use-the-agent-traces-from-the-hal-leaderboard)
+8. [About](#about-hal)
+9. [Repository Structure](#repository-structure)
+10. [Citing HAL](#citing-hal)
 ## Setup
 
 1. **Clone the repository:**
@@ -74,7 +75,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 
 5. **Install Model Provider Dependencies:**
    
-   For **Inspect AI benchmarks**, you'll need to install the appropriate Python SDK for your chosen model provider:
+   You'll need to install the appropriate Python SDK for your chosen model provider:
 
    ```bash
    # For OpenAI models
@@ -114,6 +115,14 @@ This repository provides a standardized evaluation harness for reproducible agen
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
 - **Does not support arm64 machines**
 
+For SWE-bench Verified, you will need to install the SWE-bench benchmark specific dependencies:
+```bash
+pip install -e .[swebench]
+```
+
+You will also need to **install docker** following the instructions [here](https://docs.docker.com/engine/install/). Docker is used during evaluation to run the SWE-bench tasks. For linux users, you will also need to complete the linux post-installation steps [here](https://docs.docker.com/engine/install/linux-postinstall/).
+ 
+
 ### [USACO](https://github.com/princeton-nlp/USACO)
 - Programming competition problems
 - Supports local, Docker, and VM execution
@@ -123,9 +132,16 @@ For USACO, you will need to download and extract the USACO dataset. This can be 
 1. Download the USACO dataset from [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link)
 2. Unzip the dataset and move the `data` directory to `hal/benchmarks/USACO/`. Hence there should be a `data/` directory in `hal/benchmarks/USACO/`
 
+You will also need to **install docker** following the instructions [here](https://docs.docker.com/engine/install/). Docker is used during evaluation to run the USACO tasks. For linux users, you will also need to complete the linux post-installation steps [here](https://docs.docker.com/engine/install/linux-postinstall/).
+ 
 ### [AppWorld](https://appworld.dev/)
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
 - **Requires VM execution** (`--vm` flag mandatory)
+
+For AppWorld, you will need to install the AppWorld benchmark specific dependencies:
+```bash
+pip install -e .[appworld]
+```
 
 ### [CORE-bench](https://github.com/siegelz/core-bench)
 - Computational reproducibility benchmark for agents on real scientific papers
@@ -151,6 +167,10 @@ For all SciCode benchmarks, you will need to download and extract the SciCode un
 
 1. Download the unit tests [here](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR)
 2. Move the file to `hal/benchmarks/SciCode/eval/data/`.
+3. Install benchmark specific dependencies:
+```bash
+pip install -e .[scicode]
+```
 
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
@@ -425,18 +445,35 @@ Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-
    ```
 
 2. **After Evaluation:**
+For submitting results to the leaderboard, upload the files ending with `_UPLOAD.json` located in the generatedrun directories `results/<benchmark_name>/<run_id>/`. There are multiple ways to do this. 
+
    ```bash
-   # Upload all results for a benchmark
+   # Upload all results for a benchmark (this will upload all files ending with `_UPLOAD.json` in the run directories for the benchmark)
    hal-upload -B <benchmark_name>
    
    # Upload a single file
-   hal-upload -F path/to/file.json
+   hal-upload -F path/to/<run_id>_UPLOAD.json
    
-   # Upload all files in a directory
+   # Upload all files in a directory you point to (you can move the files you want to this directory and then upload)
    hal-upload -D path/to/directory
    ```
 
-   **Note:** When using `-F` to upload a single file, the file must be a JSON file.
+## How can I use the agent traces from the HAL Leaderboard?
+
+For each benchmark and agent on [HAL](hal.cs.princeton.edu), you can download the agent traces and use them for further analysis.
+
+1. Download the agent traces from the [HAL Leaderboard](hal.cs.princeton.edu)
+2. Use the `hal-decrypt` command to decrypt the traces. You can either decrypt and entire directory of traces or a single trace. For example:
+
+Entire directory:
+```bash
+hal-decrypt -D path/to/directory
+```
+
+Single trace:
+```bash
+hal-decrypt -F taubench_airline_1743961943_UPLOAD.zip
+```
 
 ## About HAL
 
@@ -445,6 +482,8 @@ The current landscape of AI agent evaluation faces several critical challenges. 
 HAL addresses these challenges through two key components: 1) A central leaderboard platform that incorporates cost-controlled evaluations by default, providing clear insights into the cost-performance tradeoffs of different agents, and 2) A standardized evaluation harness that enables reproducible agent evaluations across various benchmarks while tracking token usage and traces and **without** requiring any changes to the agent code or constraining agent developers to follow a certain agent framework. Evaluations can be run locally or in the cloud and fully parallelized.
 
 **TLDR:** We aim to standardize AI agent evaluations by providing a third-party platform for comparing agents across various benchmarks. Our goal with HAL is to serve as a one-stop shop for agent evaluations, taking into account both accuracy and cost by default. The accompanying HAL harness offers a simple and scalable way to run agent evals - locally or in the cloud.
+
+Check out this [issue](https://github.com/princeton-pli/hal-harness/issues/16) for more details on the motivation behind HAL and what differentiates it from other agent eval frameworks.
 
 ## Repository Structure
 

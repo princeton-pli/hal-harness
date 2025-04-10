@@ -13,7 +13,7 @@ from ..utils.utils import make_json_serializable
 class BaseBenchmark(ABC):
     """Base class for all benchmarks"""
     
-    def __init__(self, agent_dir: str, config: Dict[str, Any], vm_only: bool = False, setup_script: Optional[str] = None):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], requires_sandbox: bool = False, setup_script: Optional[str] = None):
         self.agent_dir = agent_dir
         self.config = config
         self.benchmark_name: str
@@ -22,7 +22,7 @@ class BaseBenchmark(ABC):
         self.base_results_dir = "results"
         self.benchmark_results_dir = os.path.join(self.base_results_dir, self.benchmark_name)
         self.agent_args: Dict[str, Any] = {}  # Store agent args
-        self.vm_only = vm_only # Whether benchmark requires VM execution
+        self.requires_sandbox = requires_sandbox # Whether benchmark requires VM execution
         
 
     @abstractmethod
@@ -63,7 +63,7 @@ class BaseBenchmark(ABC):
         else:
             results_path = os.path.join(run_dir, f"{run_id}.json")
             with open(results_path, 'w') as f:
-                json.dump(eval_results, f)
+                json.dump(eval_results, f, indent=2)
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
@@ -93,11 +93,11 @@ class BaseBenchmark(ABC):
         upload_path = os.path.join(run_dir, f"{run_id}_UPLOAD.json")
         try:
             with open(upload_path, 'w') as f:
-                json.dump(results_summary, f)
+                json.dump(results_summary, f, indent=2)
         except TypeError as e:
             print_warning(f"Error serializing results summary: {e}. Converting to json serializable.")
             with open(upload_path, 'w') as f:
-                json.dump(make_json_serializable(results_summary), f)
+                json.dump(make_json_serializable(results_summary), f, indent=2)
 
         if upload:
             self.upload_results(run_id, results_summary)

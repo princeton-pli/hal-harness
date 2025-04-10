@@ -1,4 +1,4 @@
-weave
+appworld
 openai
 smolagents
 mammoth
@@ -9,3 +9,5 @@ puremagic>=1.28
 pydub
 youtube_transcript_api>=0.6.2
 SpeechRecognition
+tiktoken
+pandas
