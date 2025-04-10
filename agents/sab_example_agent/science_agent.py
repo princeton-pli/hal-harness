@@ -3,10 +3,11 @@ from engine.base_engine import LLMEngine
 from litellm import model_cost
 from litellm.utils import trim_messages
 from pathlib import Path
-from shutil import copyfile, rmtree
+from shutil import rmtree
 
 import os
 import re
+import shutil
 import subprocess
 
 SYSTEM_PROMPT = """You are an expert Python programming assistant that helps scientist users to write high-quality code to solve their tasks.
@@ -97,15 +98,16 @@ class ScienceAgent():
     def install(self, out_fname):
         err_msg = ""
 
-        test_path = Path("program_to_eval/")
-        if test_path.exists():
-            rmtree(test_path)
-        os.mkdir(test_path)
+        # test_path = Path("program_to_eval/")
+        # if test_path.exists():
+        #     rmtree(test_path)
+        # os.mkdir(test_path)
 
-        copyfile(out_fname, Path("program_to_eval/", out_fname.split("/")[-1]))
+        # copyfile(out_fname, Path("program_to_eval/", out_fname.split("/")[-1]))
 
         exec_res = subprocess.run(
-            ["pipreqs", "program_to_eval/", "--savepath=requirements.in", "--mode", "no-pin"], 
+            ["pipreqs", "pred_programs/", "--savepath=requirements.in", "--mode", "no-pin"], 
+            # ["pipreqs", "program_to_eval/", "--savepath=requirements.in", "--mode", "no-pin"], 
             capture_output=True
         )
         if exec_res.returncode != 0:
@@ -214,23 +216,23 @@ class ScienceAgent():
 
         assistant_output, prompt_tokens, completion_tokens = self.llm_engine.respond(user_input, temperature=0.2, top_p=0.95)
 
+        self.history.append(
+            {'role': 'assistant', 'content': assistant_output}
+        )
+
         cost = (
             self.llm_cost["input_cost_per_token"] * prompt_tokens +
             self.llm_cost["output_cost_per_token"] * completion_tokens
         )
 
-        # self.write_program(assistant_output, out_fname)
+        if self.use_self_debug:
+            self.write_program(assistant_output, out_fname)
 
-        self.history.append(
-            {'role': 'assistant', 'content': assistant_output}
-        )
-
-        # if self.use_self_debug:
-        #     for t in range(10):
-        #         halt, new_cost = self.step(out_fname, task["output_fname"])
-        #         cost += new_cost
-        #         if halt:
-        #             break
+            for t in range(10):
+                halt, new_cost = self.step(out_fname, task["output_fname"])
+                cost += new_cost
+                if halt:
+                    break
 
         self.history = [
             {'role': 'user', 'content': self.sys_msg}
