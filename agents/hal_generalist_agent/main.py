@@ -436,7 +436,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     agent = CodeAgent(
     tools=CORE_TOOLS,
     planning_interval=4,
-    max_steps=80,
+    max_steps=2,
     model=model)
 
     if kwargs['benchmark_name'] == 'usaco':
@@ -535,11 +535,11 @@ Task:
             @tool
             def execute_code_to_interact_with_apis(code: str) -> str:
                 """
-                Execute code to interact with the APIs. You can access variables from previous code blocks you executed.
+                Execute code to interact with the APIs. You can access variables from previous code blocks you executed. Code is executed in a python REPL environment.
                 Args:
                     code: The code to execute
                 Returns:
-                    str: The output of the code
+                    str: The terminal output of the code
                     str: Whether the task is completed
                 """
                 return world.execute(code), "Task completed" if world.task_completed() else "Task not yet completed"
@@ -550,7 +550,7 @@ Task:
                 max_steps=80,
                 model=model)
             
-            response = agent.run(instruction)
+            response = agent.run(prompt)
             save_agent_steps(agent, kwargs, response, task)
             
         return {task_id: "Completed"}
@@ -562,11 +562,11 @@ Task:
         @tool
         def execute_code_to_interact_with_apis(code: str) -> str:
             """
-            Execute code to interact with the APIs. You can access variables from previous code blocks you executed.
+            Execute code to interact with the APIs. You can access variables from previous code blocks you executed. Code is executed in a python REPL environment.
             Args:
                 code: The code to execute
             Returns:
-                str: The output of the code
+                str: The terminal output of the code
                 str: Whether the task is completed
             """
             return world.execute(code), "Task completed" if world.task_completed() else "Task not yet completed"
@@ -579,8 +579,31 @@ Task:
         
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
             instruction = world.task.instruction # To see task instruction.
+            supervisor = world.task.supervisor
             
-            response = agent.run(instruction)
+            prompt = f"""Using the available APIs you can interact with on my behalf through the "interact_with_apis" tool, generate code to solve the following task.
+            
+Here are three key APIs that you need to know to get more information
+            
+# To get a list of apps that are available to you.
+print(apis.api_docs.show_app_descriptions())
+
+# To get the list of apis under any app listed above, e.g. supervisor
+print(apis.api_docs.show_api_descriptions(app_name='supervisor'))
+
+# To get the specification of a particular api, e.g. supervisor app's show_account_passwords
+print(apis.api_docs.show_api_doc(app_name='supervisor', api_name='show_account_passwords'))
+
+Now please generate code to solve the following task:
+
+My name is: {supervisor.first_name} {supervisor.last_name}. My personal email is {supervisor.email} and phone number is {supervisor.phone_number}.
+
+Task:
+
+{instruction}
+"""
+            
+            response = agent.run(prompt)
             save_agent_steps(agent, kwargs, response, task)
         
         return {task_id: "Completed"}
@@ -1054,11 +1077,10 @@ User's question: {user_question}
 
 # INSPECT BENCHMARKS BELOW
 
-from inspect_ai.util import sandbox
-
 import asyncio
 
 async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
+    from inspect_ai.util import sandbox
     
     model = LiteLLMModel(model_id='openai/gpt-4o-mini-2024-07-18')
         
