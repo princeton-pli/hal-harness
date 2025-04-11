@@ -159,6 +159,10 @@ def main(
                 print_error("Conda environments are not supported for inspect solvers. Dependencies are managed by Inspect harness. Run without --conda_env_name flag. Exiting...")
                 sys.exit(1)
                 
+        if max_tasks and is_inspect_benchmark(benchmark):
+            print_error("max_tasks is not supported for inspect benchmarks. Please remove the flag and run the full benchmark.")
+            sys.exit(1)
+            
         if continue_run and not set_run_id:
             raise ValueError("continue_run flag requires run_id to be set")
                 
