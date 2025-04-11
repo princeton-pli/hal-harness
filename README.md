@@ -277,7 +277,7 @@ hal-eval --benchmark corebench_easy \
 - Benchmark for evaluating agents' capabilities to solve real-world data-driven discovery tasks collected from scientific publications.
 - Tasks involve processing, modeling, analyzing, and visualizing scientific data from four disciplines.
 - Evaluates programs in a Docker container environment for consistent evaluation.
-- Supports both local (does not support concurrency for self-debug), docker (recommended), and VM execution.
+- Supports local (does not allow concurrency for self-debug), docker (recommended), and VM execution.
 
 ScienceAgentBench will be automatically downloaded via the Hugging Face datasets library. To execute the tasks, you will need to additionally download the scientific data used in ScienceAgentBench [here](https://buckeyemailosu-my.sharepoint.com/:u:/g/personal/chen_8336_buckeyemail_osu_edu/EQuA6uJ3CtRHvRfZ2GiN1tYBRVJE4DSUD10MW61fr7HuSQ?e=sCBegG). Then, you can extract the data using the password `scienceagentbench` as follows:
 ```bash
@@ -316,14 +316,14 @@ hal-eval --benchmark scienceagentbench \
   -A model_name=us.meta.llama3-3-70b-instruct-v1:0 \
   -A use_self_debug=True \
   -A use_knowledge=False \
-  --max_concurrent 10
+  --max_concurrent 10 \
   --docker
 ```
 
 Agent Arguments:
 - `model_name`: name of base LLM (currently supporting OpenAI and AWS Bedrock)
 - `use_self_debug`: using the self-debug agent instead of direct prompting if `True`
-- `use_knowledge`: using the expert-annotated domain knowledge as additiona agent input if `True`
+- `use_knowledge`: using the expert-annotated domain knowledge as additional agent input if `True`
 
 ## How Do I Run Evaluations?
 
