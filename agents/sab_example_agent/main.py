@@ -2,6 +2,7 @@ from science_agent import ScienceAgent
 
 def format_task_dict(example):
     task = {
+        "instance_id": example["instance_id"],
         "task_inst": example["task_inst"],
         "dataset_path": "benchmark/datasets/" + example["dataset_folder_tree"].split("\n")[0][4:],
         "dataset_folder_tree": example["dataset_folder_tree"],
@@ -15,7 +16,6 @@ def format_task_dict(example):
 
 
 def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
-
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input_dict) == 1, 'input must contain only one task'
 

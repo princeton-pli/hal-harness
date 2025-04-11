@@ -286,14 +286,14 @@ Can be found in `agents/inspect/gaia.py` and `agents/inspect/cybench.py`.
 ```python
 {
     "task_id": {
+        "instance_id": "Unique identifier for the instance"
         "task_inst": "Task instruction text",
         "dataset_path": "Path to the dataset",
         "dataset_folder_tree": "Folder structure of the dataset",
         "dataset_preview": "Preview of the dataset contents",
         "output_fname": "Expected output filename",
         "domain_knowledge": "Additional domain knowledge",
-        "gold_program_name": "Name of the gold standard program",
-        "instance_id": "Unique identifier for the instance"
+        "gold_program_name": "Name of the gold program"
     }
 }
 ```
