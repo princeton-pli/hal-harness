@@ -4,7 +4,7 @@
 [![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
 [![Inspect AI](https://img.shields.io/badge/Inspect_AI-green)](https://github.com/UKGovernmentBEIS/inspect_ai)
 
-This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and the official [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for sharing evaluation results.
+This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and the official [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) for sharing evaluation results.
 
 ## Features
 
@@ -32,7 +32,7 @@ This repository provides a standardized evaluation harness for reproducible agen
   - Automatic encryption of agent traces before uploading to avoid benchmark contamination
 
 * **HAL leaderboard integration**
-  - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space)
+  - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu)
   - Detailed metrics and in-depth performance analysis
 
 ## Table of Contents
@@ -474,7 +474,7 @@ See [hal/benchmarks/README.md](hal/benchmarks/README.md) for details.
 
 ## How Can I Submit My Results to the HAL Leaderboards?
 
-Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
+Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
 
 1. **During Evaluation:**
    ```bash
