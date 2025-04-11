@@ -188,7 +188,7 @@ class DockerRunner:
                              agent_dir: str,
                              agent_args: Dict[str, Any],
                              run_id: str,
-                             timeout: int = 7200) -> Optional[Dict[str, Any]]:
+                             timeout: int = 900) -> Optional[Dict[str, Any]]:
         """Process a single task in a Docker container with timeout"""
         # Create temporary directory for mounting into container
         temp_dir = Path(tempfile.mkdtemp())
