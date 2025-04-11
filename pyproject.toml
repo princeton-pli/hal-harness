@@ -14,7 +14,7 @@ dependencies = [
     "python-dotenv",
     "setuptools>=48.0.0",
     "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@d3a242f74c8a4f42a86d1219eaca12ab620c3be2",
-    "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals",
+    "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals@15a81e27ac7161a39e28f247157e36036a61ef18",
     "tenacity>=8.2.0",
     "docker>=7.1.0",
     "cryptography>=42.0.0",
