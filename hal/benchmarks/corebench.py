@@ -165,10 +165,18 @@ class CoreBench(BaseBenchmark):
         results = {}
         
         for task_id, solution in agent_output.items():
+            # Get the ground truth results for this task
+            gt_result = self.benchmark_answers[task_id]
+            
+            # Calculate total questions from ground truth (regardless of parsing success)
+            numeric_keys = [key for key in gt_result[0].keys() if isinstance(gt_result[0][key], (int, float))]
+            list_keys = [key for key in gt_result[0].keys() if isinstance(gt_result[0][key], list)]
+            string_keys = [key for key in gt_result[0].keys() if isinstance(gt_result[0][key], str)]
+            
+            total_written_questions = len([key for key in string_keys if 'fig' not in key]) + len([key for key in numeric_keys if 'fig' not in key]) + len([key for key in list_keys if 'fig' not in key])
+            total_vision_questions = len([key for key in string_keys if 'fig' in key]) + len([key for key in numeric_keys if 'fig' in key]) + len([key for key in list_keys if 'fig' in key])
+            
             try:
-                # Get the ground truth results for this task
-                gt_result = self.benchmark_answers[task_id]
-                
                 # Parse the agent's answer as a dictionary
                 if type(solution) is str:
                     reported_result = json.loads(solution)
@@ -183,15 +191,15 @@ class CoreBench(BaseBenchmark):
                 results[task_id] = {
                     "correct_written_answers": evaluation["correct_written_answers"],
                     "correct_vision_answers": evaluation["correct_vision_answers"],
-                    "total_written_questions": evaluation["total_written_questions"],
-                    "total_vision_questions": evaluation["total_vision_questions"]
+                    "total_written_questions": total_written_questions,
+                    "total_vision_questions": total_vision_questions
                 }
             except Exception as e:
                 results[task_id] = {
                     "correct_written_answers": 0,
                     "correct_vision_answers": 0,
-                    "total_written_questions": 0,
-                    "total_vision_questions": 0,
+                    "total_written_questions": total_written_questions,
+                    "total_vision_questions": total_vision_questions,
                     "error": str(e)
                 }
                 
