@@ -463,19 +463,42 @@ No outside libraries are allowed.
         return {task_id: response}
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
+        # Create a new agent with more steps specifically for CoreBench easy
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=80,  # Increased from 2 to 80
+            model=model
+        )
         
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        # Create a new agent with more steps specifically for CoreBench medium
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=80,  # Increased from 2 to 80
+            model=model
+        )
+        
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        # Create a new agent with more steps specifically for CoreBench hard
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=80,  # Increased from 2 to 80
+            model=model
+        )
+        
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
         
     elif kwargs['benchmark_name'] == 'swebench_verified':
@@ -1139,4 +1162,3 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         return {"output": str(response)}
     except Exception as e:
         return  {"output": str(e)}
-
