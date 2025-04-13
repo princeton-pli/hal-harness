@@ -24,8 +24,6 @@ class GaiaBenchmark(BaseBenchmark):
         # create benchmark dictionary
         self.benchmark = {}
         for idx, d in enumerate(dataset):
-            if idx > 20:
-                break
             self.benchmark[d['task_id']] = d
             if d['file_name'] != '':
                 self.benchmark[d['task_id']]['files'] = {
