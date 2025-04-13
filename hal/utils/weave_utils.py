@@ -48,6 +48,7 @@ MODEL_PRICES_DICT = {
                 "anthropic/claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "google/gemini-1.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 5/1e6},
                 "google/gemini-1.5-flash": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
+                "google/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {"prompt_tokens": 3.5/1e6, "completion_tokens": 3.5/1e6},
                 "together/meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
                 "bedrock/amazon.nova-micro-v1:0": {"prompt_tokens": 0.000035/1e3, "completion_tokens": 0.00014/1e3},
@@ -74,6 +75,7 @@ MODEL_PRICES_DICT = {
                 "together_ai/deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
                 "gemini/gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
                 "gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
+                "gemini/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
 }
 
