@@ -1,7 +1,54 @@
 import re
 import os
 import json
-from typing import Any
+from typing import Any, Dict
+import subprocess
+
+def get_git_info() -> Dict[str, str]:
+    """Get git repository information."""
+    git_info = {}
+    
+    try:
+        # Get current commit hash
+        git_commit = subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'], 
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+        git_info['commit'] = git_commit
+        
+        # Get repository URL
+        git_remote_url = subprocess.check_output(
+            ['git', 'config', '--get', 'remote.origin.url'],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+        git_info['repository_url'] = git_remote_url
+        
+        # Get current branch
+        git_branch = subprocess.check_output(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+        git_info['branch'] = git_branch
+        
+        # Get commit timestamp
+        git_commit_time = subprocess.check_output(
+            ['git', 'show', '-s', '--format=%ci', 'HEAD'],
+            stderr=subprocess.DEVNULL
+        ).decode('utf-8').strip()
+        git_info['commit_timestamp'] = git_commit_time
+        
+        # Build repository URL with commit
+        if 'github.com' in git_remote_url:
+            # Format GitHub URL to point to specific commit
+            repo_base = git_remote_url.replace('.git', '').replace('git@github.com:', 'https://github.com/')
+            if repo_base.endswith('/'):
+                repo_base = repo_base[:-1]
+            git_info['commit_url'] = f"{repo_base}/tree/{git_commit}"
+        
+    except subprocess.SubprocessError:
+        git_info['error'] = "Failed to get git information"
+    
+    return git_info
 
 def move_merge_dirs(source_root, dest_root):
     for path, dirs, files in os.walk(source_root, topdown=False):
