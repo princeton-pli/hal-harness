@@ -5,8 +5,13 @@ from pathlib import Path
 import re
 import json
 import os
+import sys
 from typing import Optional
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
+
+# Import agent_hints using absolute path
+sys.path.append(os.path.dirname(__file__))
+from agent_hints import AGENT_HINTS
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 from mdconvert import MarkdownConverter
@@ -413,6 +418,25 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     if kwargs['benchmark_name'] != 'corebench_easy' and kwargs['benchmark_name'] != 'corebench_medium' and kwargs['benchmark_name'] != 'corebench_hard':
         raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
+    
+    # Determine agent type based on benchmark name or flags
+    benchmark_name = kwargs['benchmark_name']
+    
+    # Check if base_agent flag is set to true
+    if kwargs.get('base_agent', False):
+        # Use base agent regardless of benchmark name
+        agent_type = 'base'
+        print(f"Using base agent (no hints) as requested by base_agent flag")
+    elif benchmark_name in AGENT_HINTS:
+        # Use the benchmark name directly as the agent type
+        agent_type = benchmark_name
+        
+    # Validate agent type
+    if agent_type not in AGENT_HINTS:
+        raise ValueError(f"Invalid agent_type: {agent_type}. Must be one of: {', '.join(AGENT_HINTS.keys())}")
+    
+    # Get hints based on agent type
+    hints = AGENT_HINTS[agent_type]
         
     task_id, task = list(input.items())[0]
     
@@ -431,13 +455,20 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         query_vision_language_model,
     ]
 
+    # Create the agent
     agent = CodeAgent(
-    tools=CORE_TOOLS,
-    planning_interval=4,
-    max_steps=80,
-    model=model) 
+        tools=CORE_TOOLS,
+        planning_interval=4,
+        max_steps=80,
+        model=model
+    ) 
     
-    response = agent.run(task['prompt'])
+    # Prepend hints to the task prompt if available
+    prompt = task['prompt']
+    if hints:
+        prompt = f"{hints}\n\n{prompt}"
+    
+    response = agent.run(prompt)
     results[task_id] = response
         
     return results
