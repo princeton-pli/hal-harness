@@ -587,7 +587,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     agent = CodeAgent(
         tools=CORE_TOOLS,
         planning_interval=4,
-        max_steps=80,
+        max_steps=40,
         model=model,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
     ) 
