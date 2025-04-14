@@ -17,6 +17,33 @@ from smolagents.agents import ActionStep
 
 from mdconvert import MarkdownConverter
 
+AUTHORIZED_IMPORTS = [
+    "requests",
+    "zipfile",
+    "os",
+    "pandas",
+    "numpy",
+    "sympy",
+    "json",
+    "bs4",
+    "pubchempy",
+    "xml",
+    "yahoo_finance",
+    "Bio",
+    "sklearn",
+    "scipy",
+    "pydub",
+    "io",
+    "PIL",
+    "chess",
+    "PyPDF2",
+    "pptx",
+    "torch",
+    "datetime",
+    "fractions",
+    "csv",
+]
+
 
 def save_agent_steps(agent, kwargs, response, sample):
     for step in agent.memory.steps:
@@ -30,6 +57,32 @@ def save_agent_steps(agent, kwargs, response, sample):
             "response": str(response),
             "sample": sample
             }, f, indent=2)
+        
+def extract_diff(response):
+    """
+    Extracts the diff from a response formatted in different ways
+    """
+    if response is None:
+        return None
+    diff_matches = []
+    other_matches = []
+    pattern = re.compile(r"\<([\w-]+)\>(.*?)\<\/\1\>", re.DOTALL)
+    for code, match in pattern.findall(response):
+        if code in {"diff", "patch"}:
+            diff_matches.append(match)
+        else:
+            other_matches.append(match)
+    pattern = re.compile(r"```(\w+)?\n(.*?)```", re.DOTALL)
+    for code, match in pattern.findall(response):
+        if code in {"diff", "patch"}:
+            diff_matches.append(match)
+        else:
+            other_matches.append(match)
+    if diff_matches:
+        return diff_matches[0]
+    if other_matches:
+        return other_matches[0]
+    return response.split("</s>")[0]
 
 
 class TextInspectorTool(Tool):
@@ -251,8 +304,6 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
                     return content[:5000] + ('...' if len(content) > 5000 else '')
 
         elif command == "create":
-            if path.exists():
-                return f"Error: {path} already exists"
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, 'w') as f:
                 f.write(content or "")
@@ -436,7 +487,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     agent = CodeAgent(
     tools=CORE_TOOLS,
     planning_interval=4,
-    max_steps=2,
+    max_steps=40,
+    additional_authorized_imports=AUTHORIZED_IMPORTS,
     model=model)
 
     if kwargs['benchmark_name'] == 'usaco':
@@ -486,22 +538,23 @@ No outside libraries are allowed.
         if process.returncode != 0:
             raise Exception(f"Failed to clone repository: {process.stderr}")
         
-        process = subprocess.run(['git', 'reset', '--hard', task['base_commit']], capture_output=True, text=True)
+        process = subprocess.run(
+            f"cd {task['repo'].split('/')[-1]} && git reset --hard {task['base_commit']}", shell=True, capture_output=True, text=True)
         print(process.stdout)
         if process.returncode != 0:
             raise Exception(f"Failed to reset repository: {process.stderr}")
         
-        
-        
         response = agent.run(
-            f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
+            f"""I need you to solve this issue by generating a single patch that I can apply directly to this repository using git apply.
             
 Problem: {task['problem_statement']}
             
-The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
+The code of the project is cloned to {task['repo'].split('/')[-1]}. After you are done, please return the content of the patch as your final answer."""
         )
         save_agent_steps(agent, kwargs, response, task)
-        return {task_id: response}
+        
+        model_patch = extract_diff(response)
+        return {task_id: model_patch}
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
         from appworld import AppWorld
@@ -547,7 +600,8 @@ Task:
             agent = CodeAgent(
                 tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
                 planning_interval=4,
-                max_steps=80,
+                max_steps=40,
+                additional_authorized_imports=AUTHORIZED_IMPORTS,
                 model=model)
             
             response = agent.run(prompt)
@@ -574,7 +628,8 @@ Task:
         agent = CodeAgent(
             tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
             planning_interval=4,
-            max_steps=80,
+            max_steps=40,
+            additional_authorized_imports=AUTHORIZED_IMPORTS,
             model=model)
         
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
@@ -617,7 +672,7 @@ Task:
 - If the answer is a string, don't include articles, and don't use abbreviations (e.g. for states).                                                             
 - If the answer is a comma separated list, apply the above rules to each element in the list.                                                                                                                                                                                                                    
                                                                                                                                                                  
-Here is the question:
+Here is the question and attached files are stored in your current directory:
 
 {task['Question']}"""
         response = agent.run(prompt)
@@ -1043,7 +1098,8 @@ Here is the question:
             ask_user
         ],
         planning_interval=4,
-        max_steps=80,
+        max_steps=40,
+        additional_authorized_imports=AUTHORIZED_IMPORTS,
         model=model)
         
         
@@ -1122,7 +1178,8 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     agent = CodeAgent(
     tools=CORE_TOOLS_INSPECT,
     planning_interval=4,
-    max_steps=80,
+    max_steps=40,
+    additional_authorized_imports=AUTHORIZED_IMPORTS,
     model=model)
         
         
