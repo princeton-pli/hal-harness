@@ -18,6 +18,32 @@ from smolagents.agents import ActionStep
 from mdconvert import MarkdownConverter
 import litellm
 
+AUTHORIZED_IMPORTS = [
+    "requests",
+    "zipfile",
+    "os",
+    "pandas",
+    "numpy",
+    "sympy",
+    "json",
+    "bs4",
+    "pubchempy",
+    "xml",
+    "yahoo_finance",
+    "Bio",
+    "sklearn",
+    "scipy",
+    "pydub",
+    "io",
+    "PIL",
+    "chess",
+    "PyPDF2",
+    "pptx",
+    "torch",
+    "datetime",
+    "fractions",
+    "csv",
+]
 
 def save_agent_steps(agent, kwargs, response, sample):
     for step in agent.memory.steps:
@@ -542,7 +568,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         tools=CORE_TOOLS,
         planning_interval=4,
         max_steps=80,
-        model=model
+        model=model,
+        additional_authorized_imports=AUTHORIZED_IMPORTS,
     ) 
     
     response = agent.run(prompt)
