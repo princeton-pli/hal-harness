@@ -172,13 +172,13 @@ def get_total_cost(client):
     requests = 0
 
     # Fetch all the calls in the project
-    print_step("Fetching Weave calls (this can take a while)...")
+    print_step("Getting token usage data (this can take a while)...")
     calls = list(
         client.get_calls(filter={"trace_roots_only": False}, include_costs=False)
     )
 
     with create_progress() as progress:
-        task = progress.add_task("Processing usage data...", total=len(calls))
+        task = progress.add_task("Processing token usage data...", total=len(calls))
         for call in calls:
             # If the call has costs, we add them to the total cost
             try:
@@ -241,7 +241,7 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
-    print_step("Retrieving Weave traces...")
+    print_step("Getting Weave traces (this can take a while)...")
     
     # dict to store latency for each task
     latency_dict = {}
@@ -252,9 +252,8 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
         calls = fetch_weave_calls(client)
         progress.update(task1, completed=1)
         
-        # Process calls
+        # Processed calls
         processed_calls = []
-        task2 = progress.add_task("Processing calls... (this can take a while)", total=len(calls))
         
         for call in calls:
             task_id = call.attributes['weave_task_id']
