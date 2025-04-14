@@ -444,6 +444,108 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     
     model = LiteLLMModel(**model_params)
     
+    # Prepend hints to the task prompt if available
+    prompt = task['prompt']
+    if hints:
+        prompt = f"{hints}\n\n{prompt}"
+    
+    # Create a custom FinalAnswerTool that includes key validation
+    class CustomFinalAnswerTool(Tool):
+        name = "final_answer"
+        description = "Provides a final answer to the given problem."
+        inputs = {"answer": {"type": "any", "description": "The final answer to the problem"}}
+        output_type = "any"
+
+        def __init__(self, base_agent_flag, task_prompt):
+            super().__init__()
+            self.base_agent_flag = base_agent_flag
+            self.task_prompt = task_prompt
+            print(f"[DEBUG] CustomFinalAnswerTool created with base_agent_flag={base_agent_flag}")
+            
+        def extract_dict_keys(self, prompt):
+            """Extract dictionary keys from the task prompt."""
+            dict_keys_pattern = r"dict_keys\(\[(.*?)\]\)"
+            match = re.search(dict_keys_pattern, prompt)
+            if match:
+                keys_str = match.group(1)
+                print(f"[DEBUG] Found dict_keys pattern in prompt: {keys_str}")
+                
+                # Parse the keys from the string format
+                keys = []
+                # Split by commas but respect quotes
+                in_quote = False
+                current_key = ""
+                for char in keys_str:
+                    if char == "'" or char == '"':
+                        in_quote = not in_quote
+                        current_key += char
+                    elif char == ',' and not in_quote:
+                        keys.append(current_key.strip())
+                        current_key = ""
+                    else:
+                        current_key += char
+                if current_key:
+                    keys.append(current_key.strip())
+                
+                # Clean up the keys (remove quotes)
+                cleaned_keys = []
+                for key in keys:
+                    key = key.strip()
+                    if (key.startswith("'") and key.endswith("'")) or (key.startswith('"') and key.endswith('"')):
+                        key = key[1:-1]
+                    cleaned_keys.append(key)
+                
+                print(f"[DEBUG] Extracted keys: {cleaned_keys}")
+                return cleaned_keys
+            print("[DEBUG] No dict_keys pattern found in prompt")
+            return []
+            
+        def forward(self, answer: Any) -> Any:
+            """Process the final answer with key validation if base_agent is False."""
+            print(f"[DEBUG] CustomFinalAnswerTool.forward called with answer: {answer}")
+            print(f"[DEBUG] base_agent_flag is {self.base_agent_flag}")
+            
+            if not self.base_agent_flag:
+                # Extract expected keys from the task prompt
+                expected_keys = self.extract_dict_keys(self.task_prompt)
+                
+                # Validate that the answer is a dictionary with the expected keys
+                if expected_keys:
+                    if not isinstance(answer, dict):
+                        error_msg = f"The submitted answer must be a dictionary with the following keys: {expected_keys}"
+                        print(f"[DEBUG] Validation failed: {error_msg}")
+                        raise Exception(error_msg)
+                    
+                    # Check if all expected keys are in the answer
+                    missing_keys = [key for key in expected_keys if key not in answer]
+                    if missing_keys:
+                        error_msg = f"The submitted answer is missing the following keys: {missing_keys}"
+                        print(f"[DEBUG] Validation failed: {error_msg}")
+                        raise Exception(error_msg)
+                    
+                    # Check if there are any extra keys in the answer
+                    extra_keys = [key for key in answer if key not in expected_keys]
+                    if extra_keys:
+                        error_msg = f"The submitted answer contains extra keys: {extra_keys}. Expected keys: {expected_keys}"
+                        print(f"[DEBUG] Validation failed: {error_msg}")
+                        raise Exception(error_msg)
+                    
+                    print(f"[DEBUG] Validation passed for answer: {answer}")
+            else:
+                print("[DEBUG] Skipping validation because base_agent_flag is True")
+            
+            # If validation passes or base_agent is True, return the answer
+            print(f"[DEBUG] Returning final answer: {answer}")
+            return answer
+
+    # Create the custom FinalAnswerTool instance
+    # This will replace the default FinalAnswerTool in the agent because they share the same name
+    custom_final_answer_tool = CustomFinalAnswerTool(
+        base_agent_flag=kwargs.get('base_agent', False),
+        task_prompt=prompt
+    )
+    
+    # Include the custom tool directly in the CORE_TOOLS list
     CORE_TOOLS = [
         DuckDuckGoSearchTool(),
         VisitWebpageTool(),
@@ -453,8 +555,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         edit_file,
         file_content_search,
         query_vision_language_model,
+        custom_final_answer_tool,  # Add the custom tool directly to the list
     ]
-
+    
     # Create the agent
     agent = CodeAgent(
         tools=CORE_TOOLS,
@@ -462,11 +565,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         max_steps=80,
         model=model
     ) 
-    
-    # Prepend hints to the task prompt if available
-    prompt = task['prompt']
-    if hints:
-        prompt = f"{hints}\n\n{prompt}"
     
     response = agent.run(prompt)
     results[task_id] = response
