@@ -32,7 +32,7 @@ async def generate_from_openai_chat_completion(
     
     async def bounded_generate_answer(message, **kwargs):
         async with semaphore:
-            return await generate_answer(message, model, temperature, **kwargs)
+            return await generate_answer(message, model, temperature, max_tokens, **kwargs)
     
     async_responses = [
         asyncio.create_task(bounded_generate_answer(message, **kwargs))
@@ -44,7 +44,7 @@ async def generate_from_openai_chat_completion(
     return responses
 
 @backoff.on_exception(backoff.expo, Exception)
-async def generate_answer(prompt, model, temperature, **kwargs):
+async def generate_answer(prompt, model, temperature, max_tokens, **kwargs):
     """
     Send a prompt to LLM API and get the answer using litellm.
     :param prompt: the prompt to send.
@@ -56,6 +56,7 @@ async def generate_answer(prompt, model, temperature, **kwargs):
                 model=model,
                 messages=prompt[0],
                 temperature=temperature,
+                max_tokens=max_tokens,
                 **kwargs
             )
         except Exception as e:

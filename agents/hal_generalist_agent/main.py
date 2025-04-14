@@ -17,6 +17,33 @@ from smolagents.agents import ActionStep
 
 from mdconvert import MarkdownConverter
 
+AUTHORIZED_IMPORTS = [
+    "requests",
+    "zipfile",
+    "os",
+    "pandas",
+    "numpy",
+    "sympy",
+    "json",
+    "bs4",
+    "pubchempy",
+    "xml",
+    "yahoo_finance",
+    "Bio",
+    "sklearn",
+    "scipy",
+    "pydub",
+    "io",
+    "PIL",
+    "chess",
+    "PyPDF2",
+    "pptx",
+    "torch",
+    "datetime",
+    "fractions",
+    "csv",
+]
+
 
 def save_agent_steps(agent, kwargs, response, sample):
     for step in agent.memory.steps:
@@ -277,8 +304,6 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
                     return content[:5000] + ('...' if len(content) > 5000 else '')
 
         elif command == "create":
-            if path.exists():
-                return f"Error: {path} already exists"
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, 'w') as f:
                 f.write(content or "")
@@ -463,6 +488,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     tools=CORE_TOOLS,
     planning_interval=4,
     max_steps=40,
+    additional_authorized_imports=AUTHORIZED_IMPORTS,
     model=model)
 
     if kwargs['benchmark_name'] == 'usaco':
@@ -546,7 +572,7 @@ No outside libraries are allowed.
             
 Problem: {task['problem_statement']}
             
-The code of the project is cloned to your current directory. Please return only the patch. Please do not include any other text or comments."""
+The code of the project is cloned to {task['repo'].split('/')[-1]}. After you are done, please return the content of the patch as your final answer."""
         )
         save_agent_steps(agent, kwargs, response, task)
         
@@ -598,6 +624,7 @@ Task:
                 tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
                 planning_interval=4,
                 max_steps=40,
+                additional_authorized_imports=AUTHORIZED_IMPORTS,
                 model=model)
             
             response = agent.run(prompt)
@@ -625,6 +652,7 @@ Task:
             tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
             planning_interval=4,
             max_steps=40,
+            additional_authorized_imports=AUTHORIZED_IMPORTS,
             model=model)
         
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
@@ -667,7 +695,7 @@ Task:
 - If the answer is a string, don't include articles, and don't use abbreviations (e.g. for states).                                                             
 - If the answer is a comma separated list, apply the above rules to each element in the list.                                                                                                                                                                                                                    
                                                                                                                                                                  
-Here is the question:
+Here is the question and attached files are stored in your current directory:
 
 {task['Question']}"""
         response = agent.run(prompt)
@@ -1094,6 +1122,7 @@ Here is the question:
         ],
         planning_interval=4,
         max_steps=40,
+        additional_authorized_imports=AUTHORIZED_IMPORTS,
         model=model)
         
         
@@ -1173,6 +1202,7 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     tools=CORE_TOOLS_INSPECT,
     planning_interval=4,
     max_steps=40,
+    additional_authorized_imports=AUTHORIZED_IMPORTS,
     model=model)
         
         
