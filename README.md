@@ -4,7 +4,7 @@
 [![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
 [![Inspect AI](https://img.shields.io/badge/Inspect_AI-green)](https://github.com/UKGovernmentBEIS/inspect_ai)
 
-This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and the official [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) for sharing evaluation results.
+This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and the official [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) for sharing evaluation results.
 
 ## Features
 
@@ -32,7 +32,7 @@ This repository provides a standardized evaluation harness for reproducible agen
   - Automatic encryption of agent traces before uploading to avoid benchmark contamination
 
 * **HAL leaderboard integration**
-  - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space)
+  - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu)
   - Detailed metrics and in-depth performance analysis
 
 ## Table of Contents
@@ -274,18 +274,25 @@ hal-eval --benchmark corebench_easy \
 ```
 
 ### [ScienceAgentBench](https://github.com/osunlp/ScienceAgentBench)
-- Benchmark for evaluating agents' capabilities to solve computational science tasks
-- Evaluates programs in a Docker container environment for consistent evaluation
-- Supports both local and VM execution
+- Benchmark for evaluating agents' capabilities to solve real-world data-driven discovery tasks collected from scientific publications.
+- Tasks involve processing, modeling, analyzing, and visualizing scientific data from four disciplines.
+- Evaluates programs in a Docker container environment for consistent evaluation.
+- Supports local (does not allow concurrency for self-debug), docker (recommended), and VM execution.
 
-For ScienceAgentBench, you will need to download and extract the ScienceAgentBench dataset. ScienceAgentBench will be automatically downloaded via the Hugging Face datasets library.
+ScienceAgentBench will be automatically downloaded via the Hugging Face datasets library. To execute the tasks, you will need to additionally download the scientific data used in ScienceAgentBench [here](https://buckeyemailosu-my.sharepoint.com/:u:/g/personal/chen_8336_buckeyemail_osu_edu/EQuA6uJ3CtRHvRfZ2GiN1tYBRVJE4DSUD10MW61fr7HuSQ?e=sCBegG). Then, you can extract the data using the password `scienceagentbench` as follows:
+```bash
+mv benchmark.zip hal/benchmarks/scienceagentbench/ScienceAgentBench
+cd hal/benchmarks/scienceagentbench/ScienceAgentBench
+unzip -P [password] benchmark.zip
+```
 
-Requirements for the example agent (agents/sab_example_agent):
+Requirements for the example direct prompting and self-debug agents (agents/sab_example_agent):
 ```
 backoff==2.2.1
 boto3==1.37.1
 botocore==1.37.1
 litellm==1.52.8
+pipreqs
 ```
 
 ### [CollaborativeAgentBench](https://github.com/facebookresearch/sweet_rl)
@@ -315,6 +322,36 @@ hal-eval --benchmark colbench_frontend_design --agent_dir agents/colbench_exampl
 
 
 
+=======
+Examples:
+- Running direct prompting agent locally
+```bash
+hal-eval --benchmark scienceagentbench \
+  --agent_dir agents/sab_example_agent/ \
+  --agent_function main.run \
+  --agent_name "SAB Direct Prompting Llama3.3-70B" \
+  -A model_name=us.meta.llama3-3-70b-instruct-v1:0 \
+  -A use_self_debug=False \
+  -A use_knowledge=False \
+  --max_concurrent 10
+```
+- Running self-debug agent with Docker
+```bash
+hal-eval --benchmark scienceagentbench \
+  --agent_dir agents/sab_example_agent/ \
+  --agent_function main.run \
+  --agent_name "SAB Self-Debug Llama3.3-70B" \
+  -A model_name=us.meta.llama3-3-70b-instruct-v1:0 \
+  -A use_self_debug=True \
+  -A use_knowledge=False \
+  --max_concurrent 10 \
+  --docker
+```
+
+Agent Arguments:
+- `model_name`: name of base LLM (currently supporting OpenAI and AWS Bedrock)
+- `use_self_debug`: using the self-debug agent instead of direct prompting if `True`
+- `use_knowledge`: using the expert-annotated domain knowledge as additional agent input if `True`
 
 ## How Do I Run Evaluations?
 
@@ -465,7 +502,7 @@ See [hal/benchmarks/README.md](hal/benchmarks/README.md) for details.
 
 ## How Can I Submit My Results to the HAL Leaderboards?
 
-Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-evals-leaderboard.hf.space) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
+Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
 
 1. **During Evaluation:**
    ```bash
@@ -473,18 +510,18 @@ Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://agent-
    ```
 
 2. **After Evaluation:**
+For submitting results to the leaderboard, upload the files ending with `_UPLOAD.json` located in the generatedrun directories `results/<benchmark_name>/<run_id>/`. There are multiple ways to do this. 
+
    ```bash
-   # Upload all results for a benchmark
+   # Upload all results for a benchmark (this will upload all files ending with `_UPLOAD.json` in the run directories for the benchmark)
    hal-upload -B <benchmark_name>
    
    # Upload a single file
-   hal-upload -F path/to/file.json
+   hal-upload -F path/to/<run_id>_UPLOAD.json
    
-   # Upload all files in a directory
+   # Upload all files in a directory you point to (you can move the files you want to this directory and then upload)
    hal-upload -D path/to/directory
    ```
-
-   **Note:** When using `-F` to upload a single file, the file must be a JSON file.
 
 ## How can I use the agent traces from the HAL Leaderboard?
 
@@ -510,6 +547,8 @@ The current landscape of AI agent evaluation faces several critical challenges. 
 HAL addresses these challenges through two key components: 1) A central leaderboard platform that incorporates cost-controlled evaluations by default, providing clear insights into the cost-performance tradeoffs of different agents, and 2) A standardized evaluation harness that enables reproducible agent evaluations across various benchmarks while tracking token usage and traces and **without** requiring any changes to the agent code or constraining agent developers to follow a certain agent framework. Evaluations can be run locally or in the cloud and fully parallelized.
 
 **TLDR:** We aim to standardize AI agent evaluations by providing a third-party platform for comparing agents across various benchmarks. Our goal with HAL is to serve as a one-stop shop for agent evaluations, taking into account both accuracy and cost by default. The accompanying HAL harness offers a simple and scalable way to run agent evals - locally or in the cloud.
+
+Check out this [issue](https://github.com/princeton-pli/hal-harness/issues/16) for more details on the motivation behind HAL and what differentiates it from other agent eval frameworks.
 
 ## Repository Structure
 

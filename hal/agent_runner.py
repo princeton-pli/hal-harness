@@ -29,7 +29,8 @@ class AgentRunner:
                  conda_env: Optional[str] = None,
                  continue_run: bool = False,
                  run_command: str = None,
-                 ignore_errors: bool = False):
+                 ignore_errors: bool = False,
+                 max_tasks: Optional[int] = None):
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -96,7 +97,7 @@ class AgentRunner:
         self.use_docker = use_docker
         self.continue_run = continue_run
         self.ignore_errors = ignore_errors
-        
+        self.max_tasks = max_tasks
         
 
     def get_remaining_tasks(self, dataset: Dict[str, Any]) -> Dict[str, Any]:
@@ -155,12 +156,19 @@ class AgentRunner:
         elif self.continue_run and self.ignore_errors:
             dataset = {}
             
+        # Limit the number of tasks if max_tasks is specified
+        if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
+            print_step(f"Limiting to the first {self.max_tasks} tasks as requested")
+            task_ids = list(dataset.keys())[:self.max_tasks]
+            dataset = {task_id: dataset[task_id] for task_id in task_ids}
+            
         # delete previous calls from previous run if continuing for remaining tasks
         if self.continue_run and not self.ignore_errors:
             print_step("Cleaning up calls from previous run...")
             for task_id in dataset:
                 call_ids = get_call_ids(task_id, weave_client)
-                delete_calls(call_ids, weave_client)
+                if len(call_ids) > 0:
+                    delete_calls(call_ids, weave_client)
         
         if not dataset:
             print_warning("No remaining tasks to run")

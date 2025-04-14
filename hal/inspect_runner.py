@@ -22,7 +22,7 @@ from .inspect.inspect import (
 )
 from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
-from .utils.utils import safe_filename
+from .utils.utils import safe_filename, get_git_info
 from .utils.weave_utils import comput_cost_from_inspect_usage, get_weave_calls
 
 from .utils.logging_utils import print_success, print_results_table, print_warning
@@ -235,6 +235,7 @@ def inspect_evaluate(
             "raw_eval_results": inspect_eval_results,            
             "raw_logging_results": raw_logging,
             "total_usage": inspect_eval_results['stats']['model_usage'],
+            "git_info": get_git_info()
         }
 
         # Store the upload results locally
