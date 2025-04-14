@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(__file__))
 from agent_hints import AGENT_HINTS
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
-from mdconvert import MarkdownConverter
+from mdconvert import MarkdownConverter, DocumentConverterResult
 import litellm
 
 AUTHORIZED_IMPORTS = [
@@ -63,11 +63,11 @@ class TextInspectorTool(Tool):
     name = "inspect_file_as_text"
     description = """
 You cannot load files yourself: instead call this tool to read a file as markdown text and ask questions about it.
-This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pptx", ".wav", ".mp3", ".m4a", ".flac", ".pdf", ".docx"], and all other types of text files. IT DOES NOT HANDLE IMAGES."""
+This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pptx", ".wav", ".mp3", ".m4a", ".flac", ".pdf", ".docx"], and all other types of text files, including files without extensions (which are treated as text files). IT DOES NOT HANDLE IMAGES."""
 
     inputs = {
         "file_path": {
-            "description": "The path to the file you want to read as text. Must be a '.something' file, like '.pdf'. If it is an image, use the visualizer tool instead! DO NOT use this tool for an HTML webpage: use the web_search tool instead!",
+            "description": "The path to the file you want to read as text. Can be a file with an extension (like '.pdf') or a file without an extension (which will be treated as a text file). If it is an image, use the visualizer tool instead! DO NOT use this tool for an HTML webpage: use the web_search tool instead!",
             "type": "string",
         },
         "question": {
@@ -85,7 +85,17 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         self.text_limit = text_limit
 
     def forward_initial_exam_mode(self, file_path, question):
-        result = self.md_converter.convert(file_path)
+        # Check if the file has no extension (no dot in the filename or the dot is at the beginning)
+        _, file_extension = os.path.splitext(file_path)
+        if not file_extension:
+            # Treat files without extensions as text files
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                text_content = f.read()
+            # Create a DocumentConverterResult with the text content
+            result = DocumentConverterResult(title=None, text_content=text_content)
+        else:
+            # Normal conversion for files with extensions
+            result = self.md_converter.convert(file_path)
 
         if file_path[-4:] in [".png", ".jpg"]:
             raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
@@ -127,7 +137,17 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         return self.model(messages).content
 
     def forward(self, file_path, question: Optional[str] = None) -> str:
-        result = self.md_converter.convert(file_path)
+        # Check if the file has no extension (no dot in the filename or the dot is at the beginning)
+        _, file_extension = os.path.splitext(file_path)
+        if not file_extension:
+            # Treat files without extensions as text files
+            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+                text_content = f.read()
+            # Create a DocumentConverterResult with the text content
+            result = DocumentConverterResult(title=None, text_content=text_content)
+        else:
+            # Normal conversion for files with extensions
+            result = self.md_converter.convert(file_path)
 
         if file_path[-4:] in [".png", ".jpg"]:
             raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
