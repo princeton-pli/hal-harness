@@ -30,12 +30,12 @@ async def generate_from_openai_chat_completion(
     # Create a semaphore to limit concurrent tasks
     semaphore = asyncio.Semaphore(requests_per_minute)
     
-    async def bounded_generate_answer(message):
+    async def bounded_generate_answer(message, **kwargs):
         async with semaphore:
-            return await generate_answer(message, model, temperature)
+            return await generate_answer(message, model, temperature, **kwargs)
     
     async_responses = [
-        asyncio.create_task(bounded_generate_answer(message))
+        asyncio.create_task(bounded_generate_answer(message, **kwargs))
         for message in messages_list
     ]
     
@@ -44,7 +44,7 @@ async def generate_from_openai_chat_completion(
     return responses
 
 @backoff.on_exception(backoff.expo, Exception)
-async def generate_answer(prompt, model, temperature):
+async def generate_answer(prompt, model, temperature, **kwargs):
     """
     Send a prompt to LLM API and get the answer using litellm.
     :param prompt: the prompt to send.
@@ -55,7 +55,8 @@ async def generate_answer(prompt, model, temperature):
             response = await acompletion(
                 model=model,
                 messages=prompt[0],
-                temperature=temperature
+                temperature=temperature,
+                **kwargs
             )
         except Exception as e:
             print(f"Request error: {e}")
@@ -77,7 +78,7 @@ async def generate_from_anthropic_chat_completion(
     # Create a semaphore to limit concurrent requests
     semaphore = asyncio.Semaphore(max_concurrent_requests)
     
-    async def rate_limited_generate(message: str) -> str:
+    async def rate_limited_generate(message: str, **kwargs) -> str:
         async with semaphore:  # This ensures we don't exceed max concurrent requests
             try:
                 return await generate_answer_anthropic(
@@ -93,7 +94,7 @@ async def generate_from_anthropic_chat_completion(
 
     # Create tasks for each message
     async_responses = [
-        asyncio.create_task(rate_limited_generate(message))
+        asyncio.create_task(rate_limited_generate(message, **kwargs))
         for message in messages_list
     ]
     
