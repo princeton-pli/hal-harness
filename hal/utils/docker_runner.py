@@ -29,6 +29,7 @@ class DockerRunner:
         self._file_lock = asyncio.Lock()
         self._active_containers: List[str] = []
         self.benchmark = benchmark
+        self.verbose = False
         
         # Initialize Docker client
         self.docker_client = docker.from_env()
@@ -249,8 +250,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
             
@@ -261,8 +263,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                 
@@ -273,8 +276,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
             
@@ -293,8 +297,9 @@ class DockerRunner:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await proc.communicate()
-                    if stdout:
-                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if self.verbose:
+                        if stdout:
+                            verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
                         verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                     
@@ -305,8 +310,9 @@ class DockerRunner:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await proc.communicate()
-                    if stdout:
-                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if self.verbose:    
+                        if stdout:
+                            verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
                         verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")   
                         
@@ -317,8 +323,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")                    
             
@@ -336,8 +343,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")        
             
@@ -354,8 +362,9 @@ class DockerRunner:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await proc.communicate()
-                    if stdout:
-                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if self.verbose:
+                        if stdout:
+                            verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
                         verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                     
