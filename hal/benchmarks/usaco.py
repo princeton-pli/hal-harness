@@ -22,8 +22,8 @@ class USACOBenchmark(BaseBenchmark):
         
         self.benchmark_name = 'usaco'
         self.requirements_file = 'usaco'
-        self.vm_only = False
-        super().__init__(agent_dir, config, vm_only=self.vm_only)
+        self.requires_sandbox = False
+        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
         
         # Load benchmark dataset
         dataset_path = os.path.join(

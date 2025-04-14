@@ -29,6 +29,7 @@ class DockerRunner:
         self._file_lock = asyncio.Lock()
         self._active_containers: List[str] = []
         self.benchmark = benchmark
+        self.verbose = False
         
         # Initialize Docker client
         self.docker_client = docker.from_env()
@@ -188,7 +189,7 @@ class DockerRunner:
                              agent_dir: str,
                              agent_args: Dict[str, Any],
                              run_id: str,
-                             timeout: int = 7200) -> Optional[Dict[str, Any]]:
+                             timeout: int = 900) -> Optional[Dict[str, Any]]:
         """Process a single task in a Docker container with timeout"""
         # Create temporary directory for mounting into container
         temp_dir = Path(tempfile.mkdtemp())
@@ -196,7 +197,7 @@ class DockerRunner:
         
         try:
             # Copy agent code to temp directory
-            temp_agent_dir = temp_dir / "agent"
+            temp_agent_dir = temp_dir
             shutil.copytree(agent_dir, temp_agent_dir, dirs_exist_ok=True)
 
             # Write input and args files
@@ -249,8 +250,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
             
@@ -261,20 +263,22 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                 
             # install requirements
             proc = await asyncio.create_subprocess_exec(
-                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install -r /workspace/agent/requirements.txt",
+                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install -r /workspace/requirements.txt",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
             
@@ -293,8 +297,9 @@ class DockerRunner:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await proc.communicate()
-                    if stdout:
-                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if self.verbose:
+                        if stdout:
+                            verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
                         verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                     
@@ -305,8 +310,9 @@ class DockerRunner:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await proc.communicate()
-                    if stdout:
-                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if self.verbose:    
+                        if stdout:
+                            verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
                         verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")   
                         
@@ -317,8 +323,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")                    
             
@@ -336,8 +343,9 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if self.verbose:
+                if stdout:
+                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")        
             
@@ -354,8 +362,9 @@ class DockerRunner:
                         stderr=asyncio.subprocess.PIPE
                     )
                     stdout, stderr = await proc.communicate()
-                    if stdout:
-                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    if self.verbose:
+                        if stdout:
+                            verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
                         verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                     
@@ -430,7 +439,7 @@ try:
     # Import agent module
     spec = importlib.util.spec_from_file_location(
         "{module_name}",
-        os.path.join(os.getcwd(), "agent", "{module_name}.py")
+        os.path.join(os.getcwd(), "{module_name}.py")
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

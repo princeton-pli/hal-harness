@@ -14,8 +14,8 @@ class SciCodeBenchmark(BaseBenchmark):
     
     def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'scicode'):
         self.benchmark_name = benchmark_name
-        self.vm_only = False
-        super().__init__(agent_dir, config, vm_only=self.vm_only)
+        self.requires_sandbox = False
+        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
         
         # Load the dataset.
         self.dataset = list(load_dataset("SciCode1/SciCode", split="test"))

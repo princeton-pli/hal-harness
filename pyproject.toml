@@ -14,13 +14,16 @@ dependencies = [
     "python-dotenv",
     "setuptools>=48.0.0",
     "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@d3a242f74c8a4f42a86d1219eaca12ab620c3be2",
-    "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals",
+    "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals@15a81e27ac7161a39e28f247157e36036a61ef18",
     "tenacity>=8.2.0",
     "docker>=7.1.0",
     "cryptography>=42.0.0",
 ]
 
 [project.optional-dependencies]
+swebench = [
+    "swebench @ git+https://github.com/SWE-bench/SWE-bench@006a760a95c9cc11e987884d7e311d74a16db88a",
+]
 azure = [
     "azure-mgmt-compute>=29.1.0",
     "azure-mgmt-network>=25.1.0",
@@ -34,11 +37,20 @@ taubench = [
 scicode = [
   "scicode @ git+https://github.com/peterkirgis/SciCode"
 ]
-assistantbench = [
-    browsergym-assistantbench
+hal-agent-inspect = [
+    "smolagents @ git+https://github.com/benediktstroebl/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "mammoth",
+    "python_pptx>=1.0.2",
+    "pdfminer>=20191125",
+    "pdfminer.six>=20240706",
+    "puremagic>=1.28",
+    "pydub",
+    "youtube_transcript_api>=0.6.2",
+    "SpeechRecognition",
 ]
 hal-agent = [
-    "smolagents @ git+https://github.com/benediktstroebl/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
+    "smolagents",
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
     "mammoth",
     "python_pptx>=1.0.2",

@@ -1,27 +1,88 @@
 
 from typing import Optional, List, Dict, Any
 import tiktoken
-from functools import partial
 
 import subprocess
 from pathlib import Path
 import re
 
-from prompts import USACO_PROMPT
-from tau_bench.envs import get_env
-from tau_bench.types import Action
 import json
 import os
 
 from typing import Optional
 
-from smolagents import ToolCallingAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
-from smolagents import Tool
+from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 from smolagents.models import MessageRole, Model
+from smolagents.agents import ActionStep
 
 from mdconvert import MarkdownConverter
 
+AUTHORIZED_IMPORTS = [
+    "requests",
+    "zipfile",
+    "os",
+    "pandas",
+    "numpy",
+    "sympy",
+    "json",
+    "bs4",
+    "pubchempy",
+    "xml",
+    "yahoo_finance",
+    "Bio",
+    "sklearn",
+    "scipy",
+    "pydub",
+    "io",
+    "PIL",
+    "chess",
+    "PyPDF2",
+    "pptx",
+    "torch",
+    "datetime",
+    "fractions",
+    "csv",
+]
 
+
+def save_agent_steps(agent, kwargs, response, sample):
+    for step in agent.memory.steps:
+        if isinstance(step, ActionStep):
+            step.agent_memory = None
+    intermediate_steps = str(agent.memory.steps)
+    with open("steps.json", "w") as f:
+        json.dump({
+            "agent_args": kwargs,
+            "intermediate_steps": intermediate_steps,
+            "response": str(response),
+            "sample": sample
+            }, f, indent=2)
+        
+def extract_diff(response):
+    """
+    Extracts the diff from a response formatted in different ways
+    """
+    if response is None:
+        return None
+    diff_matches = []
+    other_matches = []
+    pattern = re.compile(r"\<([\w-]+)\>(.*?)\<\/\1\>", re.DOTALL)
+    for code, match in pattern.findall(response):
+        if code in {"diff", "patch"}:
+            diff_matches.append(match)
+        else:
+            other_matches.append(match)
+    pattern = re.compile(r"```(\w+)?\n(.*?)```", re.DOTALL)
+    for code, match in pattern.findall(response):
+        if code in {"diff", "patch"}:
+            diff_matches.append(match)
+        else:
+            other_matches.append(match)
+    if diff_matches:
+        return diff_matches[0]
+    if other_matches:
+        return other_matches[0]
+    return response.split("</s>")[0]
 
 
 class TextInspectorTool(Tool):
@@ -243,8 +304,6 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
                     return content[:5000] + ('...' if len(content) > 5000 else '')
 
         elif command == "create":
-            if path.exists():
-                return f"Error: {path} already exists"
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, 'w') as f:
                 f.write(content or "")
@@ -425,44 +484,50 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         query_vision_language_model,
     ]
 
-    agent = ToolCallingAgent(
+    agent = CodeAgent(
     tools=CORE_TOOLS,
     planning_interval=4,
-    max_steps=80,
+    max_steps=40,
+    additional_authorized_imports=AUTHORIZED_IMPORTS,
     model=model)
 
     if kwargs['benchmark_name'] == 'usaco':
+        USACO_PROMPT = """Please reply with a Python 3 solution to the below problem. Make sure
+to wrap your code in '```python' and '```' Markdown delimiters, and
+include exactly one block of code with the entire solution.
+Reason through the problem and conceptualize a solution first,
+then write pseudocode, and finally output the Python
+with your solution steps in comments.
+No outside libraries are allowed.
+
+[BEGIN PROBLEM]
+{}
+[END PROBLEM]
+"""
         prompt = USACO_PROMPT.format(task['description'])
-        response = asyncio.run(agent.arun(prompt))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(prompt)
+        save_agent_steps(agent, kwargs, response, task)
         
         # extract code from response
         if '```python' in response:
             response = response.split('```python')[1].split('```')[0]
             
+        return {task_id: response}
+            
     elif kwargs['benchmark_name'] == 'corebench_easy':
         
-        response = asyncio.run(agent.arun(task['prompt']))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(task['prompt'])
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = asyncio.run(agent.arun(task['prompt']))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
-            
+        response = agent.run(task['prompt'])
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = asyncio.run(agent.arun(task['prompt']))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(task['prompt'])
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
         
     elif kwargs['benchmark_name'] == 'swebench_verified':
@@ -473,76 +538,128 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         if process.returncode != 0:
             raise Exception(f"Failed to clone repository: {process.stderr}")
         
-        process = subprocess.run(['git', 'reset', '--hard', task['base_commit']], capture_output=True, text=True)
+        process = subprocess.run(
+            f"cd {task['repo'].split('/')[-1]} && git reset --hard {task['base_commit']}", shell=True, capture_output=True, text=True)
         print(process.stdout)
         if process.returncode != 0:
             raise Exception(f"Failed to reset repository: {process.stderr}")
         
-        
-        
-        response = asyncio.run(agent.arun(
-            f"""I need you to solve this issue by generating a single patch file that I can apply directly to this repository using git apply.
+        response = agent.run(
+            f"""I need you to solve this issue by generating a single patch that I can apply directly to this repository using git apply.
             
 Problem: {task['problem_statement']}
             
-The code of the project is cloned to your current directory. Please respond with a single patch file. Please do not include any other text or comments."""
-        ))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+The code of the project is cloned to {task['repo'].split('/')[-1]}. After you are done, please return the content of the patch as your final answer."""
+        )
+        save_agent_steps(agent, kwargs, response, task)
+        
+        model_patch = extract_diff(response)
+        return {task_id: model_patch}
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
-        from appworld import AppWorld, load_task_ids
+        from appworld import AppWorld
     
-        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
+        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
             instruction = world.task.instruction # To see task instruction.
+            supervisor = world.task.supervisor
+            
+            prompt = f"""Using the available APIs you can interact with on my behalf through the "interact_with_apis" tool, generate code to solve the following task.
+            
+Here are three key APIs that you need to know to get more information
+            
+# To get a list of apps that are available to you.
+print(apis.api_docs.show_app_descriptions())
+
+# To get the list of apis under any app listed above, e.g. supervisor
+print(apis.api_docs.show_api_descriptions(app_name='supervisor'))
+
+# To get the specification of a particular api, e.g. supervisor app's show_account_passwords
+print(apis.api_docs.show_api_doc(app_name='supervisor', api_name='show_account_passwords'))
+
+Now please generate code to solve the following task:
+
+My name is: {supervisor.first_name} {supervisor.last_name}. My personal email is {supervisor.email} and phone number is {supervisor.phone_number}.
+
+Task:
+
+{instruction}
+"""
             
             @tool
-            def execute_in_world(command: str) -> str:
+            def execute_code_to_interact_with_apis(code: str) -> str:
                 """
-                Execute a command in the appworld environment.
+                Execute code to interact with the APIs. You can access variables from previous code blocks you executed. Code is executed in a python REPL environment.
                 Args:
-                    command: The command to execute
+                    code: The code to execute
                 Returns:
-                    str: The response of the environment
+                    str: The terminal output of the code
+                    str: Whether the task is completed
                 """
-                return world.execute(command)
+                return world.execute(code), "Task completed" if world.task_completed() else "Task not yet completed"
             
-            agent = ToolCallingAgent(
-                tools=CORE_TOOLS + [execute_in_world],
+            agent = CodeAgent(
+                tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
                 planning_interval=4,
-                max_steps=80,
+                max_steps=40,
+                additional_authorized_imports=AUTHORIZED_IMPORTS,
                 model=model)
             
-            response = asyncio.run(agent.arun(instruction))
-            steps = agent.to_json()
-            with open("steps.json", "w") as f:
-                json.dump(steps, f)
-        
+            response = agent.run(prompt)
+            save_agent_steps(agent, kwargs, response, task)
+            
         return {task_id: "Completed"}
+    
+    
     elif kwargs['benchmark_name'] == 'appworld_test_challenge':
         from appworld import AppWorld
         
         @tool
-        def execute_in_world(command: str) -> str:
+        def execute_code_to_interact_with_apis(code: str) -> str:
             """
-            Execute a command in the appworld environment.
+            Execute code to interact with the APIs. You can access variables from previous code blocks you executed. Code is executed in a python REPL environment.
+            Args:
+                code: The code to execute
+            Returns:
+                str: The terminal output of the code
+                str: Whether the task is completed
             """
-            return world.execute(command)
+            return world.execute(code), "Task completed" if world.task_completed() else "Task not yet completed"
         
-        agent = ToolCallingAgent(
-            tools=CORE_TOOLS,
+        agent = CodeAgent(
+            tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
             planning_interval=4,
-            max_steps=80,
+            max_steps=40,
+            additional_authorized_imports=AUTHORIZED_IMPORTS,
             model=model)
         
-        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
+        with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
             instruction = world.task.instruction # To see task instruction.
+            supervisor = world.task.supervisor
             
-            response = asyncio.run(agent.arun(instruction))
-            steps = agent.to_json()
-            with open("steps.json", "w") as f:
-                json.dump(steps, f)
+            prompt = f"""Using the available APIs you can interact with on my behalf through the "interact_with_apis" tool, generate code to solve the following task.
+            
+Here are three key APIs that you need to know to get more information
+            
+# To get a list of apps that are available to you.
+print(apis.api_docs.show_app_descriptions())
+
+# To get the list of apis under any app listed above, e.g. supervisor
+print(apis.api_docs.show_api_descriptions(app_name='supervisor'))
+
+# To get the specification of a particular api, e.g. supervisor app's show_account_passwords
+print(apis.api_docs.show_api_doc(app_name='supervisor', api_name='show_account_passwords'))
+
+Now please generate code to solve the following task:
+
+My name is: {supervisor.first_name} {supervisor.last_name}. My personal email is {supervisor.email} and phone number is {supervisor.phone_number}.
+
+Task:
+
+{instruction}
+"""
+            
+            response = agent.run(prompt)
+            save_agent_steps(agent, kwargs, response, task)
         
         return {task_id: "Completed"}
             
@@ -555,17 +672,17 @@ The code of the project is cloned to your current directory. Please respond with
 - If the answer is a string, don't include articles, and don't use abbreviations (e.g. for states).                                                             
 - If the answer is a comma separated list, apply the above rules to each element in the list.                                                                                                                                                                                                                    
                                                                                                                                                                  
-Here is the question:
+Here is the question and attached files are stored in your current directory:
 
 {task['Question']}"""
-        response = asyncio.run(agent.arun(prompt))
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        response = agent.run(prompt)
+        save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
     
     
     elif kwargs['benchmark_name'] == 'taubench_airline':
+        from tau_bench.envs import get_env
+        from tau_bench.types import Action
         
         ### ENV SETUP (usually this should be untouched) ###
         isolated_env = get_env(
@@ -617,7 +734,7 @@ Here is the question:
 
             Returns:
                 str: A JSON string of the reservation details if booking is successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             
             action = Action(
@@ -637,7 +754,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
         
         @tool
         def calculate(expression: str) -> str:
@@ -650,7 +767,7 @@ Here is the question:
             
             Returns:
                 str: The result of the calculation or an error message if the calculation fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='calculate',
@@ -659,7 +776,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def cancel_reservation(reservation_id: str) -> str:
@@ -671,7 +788,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation message if cancellation is successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='cancel_reservation',
@@ -680,7 +797,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def get_reservation_details(reservation_id: str) -> str:
@@ -692,7 +809,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of the reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='get_reservation_details',
@@ -701,7 +818,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def get_user_details(user_id: str) -> str:
@@ -713,7 +830,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of the user details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='get_user_details',
@@ -722,7 +839,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def list_all_airports() -> str:
@@ -731,14 +848,14 @@ Here is the question:
             
             Returns:
                 str: A JSON string containing all airports and their cities if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='list_all_airports',
                 kwargs={}
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def search_direct_flight(origin: str, destination: str, date: str) -> str:
@@ -752,7 +869,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of available direct flights if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='search_direct_flight',
@@ -763,7 +880,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def search_onestop_flight(origin: str, destination: str, date: str) -> str:
@@ -777,7 +894,7 @@ Here is the question:
             
             Returns:
                 str: A JSON string of available one-stop flights if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='search_onestop_flight',
@@ -788,7 +905,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def send_certificate(user_id: str, amount: float) -> str:
@@ -801,7 +918,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation message if the certificate is sent successfully, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='send_certificate',
@@ -811,7 +928,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def think(thought: str) -> str:
@@ -824,7 +941,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation that the thought was logged.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='think',
@@ -833,7 +950,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def transfer_to_human_agents(summary: str) -> str:
@@ -847,7 +964,7 @@ Here is the question:
             
             Returns:
                 str: Confirmation that the user was transferred to a human agent.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='transfer_to_human_agents',
@@ -856,7 +973,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_baggages(reservation_id: str, total_baggages: int, nonfree_baggages: int, payment_id: str) -> str:
@@ -871,7 +988,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_baggages',
@@ -883,7 +1000,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_flights(reservation_id: str, cabin: str, flights: List[Dict[str, str]], payment_id: str) -> str:
@@ -899,7 +1016,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_flights',
@@ -911,7 +1028,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
 
         @tool
         def update_reservation_passengers(reservation_id: str, passengers: List[Dict[str, str]]) -> str:
@@ -924,7 +1041,7 @@ Here is the question:
             
             Returns:
                 str: Updated reservation details if successful, or an error message if it fails.
-                bool: Whether the user indicated that they want to end the conversation. You should provide your final answer if this is True.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='update_reservation_passengers',
@@ -934,7 +1051,7 @@ Here is the question:
                 }
             )
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
         
         @tool 
         def ask_user(question: str) -> str:
@@ -946,6 +1063,7 @@ Here is the question:
                 
             Returns:
                 str: The user's response.
+                str: Indication of whether the user wants to end the conversation.
             """
             action = Action(
                 name='respond',
@@ -953,22 +1071,7 @@ Here is the question:
                     'content': question
                 })
             observation = isolated_env.step(action)
-            return observation.observation, observation.done
-        
-        class FinalAnswerTool(Tool):
-            name = "final_answer"
-            description = "Provides a final answer to the given problem."
-            inputs = {"answer": {"type": "any", "description": "The final answer to the problem"}}
-            output_type = "any"
-
-            def forward(self, answer: Any) -> Any:
-                action = Action(
-                name='respond',
-                kwargs={
-                    'content': answer
-                })
-                observation = isolated_env.step(action)
-                return observation
+            return observation.observation, "User wants to end the conversation" if observation.done else "User does not want to end the conversation"
             
         
         # get instruction from environment
@@ -976,7 +1079,7 @@ Here is the question:
         wiki = isolated_env.wiki
         with open('wiki.md', 'w') as f:
             f.write(wiki)
-        agent = ToolCallingAgent(
+        agent = CodeAgent(
         tools=CORE_TOOLS + [
             book_reservation,
             calculate,
@@ -995,17 +1098,17 @@ Here is the question:
             ask_user
         ],
         planning_interval=4,
-        max_steps=80,
+        max_steps=40,
+        additional_authorized_imports=AUTHORIZED_IMPORTS,
         model=model)
         
-        # agent.tools.setdefault(FinalAnswerTool())
         
         ### YOUR AGENT CODE HERE ###
         instruction = f"""I added some useful information to the wiki in `wiki.md`. Please read it and then answer the user's question.
 
 User's question: {user_question}
         """
-        response = asyncio.run(agent.arun(instruction))
+        response = agent.run(instruction)
         action = Action(
                 name='respond',
                 kwargs={
@@ -1014,9 +1117,7 @@ User's question: {user_question}
         observation = isolated_env.step(action)
         print("Final user's response: ", observation)
         
-        steps = agent.to_json()
-        with open("steps.json", "w") as f:
-            json.dump(steps, f)
+        save_agent_steps(agent, kwargs, response, task)
             
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
@@ -1032,11 +1133,10 @@ User's question: {user_question}
 
 # INSPECT BENCHMARKS BELOW
 
-from inspect_ai.util import sandbox
-
 import asyncio
 
 async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
+    from inspect_ai.util import sandbox
     
     model = LiteLLMModel(model_id='openai/gpt-4o-mini-2024-07-18')
         
@@ -1075,10 +1175,11 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         query_vision_language_model
     ]
         
-    agent = ToolCallingAgent(
+    agent = CodeAgent(
     tools=CORE_TOOLS_INSPECT,
     planning_interval=4,
-    max_steps=80,
+    max_steps=40,
+    additional_authorized_imports=AUTHORIZED_IMPORTS,
     model=model)
         
         
@@ -1089,12 +1190,9 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         response = await agent.arun(sample["input"][0]["content"])
     else:
         raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
-    
-    steps = agent.to_json()
-    with open("steps.json", "w") as f:
-        json.dump(steps, f)
-        
+
     try:
+        save_agent_steps(agent, kwargs, response, sample)
         return {"output": str(response)}
     except Exception as e:
         return  {"output": str(e)}
