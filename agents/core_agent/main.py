@@ -6,6 +6,7 @@ import re
 import json
 import os
 import sys
+import ast
 from typing import Optional
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
 
@@ -463,42 +464,20 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             print(f"[DEBUG] CustomFinalAnswerTool created with base_agent_flag={base_agent_flag}")
             
         def extract_dict_keys(self, prompt):
-            """Extract dictionary keys from the task prompt."""
-            dict_keys_pattern = r"dict_keys\(\[(.*?)\]\)"
-            match = re.search(dict_keys_pattern, prompt)
+            """Extract dictionary keys from the task prompt using ast.literal_eval."""
+            # Regular expression to find the dict_keys part
+            pattern = r"dict_keys\((\[.*?\])\)"
+            match = re.search(pattern, prompt)
+
             if match:
-                keys_str = match.group(1)
-                print(f"[DEBUG] Found dict_keys pattern in prompt: {keys_str}")
-                
-                # Parse the keys from the string format
-                keys = []
-                # Split by commas but respect quotes
-                in_quote = False
-                current_key = ""
-                for char in keys_str:
-                    if char == "'" or char == '"':
-                        in_quote = not in_quote
-                        current_key += char
-                    elif char == ',' and not in_quote:
-                        keys.append(current_key.strip())
-                        current_key = ""
-                    else:
-                        current_key += char
-                if current_key:
-                    keys.append(current_key.strip())
-                
-                # Clean up the keys (remove quotes)
-                cleaned_keys = []
-                for key in keys:
-                    key = key.strip()
-                    if (key.startswith("'") and key.endswith("'")) or (key.startswith('"') and key.endswith('"')):
-                        key = key[1:-1]
-                    cleaned_keys.append(key)
-                
-                print(f"[DEBUG] Extracted keys: {cleaned_keys}")
-                return cleaned_keys
-            print("[DEBUG] No dict_keys pattern found in prompt")
-            return []
+                list_str = match.group(1)
+                print(f"[DEBUG] Found dict_keys pattern in prompt: {list_str}")
+
+                array = ast.literal_eval(list_str)
+                print(f"[DEBUG] Extracted keys: {array}")
+                return array
+            else:
+                raise ValueError("No dict_keys pattern found in the prompt.")
             
         def forward(self, answer: Any) -> Any:
             """Process the final answer with key validation if base_agent is False."""
