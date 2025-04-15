@@ -19,13 +19,23 @@ def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input_dict) == 1, 'input must contain only one task'
 
-    agent = ScienceAgent(
-        kwargs['model_name'],
-        context_cutoff=28000,
-        max_tokens=kwargs['max_tokens'],
-        use_self_debug=kwargs['use_self_debug'],
-        use_knowledge=kwargs['use_knowledge']
-    )
+    if 'reasoning_effort' in kwargs:
+        agent = ScienceAgent(
+            kwargs['model_name'],
+            context_cutoff=28000,
+            max_tokens=kwargs['max_tokens'],
+            reasoning_effort=kwargs['reasoning_effort'],
+            use_self_debug=kwargs['use_self_debug'],
+            use_knowledge=kwargs['use_knowledge']
+        )
+    else:
+        agent = ScienceAgent(
+            kwargs['model_name'],
+            context_cutoff=28000,
+            max_tokens=kwargs['max_tokens'],
+            use_self_debug=kwargs['use_self_debug'],
+            use_knowledge=kwargs['use_knowledge']
+        )
 
     task_id = list(input_dict.keys())[0]
     task = format_task_dict(list(input_dict.values())[0])
