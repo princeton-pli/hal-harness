@@ -269,7 +269,7 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
                     if processed_call['started_at'] > latency_dict[task_id]['last_call_timestamp']:
                         latency_dict[task_id]['last_call_timestamp'] = processed_call['started_at']
                     
-            progress.update(task2, advance=1)
+            progress.update(task1, advance=1)
             
     for task_id in latency_dict:
         latency_dict[task_id]['total_time'] = (datetime.fromisoformat(latency_dict[task_id]['last_call_timestamp']) - datetime.fromisoformat(latency_dict[task_id]['first_call_timestamp'])).total_seconds()
