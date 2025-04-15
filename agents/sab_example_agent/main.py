@@ -22,6 +22,7 @@ def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
     agent = ScienceAgent(
         kwargs['model_name'],
         context_cutoff=28000,
+        max_tokens=kwargs['max_tokens'],
         use_self_debug=kwargs['use_self_debug'],
         use_knowledge=kwargs['use_knowledge']
     )
