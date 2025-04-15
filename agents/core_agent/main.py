@@ -501,17 +501,18 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if hints:
         prompt = f"{hints}\n\n{prompt}"
     
-    # Create a custom FinalAnswerTool that includes key validation
+    # Create a custom FinalAnswerTool that includes key validation and LLM-based giving-up detection
     class CustomFinalAnswerTool(Tool):
         name = "final_answer"
         description = "Provides a final answer to the given problem."
         inputs = {"answer": {"type": "any", "description": "The final answer to the problem"}}
         output_type = "any"
 
-        def __init__(self, base_agent_flag, task_prompt):
+        def __init__(self, base_agent_flag, task_prompt, model=None):
             super().__init__()
             self.base_agent_flag = base_agent_flag
             self.task_prompt = task_prompt
+            self.model = model  # Store the model for LLM-based checks
             print(f"[DEBUG] CustomFinalAnswerTool created with base_agent_flag={base_agent_flag}")
             
         def extract_dict_keys(self, prompt):
@@ -529,11 +530,73 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                 return array
             else:
                 raise ValueError("No dict_keys pattern found in the prompt.")
+        
+        def check_if_giving_up(self, answer):
+            """Use the LLM to determine if the answer indicates giving up on the task."""
+            if self.model is None:
+                print("[DEBUG] No model provided for giving-up check, skipping")
+                return False, "No model available for check"
+                
+            # Convert answer to string representation for analysis
+            answer_str = str(answer)
+            
+            # Create a prompt for the LLM to analyze the answer
+            messages = [
+                {
+                    "role": MessageRole.SYSTEM,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": """You are an evaluator determining if an agent's answer indicates giving up on a task.
+                            
+All tasks are possible to complete, and the agent should never give up by saying a task is impossible, unavailable, or not reproducible.
+
+Analyze the answer and determine if it indicates giving up (e.g., contains phrases like "unobtainable", "unavailable", "NOT REPRODUCIBLE", "ERROR", "NOT FOUND", "unknown", or null values).
+
+Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEMPT" if it appears to be a genuine attempt at solving the problem."""
+                        }
+                    ]
+                },
+                {
+                    "role": MessageRole.USER,
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Analyze this answer to determine if the agent is giving up:\n\n{answer_str}"
+                        }
+                    ]
+                }
+            ]
+            
+            # Get the LLM's evaluation
+            try:
+                evaluation = self.model(messages).content.strip()
+                print(f"[DEBUG] LLM evaluation of answer: {evaluation}")
+                
+                # Check if the LLM determined the agent is giving up
+                is_giving_up = "GIVING_UP" in evaluation
+                
+                if is_giving_up:
+                    feedback = "The answer indicates giving up on the task. Remember that all tasks are possible to complete. Please try a different approach to get the answer."
+                else:
+                    feedback = "The answer appears to be a genuine attempt at solving the problem."
+                    
+                return is_giving_up, feedback
+            except Exception as e:
+                print(f"[DEBUG] Error during LLM evaluation: {str(e)}")
+                return False, f"Error during evaluation: {str(e)}"
             
         def forward(self, answer: Any) -> Any:
             """Process the final answer with key validation if base_agent is False."""
             print(f"[DEBUG] CustomFinalAnswerTool.forward called with answer: {answer}")
             print(f"[DEBUG] base_agent_flag is {self.base_agent_flag}")
+            
+            # First, check if the agent is giving up
+            is_giving_up, feedback = self.check_if_giving_up(answer)
+            if is_giving_up:
+                error_msg = f"Submission rejected: {feedback}"
+                print(f"[DEBUG] {error_msg}")
+                raise Exception(error_msg)
             
             if not self.base_agent_flag:
                 # Extract expected keys from the task prompt
@@ -572,7 +635,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # This will replace the default FinalAnswerTool in the agent because they share the same name
     custom_final_answer_tool = CustomFinalAnswerTool(
         base_agent_flag=kwargs.get('base_agent', False),
-        task_prompt=prompt
+        task_prompt=prompt,
+        model=model  # Pass the model for LLM-based checks
     )
     
     # Include the custom tool directly in the CORE_TOOLS list
@@ -592,7 +656,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     agent = CodeAgent(
         tools=CORE_TOOLS,
         planning_interval=4,
-        max_steps=40,
+        max_steps=1, # TEMPORARY
         model=model,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
     ) 
