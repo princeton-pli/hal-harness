@@ -441,6 +441,11 @@ def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.gi
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
+    # Create symbolic links
+    cwd = os.getcwd()
+    os.symlink(f'{cwd}/environment/data', '/data', target_is_directory=True)
+    os.symlink(f'{cwd}/environment/code', '/code', target_is_directory=True)
+    os.symlink(f'{cwd}/environment/results', '/results', target_is_directory=True)
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
