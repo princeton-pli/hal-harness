@@ -189,7 +189,7 @@ class DockerRunner:
                              agent_dir: str,
                              agent_args: Dict[str, Any],
                              run_id: str,
-                             timeout: int = 900) -> Optional[Dict[str, Any]]:
+                             timeout: int = 7200) -> Optional[Dict[str, Any]]:
         """Process a single task in a Docker container with timeout"""
         # Create temporary directory for mounting into container
         temp_dir = Path(tempfile.mkdtemp())
@@ -343,9 +343,8 @@ class DockerRunner:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            if self.verbose:
-                if stdout:
-                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+            if stdout:
+                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")        
             
@@ -361,10 +360,9 @@ class DockerRunner:
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE
                     )
-                    stdout, stderr = await proc.communicate()
-                    if self.verbose:
-                        if stdout:
-                            verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    stdout, stderr = await proc.communicate()                    
+                    if stdout:
+                        verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
                         verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
                     
