@@ -303,6 +303,7 @@ hal-eval --benchmark scienceagentbench \
   --agent_function main.run \
   --agent_name "SAB Direct Prompting Llama3.3-70B" \
   -A model_name=us.meta.llama3-3-70b-instruct-v1:0 \
+  -A max_tokens=4096 \
   -A use_self_debug=False \
   -A use_knowledge=False \
   --max_concurrent 10
@@ -314,6 +315,7 @@ hal-eval --benchmark scienceagentbench \
   --agent_function main.run \
   --agent_name "SAB Self-Debug Llama3.3-70B" \
   -A model_name=us.meta.llama3-3-70b-instruct-v1:0 \
+  -A max_tokens=4096 \
   -A use_self_debug=True \
   -A use_knowledge=False \
   --max_concurrent 10 \
