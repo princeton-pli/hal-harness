@@ -59,6 +59,7 @@ Best practices:
 • If there exists a file called 'manuscript' then first read this file to extract the required results to answer the questions of the task.
 • If you are extracting information from html (such as the output of a Jupyter notebook), convert it to a PDF or PNG first and then extract the relevant information.
 • Before running the code, first determine a list of package/dependency requirements that must be installed by reading through the README file or code itself. Then install those dependencies before running the code.
+• Note: Symbolic links have been automatically created for environment/data → /data, environment/code → /code, and environment/results → /results to ensure proper file access.
 
 Constraints:
 • Use flags or modify commands to bypass any need for confirmations during execution to streamline processes.
