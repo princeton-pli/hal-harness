@@ -35,8 +35,8 @@ Here are some helpful previews for the dataset file(s):
 
 
 class ScienceAgent():
-    def __init__(self, llm_engine_name, context_cutoff=28000, max_tokens=4096, use_self_debug=False, use_knowledge=False):
-        self.llm_engine = LiteLlmEngine(llm_engine_name)
+    def __init__(self, llm_engine_name, context_cutoff=28000, max_tokens=4096, reasoning_effort=None, use_self_debug=False, use_knowledge=False):
+        self.llm_engine = LiteLlmEngine(llm_engine_name, reasoning_effort)
         self.llm_cost = model_cost[llm_engine_name]
 
         self.context_cutoff = context_cutoff
