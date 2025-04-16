@@ -93,7 +93,7 @@ class GaiaBenchmark(BaseBenchmark):
         failed_tasks = [task_id for task_id, task_output in eval_results.items() if int(task_output['score']) == 0]
                 
         results = {
-            'overall_accuracy': overall_correct_count / len(eval_results),
+            'accuracy': overall_correct_count / len(eval_results),
             'level_1_accuracy': level_correct_count['level_1'] / level_count['level_1'] if level_count['level_1'] > 0 else None,
             'level_2_accuracy': level_correct_count['level_2'] / level_count['level_2'] if level_count['level_2'] > 0 else None,
             'level_3_accuracy': level_correct_count['level_3'] / level_count['level_3'] if level_count['level_3'] > 0 else None,
