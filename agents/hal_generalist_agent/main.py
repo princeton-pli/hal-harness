@@ -509,6 +509,7 @@ No outside libraries are allowed.
         save_agent_steps(agent, kwargs, response, task)
         
         # extract code from response
+        response = str(response)
         if '```python' in response:
             response = response.split('```python')[1].split('```')[0]
             
@@ -557,11 +558,41 @@ The code of the project is cloned to {task['repo'].split('/')[-1]}. After you ar
         return {task_id: model_patch}
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
+        from appworld.task import Task
+        
+        def tool_generator(name_: str, description_: str, inputs_: dict, output_type_: dict, function: callable):
+            class GeneratedTool(Tool):
+                name = name_
+                description = description_
+                inputs = inputs_
+                output_type = output_type_
+
+                def forward(self, *args, **kwargs):
+                    return world.apis.function(*args, **kwargs)
+
+            GeneratedTool.__name__ = f"{name_.title()}Tool"
+            return GeneratedTool
+
+        def get_smolagents_tools(task):
+            tools: list[Tool] = []
+            for api in task.api_docs.keys():
+                for api_func in task.api_docs[api].keys():
+                    tool = tool_generator(
+                    name_=api_func,
+                    description_=task.api_docs[api][api_func]["description"],
+                    inputs_=task.api_docs[api][api_func]["parameters"],
+                    output_type_=task.api_docs[api][api_func]["response_schemas"]["success"],
+                    function=api_func
+                    )
+                    tools.append(tool)
+            return tools
+        
         from appworld import AppWorld
     
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
             instruction = world.task.instruction # To see task instruction.
             supervisor = world.task.supervisor
+            tools = get_smolagents_tools(world.task)
             
             prompt = f"""Using the available APIs you can interact with on my behalf through the "interact_with_apis" tool, generate code to solve the following task.
             
@@ -598,13 +629,15 @@ Task:
                 return world.execute(code), "Task completed" if world.task_completed() else "Task not yet completed"
             
             agent = CodeAgent(
-                tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
+                tools=CORE_TOOLS + get_smolagents_tools(world.task),
                 planning_interval=4,
-                max_steps=40,
+                max_steps=2,
                 additional_authorized_imports=AUTHORIZED_IMPORTS,
                 model=model)
             
             response = agent.run(prompt)
+            world.post_execute()
+            world.save()
             save_agent_steps(agent, kwargs, response, task)
             
         return {task_id: "Completed"}
@@ -659,6 +692,8 @@ Task:
 """
             
             response = agent.run(prompt)
+            world.post_execute()
+            world.save()
             save_agent_steps(agent, kwargs, response, task)
         
         return {task_id: "Completed"}
@@ -1108,7 +1143,7 @@ Here is the question and attached files are stored in your current directory:
 
 User's question: {user_question}
         """
-        response = agent.run(instruction)
+        response = str(agent.run(instruction))
         action = Action(
                 name='respond',
                 kwargs={
