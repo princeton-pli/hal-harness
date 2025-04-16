@@ -87,7 +87,18 @@ class ScienceAgentBench(BaseBenchmark):
         run_log = []
         eval_log = []
         for idx in range(1, len(self.benchmark) + 1):
-            run_log.append(agent_output[str(idx)])
+            if agent_output[str(idx)] == "TIMEOUT after 900 seconds":
+                run_log.append({
+                    "history": [
+                        {
+                            "role": "assistant",
+                            "content": "TIMEOUT",
+                        }
+                    ],
+                    "cost": 0.0 # need to rely on weave log for accurate cost
+                })
+            else:
+                run_log.append(agent_output[str(idx)])
             eval_log.append(eval_result[str(idx)])
         
         metrics = evaluate_best_run([run_log], [eval_log])
@@ -102,7 +113,20 @@ class ScienceAgentBench(BaseBenchmark):
         all_data = agent_output
         with open(log_fname, "w") as f:
             for idx in range(1, len(self.benchmark) + 1):
-                f.write(json.dumps(all_data[str(idx)]) + "\n")
+                if all_data[str(idx)] == "TIMEOUT after 900 seconds":
+                    f.write(json.dumps(
+                        {
+                            "history": [
+                                {
+                                    "role": "assistant",
+                                    "content": "TIMEOUT",
+                                }
+                            ],
+                            "cost": 0.0 # need to rely on weave log for accurate cost
+                        }
+                    ) + "\n")
+                else:
+                    f.write(json.dumps(all_data[str(idx)]) + "\n")
 
         args.log_fname = log_fname
         args.pred_program_path = os.path.join(self.get_run_dir(run_id), "pred_programs")
