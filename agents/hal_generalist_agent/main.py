@@ -11,7 +11,7 @@ import os
 
 from typing import Optional
 
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
+from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
@@ -474,7 +474,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     model = LiteLLMModel(**model_params)
     
     CORE_TOOLS = [
-        DuckDuckGoSearchTool(),
+        # DuckDuckGoSearchTool(),
+        GoogleSearchTool(provider='serpapi'),
         VisitWebpageTool(),
         PythonInterpreterTool(),
         execute_bash,
@@ -1166,7 +1167,8 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
             return "Execution failed: " + str(e)
         
     CORE_TOOLS_INSPECT = [
-        DuckDuckGoSearchTool(),
+        # DuckDuckGoSearchTool(),
+        GoogleSearchTool(provider='serpapi'),
         VisitWebpageTool(),
         PythonInterpreterTool(),
         TextInspectorTool(model=model, text_limit=5000),
