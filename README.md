@@ -267,10 +267,11 @@ pip install -e .[corebench]
   - `corebench_hard` - Agent must install dependencies and run code from scratch, and answer task questions.
 - Example usage:
 ```bash
-hal-eval --benchmark corebench_easy \
-  --agent_dir agents/list_files_agent \
+hal-eval --benchmark corebench_hard \
+  --agent_dir agents/core_agent \
   --agent_function main.run \
-  --agent_name "Test Agent"
+  --agent_name "CORE-Agent" \
+  -A model_name="openai/gpt-4.1-2025-04-14"
 ```
 
 ### [ScienceAgentBench](https://github.com/osunlp/ScienceAgentBench)
