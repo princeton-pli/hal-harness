@@ -61,6 +61,18 @@ hal-agent = [
     "youtube_transcript_api>=0.6.2",
     "SpeechRecognition",
 ]
+coreagent = [
+    "smolagents",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "mammoth",
+    "python_pptx>=1.0.2",
+    "pdfminer>=20191125",
+    "pdfminer.six>=20240706",
+    "puremagic>=1.28",
+    "pydub",
+    "youtube_transcript_api>=0.6.2",
+    "SpeechRecognition",
+]
 corebench = [
     "scipy>=1.15.2"
 ]

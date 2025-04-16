@@ -256,7 +256,7 @@ gpg --output hal/benchmarks/corebench/core_test.json --decrypt hal/benchmarks/co
 ```
 - Install benchmark specific dependencies:
 ```bash
-pip install -e .[corebench]
+pip install -e .[corebench,coreagent]
 ```
 - Benchmark for evaluating how agents can reproduce the results of scientific papers when provided with their code.
 - Tasks involve setting up the environment, running the code, and answering questions about the results.
