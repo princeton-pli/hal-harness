@@ -519,7 +519,7 @@ No outside libraries are allowed.
         corebench_agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
-            max_steps=80,  # Increased from 2 to 80
+            max_steps=40,
             model=model
         )
         
@@ -532,7 +532,7 @@ No outside libraries are allowed.
         corebench_agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
-            max_steps=80,  # Increased from 2 to 80
+            max_steps=40,
             model=model
         )
         
@@ -545,7 +545,7 @@ No outside libraries are allowed.
         corebench_agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
-            max_steps=80,  # Increased from 2 to 80
+            max_steps=40,
             model=model
         )
         
