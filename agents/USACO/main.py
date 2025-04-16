@@ -46,6 +46,8 @@ def run_usaco_zeroshot(problem_dict, episodic_retrieval=False, semantic_retrieva
 
     # add result to the dict for each key in the problem_dict
     assert len(results) == 1, "Only one problem should be provided"
+    if type(results[results.keys()[0]]) is not str:
+        return 'None'
     return results
 
 def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True, semantic_retrieval=True, reflexion=False, attempts=1, num_reflexion=2, num_retrieved=2 , **kwargs):
@@ -77,6 +79,8 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
 
     # add result to the dict for each key in the problem_dict
     assert len(results) == 1, "Only one problem should be provided"
+    if type(results[results.keys()[0]]) is not str:
+        return 'None'
     return results
 
 
@@ -116,4 +120,6 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
     results = (rdict, sdict, rs, ss)
     
     assert len(results) == 1, "Only one problem should be provided"
+    if type(results[results.keys()[0]]) is not str:
+        return 'None'
     return results
