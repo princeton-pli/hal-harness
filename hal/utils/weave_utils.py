@@ -57,8 +57,6 @@ MODEL_PRICES_DICT = {
                 "google/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {"prompt_tokens": 3.5/1e6, "completion_tokens": 3.5/1e6},
                 "together/meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
-                "together/deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
-                "together/deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
                 "bedrock/amazon.nova-micro-v1:0": {"prompt_tokens": 0.000035/1e3, "completion_tokens": 0.00014/1e3},
                 "amazon.nova-micro-v1:0" : {"prompt_tokens": 0.000035/1e3, "completion_tokens": 0.00014/1e3},
                 "bedrock/amazon.nova-lite-v1:0": {"prompt_tokens": 0.00006/1e3, "completion_tokens": 0.00024/1e3},
