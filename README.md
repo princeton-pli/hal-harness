@@ -296,34 +296,6 @@ litellm==1.52.8
 pipreqs
 ```
 
-### [CollaborativeAgentBench](https://github.com/facebookresearch/sweet_rl)
-- Benchmark for evaluating agents' capabilities to collaborate with humans for artifact creations
-- Supports both frontend design and backend programming
-
-For evaluation, follow the steps from [here](https://github.com/facebookresearch/sweet_rl) to set up, including installing packages, downloading data, and installing geckodriver (for frontend design only).
-Example script for evaluations on colbench:
-```bash
-hal-eval --benchmark colbench_backend_programming --agent_dir agents/colbench_example_agent \
-    --agent_name colbench_text_70b \
-    --agent_function main.run -A model_name=/fsx-ram/shared/Meta-Llama-3.1-70B-Instruct \
-    -B task_path=/home/yifeizhou/hal_collaborative/temp_data/test.jsonl \
-    -A env_model_name=/fsx-ram/shared/Meta-Llama-3.1-70B-Instruct \
-    --max_concurrent 100
-
-
-hal-eval --benchmark colbench_frontend_design --agent_dir agents/colbench_example_agent \
-    --agent_name colbench_text_70b \
-    --agent_function main.run -A model_name=/fsx-ram/shared/Meta-Llama-3.1-8B-Instruct \
-    -B task_path=/home/yifeizhou/hal_collaborative/temp_data/frontend_tasks/test.jsonl \
-    -A env_model_name=/fsx-ram/shared/Qwen2-VL-72B-Instruct \
-    -A cache_path=/fsx-ram/yifeizhou/collab_llm/driver_cache/ \
-    --max_concurrent 20
-```
-
-
-
-
-=======
 Examples:
 - Running direct prompting agent locally
 ```bash
@@ -355,6 +327,31 @@ Agent Arguments:
 - `model_name`: name of base LLM (currently supporting OpenAI and AWS Bedrock)
 - `use_self_debug`: using the self-debug agent instead of direct prompting if `True`
 - `use_knowledge`: using the expert-annotated domain knowledge as additional agent input if `True`
+
+
+### [CollaborativeAgentBench](https://github.com/facebookresearch/sweet_rl)
+- Benchmark for evaluating agents' capabilities to collaborate with humans for artifact creations
+- Supports both frontend design and backend programming
+
+For evaluation, follow the steps from [here](https://github.com/facebookresearch/sweet_rl) to set up, including installing packages, downloading data, and installing geckodriver (for frontend design only).
+Example script for evaluations on colbench:
+```bash
+hal-eval --benchmark colbench_backend_programming --agent_dir agents/colbench_example_agent \
+    --agent_name colbench_text_70b \
+    --agent_function main.run -A model_name=/fsx-ram/shared/Meta-Llama-3.1-70B-Instruct \
+    -B task_path=/home/yifeizhou/hal_collaborative/temp_data/test.jsonl \
+    -A env_model_name=/fsx-ram/shared/Meta-Llama-3.1-70B-Instruct \
+    --max_concurrent 100
+
+
+hal-eval --benchmark colbench_frontend_design --agent_dir agents/colbench_example_agent \
+    --agent_name colbench_text_70b \
+    --agent_function main.run -A model_name=/fsx-ram/shared/Meta-Llama-3.1-8B-Instruct \
+    -B task_path=/home/yifeizhou/hal_collaborative/temp_data/frontend_tasks/test.jsonl \
+    -A env_model_name=/fsx-ram/shared/Qwen2-VL-72B-Instruct \
+    -A cache_path=/fsx-ram/yifeizhou/collab_llm/driver_cache/ \
+    --max_concurrent 20
+```
 
 ## How Do I Run Evaluations?
 

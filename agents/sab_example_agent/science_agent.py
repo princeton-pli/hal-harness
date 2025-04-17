@@ -37,7 +37,19 @@ Here are some helpful previews for the dataset file(s):
 class ScienceAgent():
     def __init__(self, llm_engine_name, context_cutoff=28000, max_tokens=4096, reasoning_effort=None, use_self_debug=False, use_knowledge=False):
         self.llm_engine = LiteLlmEngine(llm_engine_name, reasoning_effort)
-        self.llm_cost = model_cost[llm_engine_name]
+
+        if llm_engine_name == "together_ai/deepseek-ai/DeepSeek-V3":
+            self.llm_cost = {
+                "input_cost_per_token": 1.25/1e6,
+                "output_cost_per_token": 1.25/1e6
+            }
+        elif llm_engine_name == "together_ai/deepseek-ai/DeepSeek-R1":
+            self.llm_cost = {
+                "input_cost_per_token": 3/1e6,
+                "output_cost_per_token": 7/1e6
+            }
+        else:
+            self.llm_cost = model_cost[llm_engine_name]
 
         self.context_cutoff = context_cutoff
         self.max_tokens = max_tokens

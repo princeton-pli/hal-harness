@@ -115,12 +115,9 @@ def main(
             benchmark_name = benchmark.split("/")[-1]
             
             # convert agent name into a valid run_id, it has spaces and parentheses and might contain large letters and special characters
-            agent_name = agent_name.replace(" ", "_").replace("(", "").replace(")", "")
+            agent_name_run_id = re.sub(r'[^a-zA-Z0-9_]', '', agent_name.replace(" ", "_").replace("(", "").replace(")", "")).lower()
             
-            # remove any special characters from agent_name
-            agent_name = re.sub(r'[^a-zA-Z0-9_]', '', agent_name).lower()
-            
-            run_id = f"{benchmark_name}_{agent_name}_{int(time.time())}"
+            run_id = f"{benchmark_name}_{agent_name_run_id}_{int(time.time())}"
             
             
         else:
