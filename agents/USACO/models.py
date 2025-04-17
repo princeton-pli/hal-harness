@@ -56,7 +56,7 @@ async def generate_answer(prompt, model, temperature, max_tokens, **kwargs):
                 model=model,
                 messages=prompt[0],
                 temperature=temperature,
-                max_tokens=128000,
+                max_tokens=64000,
                 **kwargs
             )
         except Exception as e:
@@ -126,7 +126,7 @@ async def generate_answer_anthropic(
             response = await acompletion(
                 model=model,
                 messages=prompt,
-                max_tokens=128000,
+                max_tokens=64000,
                 temperature=temperature,
                 **kwargs
             )
