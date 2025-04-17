@@ -441,11 +441,24 @@ def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.gi
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
+    # Print package versions and conda list output
+    print("=== Package Versions and Environment Information ===")
+    try:
+        # Run conda list command and print output
+        conda_output = subprocess.run(['conda', 'list'], capture_output=True, text=True)
+        print(conda_output.stdout)
+    except Exception as e:
+        print(f"[WARNING] Failed to run 'conda list': {str(e)}")
+    print("=== End of Package Versions and Environment Information ===")
+    
     # Create symbolic links
-    cwd = os.getcwd()
-    os.symlink(f'{cwd}/environment/data', '/data', target_is_directory=True)
-    os.symlink(f'{cwd}/environment/code', '/code', target_is_directory=True)
-    os.symlink(f'{cwd}/environment/results', '/results', target_is_directory=True)
+    try:
+        cwd = os.getcwd()
+        os.symlink(f'{cwd}/environment/data', '/data', target_is_directory=True)
+        os.symlink(f'{cwd}/environment/code', '/code', target_is_directory=True)
+        os.symlink(f'{cwd}/environment/results', '/results', target_is_directory=True)
+    except Exception as e:
+        print(f"[WARNING] Failed to create symbolic links for /data, /code, and /results: {str(e)}")
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
