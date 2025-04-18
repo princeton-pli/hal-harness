@@ -200,6 +200,7 @@ class VMRunner:
 
                 # Copy results back
                 if self.log_dir:
+                    print(f"Copying results from VM {vm_name} to local directory")
                     dest_dir = os.path.join(self.log_dir, f"{task_id}")
                     os.makedirs(dest_dir, exist_ok=True)
                     self.vm_manager.copy_files_from_vm(
