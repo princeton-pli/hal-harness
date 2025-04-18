@@ -72,14 +72,28 @@ class VMRunner:
             vm_names.append(vm_name)
             
             try:
-                # Create VM
-                print(f"Creating VM {vm_name} for task {task_id}")
-                vm = self.vm_manager.create_vm(
-                    vm_name=vm_name,
-                    username="agent",
-                    ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
-                    network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
-                )
+                # Check if the task requires GPU
+                gpu_required = False
+                if self.benchmark and hasattr(self.benchmark, 'benchmark'):
+                    task_benchmark = self.benchmark.benchmark.get(task_id, {})
+                    gpu_required = task_benchmark.get('gpu', False)
+                
+                # Create VM based on GPU requirement
+                print(f"Creating {'GPU ' if gpu_required else ''}VM {vm_name} for task {task_id}")
+                if gpu_required:
+                    vm = self.vm_manager.create_gpu_vm(
+                        vm_name=vm_name,
+                        username="agent",
+                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
+                        network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                    )
+                else:
+                    vm = self.vm_manager.create_vm(
+                        vm_name=vm_name,
+                        username="agent",
+                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
+                        network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                    )
 
                 # Create temp directory with all necessary files
                 temp_dir = tempfile.mkdtemp()
