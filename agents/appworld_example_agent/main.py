@@ -6,7 +6,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     
     task_id = list(input.keys())[0]
     
-    with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url=f"http://0.0.0.0:8001") as world:
+    with AppWorld(task_id=task_id, experiment_name="output") as world:
         world.task.instruction # To see task instruction.
 
         # indicate task completion:

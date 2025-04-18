@@ -108,9 +108,6 @@ open_deep_research = [
     "smolagents[quality,test] @ git+https://github.com/huggingface/smolagents@d8daf8f6e68d4e7ebe9f428938c3466fe482ebb0",
     "sqlalchemy", # for ./examples",
 ]
-appworld = [
-    "appworld @ git+https://github.com/benediktstroebl/appworld@3730478a677c41d43a1af192cd2b0aba9b74714c"
-]
 
 [project.scripts]
 hal-eval = "hal.cli:main"
