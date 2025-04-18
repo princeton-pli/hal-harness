@@ -1,6 +1,6 @@
 appworld
 openai
-smolagents
+smolagents @ git+https://github.com/huggingface/smolagents@d8daf8f6e68d4e7ebe9f428938c3466fe482ebb0
 mammoth
 python_pptx>=1.0.2
 pdfminer>=20191125
