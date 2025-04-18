@@ -51,7 +51,8 @@ class CoreBench(BaseBenchmark):
             prompt = self._construct_prompt(task)
             self.benchmark[capsule_id] = {
                 "prompt": prompt,
-                "files": self._get_capsule_files_dict(capsule_dir)
+                "files": self._get_capsule_files_dict(capsule_dir),
+                "gpu": True if "gpu" in task else False,
             }
             
             # Store results

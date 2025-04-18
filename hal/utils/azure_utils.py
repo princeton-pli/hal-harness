@@ -364,6 +364,10 @@ class VirtualMachineManager:
         # Create an SFTP client
         sftp_client = ssh_client.open_sftp()
 
+        # Remove ./miniconda3 directory from the VM
+        _, stdout, _ = ssh_client.exec_command(f"rm -rf /home/{username}/miniconda3")
+        for _ in stdout: pass # Block until the rm command completes
+
         # Compress all files in the home directory on the VM
         remote_tar_file_path = f"/home/{username}/{os.path.basename(destination_directory)}_back.tar.gz"
         remote_home_directory = f"/home/{username}"
