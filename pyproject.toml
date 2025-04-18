@@ -62,7 +62,7 @@ hal-agent = [
     "SpeechRecognition",
 ]
 coreagent = [
-    "smolagents",
+    "smolagents @ git+https://github.com/huggingface/smolagents@d8daf8f6e68d4e7ebe9f428938c3466fe482ebb0",
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
     "mammoth",
     "python_pptx>=1.0.2",
