@@ -56,7 +56,7 @@ async def generate_answer(prompt, model, temperature, max_tokens, **kwargs):
                 model=model,
                 messages=prompt[0],
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_tokens=128000,
                 **kwargs
             )
         except Exception as e:
@@ -126,7 +126,7 @@ async def generate_answer_anthropic(
             response = await acompletion(
                 model=model,
                 messages=prompt,
-                max_tokens=max_tokens,
+                max_tokens=128000,
                 temperature=temperature,
                 **kwargs
             )
@@ -173,7 +173,7 @@ def chatgpts_raw(messages_list, model="gpt-4", temperature=1, max_tokens=2000, s
         responses_all.extend([x.choices[0].message for x in responses])
     return responses_all
 
-def claude(prompts, model="claude-3-sonnet-20240229", temperature=1, max_tokens=3000, stop=None, max_messages=400, system_prompt=None, **kwargs) -> list:
+def claude(prompts, model="claude-3-sonnet-20240229", temperature=1, max_tokens=None, stop=None, max_messages=400, system_prompt=None, **kwargs) -> list:
     texts = []
     if system_prompt is not None:
         messages_list = [[{'role': 'system', 'content': system_prompt},
