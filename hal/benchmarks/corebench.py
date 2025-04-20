@@ -51,7 +51,8 @@ class CoreBench(BaseBenchmark):
             prompt = self._construct_prompt(task)
             self.benchmark[capsule_id] = {
                 "prompt": prompt,
-                "files": self._get_capsule_files_dict(capsule_dir)
+                "files": self._get_capsule_files_dict(capsule_dir),
+                "gpu": True if "gpu" in task else False,
             }
             
             # Store results
@@ -273,41 +274,56 @@ class CoreBench(BaseBenchmark):
         
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate accuracy, successful tasks, and failed tasks IDs"""
-        total_written_correct = sum(r.get("correct_written_answers", 0) for r in eval_results.values())
-        total_vision_correct = sum(r.get("correct_vision_answers", 0) for r in eval_results.values())
-        total_written_questions = sum(r.get("total_written_questions", 0) for r in eval_results.values())
-        total_vision_questions = sum(r.get("total_vision_questions", 0) for r in eval_results.values())
+        # Initialize counters
+        correct_written_tasks = 0
+        correct_vision_tasks = 0
+        correct_tasks = 0
+        total_written_tasks = 0
+        total_vision_tasks = 0
+        total_tasks = len(eval_results)
         
-        total_correct = total_written_correct + total_vision_correct
-        total_questions = total_written_questions + total_vision_questions
-        
-        # Determine successful and failed tasks using binary approach
-        # A task is successful only if all questions are answered correctly
+        # For tracking successful and failed task IDs
         successful_tasks = []
         failed_tasks = []
         
+        # Calculate task-based metrics
         for task_id, result in eval_results.items():
             written_correct = result.get("correct_written_answers", 0)
             vision_correct = result.get("correct_vision_answers", 0)
             written_total = result.get("total_written_questions", 0)
             vision_total = result.get("total_vision_questions", 0)
             
-            total_correct_task = written_correct + vision_correct
-            total_questions_task = written_total + vision_total
+            # Check if task has written questions
+            if written_total > 0:
+                total_written_tasks += 1
+                # Check if all written questions are correct
+                if written_correct == written_total:
+                    correct_written_tasks += 1
             
-            # Binary approach: task is successful only if all questions are correct
-            if total_questions_task > 0 and total_correct_task == total_questions_task:
+            # Check if task has vision questions
+            if vision_total > 0:
+                total_vision_tasks += 1
+                # Check if all vision questions are correct
+                if vision_correct == vision_total:
+                    correct_vision_tasks += 1
+            
+            # Check if all questions in the task are correct
+            if (written_correct == written_total and vision_correct == vision_total and 
+                (written_total > 0 or vision_total > 0)):
+                correct_tasks += 1
                 successful_tasks.append(task_id)
             else:
                 failed_tasks.append(task_id)
         
-        # Calculate overall accuracy
-        accuracy = total_correct / total_questions if total_questions > 0 else 0
+        # Calculate accuracies
+        accuracy = correct_tasks / total_tasks if total_tasks > 0 else 0
+        written_accuracy = correct_written_tasks / total_written_tasks if total_written_tasks > 0 else 0
+        vision_accuracy = correct_vision_tasks / total_vision_tasks if total_vision_tasks > 0 else 0
         
         return {
             "accuracy": accuracy,
-            "written_accuracy": total_written_correct / total_written_questions if total_written_questions > 0 else 0,
-            "vision_accuracy": total_vision_correct / total_vision_questions if total_vision_questions > 0 else 0,
+            "written_accuracy": written_accuracy,
+            "vision_accuracy": vision_accuracy,
             "successful_tasks": successful_tasks,
             "failed_tasks": failed_tasks
         }

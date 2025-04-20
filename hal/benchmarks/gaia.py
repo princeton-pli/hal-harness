@@ -66,15 +66,25 @@ class GaiaBenchmark(BaseBenchmark):
             'level_3': 0
         }
         
-        for task_id, task_output in eval_results.items():
-            if int(task_output['score']) > 0:
-                overall_correct_count += 1
+        for task_id, task_output in self.benchmark.items():
+            if task_id in eval_results:
+                # update the level count
                 if str(self.benchmark[task_id]['Level']) == '1':
-                    level_correct_count['level_1'] += 1
+                    level_count['level_1'] += 1
                 elif str(self.benchmark[task_id]['Level']) == '2':
-                    level_correct_count['level_2'] += 1
+                    level_count['level_2'] += 1
                 elif str(self.benchmark[task_id]['Level']) == '3':
-                    level_correct_count['level_3'] += 1
+                    level_count['level_3'] += 1
+                
+                # if the agent got the task correct, update the level and overall correct counts
+                if int(eval_results[task_id]['score']) > 0:
+                    overall_correct_count += 1
+                    if str(self.benchmark[task_id]['Level']) == '1':
+                        level_correct_count['level_1'] += 1
+                    elif str(self.benchmark[task_id]['Level']) == '2':
+                        level_correct_count['level_2'] += 1
+                    elif str(self.benchmark[task_id]['Level']) == '3':
+                        level_correct_count['level_3'] += 1
             else:
                 level_count[f'level_{str(self.benchmark[task_id]["Level"])}'] += 1
 
@@ -83,7 +93,7 @@ class GaiaBenchmark(BaseBenchmark):
         failed_tasks = [task_id for task_id, task_output in eval_results.items() if int(task_output['score']) == 0]
                 
         results = {
-            'overall_accuracy': overall_correct_count / len(eval_results),
+            'accuracy': overall_correct_count / len(eval_results),
             'level_1_accuracy': level_correct_count['level_1'] / level_count['level_1'] if level_count['level_1'] > 0 else None,
             'level_2_accuracy': level_correct_count['level_2'] / level_count['level_2'] if level_count['level_2'] > 0 else None,
             'level_3_accuracy': level_correct_count['level_3'] / level_count['level_3'] if level_count['level_3'] > 0 else None,

@@ -122,6 +122,20 @@ class SimpleMathBenchmark(BaseBenchmark):
 
 4. **Setup Script**: Provide `setup_script` for installing benchmark-specific dependencies on VMs.
 
+5. **GPU Support**: Tasks can specify GPU requirements by including a `"gpu": true` flag in their benchmark entries. When the benchmark is run with the `--vm` flag, tasks with this flag will be executed on GPU-enabled VMs.
+   ```python
+   # Example of a task that requires GPU
+   self.benchmark = {
+       "task_id": {
+           "prompt": "Train a neural network model...",
+           "files": {...},
+           "gpu": true  # This task will use a GPU VM when run with --vm flag
+       }
+   }
+   ```
+   - GPU VMs are only created if the benchmark is run with the `--vm` flag (which activates VM-based execution)
+   - For tasks that don't specify a GPU requirement (no `"gpu"` key or `"gpu": false`), regular VMs will be used
+
 ## Providing task-specific files to agents
 
 Benchmarks can provide files to agents by including a `files` dictionary in each task. These files will be automatically copied into the agent's working environment by both the VM and local runs.

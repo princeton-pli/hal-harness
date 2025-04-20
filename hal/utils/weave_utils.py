@@ -33,6 +33,9 @@ MODEL_PRICES_DICT = {
                 "Mistral-large-ygkys": {"prompt_tokens": 0.004/1000, "completion_tokens": 0.012/1000},
                 "o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},
                 "o3-mini-2025-01-31": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "openai/o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "o3-2025-04-16": {"prompt_tokens": 10/1e6, "completion_tokens": 40/1e6},
                 "o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
@@ -48,6 +51,7 @@ MODEL_PRICES_DICT = {
                 "openai/gpt-4.5-preview-2025-02-27": {"prompt_tokens": 75/1e6, "completion_tokens": 150/1e6},
                 "openai/o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},
                 "openai/o3-mini-2025-01-31": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "openai/o3-2025-04-16": {"prompt_tokens": 10/1e6, "completion_tokens": 40/1e6},
                 "openai/o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "openai/o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "anthropic/claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
@@ -172,13 +176,13 @@ def get_total_cost(client):
     requests = 0
 
     # Fetch all the calls in the project
-    print_step("Fetching Weave calls (this can take a while)...")
+    print_step("Getting token usage data (this can take a while)...")
     calls = list(
         client.get_calls(filter={"trace_roots_only": False}, include_costs=False)
     )
 
     with create_progress() as progress:
-        task = progress.add_task("Processing usage data...", total=len(calls))
+        task = progress.add_task("Processing token usage data...", total=len(calls))
         for call in calls:
             # If the call has costs, we add them to the total cost
             try:
@@ -241,7 +245,7 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
-    print_step("Retrieving Weave traces...")
+    print_step("Getting Weave traces (this can take a while)...")
     
     # dict to store latency for each task
     latency_dict = {}
@@ -252,9 +256,8 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
         calls = fetch_weave_calls(client)
         progress.update(task1, completed=1)
         
-        # Process calls
+        # Processed calls
         processed_calls = []
-        task2 = progress.add_task("Processing calls... (this can take a while)", total=len(calls))
         
         for call in calls:
             task_id = call.attributes['weave_task_id']
@@ -270,7 +273,7 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
                     if processed_call['started_at'] > latency_dict[task_id]['last_call_timestamp']:
                         latency_dict[task_id]['last_call_timestamp'] = processed_call['started_at']
                     
-            progress.update(task2, advance=1)
+            progress.update(task1, advance=1)
             
     for task_id in latency_dict:
         latency_dict[task_id]['total_time'] = (datetime.fromisoformat(latency_dict[task_id]['last_call_timestamp']) - datetime.fromisoformat(latency_dict[task_id]['first_call_timestamp'])).total_seconds()

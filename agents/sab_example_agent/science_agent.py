@@ -1,4 +1,4 @@
-from engine.base_engine import LLMEngine
+from litellm_engine import LiteLlmEngine
 
 from litellm import model_cost
 from litellm.utils import trim_messages
@@ -35,11 +35,24 @@ Here are some helpful previews for the dataset file(s):
 
 
 class ScienceAgent():
-    def __init__(self, llm_engine_name, context_cutoff=28000, use_self_debug=False, use_knowledge=False):
-        self.llm_engine = LLMEngine(llm_engine_name)
-        self.llm_cost = model_cost[llm_engine_name]
+    def __init__(self, llm_engine_name, context_cutoff=28000, max_tokens=4096, reasoning_effort=None, use_self_debug=False, use_knowledge=False):
+        self.llm_engine = LiteLlmEngine(llm_engine_name, reasoning_effort)
+
+        if llm_engine_name == "together_ai/deepseek-ai/DeepSeek-V3":
+            self.llm_cost = {
+                "input_cost_per_token": 1.25/1e6,
+                "output_cost_per_token": 1.25/1e6
+            }
+        elif llm_engine_name == "together_ai/deepseek-ai/DeepSeek-R1":
+            self.llm_cost = {
+                "input_cost_per_token": 3/1e6,
+                "output_cost_per_token": 7/1e6
+            }
+        else:
+            self.llm_cost = model_cost[llm_engine_name]
 
         self.context_cutoff = context_cutoff
+        self.max_tokens = max_tokens
         self.use_self_debug = use_self_debug
         self.use_knowledge = use_knowledge
 
@@ -188,7 +201,7 @@ class ScienceAgent():
                 {'role': 'user', 'content': err_msg}
             ]
 
-            assistant_output, prompt_tokens, completion_tokens = self.llm_engine.respond(user_input, temperature=0.2, top_p=0.95)
+            assistant_output, prompt_tokens, completion_tokens = self.llm_engine.respond(user_input, temperature=0.2, top_p=0.95, max_tokens=self.max_tokens)
 
             cost = (
                 self.llm_cost["input_cost_per_token"] * prompt_tokens +
@@ -214,7 +227,7 @@ class ScienceAgent():
             {'role': 'user', 'content': self.sys_msg}
         ]
 
-        assistant_output, prompt_tokens, completion_tokens = self.llm_engine.respond(user_input, temperature=0.2, top_p=0.95)
+        assistant_output, prompt_tokens, completion_tokens = self.llm_engine.respond(user_input, temperature=0.2, top_p=0.95, max_tokens=self.max_tokens)
 
         self.history.append(
             {'role': 'assistant', 'content': assistant_output}
