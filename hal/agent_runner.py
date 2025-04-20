@@ -54,6 +54,18 @@ class AgentRunner:
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
         
+        # Check if any task requires GPU
+        has_gpu_task = False
+        if hasattr(self.benchmark, 'benchmark') and isinstance(self.benchmark.benchmark, dict):
+            for task_id, task_data in self.benchmark.benchmark.items():
+                if isinstance(task_data, dict) and task_data.get('gpu', False):
+                    has_gpu_task = True
+                    break
+        
+        # Print warning if GPU tasks are present but not running on VM
+        if has_gpu_task and not use_vm:
+            print_warning("Warning: This benchmark contains tasks that require GPU, but is not being run on a VM. "
+                         "GPU tasks may not work correctly without VM execution. Use the --vm flag to run on a VM.")
         
         self.run_command = run_command
                 

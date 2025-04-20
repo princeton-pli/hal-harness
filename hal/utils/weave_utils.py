@@ -33,7 +33,9 @@ MODEL_PRICES_DICT = {
                 "Mistral-large-ygkys": {"prompt_tokens": 0.004/1000, "completion_tokens": 0.012/1000},
                 "o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},
                 "o3-mini-2025-01-31": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
-                "o3-2025-04-03": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
+                "o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "openai/o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "o3-2025-04-16": {"prompt_tokens": 10/1e6, "completion_tokens": 40/1e6},
                 "o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
@@ -49,7 +51,7 @@ MODEL_PRICES_DICT = {
                 "openai/gpt-4.5-preview-2025-02-27": {"prompt_tokens": 75/1e6, "completion_tokens": 150/1e6},
                 "openai/o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},
                 "openai/o3-mini-2025-01-31": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
-                "openai/o3-2025-04-03": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
+                "openai/o3-2025-04-16": {"prompt_tokens": 10/1e6, "completion_tokens": 40/1e6},
                 "openai/o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "openai/o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "anthropic/claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
@@ -86,7 +88,6 @@ MODEL_PRICES_DICT = {
                 "gemini/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
-                "gpt-4.1-2025-04-14": {"prompt_tokens": 2.0/1e6, "completion_tokens": 8.0/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:

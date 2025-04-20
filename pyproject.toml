@@ -50,7 +50,7 @@ hal-agent-inspect = [
     "SpeechRecognition",
 ]
 hal-agent = [
-    "smolagents",
+    "smolagents @ git+https://github.com/huggingface/smolagents@d8daf8f6e68d4e7ebe9f428938c3466fe482ebb0",
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
     "mammoth",
     "python_pptx>=1.0.2",
@@ -105,11 +105,8 @@ open_deep_research = [
     "torch",
     "xlrd",
     "SpeechRecognition",
-    "smolagents[quality,test]",
+    "smolagents[quality,test] @ git+https://github.com/huggingface/smolagents@d8daf8f6e68d4e7ebe9f428938c3466fe482ebb0",
     "sqlalchemy", # for ./examples",
-]
-appworld = [
-    "appworld @ git+https://github.com/benediktstroebl/appworld@3730478a677c41d43a1af192cd2b0aba9b74714c"
 ]
 
 [project.scripts]
