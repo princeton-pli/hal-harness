@@ -203,6 +203,14 @@ hal-eval --benchmark inspect_evals/agentharm \
   -A model_name=openai/gpt-4o-mini-2024-07-18
 ```
 
+### [MobileSafteyBench](https://github.com/jylee425/mobilesafetybench)
+
+- Evaluates safety and helpfulness of agents in controlling mobile devices
+- Two types of tasks are availbale: (a) daily scenarios and (b) indirect prompt injection attack (**Currently, we do not support indirect prompt injection attack tasks**)
+- Follow [instruction](https://github.com/jylee425/mobilesafetybench?tab=readme-ov-file#installation-guidelines) for installation of Android emulator 
+- **Do not run with max_concurrent > 1**, as instability of Android emulator
+
+
 ## How Do I Run Evaluations?
 
 The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
