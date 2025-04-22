@@ -205,11 +205,13 @@ hal-eval --benchmark inspect_evals/agentharm \
 
 ### [MobileSafteyBench](https://github.com/jylee425/mobilesafetybench)
 
-- Evaluates safety and helpfulness of agents in controlling mobile devices
-- Two types of tasks are availbale: (a) daily scenarios and (b) indirect prompt injection attack (**Currently, we do not support indirect prompt injection attack tasks**)
-- Follow [instruction](https://github.com/jylee425/mobilesafetybench?tab=readme-ov-file#installation-guidelines) for installation of Android emulator 
-- **Do not run with max_concurrent > 1**, as instability of Android emulator
+- Evaluates the safety and helpfulness of agents in controlling mobile devices
+- Two types of tasks are availbale: (a) daily scenarios and (b) indirect prompt injection attack (Currently, we do not support indirect prompt injection attack tasks)
 
+For MobileSafetyBench, you will need to install Android emulator and apk files. Regarding the use of Android emulator, we leave several notes:
+
+- Follow [instruction](https://github.com/jylee425/mobilesafetybench?tab=readme-ov-file#installation-guidelines) for installation of Android emulator 
+- Due to instability of Android emulator, we encourage **not to run with max_concurrent > 1**
 
 ## How Do I Run Evaluations?
 
