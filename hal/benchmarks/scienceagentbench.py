@@ -87,7 +87,7 @@ class ScienceAgentBench(BaseBenchmark):
         run_log = []
         eval_log = []
         for idx in range(1, len(self.benchmark) + 1):
-            if agent_output[str(idx)] == "TIMEOUT after 900 seconds":
+            if agent_output[str(idx)] == "TIMEOUT after 900 seconds" or agent_output[str(idx)] == "TIMEOUT after 7200 seconds":
                 run_log.append({
                     "history": [
                         {
@@ -113,7 +113,7 @@ class ScienceAgentBench(BaseBenchmark):
         all_data = agent_output
         with open(log_fname, "w") as f:
             for idx in range(1, len(self.benchmark) + 1):
-                if all_data[str(idx)] == "TIMEOUT after 900 seconds":
+                if all_data[str(idx)] == "TIMEOUT after 900 seconds" or all_data[str(idx)] == "TIMEOUT after 7200 seconds":
                     f.write(json.dumps(
                         {
                             "history": [
