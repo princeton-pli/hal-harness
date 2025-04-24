@@ -86,6 +86,7 @@ MODEL_PRICES_DICT = {
                 "gemini/gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
                 "gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
                 "gemini/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
 }
 
@@ -366,3 +367,74 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
 
 #     # We return the total cost, requests, and calls
 #     return total_cost
+
+def get_task_cost(run_id: str, task_id: str) -> dict:
+    """
+    Calculate the cost for a specific task ID by filtering calls with that task_id.
+    
+    Args:
+        run_id: The ID of the run to calculate costs for
+        task_id: The ID of the task to calculate costs for
+        
+    Returns:
+        dict: A dictionary containing:
+            - total_cost: The total cost in dollars
+            - token_usage: Token usage breakdown by model
+            - requests: Total number of API requests
+            - num_calls: Number of calls related to this task
+    """
+    total_cost = 0
+    token_usage = {}
+    requests = 0
+    
+    client = weave.init(run_id)
+
+    print_step(f"Getting token usage data for task ID: {task_id}...")
+    
+    # Fetch all calls and filter by task_id
+    calls = list(client.get_calls(filter={"trace_roots_only": False}, include_costs=False))
+    task_calls = [call for call in calls if call.attributes.get('weave_task_id') == task_id]
+    
+    for call in task_calls:
+        # If the call has usage data, add it to the token usage
+        try:
+            usage_items = call.summary["usage"].items()
+        except KeyError:
+            continue
+            
+        for k, cost in usage_items:   
+            if k not in token_usage:
+                token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
+            
+            requests += cost["requests"]
+            if "prompt_tokens" in cost:
+                token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
+            if "input_tokens" in cost:    
+                token_usage[k]["prompt_tokens"] += cost["input_tokens"]
+            if "cache_creation_input_tokens" in cost:
+                token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
+            if "cache_read_input_tokens" in cost:
+                token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
+                
+            if "completion_tokens" in cost:
+                token_usage[k]["completion_tokens"] += cost["completion_tokens"]
+            if "output_tokens" in cost:
+                token_usage[k]["completion_tokens"] += cost["output_tokens"]
+    
+    # Calculate total cost from token usage
+    for k in token_usage:
+        if k in MODEL_PRICES_DICT:
+            model_cost = (
+                token_usage[k]["prompt_tokens"] * MODEL_PRICES_DICT[k]["prompt_tokens"] +
+                token_usage[k]["completion_tokens"] * MODEL_PRICES_DICT[k]["completion_tokens"]
+            )
+            total_cost += model_cost
+        else:
+            print_warning(f"Model '{k}' not found in MODEL_PRICES_DICT. Skipping cost calculation.")
+    print_step(f"Cost for task ID: {task_id} is ${total_cost} for {len(task_calls)} calls.")
+    return {
+        "total_cost": total_cost,
+        "token_usage": token_usage,
+        "requests": requests,
+        "num_calls": len(task_calls)
+    }

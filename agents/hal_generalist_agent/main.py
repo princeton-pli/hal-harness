@@ -1,5 +1,6 @@
 
 from typing import Optional, List, Dict, Any
+from functools import partial
 import tiktoken
 
 import subprocess
@@ -10,6 +11,8 @@ import json
 import os
 
 from typing import Optional
+
+from hal.utils.weave_utils import MODEL_PRICES_DICT
 
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
@@ -84,6 +87,16 @@ def extract_diff(response):
         return other_matches[0]
     return response.split("</s>")[0]
 
+def check_budget_exceeded(agent: CodeAgent, budget: float, model_name: str) -> bool:
+    total_input_tokens = agent.monitor.total_input_token_count
+    total_output_tokens = agent.monitor.total_input_token_count
+    
+    cost = MODEL_PRICES_DICT[model_name]["prompt_tokens"] * total_input_tokens + MODEL_PRICES_DICT[model_name]["completion_tokens"] * total_output_tokens
+    
+    print(f"Current cost: {cost}")
+    if cost >= budget:
+        return True
+    return False
 
 class TextInspectorTool(Tool):
     name = "inspect_file_as_text"
@@ -447,6 +460,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
+    assert 'budget' in kwargs, 'budget is required'
+    
+    BUDGET = kwargs['budget']
     
     import litellm
     litellm.drop_params = True
@@ -488,9 +504,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     agent = CodeAgent(
     tools=CORE_TOOLS,
     planning_interval=4,
-    max_steps=40,
+    max_steps=200,
     additional_authorized_imports=AUTHORIZED_IMPORTS,
+    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
     model=model)
+    agent.python_executor.state["__name__"] = "__main__"
 
     if kwargs['benchmark_name'] == 'usaco':
         USACO_PROMPT = """Please reply with a Python 3 solution to the below problem. Make sure
@@ -629,9 +647,11 @@ Task:
             agent = CodeAgent(
                 tools=CORE_TOOLS + get_smolagents_tools(world.task),
                 planning_interval=4,
-                max_steps=2,
+                max_steps=200,
                 additional_authorized_imports=AUTHORIZED_IMPORTS,
+                budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
                 model=model)
+            agent.python_executor.state["__name__"] = "__main__"
             
             response = agent.run(prompt)
             world.post_execute()
@@ -659,9 +679,11 @@ Task:
         agent = CodeAgent(
             tools=CORE_TOOLS + [execute_code_to_interact_with_apis],
             planning_interval=4,
-            max_steps=40,
+            max_steps=200,
             additional_authorized_imports=AUTHORIZED_IMPORTS,
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
             model=model)
+        agent.python_executor.state["__name__"] = "__main__"
         
         with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8001") as world:
             instruction = world.task.instruction # To see task instruction.
@@ -1131,11 +1153,12 @@ Here is the question and attached files are stored in your current directory:
             ask_user
         ],
         planning_interval=4,
-        max_steps=40,
+        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+        max_steps=200,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
         model=model)
         
-        
+        agent.python_executor.state["__name__"] = "__main__"
         ### YOUR AGENT CODE HERE ###
         instruction = f"""I added some useful information to the wiki in `wiki.md`. Please read it and then answer the user's question.
 
@@ -1212,10 +1235,12 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     agent = CodeAgent(
     tools=CORE_TOOLS_INSPECT,
     planning_interval=4,
-    max_steps=40,
+    max_steps=200,
     additional_authorized_imports=AUTHORIZED_IMPORTS,
+    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
     model=model)
-        
+    agent.python_executor.state["__name__"] = "__main__"
+    
         
     if kwargs['benchmark_name'] == 'inspect_evals/gaia':
         response = await agent.arun(sample["input"][0]["content"])
