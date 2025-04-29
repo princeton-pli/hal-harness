@@ -80,8 +80,8 @@ class BenchmarkManager:
             from .benchmarks.scienceagentbench import ScienceAgentBench
             benchmark = ScienceAgentBench(self.agent_dir, self.config)
         elif benchmark_name == 'assistantbench':
-            from .benchmarks.assistantbench import AssistantBench
-            benchmark = AssistantBench(self.agent_dir, self.config)
+            from .benchmarks.assistantbench import AssistantBenchBenchmark
+            benchmark = AssistantBenchBenchmark(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         

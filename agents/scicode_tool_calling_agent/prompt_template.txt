@@ -1,0 +1,37 @@
+PROBLEM DESCRIPTION:
+You will be provided with problem steps along with background knowledge necessary for solving the problem. Your task will be to develop a Python solution focused on the next step of the problem-solving process.
+
+PROBLEM STEPS AND FUNCTION CODE:
+Here, you'll find the Python code for the initial steps of the problem-solving process. This code is integral to building the solution.
+
+{problem_steps_str}
+
+NEXT STEP - PROBLEM STEP AND FUNCTION HEADER:
+This part will describe the next step in the problem-solving process. A function header will be provided, and your task is to develop the Python code for this next step based on the provided description and function header.
+
+{next_step_str}
+
+DEPENDENCIES:
+Use only the following dependencies in your solution. Do not include these dependencies at the beginning of your code.
+
+{dependencies}
+
+APPROACH GUIDELINES:
+Approach the problem using the following steps:
+1. First make your best attempt at writing the function given your understanding of the problem and any other information you have been provided.
+2. Then test that function using the python interpreter. If there are any syntax errors, fix those and try again.
+3. If the function is syntactically correct, write out a single relevant unit test related to a real world example usage of that function and confirm that the results are aligned with what you would expect.
+4. If there are any issues with this unit test, try to re-write the function to address those issues. Do not attempt to write nested functions when trying to debug your function.
+5. Your final function should be as simple as possible while fully addressing the prompt.
+
+RESPONSE GUIDELINES:
+1. Write the complete and executable Python program for the next step in a single block.
+3. Your response should focus exclusively on implementing the solution for the next step, adhering closely to the specified function header and the context provided by the initial steps.
+4. DO NOT include previous function code, example usage or test code in your response.
+5. Ensure your response is in the format of ```python```.
+
+Example:
+```python
+
+[Insert the Python code here based on the provided function header and dependencies.]
+```

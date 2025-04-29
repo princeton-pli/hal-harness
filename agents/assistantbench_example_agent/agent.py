@@ -111,4 +111,5 @@ agent = CodeAgent(
     verbosity_level = 2
 )
 
+agent.prompt_templates["system_prompt"] = agent.prompt_templates["system_prompt"] + "\n\nProvide a concise and accurate answer to the question above without any additional context in the format specified by the prompt. If you are unable to access the information required to answer the question, simply respond with a blank line."
 

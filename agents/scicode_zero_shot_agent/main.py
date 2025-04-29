@@ -1,12 +1,39 @@
 # This is an example agent that generates code for the SciCode benchmark in a zero-shot format.
 from openai import OpenAI
+import os
 from typing import Any
 from pathlib import Path
-from agent import agent
 
 def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
+
+    client = OpenAI()
+
+    model_params = {}
+    model_params['model_id'] = kwargs['model_name']
+    if 'reasoning_effort' in kwargs:
+        model_params['reasoning_effort'] = kwargs['reasoning_effort']
+    if 'temperature' in kwargs:
+        model_params['temperature'] = kwargs['temperature']
+        
+    if 'gemini' in kwargs['model_name']:
+        model_params['model_id'] = kwargs['model_name'].replace('gemini/', 'openai/')
+        model_params['api_key'] = os.getenv('GEMINI_API_KEY')
+        model_params['api_base'] = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
+    
+    if 'anthropic' in kwargs['model_name']:
+        model_params['model_id'] = kwargs['model_name'].replace('anthropic/', 'openai/')
+        model_params['api_key'] = os.getenv('ANTHROPIC_API_KEY')
+        model_params['api_base'] = "https://api.anthropic.com/v1"
+        client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
+        
+    if 'together_ai' in kwargs['model_name']:
+        model_params['model_id'] = kwargs['model_name'].replace('together_ai/', 'openai/')
+        model_params['api_key'] = os.environ.get("TOGETHER_API_KEY")
+        model_params['api_base'] = "https://api.together.xyz/v1"
+        client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
 
     def process_problem_code(prob_data: dict, num_steps: int) -> str:
         """Process problem code and return the function header and return line"""
@@ -62,8 +89,6 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
 
     # Get the benchmark name from kwargs
     benchmark_name = kwargs['benchmark_name']
-    
-    client = OpenAI()
 
     # Initialize results dictionary
     results = {}
@@ -85,9 +110,23 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
                 prob_data=task,
                 prompt_template=prompt_template
             )
+            model_call_name = kwargs['model_name']
+
+            if 'gemini' in kwargs['model_name']:
+                model_call_name = kwargs['model_name'].replace('gemini/', '')
+            elif 'anthropic' in kwargs['model_name']:
+                model_call_name = kwargs['model_name'].replace('anthropic/', '')
+            elif 'together_ai' in kwargs['model_name']:
+                model_call_name = kwargs['model_name'].replace('together_ai/', '')
             
-            response = agent.run(prompt)
-            generated_code = response.replace("```python", "").replace("```", "").strip()
+
+            response = client.chat.completions.create(
+                model = model_call_name,
+                messages=[{"role": "user", "content": prompt}])
+
+            final_response = response.choices[0].message.content
+
+            generated_code = final_response.replace("```python", "").replace("```", "").strip()
 
             results[task_id] = generated_code
 
@@ -112,6 +151,7 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
                     full_code += f'\n{step_code}'
                     steps_results[f'{task_id}.{i + 1}'] = full_code
                     continue
+
                 prompt, dependencies = generate_prompt_with_steps(
                     with_background=easy,
                     previous_llm_code=previous_llm_code,
@@ -120,11 +160,41 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
                     prompt_template=prompt_template
                 )
 
+                model_call_name = kwargs['model_name']
 
-                response = agent.run(prompt)
+                if 'openai' in kwargs['model_name']:
+                    model_call_name = kwargs['model_name'].replace('openai/', '')
+                elif 'gemini' in kwargs['model_name']:
+                    model_call_name = kwargs['model_name'].replace('gemini/', '')
+                elif 'anthropic' in kwargs['model_name']:
+                    model_call_name = kwargs['model_name'].replace('anthropic/', '')
+                elif 'together_ai' in kwargs['model_name']:
+                    model_call_name = kwargs['model_name'].replace('together_ai/', '')
+                
+
+                if 'reasoning_effort' in kwargs:
+                
+                    response = client.chat.completions.create(
+                        model=model_call_name,
+                        reasoning_effort=kwargs['reasoning_effort'],
+                        messages=[
+                            {"role": "user", 
+                             "content":  prompt}
+                        
+                        ])
+                else:
+                    response = client.chat.completions.create(
+                        model=model_call_name,
+                        messages=[
+                            {"role": "user", 
+                             "content": prompt}
+                        
+                        ])
+
+                final_response = response.choices[0].message.content
 
                 # Remove the ```python and final ``` from generated_code
-                generated_code = response.replace("```python", "").replace("```", "").strip()
+                generated_code = final_response.replace("```python", "").replace("```", "").strip()
 
                 # Update previous_llm_code string with the generated code
                 previous_llm_code.append(generated_code)
