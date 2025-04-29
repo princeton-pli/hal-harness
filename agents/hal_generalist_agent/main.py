@@ -557,6 +557,63 @@ No outside libraries are allowed.
         response = agent.run(task['prompt'])
         save_agent_steps(agent, kwargs, response, task)
         return {task_id: response}
+    
+    elif kwargs['benchmark_name'] == 'scienceagentbench':
+        
+        DATA_INFO_PROMPT = """You can access the dataset at `{dataset_path}`. Here is the directory structure of the dataset:
+```
+{dataset_folder_tree}
+```
+Here are some helpful previews for the dataset file(s):
+{dataset_preview}"""
+        
+        def format_task_dict(example):
+            task = {
+                "instance_id": example["instance_id"],
+                "task_inst": example["task_inst"],
+                "dataset_path": "benchmark/datasets/" + example["dataset_folder_tree"].split("\n")[0][4:],
+                "dataset_folder_tree": example["dataset_folder_tree"],
+                "dataset_preview": example["dataset_preview"],
+                "output_fname": example["output_fname"],
+                "domain_knowledge": example["domain_knowledge"],
+                "gold_program_name": example["gold_program_name"],
+            }
+
+            return task
+        
+        def get_sys_msg(task):
+
+            sys_msg = (
+                """Please reply with a Python 3 solution to the below problem. Make sure
+to wrap your code in '```python' and '```' Markdown delimiters, and
+include exactly one block of code with the entire solution.""",
+                "\n" + task["task_inst"] + 
+                ("\n" + str(task["domain_knowledge"]))
+            )
+
+            sys_msg += (
+                "\n" +
+                DATA_INFO_PROMPT.format(
+                    dataset_path = task['dataset_path'],
+                    dataset_folder_tree = task['dataset_folder_tree'],
+                    dataset_preview = task["dataset_preview"]
+                )
+            )
+
+
+            return sys_msg
+        
+        
+        task_id = list(input.keys())[0]
+        task = format_task_dict(list(input.values())[0])
+        sys_msg = get_sys_msg(task)
+        
+        response = str(agent.run(sys_msg))
+        save_agent_steps(agent, kwargs, response, task)
+        
+        return {task_id: {"history": [{"role": "assistant", "content": f"```python{response}```"}]}}
+        
+        
         
     elif kwargs['benchmark_name'] == 'swebench_verified':
         pass

@@ -151,7 +151,7 @@ class LocalRunner:
                     # Copy the file
                     try:
                         if os.path.isdir(src_path):
-                            shutil.copytree(src_path, dest_full_path)
+                            shutil.copytree(src_path, dest_full_path, dirs_exist_ok=True)
                         else:
                             shutil.copy2(src_path, dest_full_path)
                     except Exception as e:
@@ -260,7 +260,7 @@ class LocalRunner:
                 self.temp_dirs.remove(str(temp_dir))
             try:
                 # copy directory to log_dir
-                shutil.copytree(temp_dir, os.path.join(self.log_dir, task_id))
+                shutil.copytree(temp_dir, os.path.join(self.log_dir, task_id), dirs_exist_ok=True)
                 # Remove temp directory
                 shutil.rmtree(temp_dir)
             except Exception as e:

@@ -120,7 +120,7 @@ class VMRunner:
                             # Copy the file
                             try:
                                 if os.path.isdir(src_path):
-                                    shutil.copytree(src_path, dest_full_path)
+                                    shutil.copytree(src_path, dest_full_path, dirs_exist_ok=True)
                                 else:
                                     shutil.copy2(src_path, dest_full_path)
                             except Exception as e:
