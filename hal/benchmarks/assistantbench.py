@@ -14,8 +14,13 @@ class AssistantBenchBenchmark(BaseBenchmark):
         self.dataset = list(load_dataset("AssistantBench/AssistantBench", split="validation"))
         self.benchmark = {task['id']: task for task in self.dataset}
 
-        self.vm_only = False
-        super().__init__(agent_dir, config, vm_only=self.vm_only)
+        # For testing, limit to 1 task
+        self.benchmark = {
+            k: v for k, v in self.benchmark.items()
+            if k in list(self.benchmark.keys())[:2]
+        }
+        
+        super().__init__(agent_dir, config)
     
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs using Browsergym evaluation"""

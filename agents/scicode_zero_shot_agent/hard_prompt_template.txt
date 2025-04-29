@@ -1,0 +1,14 @@
+PROBLEM DESCRIPTION:
+You will be provided with a challenging scientific research problem. A function header will be provided to be used in your solution. Your task will be to generate the disciplinary knowledge necessary for solving the problem and then develop a Python solution for it which uses the specified function. You can build any other helper functions necessary before implementing it. 
+
+{next_step_str}
+
+DEPENDENCIES:
+Use only the following dependencies in your solution. Do not include these dependencies at the beginning of your code.
+
+{dependencies}
+
+RESPONSE GUIDELINES:
+Now, based on the instructions and information provided above, write the complete and executable Python program for the all steps in a single block.
+Your response should included functions for each specified step, with the final step adhering closely to the specified function header and the context provided.
+DO NOT generate EXAMPLE USAGE OR TEST CODE in your response. Please make sure your response python code in format of ```python```.

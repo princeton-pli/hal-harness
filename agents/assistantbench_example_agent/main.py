@@ -17,9 +17,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
         instruction = input[task_id]['task']
 
-        # Add additional instructions
-        instruction += "\n\nProvide a concise and accurate answer to the question above without any additional context. If you are unable to access the information required to answer the question, simply respond with a blank line."
-
         response = agent.run(instruction)
 
         print(f"Response for {task_id}: {response}")

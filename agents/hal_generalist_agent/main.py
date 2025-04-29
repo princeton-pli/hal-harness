@@ -25,7 +25,7 @@ AUTHORIZED_IMPORTS = [
     "zipfile",
     "os",
     "pandas",
-    "numpy",
+    "numpy.*",
     "sympy",
     "json",
     "bs4",
@@ -34,7 +34,7 @@ AUTHORIZED_IMPORTS = [
     "yahoo_finance",
     "Bio",
     "sklearn",
-    "scipy",
+    "scipy.*",
     "pydub",
     "io",
     "PIL",
@@ -45,7 +45,18 @@ AUTHORIZED_IMPORTS = [
     "datetime",
     "fractions",
     "csv",
-]
+    "time",
+    "pickle",
+    "itertools",
+    "random",
+    "copy",
+    "math",
+    "cmath",
+    "collections",
+    "functools",
+    "mpl_toolkits.mplot3d",
+    "sympy",
+    ]
 
 
 def save_agent_steps(agent, kwargs, response, sample):
@@ -1178,6 +1189,251 @@ User's question: {user_question}
         ### WHEN DONE WE RETURN THE ENV STATE ###
         return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
     
+    elif kwargs['benchmark_name'] == 'scicode':
+        
+        from openai import OpenAI
+
+        def process_problem_code(prob_data: dict, num_steps: int) -> str:
+            """Process problem code and return the function header and return line"""
+            header_docstring = prob_data['sub_steps'][num_steps - 1]['function_header']
+            return_str = prob_data['sub_steps'][num_steps - 1]['return_line']
+            string = f"{header_docstring}\n\n{return_str}"
+            return string
+
+        def process_problem_steps(with_background: bool, previous_llm_code: list[str],
+                                problem_data: dict, num_steps: int) -> tuple[str, str]:
+            """Process problem data and return previous steps and next steps"""
+            output_lines = []
+            next_step = []
+            for i in range(num_steps - 1):
+                output_lines.append((problem_data["sub_steps"][i]["step_description_prompt"] + '\n' +
+                                    problem_data["sub_steps"][i]["step_background"]) if with_background
+                                    else problem_data["sub_steps"][i]["step_description_prompt"])
+                output_lines.append(previous_llm_code[i])
+                output_lines.append("------")
+
+            next_step.append((problem_data["sub_steps"][num_steps - 1]["step_description_prompt"] + '\n' +
+                            problem_data["sub_steps"][num_steps - 1]["step_background"]) if with_background
+                            else problem_data["sub_steps"][num_steps - 1]["step_description_prompt"])
+            next_step.append(process_problem_code(problem_data, num_steps))
+            output_str = "\n\n".join(output_lines[:-1])  # Remove the last "------"
+            next_step_str = "\n\n".join(next_step)
+            return output_str, next_step_str
+        
+        def generate_prompt_with_steps(with_background: bool, previous_llm_code: list[str],
+                                    prob_data: dict, num_steps: int, prompt_template: str) -> tuple[str, str]:
+            """Generate prompt with steps for scicode and scicode easy benchmark"""
+            # Parse the input file and extract the content
+            problem_steps_str, next_step_str = process_problem_steps(with_background, previous_llm_code, prob_data,
+                                                                                            num_steps)
+            dependencies = prob_data["required_dependencies"]
+            assert next_step_str
+            return prompt_template.format(
+                problem_steps_str=problem_steps_str,
+                next_step_str=next_step_str,
+                dependencies=dependencies,
+            ), f'{dependencies}\n'
+
+        # Get the benchmark name from kwargs
+        benchmark_name = kwargs['benchmark_name']
+
+        # Initialize results dictionary
+        results = {}
+
+        prompt_template = """
+        PROBLEM DESCRIPTION:
+You will be provided with problem steps along with background knowledge necessary for solving the problem. Your task will be to develop a Python solution focused on the next step of the problem-solving process.
+
+PROBLEM STEPS AND FUNCTION CODE:
+Here, you'll find the Python code for the initial steps of the problem-solving process. This code is integral to building the solution.
+
+{problem_steps_str}
+
+NEXT STEP - PROBLEM STEP AND FUNCTION HEADER:
+This part will describe the next step in the problem-solving process. A function header will be provided, and your task is to develop the Python code for this next step based on the provided description and function header.
+
+{next_step_str}
+
+DEPENDENCIES:
+Use only the following dependencies in your solution. Do not include these dependencies at the beginning of your code.
+
+{dependencies}
+
+RESPONSE GUIDELINES:
+1. Write the complete and executable Python program for the next step in a single block.
+3. Your response should focus exclusively on implementing the solution for the next step, adhering closely to the specified function header and the context provided by the initial steps.
+4. DO NOT include previous function code, example usage or test code in your response.
+5. Ensure your response is in the format of ```python```.
+
+Example:
+```python
+
+[Insert the Python code here based on the provided function header and dependencies.]
+```"""
+
+        easy = True if benchmark_name == 'scicode_easy' else False
+
+        # Iterate through problems
+        previous_llm_code = []
+        full_code = ""
+        steps = len(task['sub_steps'])
+        print(f'Generating {task_id}...')
+        steps_results = {}
+
+        for i in range(steps):
+            if (task_id == "13" and i == 5):
+                step_code = '''\
+    class Maxwell:
+    """ The base class for evolution of Maxwell's equations.
+    """
+
+    def __init__(self, n_grid, x_out):
+        """Constructor sets up coordinates, memory for variables.
+        The variables:
+            mesh points:
+                x: the x coordinate for each mesh grid
+                y: the y coordinate for each mesh grid
+                z: the z coordinate for each mesh grid
+                t: the time coordinate of the simulation
+                r: the distance to the origin for each mesh grid
+            evolving fields:
+                E_x: the x component of the field E
+                E_y: the y componnet of the field E
+                E_z: the z component of the field E
+                A_x: the x component of the field A
+                A_y: the y component of the field A
+                A_z: the z component of the field A
+                phi: the scalar potential field phi values
+            monitor variables:
+                constraint: the current constraint violation value from the evolving fields.
+                
+        """
+
+        self.n_grid = n_grid
+        self.n_vars = 7
+        self.delta = float(x_out) / (n_grid - 2.0)
+        delta = self.delta
+
+        self.x      = np.linspace(-self.delta*0.5, x_out + 0.5*self.delta, self.n_grid)[:,None,None]
+        self.y      = np.linspace(-self.delta*0.5, x_out + 0.5*self.delta, self.n_grid)[None,:,None]
+        self.z      = np.linspace(-self.delta*0.5, x_out + 0.5*self.delta, self.n_grid)[None,None,:]
+        self.r      = np.sqrt(self.x**2+self.y**2+self.z**2)
+        
+
+        # set up all variables common to both approaches
+        self.E_x = zeros((n_grid, n_grid, n_grid))
+        self.E_y = zeros((n_grid, n_grid, n_grid))
+        self.E_z = zeros((n_grid, n_grid, n_grid))
+        self.A_x = zeros((n_grid, n_grid, n_grid))
+        self.A_y = zeros((n_grid, n_grid, n_grid))
+        self.A_z = zeros((n_grid, n_grid, n_grid))
+        self.phi = zeros((n_grid, n_grid, n_grid))
+        self.constraint = zeros((n_grid, n_grid, n_grid))
+
+        
+        self.t = 0.0
+'''
+                previous_llm_code.append(step_code)
+                full_code += f'\n{step_code}'
+                steps_results[f'{task_id}.{i + 1}'] = full_code
+                continue
+            elif (task_id == "62" and i == 0):
+                step_code = '''
+class Block:
+    def __init__(self, length, basis_size, operator_dict):
+        self.length = length
+        self.basis_size = basis_size
+        self.operator_dict = operator_dict
+
+    def print_all(self):
+        print(self.length)
+        print(self.basis_size)
+        for key, matrix in self.operator_dict.items():
+            if isinstance(matrix, np.ndarray):
+                print(f"{key}:\n{matrix}\n")
+            else:
+                print(f"{key}:\n{matrix.toarray()}\n")
+
+class EnlargedBlock:
+    def __init__(self, length, basis_size, operator_dict):
+        self.length = length
+        self.basis_size = basis_size
+        self.operator_dict = operator_dict
+
+    def print_all(self):
+        print(self.length)
+        print(self.basis_size)
+        for key, matrix in self.operator_dict.items():
+            if isinstance(matrix, np.ndarray):
+                print(f"{key}:\n{matrix}\n")
+            else:
+                print(f"{key}:\n{matrix.toarray()}\n")
+'''
+                previous_llm_code.append(step_code)
+                full_code += f'\n{step_code}'
+                steps_results[f'{task_id}.{i + 1}'] = full_code
+                continue
+            elif (task_id == "76" and i == 2):
+                step_code = """
+def generate_dna(N: int, PWM: dict) -> tuple:
+    '''
+    Input:
+    N (int): Length of the resultant DNA sequence.
+    PWM matrix with keys 'A', 'C', 'G', 'T'
+
+    Output:
+    tuple: Insertion location (int), DNA sequence (str), DNA reverse complement (str)
+    '''
+    p = random.randint(0, N-1)
+
+    nucleotide = "ACGT"
+    uni_weights = [0.25,0.25,0.25,0.25] #uniform distribution
+    dna_string = ''.join(random.choices(nucleotide, uni_weights, k=N))
+
+    spike_mat = load_motif_from_df(PWM)
+    spiked_seq = ''.join(random.choices(nucleotide, weights=[PWM[nuc][i] for nuc in nucleotide], k=1)[0]
+                         for i in range(len(PWM['A'])))
+
+    complement = {'A':'T', 'T':'A', 'C':'G', 'G':'C'}
+    reversed_seq = dna_string[::-1]
+    reverse_complement = ''.join(complement[nuc] for nuc in reversed_seq if nuc in complement)
+
+    new_seq = dna_string[:p] + spiked_seq + dna_string[p:]
+    new_seq_rc = reverse_complement[:N-p] + spiked_seq + reverse_complement[N-p:]
+
+    return p, new_seq, new_seq_rc
+"""
+                previous_llm_code.append(step_code)
+                full_code += f'\n{step_code}'
+                steps_results[f'{task_id}.{i + 1}'] = full_code
+                continue
+
+            prompt, dependencies = generate_prompt_with_steps(
+                with_background=easy,
+                previous_llm_code=previous_llm_code,
+                prob_data=task,
+                num_steps=i + 1,
+                prompt_template=prompt_template
+            )
+
+            response = agent.run(prompt)
+            response = str(response)
+            generated_code = response.replace("```python", "").replace("```", "").strip()
+
+            # Update previous_llm_code string with the generated code
+            previous_llm_code.append(generated_code)
+            full_code += f'\n{generated_code}'
+
+            # Store the generated code for the current step
+            if easy == True:
+                steps_results[f'{task_id}.{i + 1}'] = full_code
+            else:
+                steps_results[f'{task_id}.{i + 1}'] = dependencies + full_code
+                
+        save_agent_steps(agent, kwargs, steps_results, task)
+            
+        return {task_id: steps_results}
+
     else:
         raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
     

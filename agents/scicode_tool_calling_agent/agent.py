@@ -1,5 +1,5 @@
 import os
-from smolagents import LiteLLMModel, CodeAgent, Tool, DuckDuckGoSearchTool, PythonInterpreterTool
+from smolagents import LiteLLMModel, CodeAgent, Tool, DuckDuckGoSearchTool, PythonInterpreterTool, FinalAnswerTool
 
 AUTHORIZED_IMPORTS = [
     "os",
@@ -12,8 +12,8 @@ AUTHORIZED_IMPORTS = [
     "cmath",
     "collections",
     "functools",
-    "numpy",
-    "scipy",
+    "numpy.*",
+    "scipy.*",
     "mpl_toolkits.mplot3d",
     "sympy",
 ]
@@ -113,22 +113,35 @@ class ModifiedWikipediaSearchTool(Tool):
 
         except Exception as e:
             return f"Error fetching Wikipedia summary: {str(e)}"
+        
+        
+def get_agent(model_params) -> CodeAgent:
+    """
+    Returns a CodeAgent with the specified model name.
+    
+    Args:
+        model_name (str): The name of the model to use.
+        
+    Returns:
+        CodeAgent: An instance of CodeAgent configured with the specified model.
+    """
+    # Initialize the LiteLLMModel with the specified model name
+    model = LiteLLMModel(**model_params)
 
-model = LiteLLMModel(model_id="gpt-4o-mini",
-                     api_key = os.environ['OPENAI_API_KEY'])
+    # Create a CodeAgent instance with the specified model
+    agent = CodeAgent(
+        tools=[
+            DuckDuckGoSearchTool(),
+            PythonInterpreterTool(),
+            ModifiedWikipediaSearchTool(),
+            FinalAnswerTool(description = "Produce the final answer to the problem as a code chunk the with function described in the problem description. Your response should focus exclusively on implementing the solution for the next step, adhering closely to the specified function header and the context provided by the initial steps. Your response should NOT include the dependencies and functions of all previous steps. If your next step function calls functions from previous steps, please make sure it uses the headers provided without modification. DO NOT generate EXAMPLE USAGE OR TEST CODE in your response. Please make sure your response python code in format of ```python```. THIS IS EXTREMELY IMPORTANT! DO NOT SUBMIT A RESPONSE THAT IS NOT A VALID PYTHON CODE BLOCK!")
+        ],
+        additional_authorized_imports=AUTHORIZED_IMPORTS,
+        model=model,
+        planning_interval=3,
+        max_steps=5,
+        verbosity_level=2
+    )
 
-agent = CodeAgent(
-    tools=[
-        DuckDuckGoSearchTool(),
-        PythonInterpreterTool(),
-        ModifiedWikipediaSearchTool(),
-    ],
-    additional_authorized_imports=AUTHORIZED_IMPORTS,
-    model=model,
-    max_steps = 5,
-    verbosity_level = 2
-)
-
-# Uncomment the line below to run the agent with a specific query
-
+    return agent
 

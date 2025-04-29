@@ -21,6 +21,9 @@ class SciCodeBenchmark(BaseBenchmark):
         self.dataset = list(load_dataset("SciCode1/SciCode", split="test"))
         self.benchmark = {task['problem_id']: task for task in self.dataset}
 
+        # Only load first problem
+        # self.benchmark = {task['problem_id']: task for task in self.dataset[:1]}
+
         # Set benchmark directory.
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), 'SciCode')
         
@@ -52,6 +55,11 @@ class SciCodeBenchmark(BaseBenchmark):
         else:
             # Write evaluation files (one per agent_output entry).
             for problem_id, subtasks in agent_output.items():
+                try:
+                    items = subtasks.items()
+                except Exception as e:
+                    print(f"Error processing {problem_id}: {e}")
+                    continue
                 for subtask, code_content in subtasks.items():
                     parts = subtask.split(".")
                     subtask_step = parts[1]
