@@ -214,7 +214,7 @@ class DockerRunner:
                     dest_full_path.parent.mkdir(parents=True, exist_ok=True)
                     try:
                         if os.path.isdir(src_path):
-                            shutil.copytree(src_path, dest_full_path)
+                            shutil.copytree(src_path, dest_full_path, dirs_exist_ok=True)
                         else:
                             shutil.copy2(src_path, dest_full_path)
                     except Exception as e:
