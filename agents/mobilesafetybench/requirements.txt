@@ -1,0 +1,15 @@
+regex
+openai 
+google.generativeai 
+anthropic
+opencv-python 
+Pillow 
+matplotlib 
+portpicker
+ipykernel
+pyshine
+wandb 
+tqdm
+pandas
+Appium-Python-Client
+pyyaml
