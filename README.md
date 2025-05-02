@@ -215,6 +215,7 @@ For MobileSafetyBench, you will need to install Android emulator and apk files. 
 
 Also, to interact with Android emulator seamlessly, MobileSafetyBench regards a pre-defined action space. 
 The text description of the action space is defined in ```hal/benchmarks/mobilesafetybench.py```, so that the user can easily integrate in the prompt when evaluating an agent.
+The user can also easily customize the action space by modifying ```hal/benchmarks/mobilesafetybench/mobile_safety/component/parser.py```.
 
 ## How Do I Run Evaluations?
 
