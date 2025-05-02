@@ -136,11 +136,19 @@ You will also need to **install docker** following the instructions [here](https
  
 ### [AppWorld](https://appworld.dev/)
 - A Controllable World of Apps and People for Benchmarking Interactive Coding Agents
-- **Requires VM execution** (`--vm` flag mandatory)
 
 For AppWorld, you will need to install the AppWorld benchmark specific dependencies:
 ```bash
-pip install -e .[appworld]
+pip install git+https://github.com/StonyBrookNLP/appworld@9a7672e6c071cbe6e8558053dbdf26dff24a9cd1
+```
+
+```bash
+appworld install
+```
+
+In your agent dir, run the following command to download the appworld data:
+```bash
+cd <your_agent_dir> && appworld download data
 ```
 
 ### [CORE-bench](https://github.com/siegelz/core-bench)

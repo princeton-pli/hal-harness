@@ -1,5 +1,6 @@
 import json
 from functools import partial
+import os
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
@@ -15,6 +16,22 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         litellm.acompletion = partial(litellm.acompletion, reasoning_effort=kwargs['reasoning_effort'])
         kwargs['temperature'] = 1
         
+    if 'together_ai' in kwargs['model_name']:
+        user_provider = 'openai'
+        api_base = "https://api.together.xyz/v1"
+        api_key = os.getenv('TOGETHERAI_API_KEY')
+        model_name = kwargs['model_name'].replace('together_ai/', '')
+    elif 'gemini' in kwargs['model_name']:
+        user_provider = 'openai'
+        api_base = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        api_key = os.getenv('GEMINI_API_KEY')
+        model_name = kwargs['model_name'].replace('gemini/', '')
+    else:
+        user_provider = kwargs['provider']
+        api_base = None
+        api_key = None
+        model_name = kwargs['model_name']
+        
     from tau_bench.envs import get_env
     from tau_bench.agents.few_shot_agent import FewShotToolCallingAgent
     
@@ -24,7 +41,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         input[task_id]['user_strategy'],
         input[task_id]['user_model'],
         input[task_id]['task_split'],
-        input[task_id]['user_provider'],
+        user_provider,
         input[task_id]['task_index']
     )
     
@@ -40,9 +57,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         tools_info=isolated_env.tools_info,
         wiki=isolated_env.wiki,
         few_shot_displays=few_shot_displays,
-        model=kwargs['model_name'],
-        provider=kwargs['provider'],
+        model=model_name,
+        provider=user_provider,
         temperature=kwargs['temperature'] if 'temperature' in kwargs else 0.0,
+        api_base=api_base,
+        api_key=api_key
     )
     
     output = agent.solve(isolated_env, task_index=input[task_id]['task_index'])
