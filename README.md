@@ -213,6 +213,9 @@ For MobileSafetyBench, you will need to install Android emulator and apk files. 
 - Follow [instruction](https://github.com/jylee425/mobilesafetybench?tab=readme-ov-file#installation-guidelines) for installation of Android emulator 
 - Due to instability of Android emulator, we encourage **not to run with max_concurrent > 1**
 
+Also, to interact with Android emulator seamlessly, MobileSafetyBench regards a pre-defined action space. 
+The text description of the action space is defined in ```hal/benchmarks/mobilesafetybench.py```, so that the user can easily integrate in the prompt when evaluating an agent.
+
 ## How Do I Run Evaluations?
 
 The harness uses a command-line interface (CLI) to run evaluations. The basic command structure is:
