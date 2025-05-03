@@ -27,7 +27,8 @@ class BenchmarkManager:
                            'inspect_evals/cybench',
                            'inspect_evals/appworld',
                            'inspect_evals/agentharm',
-                           'inspect_evals/agentharm_benign']
+                           'inspect_evals/agentharm_benign',
+                           'mobilesafetybench']
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
@@ -51,6 +52,9 @@ class BenchmarkManager:
         elif benchmark_name in ['taubench_retail', 'taubench_airline']:
             from .benchmarks.taubench import TauBenchBenchmark
             benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == "mobilesafetybench":
+            from .benchmarks.mobilesafetybench import MobileSafetyBench
+            benchmark = MobileSafetyBench(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         
