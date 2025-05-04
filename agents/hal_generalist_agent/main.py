@@ -575,8 +575,8 @@ Here are some helpful previews for the dataset file(s):
             sys_msg = (
                 """Please reply with a Python 3 solution to the below problem. Make sure
 to wrap your code in '```python' and '```' Markdown delimiters, and
-include exactly one block of code with the entire solution.""",
-                "\n" + task["task_inst"] + 
+include exactly one block of code with the entire solution.""" + "\n" +
+                task["task_inst"] + 
                 ("\n" + str(task["domain_knowledge"]))
             )
 
@@ -600,9 +600,10 @@ include exactly one block of code with the entire solution.""",
         response = str(agent.run(sys_msg))
         save_agent_steps(agent, kwargs, response, task)
         
-        return {task_id: {"history": [{"role": "assistant", "content": f"```python{response}```"}]}}
+        if '```python' in response:
+            response = response.split('```python')[1].split('```')[0]
         
-        
+        return {task_id: {"history": [{"role": "assistant", "content": f"```python{response}```"}], "cost": 0.0}}
         
     elif kwargs['benchmark_name'] == 'swebench_verified':
         pass
