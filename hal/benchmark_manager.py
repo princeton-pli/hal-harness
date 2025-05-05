@@ -37,6 +37,8 @@ class BenchmarkManager:
                            'corebench_hard',
                            'scienceagentbench',
                            'assistantbench',
+                           "colbench_backend_programming",
+                           "colbench_frontend_design"
                            ]
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
@@ -82,6 +84,12 @@ class BenchmarkManager:
         elif benchmark_name == 'assistantbench':
             from .benchmarks.assistantbench import AssistantBenchBenchmark
             benchmark = AssistantBenchBenchmark(self.agent_dir, self.config)
+        elif benchmark_name == 'colbench_backend_programming':
+            from .benchmarks.colbench import ColBenchBenchmark
+            benchmark = ColBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == 'colbench_frontend_design':
+            from .benchmarks.colbench import ColBenchBenchmark
+            benchmark = ColBenchBenchmark(self.agent_dir, self.config, benchmark_name)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         

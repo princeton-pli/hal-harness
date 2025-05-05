@@ -7,6 +7,7 @@ YOU SHOULD TRY TO ASK CLARIFICATION QUESTIONS.
 3) When you have gathered enough information to answer, say "I WANT TO ANSWER:" in the beginning of your response and provide your final answer.
 4) Note that you can only interact with the human users WITHIN 10 back-and-forth rounds and you have to provide your final answer before the conversation ends.
 5) You should be as concise as possible in your response to human.
+6) First think about and list the remaining concerns that you have regarding the problem, and then say "OUTPUT:" followed by your response to the human user.
 
 
 "I WANT TO ANSWER:" should be included in your response to human if you think that you have gathered enough information for addressing this problem.

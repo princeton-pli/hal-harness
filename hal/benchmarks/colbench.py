@@ -49,18 +49,21 @@ You should PRIORITIZE MOST OUTSTANDING DIFFERENCES. DESCRIBE CONCRETELY HOW EACH
 """
 
 #benchmark args is not actually passed to the benchmark
-BACKEND_TASK_PATH = "/home/yifeizhou/hal_collaborative/temp_data/test.jsonl"
-FRONTEND_TASK_PATH = "/home/yifeizhou/hal_collaborative/temp_data/frontend_tasks/test.jsonl"
-CACHE_PATH = "/fsx-ram/yifeizhou/collab_llm/driver_cache/"
+BACKEND_TASK_PATH = os.path.join(os.path.dirname(__file__), 'colbench/data/backend_test.jsonl')
+FRONTEND_TASK_PATH = os.path.join(os.path.dirname(__file__), 'colbench/data/frontend_test.jsonl')
+CACHE_PATH = os.path.join(os.path.dirname(__file__), 'colbench/cache')
 
 class ColBenchBenchmark(BaseBenchmark):
     """ColBench benchmark implementation"""
     
     def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'colbench_backend_programming', 
                  num_tasks: int = 0):
+        assert os.path.exists(os.path.join(os.path.dirname(__file__), 'colbench/data')), "data folder in Colbench directory (hal/benchmarks/colbench) not found. Please download and extract the USACO dataset as described in the README."
         self.benchmark_name = benchmark_name
         self.setup_script = 'hal/benchmarks/colbench/colbench_setup.sh'
         self.requires_sandbox = False
+        if not os.path.exists(CACHE_PATH):
+            os.makedirs(CACHE_PATH)
         # print("="*100)
         # print("task_path", task_path)
         # print("="*100)
@@ -72,7 +75,7 @@ class ColBenchBenchmark(BaseBenchmark):
             if benchmark_name == 'colbench_backend_programming':
                 num_tasks = 1000
             else:
-                num_tasks = 500
+                num_tasks = 100
         with open(task_path, "r") as fb:
             tasks = [json.loads(line) for line in fb]
             tasks = tasks[:num_tasks] if benchmark_name == 'colbench_backend_programming' else tasks[:num_tasks]
@@ -91,7 +94,8 @@ class ColBenchBenchmark(BaseBenchmark):
                 self.benchmark[str(task_index)] = {"problem_description": task["problem_description"], 
                                                    "hidden_information": task["ground_truth"],
                                                    "human_prompt": HTML_USER_PROMPT,
-                                                   "task_type": "html"}
+                                                   "task_type": "html",
+                                                   "cache_path": CACHE_PATH}
              
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
@@ -107,55 +111,59 @@ class ColBenchBenchmark(BaseBenchmark):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             jobs = [executor.submit(get_driver) for i in range(evaluation_batch_size)]
             drivers = [job.result() for job in jobs]
-            print("Rendering images")
-            rendered_images = []
-            for i in tqdm(range(0, len(annotation_results), evaluation_batch_size)):
-                actual_drivers = drivers[:len(ground_truth_images[i:i+evaluation_batch_size])]
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    jobs = [
-                        executor.submit(
-                            render_full_html,
-                            driver,
-                            ground_truth_images[i + j],
-                            CACHE_PATH,
-                            i + j,
-                        )
-                        for j, driver in enumerate(actual_drivers)
-                    ]
-                    rendered_images += [job.result() for job in jobs]
-            for d in drivers:
-                d.quit()
-            ground_truth_images = [
-                Image.open(ground_truth_image) for ground_truth_image in rendered_images
-            ]
-            answer_images = [
-                (
-                    Image.open(answer_image).convert("RGB")
-                    if answer_image is not None and os.path.exists(answer_image)
-                    else Image.new("RGB", (224, 224), "black")
-                )
-                for answer_image in answer_images
-            ]
-            # import IPython; IPython.embed(); exit()
-            model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to("cuda")
-            processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-
-            inputs1 = processor(images=answer_images, return_tensors="pt", padding=True).to(
-                "cuda"
+        print("Rendering images")
+        rendered_images = []
+        for i in tqdm(range(0, len(annotation_results), evaluation_batch_size)):
+            actual_drivers = drivers[:len(ground_truth_images[i:i+evaluation_batch_size])]
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                jobs = [
+                    executor.submit(
+                        render_full_html,
+                        driver,
+                        ground_truth_images[i + j],
+                        CACHE_PATH,
+                        i + j,
+                    )
+                    for j, driver in enumerate(actual_drivers)
+                ]
+                rendered_images += [job.result() for job in jobs]
+        for d in drivers:
+            d.quit()
+        ground_truth_images = [
+            Image.open(ground_truth_image) for ground_truth_image in rendered_images
+        ]
+        answer_images = [
+            (
+                Image.open(answer_image).convert("RGB")
+                if answer_image is not None and os.path.exists(answer_image)
+                else Image.new("RGB", (224, 224), "black")
             )
-            inputs2 = processor(
-                images=ground_truth_images, return_tensors="pt", padding=True
-            ).to("cuda")
-            # Get the image embeddings
-            with torch.no_grad():
-                image_features1 = model.get_image_features(**inputs1)
-                image_features2 = model.get_image_features(**inputs2)
-            # Normalize the embeddings
-            image_features1 = image_features1 / image_features1.norm(dim=-1, keepdim=True)
-            image_features2 = image_features2 / image_features2.norm(dim=-1, keepdim=True)
-            # Calculate cosine similarity
-            similarities = torch.sum(image_features1 * image_features2, dim=-1).cpu().numpy().tolist()
-            return similarities
+            for answer_image in answer_images
+        ]
+        # import IPython; IPython.embed(); exit()
+        model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to("cuda")
+        processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+
+        inputs1 = processor(images=answer_images, return_tensors="pt", padding=True).to(
+            "cuda"
+        )
+        inputs2 = processor(
+            images=ground_truth_images, return_tensors="pt", padding=True
+        ).to("cuda")
+        # Get the image embeddings
+        with torch.no_grad():
+            image_features1 = model.get_image_features(**inputs1)
+            image_features2 = model.get_image_features(**inputs2)
+        # Normalize the embeddings
+        image_features1 = image_features1 / image_features1.norm(dim=-1, keepdim=True)
+        image_features2 = image_features2 / image_features2.norm(dim=-1, keepdim=True)
+        # Calculate cosine similarity
+        similarities = torch.sum(image_features1 * image_features2, dim=-1).cpu().numpy().tolist()
+        
+        #remove all files in cache folder
+        for file in os.listdir(CACHE_PATH):
+            os.remove(os.path.join(CACHE_PATH, file))
+        return similarities
     
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """
