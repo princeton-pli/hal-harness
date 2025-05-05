@@ -1,5 +1,0 @@
-smolagents
-smolagents[litellm]
-wikipedia-api
-openai
-weave

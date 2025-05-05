@@ -1490,6 +1490,21 @@ def generate_dna(N: int, PWM: dict) -> tuple:
         save_agent_steps(agent, kwargs, steps_results, task)
             
         return {task_id: steps_results}
+    
+    elif kwargs['benchmark_name'] == 'assistantbench':
+
+        asstbench_prompt =  """Provide a concise and accurate answer to the question below without any additional context in the format suggested by the prompt. Do not include any justification or any additional unnecessary text. Your answer does not need to be a full sentence. If you are unsure what the final answer is, generate an empty string. The answer should either be: a number, a string, a list of strings, or a list of jsons. The answer should be parsed with the python method: json.loads(input_str). If no answer is found, generate an empty string. If the prompt includes a specified answer format, respect that format.
+
+[BEGIN QUESTION]
+{}
+[END QUESTION]
+"""
+        prompt = asstbench_prompt.format(task['task'])
+        response = agent.run(prompt)
+        save_agent_steps(agent, kwargs, response, task)
+        
+            
+        return {task_id: response}
 
     else:
         raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
@@ -1497,7 +1512,6 @@ def generate_dna(N: int, PWM: dict) -> tuple:
     results[task_id] = response
         
     return results
-
 
 
 # INSPECT BENCHMARKS BELOW

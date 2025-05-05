@@ -15,10 +15,9 @@ class AssistantBenchBenchmark(BaseBenchmark):
         self.benchmark = {task['id']: task for task in self.dataset}
 
         # For testing, limit to 1 task
-        self.benchmark = {
-            k: v for k, v in self.benchmark.items()
-            if k in list(self.benchmark.keys())[:2]
-        }
+        # self.benchmark = {
+        #     k: v for k, v in self.benchmark.items()
+        #     if k in list(self.benchmark.keys())[:1]}
         
         super().__init__(agent_dir, config)
     

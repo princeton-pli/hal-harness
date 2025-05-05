@@ -180,6 +180,10 @@ For all SciCode benchmarks, you will need to download and extract the SciCode un
 pip install -e .[scicode]
 ```
 
+### [AssistantBench](https://github.com/oriyor/assistantbench)
+- Benchmark evaluating an agent's ability to solve realistic and time-consuming web search tasks. 
+- Evaluation uses scoring system from [BrowserGym](https://github.com/ServiceNow/BrowserGym)
+
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
 - Two agent types supported:
