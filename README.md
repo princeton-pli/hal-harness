@@ -339,6 +339,12 @@ Agent Arguments:
 - `use_self_debug`: using the self-debug agent instead of direct prompting if `True`
 - `use_knowledge`: using the expert-annotated domain knowledge as additional agent input if `True`
 
+If you are running your own agent, you will need to submit the python script in the following way at the end of your agent run function. You can see an example of this in the `main.py` file in the `hal_generalist_agent` directory.
+
+```python
+return {task_id: {"history": [{"role": "assistant", "content": f"```python{response}```"}], "cost": 0.0}}
+```
+
 
 ### [CollaborativeAgentBench](https://github.com/facebookresearch/sweet_rl)
 - Benchmark for evaluating agents' capabilities to collaborate with humans for artifact creations

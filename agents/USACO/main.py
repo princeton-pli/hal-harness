@@ -17,8 +17,8 @@ def run_usaco_zeroshot(problem_dict, episodic_retrieval=False, semantic_retrieva
     import litellm
     if 'reasoning_effort' in kwargs:
         print(f"Setting reasoning_effort to {kwargs['reasoning_effort']}")
-        litellm.completion = partial(litellm.completion, reasoning_effort=kwargs['reasoning_effort'])
-        litellm.acompletion = partial(litellm.acompletion, reasoning_effort=kwargs['reasoning_effort'])
+        litellm.completion = partial(litellm.completion, reasoning_effort=kwargs['reasoning_effort'], allowed_openai_params=['reasoning_effort'])
+        litellm.acompletion = partial(litellm.acompletion, reasoning_effort=kwargs['reasoning_effort'], allowed_openai_params=['reasoning_effort'])
         kwargs['temperature'] = 1
 
     assert "model_name" in kwargs, "model_name must be provided in agent kwargs"
