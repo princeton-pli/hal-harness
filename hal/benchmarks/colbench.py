@@ -75,7 +75,7 @@ class ColBenchBenchmark(BaseBenchmark):
             if benchmark_name == 'colbench_backend_programming':
                 num_tasks = 1000
             else:
-                num_tasks = 10
+                num_tasks = 100
         with open(task_path, "r") as fb:
             tasks = [json.loads(line) for line in fb]
             tasks = tasks[:num_tasks] if benchmark_name == 'colbench_backend_programming' else tasks[:num_tasks]
@@ -94,7 +94,8 @@ class ColBenchBenchmark(BaseBenchmark):
                 self.benchmark[str(task_index)] = {"problem_description": task["problem_description"], 
                                                    "hidden_information": task["ground_truth"],
                                                    "human_prompt": HTML_USER_PROMPT,
-                                                   "task_type": "html"}
+                                                   "task_type": "html",
+                                                   "cache_path": CACHE_PATH}
              
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:

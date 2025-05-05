@@ -104,7 +104,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     else:
         env = HumanDesignInteractionEnv(env_client, task_data["human_prompt"], 
                                         env_model_name,
-                                        temp_path=kwargs['cache_path'],
+                                        temp_path=task_data['cache_path'],
                                         gpt_client=True)    
     
     
