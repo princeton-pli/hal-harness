@@ -1,0 +1,7 @@
+openai
+smolagents
+smolagents[all]
+os
+typing
+pathlib
+weave

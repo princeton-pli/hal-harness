@@ -21,6 +21,9 @@ class SciCodeBenchmark(BaseBenchmark):
         self.dataset = list(load_dataset("SciCode1/SciCode", split="test"))
         self.benchmark = {task['problem_id']: task for task in self.dataset}
 
+        # Only load first problem
+        # self.benchmark = {task['problem_id']: task for task in self.dataset[:1]}
+
         # Set benchmark directory.
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), 'SciCode')
         
@@ -40,19 +43,23 @@ class SciCodeBenchmark(BaseBenchmark):
                 with open(tmp_file, "w", encoding="utf-8") as f:
                     f.write(code_content)
                     f.write("\n\nfrom scicode.parse.parse import process_hdf5_to_tuple\n")
-                    for step_index in range(len(task["sub_steps"])):
-                        step_info = task["sub_steps"][step_index]
-                        step_id = step_info["step_number"]
-                        test_lst = step_info["test_cases"]
-                        f.write(f"targets = process_hdf5_to_tuple('{step_id}', {len(test_lst)})\n")
-                        for idx in range(len(test_lst)):
-                            f.write(f"target = targets[{idx}]\n\n")
-                            for line in test_lst[idx].split("\n"):
-                                f.write(line + "\n")
+                    last_step = task["sub_steps"][-1]
+                    step_id = last_step["step_number"]
+                    test_lst = last_step["test_cases"]
+                    f.write(f"targets = process_hdf5_to_tuple('{step_id}', {len(test_lst)})\n")
+                    for idx in range(len(test_lst)):
+                        f.write(f"target = targets[{idx}]\n\n")
+                        for line in test_lst[idx].split("\n"):
+                            f.write(line + "\n")
             
         else:
             # Write evaluation files (one per agent_output entry).
             for problem_id, subtasks in agent_output.items():
+                try:
+                    items = subtasks.items()
+                except Exception as e:
+                    print(f"Error processing {problem_id}: {e}")
+                    continue
                 for subtask, code_content in subtasks.items():
                     parts = subtask.split(".")
                     subtask_step = parts[1]
@@ -158,14 +165,18 @@ class SciCodeBenchmark(BaseBenchmark):
 
         # Iterate through benchmark tasks
         for problem_id, task in self.benchmark.items():
+            # Get the number of subtasks in the benchmark
             total = len(task.get("sub_steps", []))
+            # Get the number of subtasks that were successfully executed
             passed = len(details.get(problem_id, []))
             if self.benchmark_name == 'scicode_hard':
-                if len(details.get(problem_id, [])) > 0:
+                # For the hard benchmark, we only care about the last step
+                if passed > 0:
                     successful_tasks.append(problem_id)
                 else:
                     failed_tasks.append(problem_id)
             else:
+                # For the easy and standard benchmarks, we check whether all steps are passed
                 total_subtasks += total
                 total_passed_subtasks += passed
                 if total > 0 and passed == total:
@@ -173,10 +184,10 @@ class SciCodeBenchmark(BaseBenchmark):
                 else:
                     failed_tasks.append(problem_id)
 
-        accuracy = len(successful_tasks) / len(self.benchmark) if self.benchmark else 0
+        accuracy = len(successful_tasks) / (len(successful_tasks) + len(failed_tasks))
 
         if self.benchmark_name != 'scicode_hard':
-            subtask_accuracy = total_passed_subtasks / len(self.benchmark) if len(self.benchmark) > 0 else 0
+            subtask_accuracy = total_passed_subtasks / total_subtasks if total_subtasks > 0 else 0
 
             return {
                 "accuracy": accuracy,

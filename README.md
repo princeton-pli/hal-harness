@@ -180,6 +180,10 @@ For all SciCode benchmarks, you will need to download and extract the SciCode un
 pip install -e .[scicode]
 ```
 
+### [AssistantBench](https://github.com/oriyor/assistantbench)
+- Benchmark evaluating an agent's ability to solve realistic and time-consuming web search tasks. 
+- Evaluation uses scoring system from [BrowserGym](https://github.com/ServiceNow/BrowserGym)
+
 ### [Inspect AI Benchmarks](https://github.com/UKGovernmentBEIS/inspect_ai)
 - Supports a number of [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai) agent tasks (`inspect_evals/<task_name>`)
 - Two agent types supported:
@@ -335,6 +339,12 @@ Agent Arguments:
 - `model_name`: name of base LLM (currently supporting OpenAI and AWS Bedrock)
 - `use_self_debug`: using the self-debug agent instead of direct prompting if `True`
 - `use_knowledge`: using the expert-annotated domain knowledge as additional agent input if `True`
+
+If you are running your own agent, you will need to submit the python script in the following way at the end of your agent run function. You can see an example of this in the `main.py` file in the `hal_generalist_agent` directory.
+
+```python
+return {task_id: {"history": [{"role": "assistant", "content": f"```python{response}```"}], "cost": 0.0}}
+```
 
 
 ### [CollaborativeAgentBench](https://github.com/facebookresearch/sweet_rl)

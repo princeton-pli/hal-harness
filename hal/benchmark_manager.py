@@ -17,6 +17,8 @@ class BenchmarkManager:
         self.agent_dir = agent_dir
         self.agent_args = agent_args
         self.benchmarks = ['scicode',
+                           'scicode_easy',
+                           'scicode_hard',
                            'usaco', 
                            'swebench_verified', 
                            'swebench_verified_mini', 
@@ -34,6 +36,7 @@ class BenchmarkManager:
                            'corebench_medium',
                            'corebench_hard',
                            'scienceagentbench',
+                           'assistantbench',
                            ]
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
@@ -76,6 +79,9 @@ class BenchmarkManager:
         elif benchmark_name == 'scienceagentbench':
             from .benchmarks.scienceagentbench import ScienceAgentBench
             benchmark = ScienceAgentBench(self.agent_dir, self.config)
+        elif benchmark_name == 'assistantbench':
+            from .benchmarks.assistantbench import AssistantBenchBenchmark
+            benchmark = AssistantBenchBenchmark(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
         
