@@ -12,8 +12,6 @@ import os
 
 from typing import Optional
 
-from hal.utils.weave_utils import MODEL_PRICES_DICT
-
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
@@ -88,6 +86,8 @@ def extract_diff(response):
     return response.split("</s>")[0]
 
 def check_budget_exceeded(agent: CodeAgent, budget: float, model_name: str) -> bool:
+    from hal.utils.weave_utils import MODEL_PRICES_DICT
+    
     total_input_tokens = agent.monitor.total_input_token_count
     total_output_tokens = agent.monitor.total_input_token_count
     
