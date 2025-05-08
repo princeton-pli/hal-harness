@@ -12,13 +12,17 @@ import os
 
 from typing import Optional
 
-from hal.utils.weave_utils import MODEL_PRICES_DICT
-
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
 from mdconvert import MarkdownConverter
+
+try:
+    from hal.utils.weave_utils import MODEL_PRICES_DICT
+except ImportError:
+    # When running on VM or Docker, the utils module is not available
+    from model_prices import MODEL_PRICES_DICT
 
 AUTHORIZED_IMPORTS = [
     "requests",
