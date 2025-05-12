@@ -38,7 +38,7 @@ scicode = [
   "scicode @ git+https://github.com/peterkirgis/SciCode"
 ]
 assistantbench = [
-    "browsergym=0.13.4"
+    "browsergym>=0.13.4"
 ]
 hal-agent-inspect = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
