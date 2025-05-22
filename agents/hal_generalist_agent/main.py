@@ -14,7 +14,7 @@ from typing import Optional
 
 from hal.utils.weave_utils import MODEL_PRICES_DICT
 
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
+from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool, FinalAnswerTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
@@ -805,6 +805,7 @@ Here is the question and attached files are stored in your current directory:
     
     
 
+
     
     elif kwargs['benchmark_name'] == 'colbench_backend_programming':
         from openai import OpenAI
@@ -826,28 +827,28 @@ Here is the question and attached files are stored in your current directory:
                 str: The user's response.
                 str: Indication of whether the task is finished.
             """
-            observation, _, _ = isolated_env.step(question)
-            return observation.observation, "Task finished" if observation.done else "You may still continue to work on the task"
+            observation, _, done = isolated_env.step(question)
+            return observation[-1]["content"], "Task finished, you should call final_answer tool" if done else "You may still continue to work on the task"
         
-        @tool 
-        def finish_task(answer: str) -> str:
-            """
-            Finish the task with answer.
+        # @tool 
+        # def finish_task(answer: str) -> str:
+        #     """
+        #     Finish the task with answer.
             
-            Args:
-                answer: The answer to the task.
+        #     Args:
+        #         answer: The answer to the task.
                 
-            Returns:
-                str: The user's response.
-                str: Indication of whether the task is finished.
-            """
-            observation, _, _ = isolated_env.step("I WANT TO ANSWER:" + answer)
-            return "The task is finished. And your answer is received.", "Task finished" 
+        #     Returns:
+        #         str: The user's response.
+        #         str: Indication of whether the task is finished.
+        #     """
+        #     observation, _, _ = isolated_env.step("I WANT TO ANSWER:" + answer)
+        #     return "The task is finished. And your answer is received. , you should call final_answer tool", "Task finished, you should call final_answer tool" 
         
         agent = CodeAgent(
-            tools=CORE_TOOLS + [ask_user, finish_task],
+            tools=[ask_user, FinalAnswerTool()],
             planning_interval=4,
-            max_steps=80,
+            max_steps=9,
             model=model)
         
         instruction = f"""
@@ -859,11 +860,20 @@ Here is the question and attached files are stored in your current directory:
         {task_data["problem_description"]}
         
         You can ask the user for clarification if needed using the ask_user tool within 9 rounds.
-        When you are gathered enough information, you can finish the task using the finish_task tool and provide your answer.
-        The answer should be a piece of raw python function.
+        When you are gathered enough information, you can finish the task using the finish_answer tool and provide your answer.
+        The answer should be a piece of raw python function IN STRING FORMAT.
+        NOTE THAT YOU CANNOT REVISE THE CODE AFTER YOU HAVE DECIDED TO FINISH THE TASK.
+        MAKE SURE TO GATHER ENOUGH INFORMATION BEFORE YOU FINISH THE TASK in 10 rounds.
+        You should not execute the code, only ask questions or provide answers.
         """
         
-        response = asyncio.run(agent.arun(instruction))
+        response = agent.run(instruction)
+        # print(response)
+        try:
+            isolated_env.step("I WANT TO ANSWER:" + response.to_string())
+        except:
+            print("The returned response is not a string")
+            pass
         
         dialogue_history = [{"role": d["role"], "content": d["content"]} for d in isolated_env.get_dialogue_history()]
         answer = isolated_env.answer
@@ -882,6 +892,7 @@ Here is the question and attached files are stored in your current directory:
                                         temp_path=task_data['cache_path'],
                                         gpt_client=True)   
         observation = isolated_env.reset(task_data["problem_description"], task_data["hidden_information"])
+        
         @tool 
         def ask_user(question: str) -> str:
             """
@@ -894,28 +905,13 @@ Here is the question and attached files are stored in your current directory:
                 str: The user's response.
                 str: Indication of whether the task is finished.
             """
-            observation, _, _ = isolated_env.step(question)
-            return observation.observation, "Task finished" if observation.done else "You may still continue to work on the task"
-        
-        @tool 
-        def finish_task(answer: str) -> str:
-            """
-            Finish the task with answer.
-            
-            Args:
-                answer: The answer to the task.
-                
-            Returns:
-                str: The user's response.
-                str: Indication of whether the task is finished.
-            """
-            observation, _, _ = isolated_env.step("I WANT TO ANSWER:" + answer)
-            return "The task is finished. And your answer is received.", "Task finished" 
-        
+            observation, _, done = isolated_env.step(question)
+            return observation[-1]["content"], "Task finished" if done else "You may still continue to work on the task"
+
         agent = CodeAgent(
-            tools=CORE_TOOLS + [ask_user, finish_task],
+            tools=[ask_user, FinalAnswerTool()],
             planning_interval=4,
-            max_steps=80,
+            max_steps=9,
             model=model)
         
         instruction = f"""
@@ -930,17 +926,24 @@ Here is the question and attached files are stored in your current directory:
         https://picsum.photos/id/48/W/H, by replacing W and H with the width and height of the image.
         Keep the id the same to only use id 48 image.
         
-        You have access to the ask_user tool to ask the user for clarification, and finish_task tool to finish the task.
+        You have access to the ask_user tool to ask the user for clarification, and final_answer tool to finish the task.
         You can ask the user for clarification if needed using the ask_user tool within 9 rounds.
         
         You can include ONLY ONE snippet raw html and Tailwind css code (wrapped in <html> tag) in your question to human user to ask how is the proposed design different from what the human user wants. 
         This snippet of raw html and Tailwind css code (WRAPPED IN <html> TAG) will be rendered for the human to see a screenshot of the webpage.
         The human user will respond by comparing your rendered webpage with the webpage that the human user has in mind.
-        When you are gathered enough information, you can finish the task using the finish_task tool and provide your answer.
-        The answer should be a piece of raw html code.
+        When you are gathered enough information, you can finish the task using the final_answer tool and provide your answer.
+        The answer should be a piece of raw html code wrapped in <html> tag.
         """
         
-        response = asyncio.run(agent.arun(instruction))
+        response = agent.run(instruction)
+        
+        try:
+            isolated_env.step("I WANT TO ANSWER:" + response.to_string())
+        except:
+            print("The returned response is not a string")
+            pass
+        
         isolated_env.driver.quit()
         dialogue_history = [{"role": d["role"], "content": d["content"]} for d in isolated_env.get_dialogue_history()]
         answer = isolated_env.answer
