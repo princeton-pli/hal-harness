@@ -16,5 +16,9 @@ The human user will respond by comparing your rendered webpage with the webpage 
 6) You need to make sure that your html webpage looks exactly as the human user wants, including the overall layout, navigation bars, background color etc.
 7) The human user can only see your rendered image and provide suggestions based on the rendered image, and not any text questions.
 
+
 First output your thought on your remaining uncertainties about the understanding of the problem and user preferences such as name of the function, input format, output format, and etc.
-Then say "OUTPUT:\n" followed by your proposal html.
+After analysis, think about what would be the question that the LLM agent would ask to elicit the most information to help you solve the problem.
+Then imagine two possible responses from the user to the question and analyze the difference between the two responses. Refine your question based on the analysis.
+Then say "OUTPUT:\n" followed by your proposal html. 
+ONLY SAY "I WANT TO ANSWER:" IF ALL OF YOUR UNCERTAINTIES ARE RESOLVED, AS YOU WILL NOT BE ABLE TO FURTHER ADJUST THE HTML AFTER THAT.

@@ -834,6 +834,151 @@ Here is the question and attached files are stored in your current directory:
         return {task_id: response}
     
     
+
+    
+    elif kwargs['benchmark_name'] == 'colbench_backend_programming':
+        from openai import OpenAI
+        from sweet_rl.environments.human_interaction_env import HumanInteractionEnv
+        env_model_name = "gpt-4o-2024-08-06"
+        task_data = input[task_id]
+        env_client = OpenAI()
+        isolated_env = HumanInteractionEnv(env_client, task_data["human_prompt"], env_model_name)   
+        observation = isolated_env.reset(task_data["problem_description"], task_data["hidden_information"])
+        @tool 
+        def ask_user(question: str) -> str:
+            """
+            Ask the user a question.
+            
+            Args:
+                question: The question to ask the user.
+                
+            Returns:
+                str: The user's response.
+                str: Indication of whether the task is finished.
+            """
+            observation, _, _ = isolated_env.step(question)
+            return observation.observation, "Task finished" if observation.done else "You may still continue to work on the task"
+        
+        @tool 
+        def finish_task(answer: str) -> str:
+            """
+            Finish the task with answer.
+            
+            Args:
+                answer: The answer to the task.
+                
+            Returns:
+                str: The user's response.
+                str: Indication of whether the task is finished.
+            """
+            observation, _, _ = isolated_env.step("I WANT TO ANSWER:" + answer)
+            return "The task is finished. And your answer is received.", "Task finished" 
+        
+        agent = CodeAgent(
+            tools=CORE_TOOLS + [ask_user, finish_task],
+            planning_interval=4,
+            max_steps=80,
+            model=model)
+        
+        instruction = f"""
+        You are a backend programmer. 
+        Your task is to help a human user to resolve their problem, in particular python programming.
+        Note that the problem is highly personalized so you need to explicitly gather information about the user's problem.
+        You are given a task to solve the following problem:
+        
+        {task_data["problem_description"]}
+        
+        You can ask the user for clarification if needed using the ask_user tool within 9 rounds.
+        When you are gathered enough information, you can finish the task using the finish_task tool and provide your answer.
+        The answer should be a piece of raw python function.
+        """
+        
+        response = asyncio.run(agent.arun(instruction))
+        
+        dialogue_history = [{"role": d["role"], "content": d["content"]} for d in isolated_env.get_dialogue_history()]
+        answer = isolated_env.answer
+        return {task_id: {"answer": answer, "dialogue_history": dialogue_history, "task":{
+                      "test_cases": task_data["test_cases"] if task_data["task_type"] == "code" else None, 
+                      "ground_truth": task_data["hidden_information"]}}}
+
+    elif kwargs['benchmark_name'] == 'colbench_frontend_design':
+        from openai import OpenAI
+        from sweet_rl.environments.human_design_interaction_env import HumanDesignInteractionEnv
+        env_model_name = "gpt-4o-2024-08-06"
+        task_data = input[task_id]
+        env_client = OpenAI()
+        isolated_env = HumanDesignInteractionEnv(env_client, task_data["human_prompt"], 
+                                        env_model_name,
+                                        temp_path=task_data['cache_path'],
+                                        gpt_client=True)   
+        observation = isolated_env.reset(task_data["problem_description"], task_data["hidden_information"])
+        @tool 
+        def ask_user(question: str) -> str:
+            """
+            Ask the user a question.
+            
+            Args:
+                question: The question to ask the user.
+                
+            Returns:
+                str: The user's response.
+                str: Indication of whether the task is finished.
+            """
+            observation, _, _ = isolated_env.step(question)
+            return observation.observation, "Task finished" if observation.done else "You may still continue to work on the task"
+        
+        @tool 
+        def finish_task(answer: str) -> str:
+            """
+            Finish the task with answer.
+            
+            Args:
+                answer: The answer to the task.
+                
+            Returns:
+                str: The user's response.
+                str: Indication of whether the task is finished.
+            """
+            observation, _, _ = isolated_env.step("I WANT TO ANSWER:" + answer)
+            return "The task is finished. And your answer is received.", "Task finished" 
+        
+        agent = CodeAgent(
+            tools=CORE_TOOLS + [ask_user, finish_task],
+            planning_interval=4,
+            max_steps=80,
+            model=model)
+        
+        instruction = f"""
+        You are a frontend designer. You are given a task to solve the following problem:
+        
+        {observation}
+        
+        Your task is to help a human user to code a complete website with a good design in HTML and Tailwind CSS.
+        Write the code inside a tag <html>.
+        Write real and long sentences about the business.
+        You don’t have to include images, but if you do, use only this source
+        https://picsum.photos/id/48/W/H, by replacing W and H with the width and height of the image.
+        Keep the id the same to only use id 48 image.
+        
+        You have access to the ask_user tool to ask the user for clarification, and finish_task tool to finish the task.
+        You can ask the user for clarification if needed using the ask_user tool within 9 rounds.
+        
+        You can include ONLY ONE snippet raw html and Tailwind css code (wrapped in <html> tag) in your question to human user to ask how is the proposed design different from what the human user wants. 
+        This snippet of raw html and Tailwind css code (WRAPPED IN <html> TAG) will be rendered for the human to see a screenshot of the webpage.
+        The human user will respond by comparing your rendered webpage with the webpage that the human user has in mind.
+        When you are gathered enough information, you can finish the task using the finish_task tool and provide your answer.
+        The answer should be a piece of raw html code.
+        """
+        
+        response = asyncio.run(agent.arun(instruction))
+        isolated_env.driver.quit()
+        dialogue_history = [{"role": d["role"], "content": d["content"]} for d in isolated_env.get_dialogue_history()]
+        answer = isolated_env.answer
+        return {task_id: {"answer": answer, "dialogue_history": dialogue_history, "task":{
+                      "test_cases": task_data["test_cases"] if task_data["task_type"] == "code" else None, 
+                      "ground_truth": task_data["hidden_information"]}}}
+
+    
     elif kwargs['benchmark_name'] == 'taubench_airline':
         from tau_bench.envs import get_env
         from tau_bench.types import Action
