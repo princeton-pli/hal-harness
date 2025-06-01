@@ -551,7 +551,7 @@ No outside libraries are allowed.
         corebench_agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
-            max_steps=200,
+            max_steps=40,
             budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
             model=model
         )
@@ -565,7 +565,7 @@ No outside libraries are allowed.
         corebench_agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
-            max_steps=200,
+            max_steps=40,
             budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
             model=model
         )
@@ -579,7 +579,7 @@ No outside libraries are allowed.
         corebench_agent = CodeAgent(
             tools=CORE_TOOLS,
             planning_interval=4,
-            max_steps=200,
+            max_steps=40,
             budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
             model=model
         )
