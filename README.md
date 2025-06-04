@@ -378,6 +378,14 @@ The harness uses a command-line interface (CLI) to run evaluations. The basic co
 hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_function <agent_function> --agent_name <agent_name> [OPTIONS]
 ```
 
+For a quick sanity check of the built-in generalist agent you can use the `hal-test` command. This runs the generalist agent on a small subset of tasks from a benchmark:
+
+```bash
+hal-test --benchmark gaia -A model_name=gpt-3.5-turbo -A budget=0.01 --max_tasks 1
+```
+
+The command accepts the same argument syntax as `hal-eval` but is intended for lightweight validation.
+
 ### Core Options
 
 *   **`--benchmark <benchmark_name>`**: The name of the benchmark to run. Supported benchmarks:
