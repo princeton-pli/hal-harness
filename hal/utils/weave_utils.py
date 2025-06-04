@@ -215,12 +215,20 @@ def get_total_cost(client):
     return total_cost, token_usage
 
             
-def comput_cost_from_inspect_usage(usage: Dict[str, Dict[str, int]], skip_models: List[str] = []) -> float:
+def compute_cost_from_inspect_usage(
+    usage: Dict[str, Dict[str, int]], skip_models: Optional[List[str]] = None
+) -> float:
     """Compute cost from token usage"""
-    return sum(MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name]["input_tokens"] +
-               MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name].get("input_tokens_cache_write",0) +
-               MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name].get("input_tokens_cache_read",0) +
-               MODEL_PRICES_DICT[model_name]["completion_tokens"] * usage[model_name]["output_tokens"] for model_name in usage if model_name not in skip_models)
+    skip_models = skip_models or []
+
+    return sum(
+        MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name]["input_tokens"]
+        + MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name].get("input_tokens_cache_write", 0)
+        + MODEL_PRICES_DICT[model_name]["prompt_tokens"] * usage[model_name].get("input_tokens_cache_read", 0)
+        + MODEL_PRICES_DICT[model_name]["completion_tokens"] * usage[model_name]["output_tokens"]
+        for model_name in usage
+        if model_name not in skip_models
+    )
 
 def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     """Process a single Weave call output"""
