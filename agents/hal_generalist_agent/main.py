@@ -12,13 +12,17 @@ import os
 
 from typing import Optional
 
-from hal.utils.weave_utils import MODEL_PRICES_DICT
-
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
+from smolagents import CodeAgent, tool, LiteLLMModel, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
 from mdconvert import MarkdownConverter
+
+try:
+    from hal.utils.weave_utils import MODEL_PRICES_DICT
+except ImportError:
+    # When running on VM or Docker, the utils module is not available
+    from model_prices import MODEL_PRICES_DICT
 
 AUTHORIZED_IMPORTS = [
     "requests",
@@ -543,19 +547,45 @@ No outside libraries are allowed.
         return {task_id: response}
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
+        # Create a new agent with more steps specifically for CoreBench easy
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=40,
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            model=model
+        )
         
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        # Create a new agent with more steps specifically for CoreBench medium
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=40,
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            model=model
+        )
+        
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        # Create a new agent with more steps specifically for CoreBench hard
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=40,
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            model=model
+        )
+        
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'scienceagentbench':
@@ -1728,4 +1758,3 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         return {"output": str(response)}
     except Exception as e:
         return  {"output": str(e)}
-
