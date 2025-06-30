@@ -8,7 +8,7 @@ import os
 import sys
 import ast
 from typing import Optional
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool
+from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, Tool, PythonInterpreterTool, VisitWebpageTool
 
 # Import agent_hints using absolute path
 sys.path.append(os.path.dirname(__file__))

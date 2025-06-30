@@ -12,7 +12,7 @@ import os
 
 from typing import Optional
 
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
+from smolagents import CodeAgent, tool, LiteLLMModel, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
