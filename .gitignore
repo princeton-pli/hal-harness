@@ -28,3 +28,6 @@ hal/benchmarks/scienceagentbench/benchmark
 experiments/*
 archive/*
 agents/USACO/data/.DS_Store
+
+# Claude Code settings
+.claude/settings.local.json
