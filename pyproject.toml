@@ -32,7 +32,7 @@ azure = [
     "paramiko==3.5.0",
 ]
 taubench = [
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
 ]
 scicode = [
   "scicode @ git+https://github.com/peterkirgis/SciCode"

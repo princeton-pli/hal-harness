@@ -40,6 +40,7 @@ MODEL_PRICES_DICT = {
                 "o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "us.anthropic.claude-3-5-sonnet-20240620-v1:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "openai/gpt-4o-2024-11-20": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
