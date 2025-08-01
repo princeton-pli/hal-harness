@@ -116,6 +116,7 @@ open_deep_research = [
 hal-eval = "hal.cli:main"
 hal-upload = "hal.utils.upload:upload_results"
 hal-decrypt = "hal.utils.decrypt:decrypt_cli"
+hal-test = "hal.test_cli:test_command"
 
 [tool.setuptools]
 packages = ["hal"]
