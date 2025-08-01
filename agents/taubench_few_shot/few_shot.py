@@ -26,6 +26,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         api_base = "https://generativelanguage.googleapis.com/v1beta/openai/"
         api_key = os.getenv('GEMINI_API_KEY')
         model_name = kwargs['model_name'].replace('gemini/', '')
+    elif 'claude' in kwargs['model_name']:
+        user_provider = 'openai'
+        api_base = "https://api.anthropic.com/v1/"
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        model_name = kwargs['model_name'].replace('anthropic/', '')
     else:
         user_provider = kwargs['provider']
         api_base = None
