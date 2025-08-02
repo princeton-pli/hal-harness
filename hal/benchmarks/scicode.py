@@ -21,9 +21,6 @@ class SciCodeBenchmark(BaseBenchmark):
         self.dataset = list(load_dataset("SciCode1/SciCode", split="test"))
         self.benchmark = {task['problem_id']: task for task in self.dataset}
 
-        # Only load first problem
-        # self.benchmark = {task['problem_id']: task for task in self.dataset[:1]}
-
         # Set benchmark directory.
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), 'SciCode')
         
