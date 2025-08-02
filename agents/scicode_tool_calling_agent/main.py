@@ -28,11 +28,12 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
         model_params['model_id'] = kwargs['model_name'].replace('anthropic/', 'openai/')
         model_params['api_key'] = os.getenv('ANTHROPIC_API_KEY')
         model_params['api_base'] = "https://api.anthropic.com/v1"
+        model_params['allowed_openai_params'] = ["reasoning_effort"]
         client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
         
     if 'together_ai' in kwargs['model_name']:
         model_params['model_id'] = kwargs['model_name'].replace('together_ai/', 'openai/')
-        model_params['api_key'] = os.environ.get("TOGETHER_API_KEY")
+        model_params['api_key'] = os.environ.get("TOGETHERAI_API_KEY")
         model_params['api_base'] = "https://api.together.xyz/v1"
         client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
 
@@ -165,6 +166,7 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
                     model_call_name = kwargs['model_name'].replace('together_ai/', '')
 
                 if 'reasoning_effort' in kwargs:
+                    
                 
                     cleaned_response = client.chat.completions.create(
                         model=model_call_name,
