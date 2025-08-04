@@ -32,17 +32,17 @@ azure = [
     "paramiko==3.5.0",
 ]
 taubench = [
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
 ]
 scicode = [
   "scicode @ git+https://github.com/peterkirgis/SciCode"
 ]
 assistantbench = [
-    "browsergym>=0.13.4"
+    "browsergym==0.13.4"
 ]
 hal-agent-inspect = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
     "mammoth",
     "python_pptx>=1.0.2",
     "pdfminer>=20191125",
@@ -54,7 +54,7 @@ hal-agent-inspect = [
 ]
 hal-agent = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c",
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
     "mammoth",
     "python_pptx>=1.0.2",
     "pdfminer>=20191125",
