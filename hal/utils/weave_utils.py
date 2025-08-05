@@ -92,6 +92,8 @@ MODEL_PRICES_DICT = {
                 "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
                 "openrouter/openai/gpt-oss-120b": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
                 "openrouter/anthropic/claude-opus-4-1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openai/gpt-oss-120b": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
+                "anthropic/claude-opus-4-1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
