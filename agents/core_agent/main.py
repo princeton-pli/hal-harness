@@ -481,9 +481,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
-    assert 'budget' in kwargs, 'budget is required'
     
-    BUDGET = kwargs['budget']
+    BUDGET = kwargs['budget'] if 'budget' in kwargs else None
     
     litellm.drop_params = True
     model_params = {}
@@ -694,9 +693,9 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
         max_steps=40,
         model=model,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
-        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
-    ) 
-    
+        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
+    )
+
     response = agent.run(prompt)
     save_agent_steps(agent, kwargs, response, task)
     results[task_id] = response

@@ -475,9 +475,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
-    assert 'budget' in kwargs, 'budget is required'
     
-    BUDGET = kwargs['budget']
+    BUDGET = kwargs['budget'] if 'budget' in kwargs else None
     
     import litellm
     litellm.drop_params = True
@@ -521,7 +520,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     planning_interval=4,
     max_steps=200,
     additional_authorized_imports=AUTHORIZED_IMPORTS,
-    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
     model=model)
     agent.python_executor.state["__name__"] = "__main__"
 
@@ -552,7 +551,7 @@ No outside libraries are allowed.
             tools=CORE_TOOLS,
             planning_interval=4,
             max_steps=40,
-            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
             model=model
         )
         
@@ -566,7 +565,7 @@ No outside libraries are allowed.
             tools=CORE_TOOLS,
             planning_interval=4,
             max_steps=40,
-            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
             model=model
         )
         
@@ -580,7 +579,7 @@ No outside libraries are allowed.
             tools=CORE_TOOLS,
             planning_interval=4,
             max_steps=40,
-            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
             model=model
         )
         
@@ -748,7 +747,7 @@ Task:
                 planning_interval=4,
                 max_steps=200,
                 additional_authorized_imports=AUTHORIZED_IMPORTS,
-                budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+                budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
                 model=model)
             agent.python_executor.state["__name__"] = "__main__"
             
@@ -780,7 +779,7 @@ Task:
             planning_interval=4,
             max_steps=200,
             additional_authorized_imports=AUTHORIZED_IMPORTS,
-            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
             model=model)
         agent.python_executor.state["__name__"] = "__main__"
         
@@ -1397,7 +1396,7 @@ Here is the question and attached files are stored in your current directory:
             ask_user
         ],
         planning_interval=4,
-        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
         max_steps=200,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
         model=model)
@@ -1740,7 +1739,7 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     planning_interval=4,
     max_steps=200,
     additional_authorized_imports=AUTHORIZED_IMPORTS,
-    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
     model=model)
     agent.python_executor.state["__name__"] = "__main__"
     
