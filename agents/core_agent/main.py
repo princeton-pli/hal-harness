@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import ast
+from functools import partial
 from typing import Optional
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, Tool, PythonInterpreterTool, VisitWebpageTool
 
@@ -17,6 +18,12 @@ from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 from mdconvert import MarkdownConverter, DocumentConverterResult
 import litellm
+
+try:
+    from hal.utils.weave_utils import MODEL_PRICES_DICT
+except ImportError:
+    # When running on VM or Docker, the utils module is not available
+    from model_prices import MODEL_PRICES_DICT
 
 AUTHORIZED_IMPORTS = [
     "requests",
@@ -57,6 +64,18 @@ def save_agent_steps(agent, kwargs, response, sample):
             "response": str(response),
             "sample": sample
             }, f, indent=2)
+
+
+def check_budget_exceeded(agent: CodeAgent, budget: float, model_name: str) -> bool:
+    total_input_tokens = agent.monitor.total_input_token_count
+    total_output_tokens = agent.monitor.total_input_token_count
+    
+    cost = MODEL_PRICES_DICT[model_name]["prompt_tokens"] * total_input_tokens + MODEL_PRICES_DICT[model_name]["completion_tokens"] * total_output_tokens
+    
+    print(f"Current cost: {cost}")
+    if cost >= budget:
+        return True
+    return False
 
 
 class TextInspectorTool(Tool):
@@ -462,6 +481,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
+    assert 'budget' in kwargs, 'budget is required'
+    
+    BUDGET = kwargs['budget']
     
     litellm.drop_params = True
     model_params = {}
@@ -672,9 +694,11 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
         max_steps=40,
         model=model,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
+        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
     ) 
     
     response = agent.run(prompt)
+    save_agent_steps(agent, kwargs, response, task)
     results[task_id] = response
         
     return results
