@@ -68,7 +68,7 @@ def save_agent_steps(agent, kwargs, response, sample):
 
 def check_budget_exceeded(agent: CodeAgent, budget: float, model_name: str) -> bool:
     total_input_tokens = agent.monitor.total_input_token_count
-    total_output_tokens = agent.monitor.total_input_token_count
+    total_output_tokens = agent.monitor.total_output_token_count
     
     cost = MODEL_PRICES_DICT[model_name]["prompt_tokens"] * total_input_tokens + MODEL_PRICES_DICT[model_name]["completion_tokens"] * total_output_tokens
     
