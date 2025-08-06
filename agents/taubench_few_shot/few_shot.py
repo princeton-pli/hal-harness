@@ -1,5 +1,6 @@
 import json
 from functools import partial
+from typing import Dict, Any
 import os
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
@@ -10,13 +11,74 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     
     import litellm
     litellm.drop_params = True
-    if 'reasoning_effort' in kwargs:
-        print(f"Setting reasoning_effort to {kwargs['reasoning_effort']}")
-        litellm.completion = partial(litellm.completion, reasoning_effort=kwargs['reasoning_effort'])
-        litellm.acompletion = partial(litellm.acompletion, reasoning_effort=kwargs['reasoning_effort'])
-        kwargs['temperature'] = 1
+    
+    # Store the original completion functions
+    original_completion = litellm.completion
+    original_acompletion = litellm.acompletion
+    
+    # Create a wrapper that adds reasoning parameters only for the agent's model
+    def completion_with_reasoning(*args, **completion_kwargs):
+        # Check if this is a call with our agent's model
+        if 'model' in completion_kwargs and completion_kwargs['model'] == model_name:
+            if 'reasoning_effort' in kwargs:
+                # Set temperature to 1 for reasoning calls
+                completion_kwargs['temperature'] = 1.0
+                
+                if 'openrouter/' in kwargs['model_name']:
+                    # For OpenRouter, add reasoning to extra_body
+                    effort_to_tokens = {
+                        'low': 1024,
+                        'medium': 2048,
+                        'high': 4096
+                    }
+                    reasoning_tokens = effort_to_tokens.get(kwargs['reasoning_effort'], 4096)
+                    extra_body = completion_kwargs.get('extra_body', {})
+                    extra_body['reasoning'] = {"max_tokens": reasoning_tokens}
+                    extra_body['include_reasoning'] = True
+                    completion_kwargs['extra_body'] = extra_body
+                    print(f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}")
+                else:
+                    # For direct Anthropic
+                    completion_kwargs['reasoning_effort'] = kwargs['reasoning_effort']
+                    print(f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}")
         
-    if 'together_ai' in kwargs['model_name']:
+        # Call the original function
+        return original_completion(*args, **completion_kwargs)
+    
+    # Create async wrapper
+    async def acompletion_with_reasoning(*args, **completion_kwargs):
+        if 'model' in completion_kwargs and completion_kwargs['model'] == model_name:
+            if 'reasoning_effort' in kwargs:
+                # Set temperature to 1 for reasoning calls
+                completion_kwargs['temperature'] = 1.0
+                
+                if 'openrouter/' in kwargs['model_name']:
+                    # For OpenRouter, add reasoning to extra_body
+                    effort_to_tokens = {'low': 1024, 'medium': 2048, 'high': 4096}
+                    reasoning_tokens = effort_to_tokens.get(kwargs['reasoning_effort'], 4096)
+                    extra_body = completion_kwargs.get('extra_body', {})
+                    extra_body['reasoning'] = {"max_tokens": reasoning_tokens}
+                    extra_body['include_reasoning'] = True
+                    completion_kwargs['extra_body'] = extra_body
+                    print(f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}")
+                else:
+                    # For direct Anthropic
+                    completion_kwargs['reasoning_effort'] = kwargs['reasoning_effort']
+                    print(f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}")
+        return await original_acompletion(*args, **completion_kwargs)
+    
+    # Replace both sync and async completion functions
+    litellm.completion = completion_with_reasoning
+    litellm.acompletion = acompletion_with_reasoning
+        
+    if 'openrouter/' in kwargs['model_name']:
+        # OpenRouter support - uses OpenAI-compatible API
+        # Check this FIRST before other providers since model names might contain provider names
+        user_provider = 'openai'
+        api_base = "https://openrouter.ai/api/v1"
+        api_key = os.getenv('OPENROUTER_API_KEY')
+        model_name = kwargs['model_name'].replace('openrouter/', '')  # Remove openrouter/ prefix
+    elif 'together_ai' in kwargs['model_name']:
         user_provider = 'openai'
         api_base = "https://api.together.xyz/v1"
         api_key = os.getenv('TOGETHERAI_API_KEY')

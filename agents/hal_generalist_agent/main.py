@@ -479,8 +479,21 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     litellm.drop_params = True
     model_params = {}
     model_params['model_id'] = kwargs['model_name']
+    
+    # Handle reasoning parameters based on provider
     if 'reasoning_effort' in kwargs:
-        model_params['reasoning_effort'] = kwargs['reasoning_effort']
+        if 'openrouter/' in kwargs['model_name']:
+            # OpenRouter doesn't support reasoning_effort, convert to reasoning.max_tokens
+            effort_to_tokens = {
+                'low': 1024,
+                'medium': 2048,
+                'high': 4096
+            }
+            model_params['reasoning'] = {"max_tokens": effort_to_tokens.get(kwargs['reasoning_effort'], 4096)}
+        else:
+            # For Anthropic direct and other providers that support reasoning_effort
+            model_params['reasoning_effort'] = kwargs['reasoning_effort']
+    
     if 'temperature' in kwargs:
         model_params['temperature'] = kwargs['temperature']
         
