@@ -41,6 +41,9 @@ MODEL_PRICES_DICT = {
                 "claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "anthropic/claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "anthropic/claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "us.anthropic.claude-3-5-sonnet-20240620-v1:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "openai/gpt-4o-2024-11-20": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
@@ -89,6 +92,15 @@ MODEL_PRICES_DICT = {
                 "gemini/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
+                "openrouter/anthropic/claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-sonnet-4": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "anthropic/claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
