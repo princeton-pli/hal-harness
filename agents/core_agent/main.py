@@ -10,13 +10,33 @@ import ast
 from functools import partial
 from typing import Optional
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, Tool, PythonInterpreterTool, VisitWebpageTool
+from smolagents.models import MessageRole, Model
+from smolagents.agents import ActionStep
+
+# Monkey-patch smolagents to handle GPT-5
+import smolagents.models
+import re
+
+def supports_stop_parameter(model_id: str) -> bool:
+    """
+    Check if the model supports the `stop` parameter.
+    
+    Not supported with reasoning models openai/o3, openai/o4-mini, and gpt-5 (and their versioned variants).
+    """
+    model_name = model_id.split("/")[-1]
+    # o3, o4-mini, and gpt-5 (including versioned variants) don't support stop parameter
+    pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5[-\d]*)$"
+    return not re.match(pattern, model_name)
+
+# Replace the function in smolagents
+smolagents.models.supports_stop_parameter = supports_stop_parameter
+
+from mdconvert import MarkdownConverter, DocumentConverterResult
 
 # Import agent_hints using absolute path
 sys.path.append(os.path.dirname(__file__))
 from agent_hints import AGENT_HINTS
-from smolagents.models import MessageRole, Model
-from smolagents.agents import ActionStep
-from mdconvert import MarkdownConverter, DocumentConverterResult
+
 import litellm
 
 try:
