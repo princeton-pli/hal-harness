@@ -49,6 +49,8 @@ su - $USERNAME -c "bash -c '\
     echo \"Initializing conda...\" && \
     source $HOME_DIR/init_conda.sh && \
     echo \"Creating agent_env...\" && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     if [ -f requirements.txt ]; then \
         PYTHON_VERSION=$(grep "^python==" requirements.txt | cut -d"=" -f3) && \
         if [ ! -z "$PYTHON_VERSION" ]; then \

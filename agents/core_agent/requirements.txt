@@ -1,4 +1,3 @@
-appworld
 openai
 smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c
 mammoth

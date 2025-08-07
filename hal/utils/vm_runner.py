@@ -26,7 +26,8 @@ class VMRunner:
     async def fetch_agent_logs(self, vm_name, username, ssh_private_key_path, task_id):
         """Fetch the latest agent trace log from a VM and store it locally."""
         try:
-            result = self.vm_manager.get_agent_trace(
+            result = await asyncio.to_thread(
+                self.vm_manager.get_agent_trace,
                 vm_name=vm_name,
                 username=username,
                 ssh_private_key_path=ssh_private_key_path
@@ -81,14 +82,16 @@ class VMRunner:
                 # Create VM based on GPU requirement
                 print(f"Creating {'GPU ' if gpu_required else ''}VM {vm_name} for task {task_id}")
                 if gpu_required:
-                    vm = self.vm_manager.create_gpu_vm(
+                    vm = await asyncio.to_thread(
+                        self.vm_manager.create_gpu_vm,
                         vm_name=vm_name,
                         username="agent",
                         ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
                         network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
                     )
                 else:
-                    vm = self.vm_manager.create_vm(
+                    vm = await asyncio.to_thread(
+                        self.vm_manager.create_vm,
                         vm_name=vm_name,
                         username="agent",
                         ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
@@ -136,13 +139,15 @@ class VMRunner:
 
                     # Copy all files to VM
                     print(f"Copying files to VM {vm_name}")
-                    self.vm_manager.copy_files_to_vm(
+                    await asyncio.to_thread(
+                        self.vm_manager.copy_files_to_vm,
                         source_directory=temp_dir,
                         vm_name=vm_name,
                         username="agent", 
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
                     )
-                    self.vm_manager.copy_files_to_vm(
+                    await asyncio.to_thread(
+                        self.vm_manager.copy_files_to_vm,
                         source_directory=agent_dir,
                         vm_name=vm_name,
                         username="agent",
@@ -153,7 +158,8 @@ class VMRunner:
                     shutil.rmtree(temp_dir)
 
                 # Run agent on VM
-                self.vm_manager.run_agent_on_vm(
+                await asyncio.to_thread(
+                    self.vm_manager.run_agent_on_vm,
                     agent_function=agent_function,
                     vm_name=vm_name,
                     task_id=task_id,
@@ -182,7 +188,8 @@ class VMRunner:
                             task_id=task_id,
                         )
                         
-                        result = self.vm_manager.check_task_completion(
+                        result = await asyncio.to_thread(
+                            self.vm_manager.check_task_completion,
                             vm_name=vm_name,
                             username="agent",
                             ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
@@ -203,7 +210,8 @@ class VMRunner:
                     print(f"Copying results from VM {vm_name} to local directory")
                     dest_dir = os.path.join(self.log_dir, f"{task_id}")
                     os.makedirs(dest_dir, exist_ok=True)
-                    self.vm_manager.copy_files_from_vm(
+                    await asyncio.to_thread(
+                        self.vm_manager.copy_files_from_vm,
                         vm_name=vm_name,
                         username="agent",
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
@@ -221,7 +229,7 @@ class VMRunner:
                 # Cleanup VM
                 try:
                     print(f"Deleting VM {vm_name}")
-                    self.vm_manager.delete_vm(vm_name)
+                    await asyncio.to_thread(self.vm_manager.delete_vm, vm_name)
                     if progress and task is not None:
                         progress.update(task, advance=1)
                 except Exception as e:

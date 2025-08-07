@@ -12,9 +12,7 @@ import os
 
 from typing import Optional
 
-from hal.utils.weave_utils import MODEL_PRICES_DICT
-
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, CodeAgent, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
+from smolagents import CodeAgent, tool, LiteLLMModel, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
@@ -37,6 +35,12 @@ def supports_stop_parameter(model_id: str) -> bool:
 smolagents.models.supports_stop_parameter = supports_stop_parameter
 
 from mdconvert import MarkdownConverter
+
+try:
+    from hal.utils.weave_utils import MODEL_PRICES_DICT
+except ImportError:
+    # When running on VM or Docker, the utils module is not available
+    from model_prices import MODEL_PRICES_DICT
 
 AUTHORIZED_IMPORTS = [
     "requests",
@@ -489,12 +493,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
-    assert 'budget' in kwargs, 'budget is required'
     
-    BUDGET = kwargs['budget']
+    BUDGET = kwargs['budget'] if 'budget' in kwargs else None
     
     import litellm
-    litellm.drop_params = True
     model_params = {}
     model_params['model_id'] = kwargs['model_name']
     
@@ -548,7 +550,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     planning_interval=4,
     max_steps=200,
     additional_authorized_imports=AUTHORIZED_IMPORTS,
-    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
     model=model)
     agent.python_executor.state["__name__"] = "__main__"
 
@@ -574,19 +576,45 @@ No outside libraries are allowed.
         return {task_id: response}
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
+        # Create a new agent with more steps specifically for CoreBench easy
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=40,
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
+            model=model
+        )
         
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
 
     elif kwargs['benchmark_name'] == 'corebench_medium':
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        # Create a new agent with more steps specifically for CoreBench medium
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=40,
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
+            model=model
+        )
+        
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'corebench_hard':
-        response = agent.run(task['prompt'])
-        save_agent_steps(agent, kwargs, response, task)
+        # Create a new agent with more steps specifically for CoreBench hard
+        corebench_agent = CodeAgent(
+            tools=CORE_TOOLS,
+            planning_interval=4,
+            max_steps=40,
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
+            model=model
+        )
+        
+        response = corebench_agent.run(task['prompt'])
+        save_agent_steps(corebench_agent, kwargs, response, task)
         return {task_id: response}
     
     elif kwargs['benchmark_name'] == 'scienceagentbench':
@@ -749,7 +777,7 @@ Task:
                 planning_interval=4,
                 max_steps=200,
                 additional_authorized_imports=AUTHORIZED_IMPORTS,
-                budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+                budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
                 model=model)
             agent.python_executor.state["__name__"] = "__main__"
             
@@ -781,7 +809,7 @@ Task:
             planning_interval=4,
             max_steps=200,
             additional_authorized_imports=AUTHORIZED_IMPORTS,
-            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+            budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
             model=model)
         agent.python_executor.state["__name__"] = "__main__"
         
@@ -1398,7 +1426,7 @@ Here is the question and attached files are stored in your current directory:
             ask_user
         ],
         planning_interval=4,
-        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
         max_steps=200,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
         model=model)
@@ -1741,7 +1769,7 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     planning_interval=4,
     max_steps=200,
     additional_authorized_imports=AUTHORIZED_IMPORTS,
-    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']),
+    budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
     model=model)
     agent.python_executor.state["__name__"] = "__main__"
     
@@ -1759,4 +1787,3 @@ async def run_inspect(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
         return {"output": str(response)}
     except Exception as e:
         return  {"output": str(e)}
-
