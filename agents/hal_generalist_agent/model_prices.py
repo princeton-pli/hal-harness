@@ -97,4 +97,5 @@ MODEL_PRICES_DICT = {
                 "anthropic/claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openai/gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
 }
