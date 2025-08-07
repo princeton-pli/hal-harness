@@ -101,6 +101,7 @@ MODEL_PRICES_DICT = {
                 "anthropic/claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "gpt-5": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
