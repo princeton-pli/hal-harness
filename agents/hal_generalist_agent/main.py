@@ -479,7 +479,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     BUDGET = kwargs['budget'] if 'budget' in kwargs else None
     
     import litellm
-    litellm.drop_params = True
     model_params = {}
     model_params['model_id'] = kwargs['model_name']
     
