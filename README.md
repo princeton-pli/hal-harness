@@ -152,7 +152,7 @@ Download download in the AppWorld agent directory.
 appworld download data --root agents/appworld_agent
 ```
 
-With the `appworld_agent`, you can run any agent in the AppWorld repository via `hal-eval` as follows:
+With the `appworld_agent`, you can run any agent in the [AppWorld repository](https://github.com/stonybrooknlp/appworld) via `hal-eval` as follows:
 
 ```bash
 # For choices for the 3 variables below, checkout https://github.com/StonyBrookNLP/appworld/tree/main/experiments/configs
@@ -167,6 +167,8 @@ hal-eval --benchmark appworld_${DATASET_NAME} \
   --agent_name "${AGENT_NAME} (${MODEL_NAME})" \
   -A model_name=${MODEL_NAME} -A method_name=${METHOD_NAME}
 ```
+
+You can also convert HAL experiment outputs to AppWorld experiment outputs (via [this](https://github.com/StonyBrookNLP/appworld/blob/main/scripts/appworld_to_hal_leaderboard.py)) and vice versa (via [this](https://github.com/StonyBrookNLP/appworld/blob/main/scripts/hal_to_appworld__leaderboard.py)), to easily submit to both leaderboards.
 
 ### [CORE-bench](https://github.com/siegelz/core-bench)
 - Computational reproducibility benchmark for agents on real scientific papers
