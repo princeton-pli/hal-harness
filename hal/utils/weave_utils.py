@@ -201,33 +201,40 @@ def get_total_cost(client):
     with create_progress() as progress:
         task = progress.add_task("Processing token usage data...", total=len(calls))
         for call in calls:
-            # If the call has costs, we add them to the total cost
+            # Get model from inputs and usage from output
             try:
-                usage_items = call.summary["usage"].items()
-            except KeyError as e:
-                print("No usage data found for call:", call)
-                continue
-            for k, cost in usage_items:   
-                if k not in token_usage:
-                    token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
+                model_name = call.inputs['model']
+                usage_data = call.output['usage']
+                usage_data["requests"] = 1  # Add requests field
+                usage_items = [(model_name, usage_data)]
                 
-                requests += cost["requests"]
-                if "prompt_tokens" in cost:
-                    token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
-                if "input_tokens" in cost:    
-                    token_usage[k]["prompt_tokens"] += cost["input_tokens"]
-                if "cache_creation_input_tokens" in cost:
-                    token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
-                if "cache_read_input_tokens" in cost:
-                    token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
+                for k, cost in usage_items:   
+                    if k not in token_usage:
+                        token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
                     
-                if "completion_tokens" in cost:
-                    token_usage[k]["completion_tokens"] += cost["completion_tokens"]
-                if "output_tokens" in cost:
-                    token_usage[k]["completion_tokens"] += cost["output_tokens"]
-            progress.update(task, advance=1)
+                    requests += cost.get("requests", 1)
+                    if "prompt_tokens" in cost:
+                        token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
+                    if "input_tokens" in cost:    
+                        token_usage[k]["prompt_tokens"] += cost["input_tokens"]
+                    if "cache_creation_input_tokens" in cost:
+                        token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
+                    if "cache_read_input_tokens" in cost:
+                        token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
+                        
+                    if "completion_tokens" in cost:
+                        token_usage[k]["completion_tokens"] += cost["completion_tokens"]
+                    if "output_tokens" in cost:
+                        token_usage[k]["completion_tokens"] += cost["output_tokens"]
+                    
+            except (KeyError, TypeError):
+                continue
             
+            progress.update(task, advance=1)
+    
+    # Calculate total cost
     total_cost = sum(token_usage[k]["prompt_tokens"] * MODEL_PRICES_DICT[k]["prompt_tokens"] + token_usage[k]["completion_tokens"] * MODEL_PRICES_DICT[k]["completion_tokens"] for k in token_usage)
+    
     return total_cost, token_usage
 
             
@@ -412,30 +419,34 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
     task_calls = [call for call in calls if call.attributes.get('weave_task_id') == task_id]
     
     for call in task_calls:
-        # If the call has usage data, add it to the token usage
+        # Get model from inputs and usage from output
         try:
-            usage_items = call.summary["usage"].items()
-        except KeyError:
-            continue
+            model_name = call.inputs['model']
+            usage_data = call.output['usage']
+            usage_data["requests"] = 1  # Add requests field
+            usage_items = [(model_name, usage_data)]
             
-        for k, cost in usage_items:   
-            if k not in token_usage:
-                token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
-            
-            requests += cost["requests"]
-            if "prompt_tokens" in cost:
-                token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
-            if "input_tokens" in cost:    
-                token_usage[k]["prompt_tokens"] += cost["input_tokens"]
-            if "cache_creation_input_tokens" in cost:
-                token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
-            if "cache_read_input_tokens" in cost:
-                token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
+            for k, cost in usage_items:   
+                if k not in token_usage:
+                    token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
                 
-            if "completion_tokens" in cost:
-                token_usage[k]["completion_tokens"] += cost["completion_tokens"]
-            if "output_tokens" in cost:
-                token_usage[k]["completion_tokens"] += cost["output_tokens"]
+                requests += cost.get("requests", 1)
+                if "prompt_tokens" in cost:
+                    token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
+                if "input_tokens" in cost:    
+                    token_usage[k]["prompt_tokens"] += cost["input_tokens"]
+                if "cache_creation_input_tokens" in cost:
+                    token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
+                if "cache_read_input_tokens" in cost:
+                    token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
+                    
+                if "completion_tokens" in cost:
+                    token_usage[k]["completion_tokens"] += cost["completion_tokens"]
+                if "output_tokens" in cost:
+                    token_usage[k]["completion_tokens"] += cost["output_tokens"]
+                    
+        except (KeyError, TypeError):
+            continue
     
     # Calculate total cost from token usage
     for k in token_usage:
@@ -447,7 +458,9 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
             total_cost += model_cost
         else:
             print_warning(f"Model '{k}' not found in MODEL_PRICES_DICT. Skipping cost calculation.")
-    print_step(f"Cost for task ID: {task_id} is ${total_cost} for {len(task_calls)} calls.")
+    
+    print_step(f"Cost for task ID: {task_id} is ${total_cost:.6f} for {len(task_calls)} calls.")
+    
     return {
         "total_cost": total_cost,
         "token_usage": token_usage,
