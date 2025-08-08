@@ -137,7 +137,7 @@ You will also need to **install docker** following the instructions [here](https
 ### [AppWorld](https://appworld.dev/)
 - A benchmark for complex function/tool calling and/or coding agents
 - Built on a high-fidelity API-based simulation of real-world apps, like Amazon, Gmail, Spotify, etc.
-- Supports both local and VM execution
+- Supports both local and VM execution.
 
 Install benchmark specific dependencies:
 
