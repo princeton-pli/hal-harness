@@ -1,7 +1,5 @@
 import os
 
-from hal.utils.logging_utils import log_step
-
 from appworld import cli
 from appworld.common.path_store import path_store
 from appworld.common.utils import read_file, write_file
@@ -10,6 +8,7 @@ from appworld.evaluator import evaluate_dataset
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 path_store.update_root(current_directory)
+
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # assert required keys
@@ -34,16 +33,13 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     )
     write_file(actual_experiment_config, actual_experiment_config_file_path)
     # run the experiment
-    log_step(f"XXX: {current_directory}")
-    log_step(f"ZZZ: {path_store.experiment_configs}")
-    log_step(f"ZZZ: {actual_experiment_config_file_path}")
     cli.run(
         experiment_name=actual_experiment_name,
         task_id=None,
         override=None,
         num_processes=1,
         process_index=None,
-        root=current_directory
+        root=current_directory,
     )
     # evaluate the results
     evaluation = evaluate_dataset(
@@ -52,5 +48,4 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         suppress_errors=True,
         include_details=True,
     )
-    log_step(f"YYY: {evaluation}")
     return {task_ids[0]: "Completed", "evaluation": evaluation}

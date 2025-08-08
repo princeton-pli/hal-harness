@@ -139,16 +139,13 @@ You will also need to **install docker** following the instructions [here](https
 
 For AppWorld, you will need to install the AppWorld benchmark specific dependencies:
 ```bash
-pip install git+https://github.com/StonyBrookNLP/appworld@9a7672e6c071cbe6e8558053dbdf26dff24a9cd1
-```
-
-```bash
+pip install -e .[appworld]
 appworld install
 ```
 
 In your agent dir, run the following command to download the appworld data:
 ```bash
-cd <your_agent_dir> && appworld download data
+appworld download data --root agents/appworld_agent
 ```
 
 ### [CORE-bench](https://github.com/siegelz/core-bench)
