@@ -157,10 +157,12 @@ With the `appworld_agent`, you can run any agent in the [AppWorld repository](ht
 ```bash
 # For choices for the 3 variables below, checkout https://github.com/StonyBrookNLP/appworld/tree/main/experiments/configs
 # Each config file name there is named as: {METHOD_NAME}_{MODEL_NAME}_{DATASET_NAME}.jsonnet
+
 DATASET_NAME = "test_challenge"             # or test_normal
 METHOD_NAME = "simplified_react"            # or simplified_function_calling, smolagents_tool_calling, smolagents_code and many others
 MODEL_NAME = "gpt-4o-2024-05-13"            # or claude-3-7-sonnet-20250219-high-thinking, gemini-2.0-flash, deepseek-r1 and many others
 LEADERBOARD_NAME = "ReAct (${MODEL_NAME})"  # name of the HAL leaderboard entry as per its convention
+
 hal-eval --benchmark appworld_${DATASET_NAME} \
   --agent_dir agents/appworld_agent \
   --agent_function main.run \
