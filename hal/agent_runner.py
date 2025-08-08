@@ -184,25 +184,17 @@ class AgentRunner:
         
         if not dataset:
             print_warning("No remaining tasks to run")
-            # Load and return previous results
-            results_path = os.path.join(self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_UPLOAD.json")
+            print_step("Loading previous results...")
+            # If continuing run, merge with previous results
+            agent_output = {}
+            results_path = os.path.join(self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_RAW_SUBMISSIONS.jsonl")
             if os.path.exists(results_path):
-                print_step("Loading previous results...")
+                previous_output = {}
                 with open(results_path) as f:
-                    previous_results = json.load(f)
-                return previous_results["results"]
-            else:
-                print_step("No previous results found. Running evaluation harness on previous raw submissions...")
-                # If continuing run, merge with previous results
-                agent_output = {}
-                results_path = os.path.join(self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_RAW_SUBMISSIONS.jsonl")
-                if os.path.exists(results_path):
-                    previous_output = {}
-                    with open(results_path) as f:
-                        for line in f:
-                            submission = json.loads(line.strip())
-                            previous_output.update(submission)
-                    agent_output.update(previous_output)
+                    for line in f:
+                        submission = json.loads(line.strip())
+                        previous_output.update(submission)
+                agent_output.update(previous_output)
             
         else:
             # Run agent on all tasks
@@ -235,25 +227,25 @@ class AgentRunner:
                     agent_output.update(previous_output)
         
         print_step("Evaluating results...")
-        # Create a temporary dataset with agent_output to check remaining tasks
-        remaining = self.get_remaining_tasks(dataset)
-        if len(remaining) > 0:
-            # Create a more informative error message
-            print_warning(f"Warning - {len(remaining)} tasks are incomplete")
-            
-            # Create and display table of remaining tasks
-            table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
-            table.add_column("Task ID", style="cyan")
-            
-            for task_id, task_data in remaining.items():
-                table.add_row(task_id)
-            
-            with terminal_print():
-                console.print(table)
-            
-            print_step("Use --continue-run flag to retry the remaining tasks. Exiting...")
-            # sys.exit(1)
-            
+        # Check for incomplete tasks only if we had tasks to run
+        if dataset:  # Only check remaining tasks if we had tasks to run in this session
+            remaining = self.get_remaining_tasks(dataset)
+            if len(remaining) > 0:
+                # Create a more informative error message
+                print_warning(f"Warning - {len(remaining)} tasks are incomplete")
+                
+                # Create and display table of remaining tasks
+                table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
+                table.add_column("Task ID", style="cyan")
+                
+                for task_id, task_data in remaining.items():
+                    table.add_row(task_id)
+                
+                with terminal_print():
+                    console.print(table)
+                
+                print_step("Use --continue-run flag to retry the remaining tasks.")
+        
         # stop weave logging before harness is run to avoid lm as judge to produce additional cost 
         weave.finish()
         
