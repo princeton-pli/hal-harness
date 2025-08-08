@@ -1,0 +1,2 @@
+appworld @ git+https://github.com/stonybrooknlp/appworld.git
+appworld-experiments[simplified] @ git+https://github.com/stonybrooknlp/appworld.git@main#egg=appworld-experiments&subdirectory=experiments
