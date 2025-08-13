@@ -17,6 +17,17 @@ write_swebench_upload_file.py
 write_upload_file.ipynb
 run_models.sh
 data/*
+hal/benchmarks/corebench/capsules
 uv.lock
+hal/benchmarks/corebench/capsules/*
 .compose.yaml
 .vscode
+hal/benchmarks/corebench/core_test.json
+agents/appworld_example_agent/data/*
+hal/benchmarks/scienceagentbench/benchmark
+experiments/*
+archive/*
+agents/USACO/data/.DS_Store
+
+# Claude Code settings
+.claude/settings.local.json

@@ -72,14 +72,28 @@ class VMRunner:
             vm_names.append(vm_name)
             
             try:
-                # Create VM
-                print(f"Creating VM {vm_name} for task {task_id}")
-                vm = self.vm_manager.create_vm(
-                    vm_name=vm_name,
-                    username="agent",
-                    ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
-                    network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
-                )
+                # Check if the task requires GPU
+                gpu_required = False
+                if self.benchmark and hasattr(self.benchmark, 'benchmark'):
+                    task_benchmark = self.benchmark.benchmark.get(task_id, {})
+                    gpu_required = task_benchmark.get('gpu', False)
+                
+                # Create VM based on GPU requirement
+                print(f"Creating {'GPU ' if gpu_required else ''}VM {vm_name} for task {task_id}")
+                if gpu_required:
+                    vm = self.vm_manager.create_gpu_vm(
+                        vm_name=vm_name,
+                        username="agent",
+                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
+                        network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                    )
+                else:
+                    vm = self.vm_manager.create_vm(
+                        vm_name=vm_name,
+                        username="agent",
+                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
+                        network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                    )
 
                 # Create temp directory with all necessary files
                 temp_dir = tempfile.mkdtemp()
@@ -106,7 +120,7 @@ class VMRunner:
                             # Copy the file
                             try:
                                 if os.path.isdir(src_path):
-                                    shutil.copytree(src_path, dest_full_path)
+                                    shutil.copytree(src_path, dest_full_path, dirs_exist_ok=True)
                                 else:
                                     shutil.copy2(src_path, dest_full_path)
                             except Exception as e:
@@ -186,6 +200,7 @@ class VMRunner:
 
                 # Copy results back
                 if self.log_dir:
+                    print(f"Copying results from VM {vm_name} to local directory")
                     dest_dir = os.path.join(self.log_dir, f"{task_id}")
                     os.makedirs(dest_dir, exist_ok=True)
                     self.vm_manager.copy_files_from_vm(

@@ -22,12 +22,12 @@ from .inspect.inspect import (
 )
 from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
-from .utils.utils import safe_filename
-from .utils.weave_utils import comput_cost_from_inspect_usage
+from .utils.utils import safe_filename, get_git_info
+from .utils.weave_utils import comput_cost_from_inspect_usage, get_weave_calls
 
 from .utils.logging_utils import print_success, print_results_table, print_warning
 
-from openai import AsyncOpenAI
+import datetime
 
 
 def inspect_evaluate(
@@ -43,8 +43,10 @@ def inspect_evaluate(
     max_concurrent: int = 10,
     conda_env_name: str = None,
     vm: bool = False,
+    docker: bool = False,
     continue_run: bool = False,
     inspect_eval_args: dict[str, Any] = None,
+    run_command: str = None
 ) -> None:
     """
     Evaluates a task using a specified model and agent, logs results, and optionally uploads them.
@@ -111,9 +113,9 @@ def inspect_evaluate(
             agent = load_agent(agent_function)
             
             # wrap the content of the run function in a weave.attributes the wrapped function should also be async
-            async def patched_agent(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
+            async def patched_agent(sample: dict[str, Any]) -> dict[str, Any]:
                 with weave.attributes({"weave_task_id": sample["sample_id"]}):
-                    return await agent(sample, **kwargs)
+                    return await agent(sample, **agent_args)
 
             # is the agent a solver?
             solver = resolve_solver(agent, agent_args=agent_args)
@@ -212,21 +214,28 @@ def inspect_evaluate(
             run_id=run_id, benchmark=task, eval_log=eval_log, agent_name=agent_name
         )
         
+        # get weave calls
+        raw_logging, latency_dict = get_weave_calls(weave_client)
+        
         # replace / in metrics with underscore
         inspect_eval_results_json = {
             key.replace("/", "_"): value 
             for key, value in inspect_eval_results_json.items()
         }
+        inspect_eval_results_json['latencies'] = latency_dict
+        
+        
 
         # Compose the final uploadable result
         eval_header_raw = eval_log
         del eval_header_raw.samples
         final_result = {
-            "config": {**eval_config, 'agent_args': agent_args},
+            "config": {**eval_config, 'agent_args': agent_args, 'run_command': run_command},
             "results": inspect_eval_results_json,
             "raw_eval_results": inspect_eval_results,            
-            "raw_logging_results": "Inspect logs are contained in raw_eval_results",
+            "raw_logging_results": raw_logging,
             "total_usage": inspect_eval_results['stats']['model_usage'],
+            "git_info": get_git_info()
         }
 
         # Store the upload results locally

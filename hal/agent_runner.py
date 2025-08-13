@@ -4,15 +4,15 @@ import weave
 import time
 from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
-from .utils.vm_runner import VMRunner
 from .utils.local_runner import LocalRunner
+from .utils.docker_runner import DockerRunner
 from .utils.logging_utils import print_step, print_success, print_error, create_progress, console, log_warning, print_warning
 import sys
 from rich.table import Table
 from rich.box import ROUNDED
 from .utils.logging_utils import terminal_print
 from .inspect.inspect import is_inspect_benchmark
-
+from .utils.weave_utils import get_call_ids, delete_calls
 class AgentRunner:
     """Handles running agents either locally or on VMs"""
 
@@ -24,9 +24,13 @@ class AgentRunner:
                  config: Dict[str, Any],
                  run_id: Optional[str] = None,
                  use_vm: bool = False,
+                 use_docker: bool = False,
                  max_concurrent: int = 1,
                  conda_env: Optional[str] = None,
-                 continue_run: bool = False):
+                 continue_run: bool = False,
+                 run_command: str = None,
+                 ignore_errors: bool = False,
+                 max_tasks: Optional[int] = None):
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -38,21 +42,36 @@ class AgentRunner:
         
         # Check for requirements.txt
         requirements_path = os.path.join(agent_dir, 'requirements.txt')
-        if not os.path.exists(requirements_path) and not conda_env:
+        if not os.path.exists(requirements_path) and not conda_env and not use_docker and not use_vm:
             raise ValueError(f"No requirements.txt found in agent directory: {agent_dir}")
         
-        # add check such that conda env and run on vm is not set together
-        if conda_env and use_vm:
-            raise ValueError("Conda environment and VM execution cannot be set together. If you want to run the agent on a VM, please do not set the conda_env flag but create requirements.txt instead in agent directory instead.")
+        # Validate runner options
+        if sum([bool(conda_env), use_vm, use_docker]) > 1:
+            raise ValueError("Only one of conda_env, use_vm, or use_docker can be set at a time.")
         
         # Initialize benchmark first
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
+        
+        # Check if any task requires GPU
+        has_gpu_task = False
+        if hasattr(self.benchmark, 'benchmark') and isinstance(self.benchmark.benchmark, dict):
+            for task_id, task_data in self.benchmark.benchmark.items():
+                if isinstance(task_data, dict) and task_data.get('gpu', False):
+                    has_gpu_task = True
+                    break
+        
+        # Print warning if GPU tasks are present but not running on VM
+        if has_gpu_task and not use_vm:
+            print_warning("Warning: This benchmark contains tasks that require GPU, but is not being run on a VM. "
+                         "GPU tasks may not work correctly without VM execution. Use the --vm flag to run on a VM.")
+        
+        self.run_command = run_command
                 
-        # Check if benchmark requires VM
-        if self.benchmark.vm_only and not use_vm:
-            raise ValueError(f"Benchmark {benchmark_name} requires VM execution. Please use --vm flag.")
+        # Check if benchmark requires sandbox
+        if self.benchmark.requires_sandbox and not use_vm and not use_docker:
+            raise ValueError(f"Benchmark {benchmark_name} requires sandbox execution. Please use --vm or --docker flag.")
         
         
         # Set run ID
@@ -60,7 +79,14 @@ class AgentRunner:
         
         # Initialize appropriate runner with benchmark
         if use_vm:
+            from .utils.vm_runner import VMRunner
             self.runner = VMRunner(
+                max_concurrent=max_concurrent,
+                log_dir=self.benchmark.get_run_dir(self.run_id),
+                benchmark=self.benchmark
+            )
+        elif use_docker:
+            self.runner = DockerRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
                 benchmark=self.benchmark
@@ -80,8 +106,10 @@ class AgentRunner:
         self.max_concurrent = max_concurrent
         self.conda_env = conda_env
         self.use_vm = use_vm
+        self.use_docker = use_docker
         self.continue_run = continue_run
-        
+        self.ignore_errors = ignore_errors
+        self.max_tasks = max_tasks
         
 
     def get_remaining_tasks(self, dataset: Dict[str, Any]) -> Dict[str, Any]:
@@ -135,8 +163,24 @@ class AgentRunner:
         
         # Get dataset and filter for remaining tasks if continuing
         dataset = self.benchmark.get_dataset()
-        if self.continue_run:
+        if self.continue_run and not self.ignore_errors:
             dataset = self.get_remaining_tasks(dataset)
+        elif self.continue_run and self.ignore_errors:
+            dataset = {}
+            
+        # Limit the number of tasks if max_tasks is specified
+        if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
+            print_step(f"Limiting to the first {self.max_tasks} tasks as requested")
+            task_ids = list(dataset.keys())[:self.max_tasks]
+            dataset = {task_id: dataset[task_id] for task_id in task_ids}
+            
+        # delete previous calls from previous run if continuing for remaining tasks
+        if self.continue_run and not self.ignore_errors:
+            print_step("Cleaning up calls from previous run...")
+            for task_id in dataset:
+                call_ids = get_call_ids(task_id, weave_client)
+                if len(call_ids) > 0:
+                    delete_calls(call_ids, weave_client)
         
         if not dataset:
             print_warning("No remaining tasks to run")
@@ -195,7 +239,7 @@ class AgentRunner:
         remaining = self.get_remaining_tasks(dataset)
         if len(remaining) > 0:
             # Create a more informative error message
-            print_error(f"Evaluation cannot proceed - {len(remaining)} tasks are incomplete")
+            print_warning(f"Warning - {len(remaining)} tasks are incomplete")
             
             # Create and display table of remaining tasks
             table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
@@ -207,8 +251,8 @@ class AgentRunner:
             with terminal_print():
                 console.print(table)
             
-            print_step("Use --continue-run flag to complete the remaining tasks. Exiting...")
-            sys.exit(1)
+            print_step("Use --continue-run flag to retry the remaining tasks. Exiting...")
+            # sys.exit(1)
             
         # stop weave logging before harness is run to avoid lm as judge to produce additional cost 
         weave.finish()
@@ -223,6 +267,7 @@ class AgentRunner:
             agent_name=agent_name,
             run_id=self.run_id,
             agent_args=self.agent_args,
+            run_command=self.run_command,
             eval_results=eval_results,
             weave_client=weave_client,
             upload=upload

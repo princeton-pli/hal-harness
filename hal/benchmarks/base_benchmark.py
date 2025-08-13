@@ -3,17 +3,18 @@ from typing import Dict, Any, Optional, TypeVar, Generic
 from pydantic import BaseModel, TypeAdapter
 import json
 import os
+import subprocess
 from inspect_ai.log import EvalLog, write_eval_log
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
 from ..utils.logging_utils import print_warning
-from ..utils.utils import make_json_serializable
+from ..utils.utils import make_json_serializable, get_git_info
 
 
 class BaseBenchmark(ABC):
     """Base class for all benchmarks"""
     
-    def __init__(self, agent_dir: str, config: Dict[str, Any], vm_only: bool = False, setup_script: Optional[str] = None):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], requires_sandbox: bool = False, setup_script: Optional[str] = None):
         self.agent_dir = agent_dir
         self.config = config
         self.benchmark_name: str
@@ -22,7 +23,7 @@ class BaseBenchmark(ABC):
         self.base_results_dir = "results"
         self.benchmark_results_dir = os.path.join(self.base_results_dir, self.benchmark_name)
         self.agent_args: Dict[str, Any] = {}  # Store agent args
-        self.vm_only = vm_only # Whether benchmark requires VM execution
+        self.requires_sandbox = requires_sandbox # Whether benchmark requires VM execution
         
 
     @abstractmethod
@@ -44,6 +45,7 @@ class BaseBenchmark(ABC):
                        agent_name: str,
                        run_id: str, 
                        agent_args: Dict[str, Any],
+                       run_command: str,
                        eval_results: Dict[str, Any],
                        weave_client,
                        upload: bool = False) -> Dict[str, Any]:
@@ -62,11 +64,11 @@ class BaseBenchmark(ABC):
         else:
             results_path = os.path.join(run_dir, f"{run_id}.json")
             with open(results_path, 'w') as f:
-                json.dump(eval_results, f)
+                json.dump(eval_results, f, indent=2)
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
-        raw_logging = get_weave_calls(weave_client)
+        raw_logging, latency_dict = get_weave_calls(weave_client)
 
         # Prepare results summary
         results_summary = {
@@ -75,24 +77,29 @@ class BaseBenchmark(ABC):
                 'benchmark_name': self.benchmark_name,
                 'date': datetime.now().strftime("%Y-%m-%d"),
                 'run_id': run_id,
-                'agent_args': agent_args
+                'agent_args': agent_args,
+                'run_command': run_command
             },
-            "results": {**self.get_metrics(eval_results), 'total_cost': total_cost},
+            "results": {**self.get_metrics(eval_results), 
+                        'total_cost': total_cost, 
+                        'latencies': latency_dict
+            },
             "raw_eval_results": inspect_eval_results if isinstance(eval_results, EvalLog) else eval_results,
             "raw_logging_results": raw_logging,
             "total_usage": total_usage,
-            'total_cost': total_cost
+            'total_cost': total_cost,
+            "git_info": get_git_info()
         }
         
         # Save full results
         upload_path = os.path.join(run_dir, f"{run_id}_UPLOAD.json")
         try:
             with open(upload_path, 'w') as f:
-                json.dump(results_summary, f)
+                json.dump(results_summary, f, indent=2)
         except TypeError as e:
             print_warning(f"Error serializing results summary: {e}. Converting to json serializable.")
             with open(upload_path, 'w') as f:
-                json.dump(make_json_serializable(results_summary), f)
+                json.dump(make_json_serializable(results_summary), f, indent=2)
 
         if upload:
             self.upload_results(run_id, results_summary)

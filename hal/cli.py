@@ -1,4 +1,5 @@
 import os
+import re
 import click
 import yaml
 import asyncio
@@ -30,6 +31,7 @@ from rich.box import ROUNDED
 import traceback
 from datetime import datetime
 from pathlib import Path
+import sys
 
 load_dotenv()
 
@@ -61,6 +63,7 @@ load_dotenv()
 )
 @click.option("--upload", is_flag=True, help="Upload results to HuggingFace after evaluation")
 @click.option("--max_concurrent", default=1, help="Maximum task-agent pairs to run concurrently for this run")
+@click.option("--max_tasks", type=int, help="Maximum number of tasks to run from the benchmark. Useful for testing.")
 @click.option("--conda_env_name", help="Conda environment to run the custom external agent in if run locally")
 @click.option("--run_id", help="Run ID to use for logging. For continuous runs, use the same run_id to continue from a previous run")
 @click.option(
@@ -69,7 +72,9 @@ load_dotenv()
     help="Path to configuration file. (currently not used)",
 )
 @click.option("--vm", is_flag=True, help="Run the agent on azure VMs")
+@click.option("--docker", is_flag=True, help="Run the agent in Docker containers for isolation. Requires Docker to be installed on the system. Resources are limited to 4GB memory and 2 CPU cores per container.")
 @click.option("--continue_run", is_flag=True, help="Continue from a previous run, only running failed or incomplete tasks. You must provide the same run_id to continue a run.")
+@click.option("--ignore_errors", is_flag=True, help="Ignore errors and continue running the remaining tasks. This is useful for continuing a run that failed due to an error.")
 @click.option(
     "-I",
     multiple=True,
@@ -87,19 +92,34 @@ def main(
     max_concurrent,
     conda_env_name,
     continue_run,
+    ignore_errors,
     a,
     b,
     i,
     vm,
+    docker,
+    max_tasks,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
     try:
+        # Parse agent and benchmark args
+        print_step("Parsing configuration...")
+        agent_args = parse_cli_args(a)
+        benchmark_args = parse_cli_args(b)
+        inspect_eval_args = parse_cli_args(i)
+        
         # Generate default run_id if none provided
         if not run_id:
             set_run_id = False
             benchmark_name = benchmark.split("/")[-1]
-            run_id = f"{benchmark_name}_{int(time.time())}"
+            
+            # convert agent name into a valid run_id, it has spaces and parentheses and might contain large letters and special characters
+            agent_name_run_id = re.sub(r'[^a-zA-Z0-9_]', '', agent_name.replace(" ", "_").replace("(", "").replace(")", "")).lower()
+            
+            run_id = f"{benchmark_name}_{agent_name_run_id}_{int(time.time())}"
+            
+            
         else:
             set_run_id = True
         
@@ -111,23 +131,23 @@ def main(
         
         print_header("HAL Harness")
         
-        # Parse agent and benchmark args
-        print_step("Parsing configuration...")
-        agent_args = parse_cli_args(a)
-        benchmark_args = parse_cli_args(b)
-        inspect_eval_args = parse_cli_args(i)
-        
         # add benchmark name to agent_args
         agent_args['benchmark_name'] = benchmark
         
         # Validate model pricing if model_name is provided in agent_args
         if "model_name" in agent_args:
             validate_model_pricing(agent_args["model_name"])
+        
+        # Validate runner options
+        if sum([bool(conda_env_name), vm, docker]) > 1:
+            print_error("Only one of --conda_env_name, --vm, or --docker can be specified. Exiting...")
+            sys.exit(1)
                 
-        # Check if VM execution is attempted with inspect solver
-        if vm and is_inspect_benchmark(benchmark):
+        # Check if VM/Docker execution is attempted with inspect solver
+        if (vm or docker) and is_inspect_benchmark(benchmark):
             if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_error("VM execution is not supported for inspect solvers. Please run without --vm flag. Exiting...")
+                run_type = "VM" if vm else "Docker"
+                print_error(f"{run_type} execution is not supported for inspect solvers. Please run without --{run_type.lower()} flag. Exiting...")
                 sys.exit(1)
                 
         # Check if conda environment is specified for inspect solver
@@ -136,6 +156,10 @@ def main(
                 print_error("Conda environments are not supported for inspect solvers. Dependencies are managed by Inspect harness. Run without --conda_env_name flag. Exiting...")
                 sys.exit(1)
                 
+        if max_tasks and is_inspect_benchmark(benchmark):
+            print_error("max_tasks is not supported for inspect benchmarks. Please remove the flag and run the full benchmark.")
+            sys.exit(1)
+            
         if continue_run and not set_run_id:
             raise ValueError("continue_run flag requires run_id to be set")
                 
@@ -154,8 +178,14 @@ def main(
             conda_env_name=conda_env_name,
             log_dir=log_dir,
             vm=vm,
-            continue_run=continue_run
+            docker=docker,
+            continue_run=continue_run,
+            ignore_errors=ignore_errors
         )
+        
+        # get exact command used to run the evaluation from click 
+        run_command = " ".join(["hal-eval"] + sys.argv[1:])
+        
         
         if is_inspect_benchmark(benchmark):
             # if agent_function and is_inspect_solver(agent_function, agent_dir):
@@ -175,7 +205,9 @@ def main(
                 max_concurrent=max_concurrent,
                 conda_env_name=conda_env_name,
                 vm=vm,
-                inspect_eval_args=inspect_eval_args
+                docker=docker,
+                inspect_eval_args=inspect_eval_args,
+                run_command=run_command
             )
             # else:
             #     # Use AgentRunner with InspectBenchmark for non-solver agents
@@ -217,9 +249,13 @@ def main(
                     config=config,
                     run_id=run_id,  # Now guaranteed to have a value
                     use_vm=vm,
+                    use_docker=docker,
                     max_concurrent=max_concurrent,
                     conda_env=conda_env_name,
-                    continue_run=continue_run
+                    continue_run=continue_run,
+                    run_command=run_command,
+                    ignore_errors=ignore_errors,
+                    max_tasks=max_tasks
                 )
 
                 # Run evaluation
@@ -323,6 +359,9 @@ def is_inspect_solver(agent_function: str, agent_dir: str) -> bool:
 def validate_model_pricing(model_name: str) -> None:
     """Validate that model pricing information exists"""
     from .utils.weave_utils import MODEL_PRICES_DICT
+    
+    # together_ai is not part of weave model name
+    model_name = model_name.replace("together_ai/", "")
     
     if model_name not in MODEL_PRICES_DICT:
         print_error(f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py. Exiting...")

@@ -25,15 +25,15 @@ from .base_benchmark import BaseBenchmark
 
 class YourBenchmark(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        super().__init__(agent_dir, config)
         self.benchmark_name = "your_benchmark"
         # Benchmark dataset
         self.benchmark: Dict[str, Any]
 
         # Optional: Set if benchmark requires VM execution
-        self.vm_only = False
+        self.requires_sandbox = False
         # Optional: Path to VM setup script
         self.setup_script = "hal/benchmarks/your_benchmark/setup.sh"
+        super().__init__(agent_dir, config)
         
         
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
@@ -101,14 +101,14 @@ class SimpleMathBenchmark(BaseBenchmark):
         
         return {
             "accuracy": correct / total,
-            "successful_tasks": {
+            "successful_tasks": [
                 task_id for task_id, result in eval_results.items()
                 if result.get("correct", False)
-            },
-            "failed_tasks": {
+            ],
+            "failed_tasks": [
                 task_id for task_id, result in eval_results.items()
                 if not result.get("correct", False)
-            }
+            ]
         }
 ```
 
@@ -118,9 +118,23 @@ class SimpleMathBenchmark(BaseBenchmark):
 
 2. **Metrics**: `get_metrics()` calculates final metrics. This should always return a dictionary with at least the keys `accuracy`, `successful_tasks`, and `failed_tasks`.
 
-3. **VM Support**: Set `vm_only = True` if benchmark requires VM execution.
+3. **Sandbox Support**: Set `requires_sandbox = True` if benchmark requires sandbox execution.
 
 4. **Setup Script**: Provide `setup_script` for installing benchmark-specific dependencies on VMs.
+
+5. **GPU Support**: Tasks can specify GPU requirements by including a `"gpu": true` flag in their benchmark entries. When the benchmark is run with the `--vm` flag, tasks with this flag will be executed on GPU-enabled VMs.
+   ```python
+   # Example of a task that requires GPU
+   self.benchmark = {
+       "task_id": {
+           "prompt": "Train a neural network model...",
+           "files": {...},
+           "gpu": true  # This task will use a GPU VM when run with --vm flag
+       }
+   }
+   ```
+   - GPU VMs are only created if the benchmark is run with the `--vm` flag (which activates VM-based execution)
+   - For tasks that don't specify a GPU requirement (no `"gpu"` key or `"gpu": false`), regular VMs will be used
 
 ## Providing task-specific files to agents
 

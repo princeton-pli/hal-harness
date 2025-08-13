@@ -10,9 +10,9 @@ class SWEBenchBenchmark(BaseBenchmark):
     
     def __init__(self, agent_dir: str, config: Dict[str, Any], mini: bool = False):
         self.benchmark_name = 'swebench_verified_mini' if mini else 'swebench_verified'
-        self.vm_only = False
+        self.requires_sandbox = False
         self.mini = mini
-        super().__init__(agent_dir, config, vm_only=self.vm_only)
+        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
         
         # Read mini instance ids
         with open('hal/benchmarks/swebench_verified_mini_task_ids.txt', 'r') as f:
@@ -26,10 +26,22 @@ class SWEBenchBenchmark(BaseBenchmark):
         if mini:
             for task in ds:
                 if task['instance_id'] in self.mini_instance_ids:
-                    self.benchmark[task['instance_id']] = task
+                    self.benchmark[task['instance_id']] = {
+                        'instance_id': task['instance_id'],
+                        'problem_statement': task['problem_statement'],
+                        'repo': task['repo'],
+                        'base_commit': task['base_commit'],
+                        'environment_setup_commit': task['environment_setup_commit']
+                    }
         else:
             for task in ds:
-                self.benchmark[task['instance_id']] = task
+                self.benchmark[task['instance_id']] = {
+                    'instance_id': task['instance_id'],
+                    'problem_statement': task['problem_statement'],
+                    'repo': task['repo'],
+                    'base_commit': task['base_commit'],
+                    'environment_setup_commit': task['environment_setup_commit']
+                }
                 
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:

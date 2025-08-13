@@ -6,6 +6,7 @@ import json
 from typing import Dict, Any, Tuple, List, Optional
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from .logging_utils import print_step, print_warning, console, create_progress
+from datetime import datetime
 
 MODEL_PRICES_DICT = {
                 "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
@@ -24,29 +25,45 @@ MODEL_PRICES_DICT = {
                 "Meta-Llama-3-1-8B-Instruct-nwxcg": {"prompt_tokens": 0.0003/1000, "completion_tokens": 0.00061/1000},
                 "gpt-4o": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "gpt-4o-2024-11-20": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
+                "gpt-4.1-2025-04-14": {"prompt_tokens": 2/1e6, "completion_tokens": 8/1e6},
+                "gpt-4.1-mini-2025-04-14": {"prompt_tokens": 0.4/1e6, "completion_tokens": 1.6/1e6},
+                "gpt-4.1-nano-2025-04-14": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
                 "gpt-4.5-preview-2025-02-27": {"prompt_tokens": 75/1e6, "completion_tokens": 150/1e6},
                 "Mistral-small-zgjes": {"prompt_tokens": 0.001/1000, "completion_tokens": 0.003/1000},
                 "Mistral-large-ygkys": {"prompt_tokens": 0.004/1000, "completion_tokens": 0.012/1000},
                 "o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},
                 "o3-mini-2025-01-31": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "openai/o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "o3-2025-04-16": {"prompt_tokens": 10/1e6, "completion_tokens": 40/1e6},
                 "o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "anthropic/claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "anthropic/claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "us.anthropic.claude-3-5-sonnet-20240620-v1:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "openai/gpt-4o-2024-11-20": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "openai/gpt-4o-2024-08-06": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "openai/gpt-4o-mini-2024-07-18": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
+                "openai/gpt-4.1-2025-04-14": {"prompt_tokens": 2/1e6, "completion_tokens": 8/1e6},
+                "openai/gpt-4.1-mini-2025-04-14": {"prompt_tokens": 0.4/1e6, "completion_tokens": 1.6/1e6},
+                "openai/gpt-4.1-nano-2025-04-14": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
                 "openai/gpt-4.5-preview-2025-02-27": {"prompt_tokens": 75/1e6, "completion_tokens": 150/1e6},
                 "openai/o1-mini-2024-09-12": {"prompt_tokens": 3/1e6, "completion_tokens": 12/1e6},
                 "openai/o3-mini-2025-01-31": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "openai/o3-2025-04-16": {"prompt_tokens": 10/1e6, "completion_tokens": 40/1e6},
                 "openai/o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "openai/o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "anthropic/claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "anthropic/claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "google/gemini-1.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 5/1e6},
                 "google/gemini-1.5-flash": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
+                "google/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {"prompt_tokens": 3.5/1e6, "completion_tokens": 3.5/1e6},
                 "together/meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
                 "bedrock/amazon.nova-micro-v1:0": {"prompt_tokens": 0.000035/1e3, "completion_tokens": 0.00014/1e3},
@@ -67,6 +84,26 @@ MODEL_PRICES_DICT = {
                 "us.meta.llama3-3-70b-instruct-v1:0" : {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3}, 
                 "claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "anthropic/claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
+                "deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
+                "together_ai/deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
+                "together_ai/deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
+                "gemini/gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
+                "gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
+                "gemini/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
+                "openrouter/anthropic/claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "openrouter/anthropic/claude-sonnet-4": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "anthropic/claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "gpt-5": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
 }
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
@@ -78,6 +115,16 @@ def fetch_weave_calls(client) -> List[Dict[str, Any]]:
     }))
     
     return calls
+
+def get_call_ids(task_id, client):
+    """Get all call ids for calls given a task id"""
+    calls = client.get_calls()
+    task_calls = [c for c in calls if c.attributes['weave_task_id'] == task_id]
+    return [c.id for c in task_calls]
+
+def delete_calls(call_ids, client):
+    """Delete calls given a list of call ids"""
+    client.delete_calls(call_ids=call_ids)
 
 
 def find_usage_dict_recursive(data):
@@ -146,13 +193,13 @@ def get_total_cost(client):
     requests = 0
 
     # Fetch all the calls in the project
-    print_step("Fetching Weave calls (this can take a while)...")
+    print_step("Getting token usage data (this can take a while)...")
     calls = list(
         client.get_calls(filter={"trace_roots_only": False}, include_costs=False)
     )
 
     with create_progress() as progress:
-        task = progress.add_task("Processing usage data...", total=len(calls))
+        task = progress.add_task("Processing token usage data...", total=len(calls))
         for call in calls:
             # If the call has costs, we add them to the total cost
             try:
@@ -213,9 +260,12 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     
     return json_call
 
-def get_weave_calls(client) -> List[Dict[str, Any]]:
+def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
-    print_step("Retrieving Weave traces...")
+    print_step("Getting Weave traces (this can take a while)...")
+    
+    # dict to store latency for each task
+    latency_dict = {}
     
     with create_progress() as progress:
         # Fetch calls
@@ -223,18 +273,30 @@ def get_weave_calls(client) -> List[Dict[str, Any]]:
         calls = fetch_weave_calls(client)
         progress.update(task1, completed=1)
         
-        # Process calls
+        # Processed calls
         processed_calls = []
-        task2 = progress.add_task("Processing calls... (this can take a while)", total=len(calls))
         
         for call in calls:
+            task_id = call.attributes['weave_task_id']
             processed_call = process_weave_output(call)
             if processed_call:
                 processed_calls.append(processed_call)
-            progress.update(task2, advance=1)
+                
+                if task_id not in latency_dict:
+                    latency_dict[task_id] = {'first_call_timestamp': processed_call['started_at'], 'last_call_timestamp': processed_call['started_at']}
+                else:
+                    if processed_call['started_at'] < latency_dict[task_id]['first_call_timestamp']:
+                        latency_dict[task_id]['first_call_timestamp'] = processed_call['started_at']
+                    if processed_call['started_at'] > latency_dict[task_id]['last_call_timestamp']:
+                        latency_dict[task_id]['last_call_timestamp'] = processed_call['started_at']
+                    
+            progress.update(task1, advance=1)
+            
+    for task_id in latency_dict:
+        latency_dict[task_id]['total_time'] = (datetime.fromisoformat(latency_dict[task_id]['last_call_timestamp']) - datetime.fromisoformat(latency_dict[task_id]['first_call_timestamp'])).total_seconds()
     
     console.print(f"[green]Total Weave traces: {len(processed_calls)}[/]")
-    return processed_calls
+    return processed_calls, latency_dict
 
 # def get_total_cost(client) -> Tuple[Optional[float], Dict[str, Dict[str, int]]]:
 #     """Get total cost and token usage for all Weave calls"""
@@ -321,3 +383,74 @@ def get_weave_calls(client) -> List[Dict[str, Any]]:
 
 #     # We return the total cost, requests, and calls
 #     return total_cost
+
+def get_task_cost(run_id: str, task_id: str) -> dict:
+    """
+    Calculate the cost for a specific task ID by filtering calls with that task_id.
+    
+    Args:
+        run_id: The ID of the run to calculate costs for
+        task_id: The ID of the task to calculate costs for
+        
+    Returns:
+        dict: A dictionary containing:
+            - total_cost: The total cost in dollars
+            - token_usage: Token usage breakdown by model
+            - requests: Total number of API requests
+            - num_calls: Number of calls related to this task
+    """
+    total_cost = 0
+    token_usage = {}
+    requests = 0
+    
+    client = weave.init(run_id)
+
+    print_step(f"Getting token usage data for task ID: {task_id}...")
+    
+    # Fetch all calls and filter by task_id
+    calls = list(client.get_calls(filter={"trace_roots_only": False}, include_costs=False))
+    task_calls = [call for call in calls if call.attributes.get('weave_task_id') == task_id]
+    
+    for call in task_calls:
+        # If the call has usage data, add it to the token usage
+        try:
+            usage_items = call.summary["usage"].items()
+        except KeyError:
+            continue
+            
+        for k, cost in usage_items:   
+            if k not in token_usage:
+                token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
+            
+            requests += cost["requests"]
+            if "prompt_tokens" in cost:
+                token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
+            if "input_tokens" in cost:    
+                token_usage[k]["prompt_tokens"] += cost["input_tokens"]
+            if "cache_creation_input_tokens" in cost:
+                token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
+            if "cache_read_input_tokens" in cost:
+                token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
+                
+            if "completion_tokens" in cost:
+                token_usage[k]["completion_tokens"] += cost["completion_tokens"]
+            if "output_tokens" in cost:
+                token_usage[k]["completion_tokens"] += cost["output_tokens"]
+    
+    # Calculate total cost from token usage
+    for k in token_usage:
+        if k in MODEL_PRICES_DICT:
+            model_cost = (
+                token_usage[k]["prompt_tokens"] * MODEL_PRICES_DICT[k]["prompt_tokens"] +
+                token_usage[k]["completion_tokens"] * MODEL_PRICES_DICT[k]["completion_tokens"]
+            )
+            total_cost += model_cost
+        else:
+            print_warning(f"Model '{k}' not found in MODEL_PRICES_DICT. Skipping cost calculation.")
+    print_step(f"Cost for task ID: {task_id} is ${total_cost} for {len(task_calls)} calls.")
+    return {
+        "total_cost": total_cost,
+        "token_usage": token_usage,
+        "requests": requests,
+        "num_calls": len(task_calls)
+    }

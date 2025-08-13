@@ -223,6 +223,12 @@ def _print_results_table(results: dict[str, Any]) -> None:
                 table.add_row("successful_tasks", str(len(value)))
             elif key == "failed_tasks" and value:
                 table.add_row("failed_tasks", str(len(value)))
+            elif key == "latencies" and value:
+                # compute average total_time across all tasks
+                total_time = 0
+                for task_id, latency in value.items():
+                    total_time += latency['total_time']
+                table.add_row("average_total_time", str(total_time / len(value)))
     
     console.print(table)
 
@@ -250,6 +256,12 @@ def log_results_table(results: dict[str, Any]) -> None:
                 log_data["results"]["successful_tasks"] = len(value)
             elif key == "failed_tasks" and value:
                 log_data["results"]["failed_tasks"] = len(value)
+            elif key == "latencies" and value:
+                # compute average total_time across all tasks
+                total_time = 0
+                for task_id, latency in value.items():
+                    total_time += latency['total_time']
+                log_data["results"]["average_total_time"] = total_time / len(value)
     
     # Also log to main log file
     main_logger.info(f"Results: {json.dumps(log_data['results'], indent=2)}")
@@ -284,7 +296,9 @@ def print_run_config(
     log_dir: str,
     conda_env_name: Optional[str],
     vm: bool,
-    continue_run: bool
+    continue_run: bool,
+    docker: bool = False,
+    ignore_errors: bool = False
 ) -> None:
     """Print a formatted table with the run configuration"""
     table = Table(title="Run Configuration", show_header=False, box=ROUNDED)
@@ -301,7 +315,9 @@ def print_run_config(
     table.add_row("Max Concurrent", str(max_concurrent))
     table.add_row("Upload Results", "✓" if upload else "✗")
     table.add_row("VM Execution", "✓" if vm else "✗")
+    table.add_row("Docker Execution", "✓" if docker else "✗")
     table.add_row("Continue Previous Run", "✓" if continue_run else "✗")
+    table.add_row("Ignore Errors", "✓" if ignore_errors else "✗")
     
     if conda_env_name:
         table.add_row("Conda Environment", conda_env_name)
@@ -340,6 +356,7 @@ def print_run_config(
     main_logger.info(f"  Upload Results: {upload}")
     main_logger.info(f"  Log Directory: {log_dir}")
     main_logger.info(f"  VM Execution: {vm}")
+    main_logger.info(f"  Docker Execution: {docker}")
     main_logger.info(f"  Continue Previous Run: {continue_run}")
     if agent_args:
         main_logger.info("  Agent Arguments:")
