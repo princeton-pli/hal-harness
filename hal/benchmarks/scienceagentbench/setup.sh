@@ -6,4 +6,6 @@ conda activate sci-agent-eval
 pip install pip-tools
 conda deactivate
 
+mkdir /workspace/pred_programs
+
 echo "ScienceAgentBench setup complete"
