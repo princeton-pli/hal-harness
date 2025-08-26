@@ -1,4 +1,4 @@
-openai
+openai==1.99.9
 smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c
 mammoth
 python_pptx>=1.0.2
@@ -10,4 +10,4 @@ youtube_transcript_api>=0.6.2
 SpeechRecognition
 tiktoken
 pandas
-litellm>=1.66.0
+litellm==1.75.5.post1
