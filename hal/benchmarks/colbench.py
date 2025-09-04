@@ -84,18 +84,24 @@ class ColBenchBenchmark(BaseBenchmark):
         self.benchmark = {}
         if benchmark_name == 'colbench_backend_programming':
             for task_index, task in enumerate(tasks):
-                self.benchmark[str(task_index)] = {"problem_description": task["problem_description"], 
-                                                   "hidden_information": task["hidden_information"], 
-                                                   "test_cases": task["test_cases"],
-                                                   "human_prompt": CODE_USER_PROMPT,
-                                                   "task_type": "code"}
+                self.benchmark[str(task_index)] = {
+                    "problem_description": task["problem_description"],
+                    "hidden_information": task["hidden_information"],
+                    "test_cases": task["test_cases"],
+                    "human_prompt": CODE_USER_PROMPT,
+                    "task_type": "code",
+                    "gpu": True,
+                }
         elif benchmark_name == 'colbench_frontend_design':
             for task_index, task in enumerate(tasks):
-                self.benchmark[str(task_index)] = {"problem_description": task["problem_description"], 
-                                                   "hidden_information": task["ground_truth"],
-                                                   "human_prompt": HTML_USER_PROMPT,
-                                                   "task_type": "html",
-                                                   "cache_path": CACHE_PATH}
+                self.benchmark[str(task_index)] = {
+                    "problem_description": task["problem_description"],
+                    "hidden_information": task["ground_truth"],
+                    "human_prompt": HTML_USER_PROMPT,
+                    "task_type": "html",
+                    "cache_path": CACHE_PATH,
+                    "gpu": True,
+                }
              
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
@@ -181,7 +187,6 @@ class ColBenchBenchmark(BaseBenchmark):
         else:
             results = {"average_correctness": sum(eval_results)/len(eval_results)}
         return results
-
 
 
 

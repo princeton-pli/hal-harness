@@ -10,7 +10,7 @@ echo "Starting setup for user: $USERNAME"
 # Install system dependencies
 # echo "Installing system dependencies..."
 # apt-get update -y
-# apt-get install -y curl wget build-essential
+# apt-get install -y curl wget build-essential git
 # echo "System dependencies installed"
 
 # Install Miniconda
@@ -43,6 +43,7 @@ EOF
 chmod +x "$HOME_DIR/init_conda.sh"
 chown $USERNAME:$USERNAME "$HOME_DIR/init_conda.sh"
 
+# TODO: Make this generic for any benchmark
 # Create and activate environment as the agent user with explicit output
 echo "Creating conda environment..."
 su - $USERNAME -c "bash -c '\
@@ -71,6 +72,13 @@ su - $USERNAME -c "bash -c '\
         pip install weave==0.51.41 && \
         echo \"Pinning gql and wandb for Weave compatibility...\" && \
         pip install \"gql>=3.4,<4\" \"wandb>=0.17.0\" && \
+        echo \"Installing sweet_rl ...\" && \
+        if [ ! -d \"$HOME_DIR/sweet_rl\" ]; then \
+            git clone https://github.com/facebookresearch/sweet_rl.git \"$HOME_DIR/sweet_rl\"; \
+        fi && \
+        cd \"$HOME_DIR/sweet_rl\" && \
+        pip install -e . && \
+        cd - >/dev/null && \
         echo \"Requirements installed\"; \
     else \
         echo \"No requirements.txt found\" && \
