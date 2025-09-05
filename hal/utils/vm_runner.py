@@ -5,6 +5,8 @@ import time
 import tempfile
 import shutil
 import uuid
+import functools
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Optional, List
 from .azure_utils import VirtualMachineManager
 from ..benchmarks.base_benchmark import BaseBenchmark
@@ -22,6 +24,9 @@ class VMRunner:
         self._file_lock = asyncio.Lock()
         self._active_vms: List[str] = []
         self.benchmark = benchmark
+        # Dedicated high-capacity executor for blocking Azure SDK calls
+        # Configure via VM_RUNNER_MAX_WORKERS (default 256)
+        self._executor = ThreadPoolExecutor(max_workers=int(os.getenv("VM_RUNNER_MAX_WORKERS", "256")))
         
     async def fetch_agent_logs(self, vm_name, username, ssh_private_key_path, task_id):
         """Fetch the latest agent trace log from a VM and store it locally."""
@@ -69,7 +74,7 @@ class VMRunner:
         
         async def process_task(task_id: str, input_data: Any) -> Optional[Dict]:
             # Create unique VM name
-            vm_name = f"agent-{benchmark.benchmark_name}-{uuid.uuid4()}"[:32].lower().replace("_", "-")
+            vm_name = f"agent-{task_id}-{uuid.uuid4()}"
             vm_names.append(vm_name)
             
             try:
@@ -81,21 +86,28 @@ class VMRunner:
                 
                 # Create VM based on GPU requirement
                 print(f"Creating {'GPU ' if gpu_required else ''}VM {vm_name} for task {task_id}")
+                loop = asyncio.get_running_loop()
                 if gpu_required:
-                    vm = await asyncio.to_thread(
-                        self.vm_manager.create_gpu_vm,
-                        vm_name=vm_name,
-                        username="agent",
-                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
-                        network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                    vm = await loop.run_in_executor(
+                        self._executor,
+                        functools.partial(
+                            self.vm_manager.create_gpu_vm,
+                            vm_name=vm_name,
+                            username="agent",
+                            ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
+                            network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                        )
                     )
                 else:
-                    vm = await asyncio.to_thread(
-                        self.vm_manager.create_vm,
-                        vm_name=vm_name,
-                        username="agent",
-                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
-                        network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                    vm = await loop.run_in_executor(
+                        self._executor,
+                        functools.partial(
+                            self.vm_manager.create_vm,
+                            vm_name=vm_name,
+                            username="agent",
+                            ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
+                            network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
+                        )
                     )
 
                 # Create temp directory with all necessary files
@@ -139,38 +151,47 @@ class VMRunner:
 
                     # Copy all files to VM
                     print(f"Copying files to VM {vm_name}")
-                    await asyncio.to_thread(
-                        self.vm_manager.copy_files_to_vm,
-                        source_directory=temp_dir,
-                        vm_name=vm_name,
-                        username="agent", 
-                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                    await loop.run_in_executor(
+                        self._executor,
+                        functools.partial(
+                            self.vm_manager.copy_files_to_vm,
+                            source_directory=temp_dir,
+                            vm_name=vm_name,
+                            username="agent",
+                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                        )
                     )
-                    await asyncio.to_thread(
-                        self.vm_manager.copy_files_to_vm,
-                        source_directory=agent_dir,
-                        vm_name=vm_name,
-                        username="agent",
-                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                    await loop.run_in_executor(
+                        self._executor,
+                        functools.partial(
+                            self.vm_manager.copy_files_to_vm,
+                            source_directory=agent_dir,
+                            vm_name=vm_name,
+                            username="agent",
+                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                        )
                     )
 
                 finally:
                     shutil.rmtree(temp_dir)
 
                 # Run agent on VM
-                await asyncio.to_thread(
-                    self.vm_manager.run_agent_on_vm,
-                    agent_function=agent_function,
-                    vm_name=vm_name,
-                    task_id=task_id,
-                    input_data=input_data,
-                    agent_args=agent_args,
-                    agent_dir="/home/agent",
-                    run_id=run_id,
-                    username="agent",
-                    log_dir=self.log_dir,
-                    ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
-                    benchmark=benchmark
+                await loop.run_in_executor(
+                    self._executor,
+                    functools.partial(
+                        self.vm_manager.run_agent_on_vm,
+                        agent_function=agent_function,
+                        vm_name=vm_name,
+                        task_id=task_id,
+                        input_data=input_data,
+                        agent_args=agent_args,
+                        agent_dir="/home/agent",
+                        run_id=run_id,
+                        username="agent",
+                        log_dir=self.log_dir,
+                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                        benchmark=benchmark
+                    )
                 )
 
                 # Wait for completion or timeout
@@ -188,11 +209,14 @@ class VMRunner:
                             task_id=task_id,
                         )
                         
-                        result = await asyncio.to_thread(
-                            self.vm_manager.check_task_completion,
-                            vm_name=vm_name,
-                            username="agent",
-                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                        result = await loop.run_in_executor(
+                            self._executor,
+                            functools.partial(
+                                self.vm_manager.check_task_completion,
+                                vm_name=vm_name,
+                                username="agent",
+                                ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
+                            )
                         )
                         if result is not None:
                             print(f"Task {task_id} completed on VM {vm_name}")
@@ -210,12 +234,15 @@ class VMRunner:
                     print(f"Copying results from VM {vm_name} to local directory")
                     dest_dir = os.path.join(self.log_dir, f"{task_id}")
                     os.makedirs(dest_dir, exist_ok=True)
-                    await asyncio.to_thread(
-                        self.vm_manager.copy_files_from_vm,
-                        vm_name=vm_name,
-                        username="agent",
-                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
-                        destination_directory=dest_dir
+                    await loop.run_in_executor(
+                        self._executor,
+                        functools.partial(
+                            self.vm_manager.copy_files_from_vm,
+                            vm_name=vm_name,
+                            username="agent",
+                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                            destination_directory=dest_dir
+                        )
                     )
 
                 return result
@@ -229,7 +256,7 @@ class VMRunner:
                 # Cleanup VM
                 try:
                     print(f"Deleting VM {vm_name}")
-                    await asyncio.to_thread(self.vm_manager.delete_vm, vm_name)
+                    await loop.run_in_executor(self._executor, functools.partial(self.vm_manager.delete_vm, vm_name))
                     if progress and task is not None:
                         progress.update(task, advance=1)
                 except Exception as e:
