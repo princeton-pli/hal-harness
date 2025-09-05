@@ -9,8 +9,8 @@ from .logging_utils import print_step, print_warning, console, create_progress
 from datetime import datetime
 
 MODEL_PRICES_DICT = {
-                "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0},
-                "text-embedding-3-large": {"prompt_tokens": 0.13/1e6, "completion_tokens": 0, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0},
+                "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
+                "text-embedding-3-large": {"prompt_tokens": 0.13/1e6, "completion_tokens": 0},
                 "gpt-4o-2024-05-13": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "gpt-4o-2024-08-06": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "gpt-3.5-turbo-0125": {"prompt_tokens": 0.5/1e6, "completion_tokens": 1.5/1e6},
@@ -107,20 +107,20 @@ MODEL_PRICES_DICT = {
 }
 
 CACHED_PRICE_OVERRIDES = {
-    "o4-mini-2025-04-16": 0.275/1e6,             # o4-mini cached input $1.00/1M
-    "openai/o4-mini-2025-04-16": 0.275/1e6,     # alias mapping
-    "o3-mini-2025-01-31": 0.55/1e6,            # o3-mini cached input $0.55/1M
-    "openai/o3-mini-2025-01-31": 0.55/1e6,     # alias mapping
-    "claude-3-7-sonnet-20250219": 0.30/1e6,    # Claude Sonnet cached input $0.30/1M (0.1× prompt)
-    "anthropic/claude-3-7-sonnet-20250219": 0.30/1e6,  # alias mapping
-    "claude-opus-4-20250514": 1.50/1e6,        # Claude Opus cached input $1.50/1M (0.1× prompt)
-    "anthropic/claude-opus-4-20250514": 1.50/1e6,      # alias mapping
-    "claude-opus-4.1-20250805": 1.50/1e6,      # same as Opus 4
-    "anthropic/claude-opus-4.1-20250805": 1.50/1e6,    # alias mapping
-    "gpt-4.1": 0.50/1e6,                       # GPT-4.1 cached input $0.75/1M (input $3, cached 0.75)
-    "gpt-5-2025-08-07": 0.125/1e6,             # GPT-5 cached input $0.125/1M
-    "o3-2025-04-16": 0.5/1e6,                 # approximate 0.25× input (input ~$1 → 0.25) based on community data
-    "openai/o3-2025-04-16": 0.5/1e6,          # alias mapping
+    "o4-mini-2025-04-16": 0.275/1e6,
+    "openai/o4-mini-2025-04-16": 0.275/1e6,
+    "o3-mini-2025-01-31": 0.55/1e6,
+    "openai/o3-mini-2025-01-31": 0.55/1e6,
+    "claude-3-7-sonnet-20250219": 0.30/1e6,
+    "anthropic/claude-3-7-sonnet-20250219": 0.30/1e6,
+    "claude-opus-4-20250514": 1.50/1e6,
+    "anthropic/claude-opus-4-20250514": 1.50/1e6,
+    "claude-opus-4.1-20250805": 1.50/1e6,
+    "anthropic/claude-opus-4.1-20250805": 1.50/1e6,
+    "gpt-4.1": 0.50/1e6,
+    "gpt-5-2025-08-07": 0.125/1e6,
+    "o3-2025-04-16": 0.5/1e6,
+    "openai/o3-2025-04-16": 0.5/1e6,
 }
 
 def _normalize_usage(cost: Dict[str, Any]) -> Tuple[int, int, int, int]:
@@ -128,19 +128,19 @@ def _normalize_usage(cost: Dict[str, Any]) -> Tuple[int, int, int, int]:
     prompt = (
         cost.get("prompt_tokens", 0)
         + cost.get("input_tokens", 0)
-        + cost.get("inputTokens", 0)          # Bedrock
+        + cost.get("inputTokens", 0)
     )
     completion = (
         cost.get("completion_tokens", 0)
         + cost.get("output_tokens", 0)
-        + cost.get("outputTokens", 0)         # Bedrock
+        + cost.get("outputTokens", 0)
     )
     cache_create = cost.get("cache_creation_input_tokens", 0) \
-        + cost.get("cacheWriteInputTokens", 0)                   # Bedrock
+        + cost.get("cacheWriteInputTokens", 0)
     cache_read = (
         cost.get("cache_read_input_tokens", 0)
-        + cost.get("cacheReadInputTokens", 0)                    # Bedrock
-        + cost.get("prompt_tokens_details", {}).get("cached_tokens", 0)  # OpenAI
+        + cost.get("cacheReadInputTokens", 0)
+        + cost.get("prompt_tokens_details", {}).get("cached_tokens", 0)
     )
     return prompt, completion, cache_create, cache_read
 
