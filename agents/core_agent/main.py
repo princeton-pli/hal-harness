@@ -559,7 +559,55 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     task_id, task = list(input.items())[0]
     
     results = {}
-    
+
+    # Inject OpenRouter provider selection via litellm extra_body if requested
+    try:
+        import litellm  # type: ignore
+        # Be lenient with unknown params on different backends
+        litellm.drop_params = True
+
+        if 'openrouter_provider_only' in kwargs and 'openrouter/' in kwargs.get('model_name', ''):
+            providers_value = kwargs['openrouter_provider_only']
+            if isinstance(providers_value, str):
+                providers = [p.strip() for p in providers_value.split(',') if p.strip()]
+            elif isinstance(providers_value, (list, tuple)):
+                providers = [str(p) for p in providers_value]
+            else:
+                providers = [str(providers_value)]
+
+            original_completion = getattr(litellm, 'completion', None)
+            original_acompletion = getattr(litellm, 'acompletion', None)
+
+            if not original_completion and not original_acompletion:
+                print("[WARNING] OpenRouter provider pinning requested but litellm completion hooks not found; skipping provider pinning.")
+            else:
+                print(f"[INFO] Enabling OpenRouter provider pinning: providers={providers}")
+
+            if original_completion is not None:
+                def completion_with_provider(*args, **completion_kwargs):
+                    model_field = completion_kwargs.get('model')
+                    if isinstance(model_field, str) and 'openrouter/' in model_field:
+                        extra_body = completion_kwargs.get('extra_body', {}) or {}
+                        extra_body['provider'] = {'only': providers}
+                        completion_kwargs['extra_body'] = extra_body
+                    return original_completion(*args, **completion_kwargs)
+
+                litellm.completion = completion_with_provider  # type: ignore
+
+            if original_acompletion is not None:
+                async def acompletion_with_provider(*args, **completion_kwargs):
+                    model_field = completion_kwargs.get('model')
+                    if isinstance(model_field, str) and 'openrouter/' in model_field:
+                        extra_body = completion_kwargs.get('extra_body', {}) or {}
+                        extra_body['provider'] = {'only': providers}
+                        completion_kwargs['extra_body'] = extra_body
+                    return await original_acompletion(*args, **completion_kwargs)  # type: ignore
+
+                litellm.acompletion = acompletion_with_provider  # type: ignore
+    except Exception as e:
+        # Non-fatal: if litellm is unavailable or wrapping fails, continue without provider pinning
+        print(f"[WARNING] Failed to enable OpenRouter provider pinning: {e}")
+
     model = LiteLLMModel(**model_params)
     
     # Prepend hints to the task prompt if available
