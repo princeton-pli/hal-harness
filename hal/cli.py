@@ -63,6 +63,7 @@ load_dotenv()
 )
 @click.option("--upload", is_flag=True, help="Upload results to HuggingFace after evaluation")
 @click.option("--max_concurrent", default=1, help="Maximum task-agent pairs to run concurrently for this run")
+@click.option("--tasks_per_vm", default=1, help="Number of tasks to run sequentially on each VM (batching). Only applies with --vm")
 @click.option("--max_tasks", type=int, help="Maximum number of tasks to run from the benchmark. Useful for testing.")
 @click.option("--conda_env_name", help="Conda environment to run the custom external agent in if run locally")
 @click.option("--run_id", help="Run ID to use for logging. For continuous runs, use the same run_id to continue from a previous run")
@@ -99,6 +100,7 @@ def main(
     vm,
     docker,
     max_tasks,
+    tasks_per_vm,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
@@ -180,7 +182,8 @@ def main(
             vm=vm,
             docker=docker,
             continue_run=continue_run,
-            ignore_errors=ignore_errors
+            ignore_errors=ignore_errors,
+            tasks_per_vm=tasks_per_vm if vm else None
         )
         
         # get exact command used to run the evaluation from click 
@@ -255,7 +258,8 @@ def main(
                     continue_run=continue_run,
                     run_command=run_command,
                     ignore_errors=ignore_errors,
-                    max_tasks=max_tasks
+                    max_tasks=max_tasks,
+                    tasks_per_vm=tasks_per_vm
                 )
 
                 # Run evaluation
