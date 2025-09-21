@@ -30,7 +30,8 @@ class AgentRunner:
                  continue_run: bool = False,
                  run_command: str = None,
                  ignore_errors: bool = False,
-                 max_tasks: Optional[int] = None):
+                 max_tasks: Optional[int] = None,
+                 tasks_per_vm: int = 1):
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -83,7 +84,8 @@ class AgentRunner:
             self.runner = VMRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark
+                benchmark=self.benchmark,
+                tasks_per_vm=tasks_per_vm
             )
         elif use_docker:
             self.runner = DockerRunner(
@@ -104,6 +106,7 @@ class AgentRunner:
         self.agent_args = agent_args
         self.config = config
         self.max_concurrent = max_concurrent
+        self.tasks_per_vm = tasks_per_vm
         self.conda_env = conda_env
         self.use_vm = use_vm
         self.use_docker = use_docker

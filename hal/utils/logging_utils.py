@@ -298,7 +298,8 @@ def print_run_config(
     vm: bool,
     continue_run: bool,
     docker: bool = False,
-    ignore_errors: bool = False
+    ignore_errors: bool = False,
+    tasks_per_vm: Optional[int] = None
 ) -> None:
     """Print a formatted table with the run configuration"""
     table = Table(title="Run Configuration", show_header=False, box=ROUNDED)
@@ -318,6 +319,8 @@ def print_run_config(
     table.add_row("Docker Execution", "✓" if docker else "✗")
     table.add_row("Continue Previous Run", "✓" if continue_run else "✗")
     table.add_row("Ignore Errors", "✓" if ignore_errors else "✗")
+    if vm and tasks_per_vm:
+        table.add_row("Tasks Per VM", str(tasks_per_vm))
     
     if conda_env_name:
         table.add_row("Conda Environment", conda_env_name)
@@ -358,6 +361,8 @@ def print_run_config(
     main_logger.info(f"  VM Execution: {vm}")
     main_logger.info(f"  Docker Execution: {docker}")
     main_logger.info(f"  Continue Previous Run: {continue_run}")
+    if vm and tasks_per_vm:
+        main_logger.info(f"  Tasks Per VM: {tasks_per_vm}")
     if agent_args:
         main_logger.info("  Agent Arguments:")
         for key, value in agent_args.items():

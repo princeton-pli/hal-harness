@@ -1,7 +1,13 @@
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.resource import ResourceManagementClient
-from azure.identity import DefaultAzureCredential
+from azure.identity import (
+    DefaultAzureCredential,
+    AzureCliCredential,
+    EnvironmentCredential,
+    ManagedIdentityCredential,
+    ChainedTokenCredential,
+)
 import paramiko
 import os
 import tarfile
@@ -33,13 +39,40 @@ class VirtualMachineManager:
         self.subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
         self.resource_group_name = os.getenv("AZURE_RESOURCE_GROUP_NAME")
         self.location = os.getenv("AZURE_LOCATION")
-        self.credential = DefaultAzureCredential()
+        # Select credential strategy
+        cred_mode = os.getenv("AZURE_CREDENTIAL", "").lower().strip()
+        if cred_mode == "cli":
+            self.credential = AzureCliCredential()
+            print("[AzureAuth] Using AzureCliCredential")
+        elif cred_mode == "env":
+            self.credential = EnvironmentCredential()
+            print("[AzureAuth] Using EnvironmentCredential")
+        elif cred_mode == "managed":
+            self.credential = ManagedIdentityCredential()
+            print("[AzureAuth] Using ManagedIdentityCredential")
+        else:
+            # Prefer CLI first then fallback to Default to reduce provider churn
+            try:
+                cli = AzureCliCredential()
+                chained = ChainedTokenCredential(cli, DefaultAzureCredential(exclude_cli_credential=True))
+                # Probe to ensure CLI works; otherwise fall back to Default
+                chained.get_token("https://management.azure.com/.default")
+                self.credential = chained
+                print("[AzureAuth] Using ChainedTokenCredential(AzureCli, Default)")
+            except Exception:
+                self.credential = DefaultAzureCredential()
+                print("[AzureAuth] Using DefaultAzureCredential")
         self.compute_client = ComputeManagementClient(self.credential, self.subscription_id)
         self.network_client = NetworkManagementClient(self.credential, self.subscription_id)
         self.resource_client = ResourceManagementClient(self.credential, self.subscription_id)
+        # Prefetch token once to avoid many concurrent CLI invocations under load
+        try:
+            self.credential.get_token("https://management.azure.com/.default")
+        except Exception as e:
+            print(f"[AzureAuth] Token prefetch failed: {e}")
 
     @get_retry_decorator()
-    def create_vm(self, vm_name, username, ssh_public_key_path, network_security_group_name, vm_size="Standard_E2as_v5", image_reference=None, disk_size=80):
+    def create_vm(self, vm_name, username, ssh_public_key_path, network_security_group_name, vm_size="Standard_E2as_v5", image_reference=None, disk_size=80, timeout: int | None = None):
         # Create a virtual network and subnet
         vnet_name = f"{vm_name}-vnet"
         subnet_name = f"{vm_name}-subnet"
@@ -130,13 +163,14 @@ class VirtualMachineManager:
         }
 
         # Create the VM
-        vm = self.compute_client.virtual_machines.begin_create_or_update(
+        poller = self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group_name, vm_name, vm_parameters
-        ).result()
+        )
+        vm = poller.result(timeout=timeout)
 
         return vm
     @get_retry_decorator()
-    def create_gpu_vm(self, vm_name, username, ssh_public_key_path, network_security_group_name, vm_size="Standard_NC4as_T4_v3", image_reference=None, disk_size=80):
+    def create_gpu_vm(self, vm_name, username, ssh_public_key_path, network_security_group_name, vm_size="Standard_NC4as_T4_v3", image_reference=None, disk_size=80, timeout: int | None = None):
         # Create a virtual network and subnet
         vnet_name = f"{vm_name}-vnet"
         subnet_name = f"{vm_name}-subnet"
@@ -228,9 +262,10 @@ class VirtualMachineManager:
         }
 
         # Create the GPU VM
-        vm = self.compute_client.virtual_machines.begin_create_or_update(
+        poller = self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group_name, vm_name, vm_parameters
-        ).result()
+        )
+        vm = poller.result(timeout=timeout)
 
         # Define the NVIDIA GPU driver extension configuration
         extension_name = "NvidiaGpuDriverLinux"
@@ -299,6 +334,33 @@ class VirtualMachineManager:
         except Exception as e:
             print(f"Failed to delete virtual network {vnet_name}: {str(e)}")
 
+    def cleanup_network_resources(self, vm_name):
+        """Best-effort cleanup for partially created resources when VM create fails or times out."""
+        # Delete NIC
+        try:
+            nic_name = f"{vm_name}-nic"
+            self.network_client.network_interfaces.begin_delete(
+                self.resource_group_name, nic_name
+            ).result()
+        except Exception:
+            pass
+        # Delete Public IP
+        try:
+            public_ip_name = f"{vm_name}-public-ip"
+            self.network_client.public_ip_addresses.begin_delete(
+                self.resource_group_name, public_ip_name
+            ).result()
+        except Exception:
+            pass
+        # Delete VNet
+        try:
+            vnet_name = f"{vm_name}-vnet"
+            self.network_client.virtual_networks.begin_delete(
+                self.resource_group_name, vnet_name
+            ).result()
+        except Exception:
+            pass
+
     @get_retry_decorator()
     def copy_files_to_vm(self, source_directory, vm_name, username, ssh_private_key_path):
         # Get the public IP address of the VM
@@ -321,9 +383,11 @@ class VirtualMachineManager:
         sftp_client = ssh_client.open_sftp()
 
         # Copy files from the source directory to the VM
-        # Compress the source directory
+        # Compress the source directory using a unique temp tar path to avoid concurrency collisions
         source_directory = os.path.abspath(source_directory)
-        tar_file_path = f"{source_directory}.tar.gz"
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".tar.gz") as tmpf:
+            tar_file_path = tmpf.name
         with tarfile.open(tar_file_path, "w:gz") as tar:
             tar.add(source_directory, arcname=os.path.basename(source_directory))
         
@@ -336,8 +400,14 @@ class VirtualMachineManager:
         for _ in stdout: pass # Block until the tar command completes
 
         # Remove the compressed file from the VM and the local machine
-        sftp_client.remove(remote_tar_file_path)
-        os.remove(tar_file_path)
+        try:
+            sftp_client.remove(remote_tar_file_path)
+        except FileNotFoundError:
+            pass
+        try:
+            os.remove(tar_file_path)
+        except FileNotFoundError:
+            pass
 
         # Close the SFTP client and SSH connection
         sftp_client.close()
@@ -447,6 +517,30 @@ class VirtualMachineManager:
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
             ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key)
+            try:
+                transport = ssh_client.get_transport()
+                if transport:
+                    transport.set_keepalive(30)
+            except Exception:
+                pass
+            try:
+                transport = ssh_client.get_transport()
+                if transport:
+                    transport.set_keepalive(30)
+            except Exception:
+                pass
+            try:
+                transport = ssh_client.get_transport()
+                if transport:
+                    transport.set_keepalive(30)
+            except Exception:
+                pass
+            try:
+                transport = ssh_client.get_transport()
+                if transport:
+                    transport.set_keepalive(30)
+            except Exception:
+                pass
 
             # Create SFTP client
             sftp_client = ssh_client.open_sftp()
@@ -467,7 +561,8 @@ class VirtualMachineManager:
 
                 # Run setup script with sudo (passing username as argument)
                 print(f"Setting up environment on VM {vm_name}")
-                _, stdout, stderr = ssh_client.exec_command(f"sudo bash {remote_setup_path} {username}")
+                # Use sudo -n to fail fast if passwordless sudo is not configured
+                _, stdout, stderr = ssh_client.exec_command(f"sudo -n bash {remote_setup_path} {username}")
                 
                 # Create log file 
                 with open(f"{log_dir}/setup_vm_log_{task_id}.log", 'w') as f:
@@ -600,6 +695,285 @@ except Exception as e:
         except Exception as e:
             print(f"Error running agent on VM {vm_name}: {e}")
             raise
+
+    def run_agent_task_on_vm_no_setup(self, agent_function, vm_name, task_id, input_data, agent_args, run_id, username, ssh_private_key_path):
+        """
+        Run a single agent task on an already-initialized VM. Assumes conda env & agent files exist.
+        - Writes input.json and agent_args.json
+        - Removes any previous output.json
+        - Runs the agent and streams logs to agent_trace.log
+        """
+        try:
+            public_ip_address = self.network_client.public_ip_addresses.get(
+                self.resource_group_name, f"{vm_name}-public-ip"
+            ).ip_address
+
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key)
+
+            sftp_client = ssh_client.open_sftp()
+            try:
+                # Remove any previous output.json to avoid false-positive completion
+                try:
+                    sftp_client.remove(f"/home/{username}/output.json")
+                except FileNotFoundError:
+                    pass
+
+                # Write input data and agent args
+                with sftp_client.open(f"/home/{username}/input.json", 'w') as f:
+                    f.write(json.dumps({task_id: input_data}))
+                with sftp_client.open(f"/home/{username}/agent_args.json", 'w') as f:
+                    f.write(json.dumps(agent_args))
+
+                # Create the runner script (re-usable per task)
+                script_content = f'''#!/usr/bin/env python3
+import os
+import json
+import importlib.util
+import weave
+import traceback
+
+try:
+    weave.init("{run_id}")
+    with open("input.json", "r") as f:
+        input_data = json.load(f)
+    with open("agent_args.json", "r") as f:
+        agent_args = json.load(f)
+    module_name = "{agent_function.rsplit(".", 1)[0]}"
+    function_name = "{agent_function.rsplit(".", 1)[1]}"
+    spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/{username}", module_name + ".py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    agent = getattr(module, function_name)
+    with weave.attributes({{"weave_task_id": "{task_id}"}}):
+        result = agent(input_data, **agent_args)
+    with open("output.json", "w") as f:
+        json.dump(result, f)
+except Exception as e:
+    with open("error.log", "w") as f:
+        f.write(f"ERROR: {{str(e)}}\\n")
+        f.write(traceback.format_exc())
+    raise
+'''
+
+                script_path = f"/home/{username}/run_agent.py"
+                with sftp_client.open(script_path, 'w') as f:
+                    f.write(script_content)
+                ssh_client.exec_command(f"chmod +x {script_path}")
+
+                cmd = f"source /home/{username}/init_conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
+                stdin, stdout, stderr = ssh_client.exec_command(cmd)
+                stdout.channel.close()
+                stderr.channel.close()
+            finally:
+                sftp_client.close()
+                ssh_client.close()
+        except Exception as e:
+            print(f"Error running no-setup task on VM {vm_name}: {e}")
+            raise
+
+    def download_files_from_vm(self, vm_name, username, ssh_private_key_path, remote_to_local: dict):
+        """Download specific files from VM via SFTP. Skips missing files."""
+        try:
+            public_ip_address = self.network_client.public_ip_addresses.get(
+                self.resource_group_name, f"{vm_name}-public-ip"
+            ).ip_address
+
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key)
+
+            sftp_client = ssh_client.open_sftp()
+            try:
+                for remote_path, local_path in remote_to_local.items():
+                    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+                    try:
+                        sftp_client.get(remote_path, local_path)
+                    except FileNotFoundError:
+                        pass
+            finally:
+                sftp_client.close()
+                ssh_client.close()
+        except Exception as e:
+            print(f"Error downloading files from VM {vm_name}: {e}")
+            raise
+
+    def upload_dir_to_vm(self, vm_name, username, ssh_private_key_path, local_dir: str, remote_dir: str):
+        """Recursively upload a local directory to a specific remote directory on the VM via SFTP."""
+        try:
+            public_ip_address = self.network_client.public_ip_addresses.get(
+                self.resource_group_name, f"{vm_name}-public-ip"
+            ).ip_address
+
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key)
+
+            sftp = ssh_client.open_sftp()
+            try:
+                # ensure remote_dir exists
+                self._sftp_mkdir_p(sftp, remote_dir)
+
+                for root, dirs, files in os.walk(local_dir):
+                    rel = os.path.relpath(root, local_dir)
+                    rel = "" if rel == "." else rel
+                    remote_root = remote_dir if rel == "" else f"{remote_dir}/{rel}"
+                    self._sftp_mkdir_p(sftp, remote_root)
+                    for d in dirs:
+                        self._sftp_mkdir_p(sftp, f"{remote_root}/{d}")
+                    for f in files:
+                        sftp.put(os.path.join(root, f), f"{remote_root}/{f}")
+            finally:
+                sftp.close()
+                ssh_client.close()
+        except Exception as e:
+            print(f"Error uploading directory to VM {vm_name}: {e}")
+            raise
+
+    def _sftp_mkdir_p(self, sftp, remote_path: str):
+        parts = remote_path.strip("/").split("/")
+        cur = "/"
+        for p in parts:
+            cur = os.path.join(cur, p)
+            try:
+                sftp.stat(cur)
+            except FileNotFoundError:
+                try:
+                    sftp.mkdir(cur)
+                except IOError:
+                    pass
+
+    def run_agent_task_on_vm_parallel(self, agent_function, vm_name, task_id, input_data, agent_args, run_id, username, ssh_private_key_path, workdir: str):
+        """
+        Launch a single agent task under a dedicated working directory (for parallel runs on one VM).
+        Does not block until completion.
+        """
+        try:
+            public_ip_address = self.network_client.public_ip_addresses.get(
+                self.resource_group_name, f"{vm_name}-public-ip"
+            ).ip_address
+
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key)
+
+            sftp_client = ssh_client.open_sftp()
+            try:
+                # ensure workdir exists
+                self._sftp_mkdir_p(sftp_client, workdir)
+
+                # Remove previous artifacts
+                for fp in ("output.json", "agent_trace.log", "error.log"):
+                    try:
+                        sftp_client.remove(f"{workdir}/{fp}")
+                    except FileNotFoundError:
+                        pass
+
+                # Write input and args
+                with sftp_client.open(f"{workdir}/input.json", 'w') as f:
+                    f.write(json.dumps({task_id: input_data}))
+                with sftp_client.open(f"{workdir}/agent_args.json", 'w') as f:
+                    f.write(json.dumps(agent_args))
+
+                # Create per-task runner script in workdir
+                script_content = f'''#!/usr/bin/env python3
+import os, json, importlib.util, weave, traceback
+try:
+    weave.init("{run_id}")
+    agent_base = "/home/{username}"
+    workdir = "{workdir}"
+    # Load inputs from the task workdir
+    with open(os.path.join(workdir, "input.json"), "r") as f:
+        input_data = json.load(f)
+    with open(os.path.join(workdir, "agent_args.json"), "r") as f:
+        agent_args = json.load(f)
+    # Import agent from agent base dir
+    module_name = "{agent_function.rsplit(".", 1)[0]}"
+    function_name = "{agent_function.rsplit(".", 1)[1]}"
+    spec = importlib.util.spec_from_file_location(module_name, os.path.join(agent_base, module_name + ".py"))
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    agent = getattr(module, function_name)
+    # Ensure agent's relative file opens (like ./code_agent_prompt.txt) work
+    os.chdir(agent_base)
+    with weave.attributes({{"weave_task_id": "{task_id}"}}):
+        result = agent(input_data, **agent_args)
+    # Save output back to the task workdir
+    with open(os.path.join(workdir, "output.json"), "w") as f:
+        json.dump(result, f)
+except Exception as e:
+    with open(os.path.join("{workdir}", "error.log"), "w") as f:
+        f.write(f"ERROR: {{str(e)}}\\n"); f.write(traceback.format_exc())
+    raise
+'''
+                script_path = f"{workdir}/run_agent.py"
+                with sftp_client.open(script_path, 'w') as f:
+                    f.write(script_content)
+                ssh_client.exec_command(f"chmod +x {script_path}")
+
+                # Execute in background so we don't block
+                cmd = f"bash -lc 'source /home/{username}/init_conda.sh && conda activate agent_env && cd {workdir} && nohup python run_agent.py > agent_trace.log 2>&1 &'"
+                ssh_client.exec_command(cmd)
+            finally:
+                sftp_client.close()
+                ssh_client.close()
+        except Exception as e:
+            print(f"Error launching parallel task on VM {vm_name}: {e}")
+            raise
+
+    def check_task_completion_at(self, vm_name, username, ssh_private_key_path, output_path: str):
+        try:
+            public_ip_address = self.network_client.public_ip_addresses.get(
+                self.resource_group_name, f"{vm_name}-public-ip"
+            ).ip_address
+
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key, timeout=15)
+            try:
+                transport = ssh_client.get_transport()
+                if transport:
+                    transport.set_keepalive(30)
+            except Exception:
+                pass
+
+            sftp_client = ssh_client.open_sftp()
+            try:
+                with sftp_client.open(output_path) as f:
+                    return json.loads(f.read().decode("utf-8"))
+            except FileNotFoundError:
+                return None
+            finally:
+                sftp_client.close()
+                ssh_client.close()
+        except Exception as e:
+            print(f"Error checking completion at {output_path} on {vm_name}: {e}")
+            return None
+
+    def get_file_text(self, vm_name, username, ssh_private_key_path, remote_path: str):
+        try:
+            public_ip_address = self.network_client.public_ip_addresses.get(
+                self.resource_group_name, f"{vm_name}-public-ip"
+            ).ip_address
+            ssh_client = paramiko.SSHClient(); ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key, timeout=15)
+            sftp_client = ssh_client.open_sftp()
+            try:
+                with sftp_client.open(remote_path) as f:
+                    return f.read().decode('utf-8')
+            except FileNotFoundError:
+                return None
+            finally:
+                sftp_client.close(); ssh_client.close()
+        except Exception as e:
+            print(f"Error reading {remote_path} from {vm_name}: {e}")
+            return None
     
 
     @get_retry_decorator(max_attempts=2, initial_wait=5)
