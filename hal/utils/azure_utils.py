@@ -8,6 +8,8 @@ from azure.identity import (
     ManagedIdentityCredential,
     ChainedTokenCredential,
 )
+from azure.core.credentials import AccessToken
+import threading
 import paramiko
 import os
 import tarfile
@@ -26,6 +28,27 @@ import time
 import traceback
 import uuid
 
+class CliCachedCredential:
+    """Azure CLI credential wrapper with in-memory caching and a concurrency lock.
+
+    Reduces failures under high concurrency by avoiding many parallel `az` invocations.
+    """
+    def __init__(self, process_timeout: int = 60):
+        self._cli = AzureCliCredential(process_timeout=process_timeout)
+        self._lock = threading.Lock()
+        self._cached: AccessToken | None = None
+
+    def get_token(self, *scopes, **kwargs) -> AccessToken:
+        # scopes is a tuple; pass through to underlying CLI credential
+        # Refresh if missing or expiring within 120s
+        now = int(time.time())
+        with self._lock:
+            if self._cached is not None and (self._cached.expires_on - now) > 120:
+                return self._cached
+            token = self._cli.get_token(*scopes, **kwargs)
+            self._cached = token
+            return token
+
 # Define retry decorator with tenacity
 def get_retry_decorator(max_attempts=3, initial_wait=1, max_wait=30):
     return retry(
@@ -42,8 +65,8 @@ class VirtualMachineManager:
         # Select credential strategy
         cred_mode = os.getenv("AZURE_CREDENTIAL", "").lower().strip()
         if cred_mode == "cli":
-            self.credential = AzureCliCredential()
-            print("[AzureAuth] Using AzureCliCredential")
+            self.credential = CliCachedCredential(process_timeout=int(os.getenv("AZURE_CLI_TIMEOUT", "60")))
+            print("[AzureAuth] Using AzureCliCredential (cached)")
         elif cred_mode == "env":
             self.credential = EnvironmentCredential()
             print("[AzureAuth] Using EnvironmentCredential")
@@ -53,12 +76,12 @@ class VirtualMachineManager:
         else:
             # Prefer CLI first then fallback to Default to reduce provider churn
             try:
-                cli = AzureCliCredential()
+                cli = CliCachedCredential(process_timeout=int(os.getenv("AZURE_CLI_TIMEOUT", "60")))
                 chained = ChainedTokenCredential(cli, DefaultAzureCredential(exclude_cli_credential=True))
                 # Probe to ensure CLI works; otherwise fall back to Default
                 chained.get_token("https://management.azure.com/.default")
                 self.credential = chained
-                print("[AzureAuth] Using ChainedTokenCredential(AzureCli, Default)")
+                print("[AzureAuth] Using ChainedTokenCredential(AzureCli cached, Default)")
             except Exception:
                 self.credential = DefaultAzureCredential()
                 print("[AzureAuth] Using DefaultAzureCredential")
