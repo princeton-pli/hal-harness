@@ -3,6 +3,7 @@ from sweet_rl.environments.human_design_interaction_env import HumanDesignIntera
 from openai import OpenAI
 import concurrent.futures
 import anthropic
+import os
 
 # from google import genai
 # response = client.models.generate_content(
@@ -22,6 +23,12 @@ class APIAgent:
         self.client = client
         self.agent_prompt = agent_prompt
         self.reasoning_effort = reasoning_effort
+        # Detect OpenRouter client by base_url
+        self._is_openrouter = False
+        try:
+            self._is_openrouter = 'openrouter.ai' in str(getattr(self.client, 'base_url', ''))
+        except Exception:
+            self._is_openrouter = False
 
     def get_action(self, messages):
         if messages is None:
@@ -54,13 +61,29 @@ class APIAgent:
             )
         
         elif self.reasoning_effort is not None:
-            completion = self.client.chat.completions.create(
-                model=self.model_id,
-                messages=messages,
-                max_completion_tokens=16384,
-                temperature=self.temperature,
-                reasoning_effort=self.reasoning_effort,
-            )
+            # Handle provider-specific reasoning parameters
+            if self._is_openrouter:
+                effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
+                reasoning_tokens = effort_to_tokens.get(str(self.reasoning_effort).lower(), 2048)
+                completion = self.client.chat.completions.create(
+                    model=self.model_id,
+                    messages=messages,
+                    max_tokens=16384,
+                    temperature=self.temperature,
+                    extra_body={
+                        "reasoning": {"max_tokens": reasoning_tokens},
+                        "include_reasoning": True,
+                    },
+                )
+            else:
+                # OpenAI reasoning models (o3, o4-mini) require max_completion_tokens
+                completion = self.client.chat.completions.create(
+                    model=self.model_id,
+                    messages=messages,
+                    max_completion_tokens=16384,
+                    temperature=self.temperature,
+                    reasoning_effort=self.reasoning_effort,
+                )
         else:
             completion = self.client.chat.completions.create(
                 model=self.model_id,
@@ -77,14 +100,28 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     task_id = list(input.keys())[0]
     task_data = input[task_id]
     env_client = OpenAI()
-    if "gpt"  in kwargs['model_name'] or "o3" in kwargs['model_name'] or "o4-mini" in kwargs['model_name']:
+    # Route agent client based on model_name/provider
+    provider = str(kwargs.get('provider', '')).lower()
+    if provider == 'openrouter' or "openrouter/" in kwargs['model_name']:
+        # Use OpenRouter OpenAI-compatible endpoint
+        agent_client = OpenAI(
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
+        )
+        # OpenRouter expects provider-native model id (strip openrouter/ prefix)
+        kwargs['model_name'] = kwargs['model_name'].replace('openrouter/', '')
+    elif "gpt"  in kwargs['model_name'] or "o3" in kwargs['model_name'] or "o4-mini" in kwargs['model_name']:
         agent_client = OpenAI()
     elif kwargs['model_name'] == "claude-3-7-sonnet-20250219":
         agent_client = anthropic.Anthropic()
     elif "gemini" in kwargs['model_name']:
+        # Use Google's OpenAI-compatible endpoint with GEMINI_API_KEY
         agent_client = OpenAI(
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            api_key=os.getenv('GEMINI_API_KEY'),
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
+        # Normalize model id for OpenAI-compatible endpoint (no vendor prefix)
+        kwargs['model_name'] = kwargs['model_name'].replace('gemini/', '')
     elif "deepseek" in kwargs['model_name']:
         from together import Together
         agent_client = Together()
@@ -124,4 +161,3 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     return {task_id: {"answer": answer, "dialogue_history": dialogue_history, "task":{
                       "test_cases": task_data["test_cases"] if task_data["task_type"] == "code" else None, 
                       "ground_truth": task_data["hidden_information"]}}}
-
