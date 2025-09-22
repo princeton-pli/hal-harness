@@ -69,6 +69,11 @@ class ColBenchBenchmark(BaseBenchmark):
         # print("="*100)
         
         super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
+        # Configurable success threshold for frontend similarity (cosine). Default 0.8
+        try:
+            self.frontend_success_threshold: float = float(self.config.get('colbench_frontend_success_threshold', 0.8))
+        except Exception:
+            self.frontend_success_threshold = 0.8
     
         task_path = BACKEND_TASK_PATH if benchmark_name == 'colbench_backend_programming' else FRONTEND_TASK_PATH
         if num_tasks == 0:
@@ -105,10 +110,20 @@ class ColBenchBenchmark(BaseBenchmark):
              
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-        """Evaluate agent outputs using AppWorld evaluation"""
+        """Evaluate agent outputs using AppWorld evaluation.
+
+        Returns a mapping from task_id to per-task score/result so that
+        downstream metrics can include successful/failed task IDs.
+        """
+        # Preserve task order to align results
+        task_ids: List[str] = list(agent_output.keys())
         annotation_results = list(agent_output.values())
+        
+        # Backend programming: code_evaluate returns per-sample correctness (e.g., 0/1)
         if self.benchmark_name == 'colbench_backend_programming':
-            return code_evaluate(annotation_results)
+            per_sample = code_evaluate(annotation_results)
+            # Map results back to their task IDs
+            return {task_ids[i]: per_sample[i] for i in range(len(per_sample))}
         evaluation_batch_size = min(20, len(annotation_results))
         answer_images = [a["answer"] for a in annotation_results]
         ground_truth_images = [a["task"]["ground_truth"] for a in annotation_results]
@@ -169,7 +184,8 @@ class ColBenchBenchmark(BaseBenchmark):
         #remove all files in cache folder
         for file in os.listdir(CACHE_PATH):
             os.remove(os.path.join(CACHE_PATH, file))
-        return similarities
+        # Map similarities back to task IDs
+        return {task_ids[i]: similarities[i] for i in range(len(similarities))}
     
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -181,12 +197,47 @@ class ColBenchBenchmark(BaseBenchmark):
         Returns:
             Dictionary with calculated metrics and task lists
         """
-        if self.benchmark_name == 'colbench_backend_programming':
-            results = {"average_correctness": sum(eval_results)/len(eval_results),
-                       "accuracy": sum([1 for correctness in eval_results if correctness == 1])/len(eval_results)}
+        # Normalize eval_results into a dict mapping task_id -> score
+        if isinstance(eval_results, dict):
+            task_scores = eval_results
         else:
-            results = {"average_correctness": sum(eval_results)/len(eval_results)}
+            # Backward compatibility: if a list was returned, map in dataset order
+            # Note: relies on the current benchmark dataset ordering
+            ids = list(self.get_dataset().keys())[:len(eval_results)]
+            task_scores = {ids[i]: eval_results[i] for i in range(len(eval_results))}
+
+        scores = list(task_scores.values())
+
+        if self.benchmark_name == 'colbench_backend_programming':
+            total = len(scores) if scores else 1
+            avg_correctness = sum(scores) / total
+            accuracy = sum(1 for s in scores if s == 1) / total
+            successful_tasks = [tid for tid, s in task_scores.items() if s == 1]
+            failed_tasks = [tid for tid, s in task_scores.items() if s != 1]
+            results = {
+                "average_correctness": avg_correctness,
+                "accuracy": accuracy,
+                "successful_tasks": successful_tasks,
+                "failed_tasks": failed_tasks,
+            }
+        else:
+            # Frontend design: interpret scores as cosine similarities and
+            # compute accuracy based on a configurable threshold.
+            total = len(scores) if scores else 1
+            avg_correctness = sum(scores) / total
+            # Allow overriding threshold via agent args if provided
+            try:
+                thr = float(self.agent_args.get('colbench_frontend_success_threshold', getattr(self, 'frontend_success_threshold', 0.8)))
+            except Exception:
+                thr = getattr(self, 'frontend_success_threshold', 0.8)
+            successful_tasks = [tid for tid, s in task_scores.items() if s >= thr]
+            failed_tasks = [tid for tid, s in task_scores.items() if s < thr]
+            accuracy = len(successful_tasks) / total if total else 0.0
+            results = {
+                "average_correctness": avg_correctness,
+                "accuracy": accuracy,
+                "successful_tasks": successful_tasks,
+                "failed_tasks": failed_tasks,
+                "similarity_threshold": thr,
+            }
         return results
-
-
-
