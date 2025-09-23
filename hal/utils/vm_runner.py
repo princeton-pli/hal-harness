@@ -252,7 +252,7 @@ class VMRunner:
                     raise RuntimeError(f"VM setup failed for {vm_name}")
 
                 # Launch all tasks in parallel on this VM with per-task workdirs
-                work_items = []  # list of dicts with task_id, workdir, start_time
+                work_items = []  # list of dicts with task_id, workdir, start_time, retries, input_data
                 for task_id, input_data in batch_items:
                     workdir = f"/home/agent/runs/{task_id}"
                     # Upload task-specific files to the workdir
@@ -306,6 +306,8 @@ class VMRunner:
                         "task_id": task_id,
                         "workdir": workdir,
                         "start": time.time(),
+                        "retries": 0,
+                        "input_data": input_data,
                     })
 
                 merged_batch_results: Dict[str, Any] = {}
@@ -367,7 +369,54 @@ class VMRunner:
                             merged_batch_results.update(result)
                             done_ids.append(tid)
                         else:
-                            # Check timeout per task
+                            # If error.log indicates transient weave/W&B outage, attempt an automatic restart
+                            err_text = await loop.run_in_executor(
+                                self._executor,
+                                functools.partial(
+                                    self.vm_manager.get_file_text,
+                                    vm_name=vm_name,
+                                    username="agent",
+                                    ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                                    remote_path=f"{info['workdir']}/error.log"
+                                )
+                            )
+                            should_restart = False
+                            if err_text:
+                                lowered = err_text.lower()
+                                transient_tokens = [
+                                    'api.wandb.ai',
+                                    'bad gateway',
+                                    'gql.transport.exceptions.transportservererror',
+                                    'weave init failed',
+                                    'wandb',
+                                ]
+                                if any(tok in lowered for tok in transient_tokens):
+                                    should_restart = True
+
+                            retry_limit = int(os.getenv('VM_TASK_RETRY_LIMIT', '3'))
+                            if should_restart and info.get('retries', 0) < retry_limit:
+                                # Relaunch the task: run_agent_task_on_vm_parallel clears old artifacts
+                                info['retries'] = info.get('retries', 0) + 1
+                                info['start'] = time.time()
+                                await loop.run_in_executor(
+                                    self._executor,
+                                    functools.partial(
+                                        self.vm_manager.run_agent_task_on_vm_parallel,
+                                        agent_function=agent_function,
+                                        vm_name=vm_name,
+                                        task_id=tid,
+                                        input_data=info.get('input_data', {}),
+                                        agent_args=agent_args,
+                                        run_id=run_id,
+                                        username="agent",
+                                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                                        workdir=info['workdir'],
+                                    )
+                                )
+                                # Continue monitoring without marking as done
+                                continue
+
+                            # Otherwise, check timeout per task
                             if time.time() - info['start'] >= timeout:
                                 merged_batch_results[tid] = f"TIMEOUT after {timeout} seconds"
                                 done_ids.append(tid)
@@ -376,7 +425,9 @@ class VMRunner:
                         pending.pop(tid, None)
 
                     if pending:
-                        await asyncio.sleep(30)
+                        # Poll interval; may be tuned via env
+                        poll_secs = int(os.getenv('VM_TASK_POLL_SECS', '30'))
+                        await asyncio.sleep(poll_secs)
 
                 return merged_batch_results
 
