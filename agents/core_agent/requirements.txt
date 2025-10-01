@@ -10,4 +10,4 @@ youtube_transcript_api>=0.6.2
 SpeechRecognition
 tiktoken
 pandas
-litellm==1.75.5.post1
+litellm @ git+https://github.com/BerriAI/litellm@05955042d57fcc32c73223221d69c8336ecd5994

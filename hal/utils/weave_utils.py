@@ -7,6 +7,7 @@ from typing import Dict, Any, Tuple, List, Optional
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from .logging_utils import print_step, print_warning, console, create_progress
 from datetime import datetime
+from weave.trace_server.trace_server_interface import CallsFilter, CallsQueryReq
 
 MODEL_PRICES_DICT = {
                 "text-embedding-3-small": {"prompt_tokens": 0.02/1e6, "completion_tokens": 0},
@@ -40,6 +41,10 @@ MODEL_PRICES_DICT = {
                 "o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "claude-3-5-sonnet-20240620": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "claude-3-5-sonnet-20241022": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "claude-sonnet-4-5": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-sonnet-4-5": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "claude-sonnet-4-5-20250929": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-sonnet-4-5-20250929": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "claude-opus-4-20250514": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "anthropic/claude-opus-4": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
@@ -211,39 +216,50 @@ def get_total_cost(client):
     # Fetch all the calls in the project
     print_step("Getting token usage data (this can take a while)...")
     calls = list(
-        client.get_calls(filter={"trace_roots_only": False}, include_costs=False)
+        client.server.calls_query_stream(
+            CallsQueryReq(
+                project_id=client._project_id(),
+                filter=CallsFilter(trace_roots_only=False),
+                columns=["summary"],
+            )
+        )
     )
 
     with create_progress() as progress:
         task = progress.add_task("Processing token usage data...", total=len(calls))
         for call in calls:
-            # If the call has costs, we add them to the total cost
-            try:
-                usage_items = call.summary["usage"].items()
-            except KeyError as e:
-                print("No usage data found for call:", call)
+            summary = getattr(call, "summary", None) or {}
+            usage = summary.get("usage")
+            if not usage:
+                progress.update(task, advance=1)
                 continue
-            for k, cost in usage_items:   
-                if k not in token_usage:
-                    token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
-                
-                requests += cost["requests"]
-                if "prompt_tokens" in cost:
-                    token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
-                if "input_tokens" in cost:    
-                    token_usage[k]["prompt_tokens"] += cost["input_tokens"]
-                if "cache_creation_input_tokens" in cost:
-                    token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
-                if "cache_read_input_tokens" in cost:
-                    token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
-                    
-                if "completion_tokens" in cost:
-                    token_usage[k]["completion_tokens"] += cost["completion_tokens"]
-                if "output_tokens" in cost:
-                    token_usage[k]["completion_tokens"] += cost["output_tokens"]
+
+            for model_name, cost in usage.items():
+                if model_name not in token_usage:
+                    token_usage[model_name] = {"prompt_tokens": 0, "completion_tokens": 0}
+
+                requests += cost.get("requests", 0)
+                token_usage[model_name]["prompt_tokens"] += cost.get("prompt_tokens", 0)
+                token_usage[model_name]["prompt_tokens"] += cost.get("input_tokens", 0)
+                token_usage[model_name]["prompt_tokens"] += cost.get("cache_creation_input_tokens", 0)
+                token_usage[model_name]["prompt_tokens"] += cost.get("cache_read_input_tokens", 0)
+
+                token_usage[model_name]["completion_tokens"] += cost.get("completion_tokens", 0)
+                token_usage[model_name]["completion_tokens"] += cost.get("output_tokens", 0)
+
             progress.update(task, advance=1)
-            
-    total_cost = sum(token_usage[k]["prompt_tokens"] * MODEL_PRICES_DICT[k]["prompt_tokens"] + token_usage[k]["completion_tokens"] * MODEL_PRICES_DICT[k]["completion_tokens"] for k in token_usage)
+
+    total_cost = 0
+    for model_name, usage in token_usage.items():
+        prices = MODEL_PRICES_DICT.get(model_name)
+        if prices is None:
+            print_warning(f"Model '{model_name}' not found in MODEL_PRICES_DICT. Skipping cost calculation.")
+            continue
+
+        total_cost += (
+            usage["prompt_tokens"] * prices["prompt_tokens"]
+            + usage["completion_tokens"] * prices["completion_tokens"]
+        )
     return total_cost, token_usage
 
             
@@ -424,34 +440,36 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
     print_step(f"Getting token usage data for task ID: {task_id}...")
     
     # Fetch all calls and filter by task_id
-    calls = list(client.get_calls(filter={"trace_roots_only": False}, include_costs=False))
-    task_calls = [call for call in calls if call.attributes.get('weave_task_id') == task_id]
+    calls = list(
+        client.server.calls_query_stream(
+            CallsQueryReq(
+                project_id=client._project_id(),
+                filter=CallsFilter(trace_roots_only=False),
+                columns=["summary", "attributes"],
+            )
+        )
+    )
+    task_calls = [call for call in calls if (getattr(call, "attributes", {}) or {}).get('weave_task_id') == task_id]
     
     for call in task_calls:
         # If the call has usage data, add it to the token usage
-        try:
-            usage_items = call.summary["usage"].items()
-        except KeyError:
+        summary = getattr(call, "summary", None) or {}
+        usage = summary.get("usage")
+        if not usage:
             continue
-            
-        for k, cost in usage_items:   
-            if k not in token_usage:
-                token_usage[k] = {"prompt_tokens": 0, "completion_tokens": 0}
-            
-            requests += cost["requests"]
-            if "prompt_tokens" in cost:
-                token_usage[k]["prompt_tokens"] += cost["prompt_tokens"]
-            if "input_tokens" in cost:    
-                token_usage[k]["prompt_tokens"] += cost["input_tokens"]
-            if "cache_creation_input_tokens" in cost:
-                token_usage[k]["prompt_tokens"] += cost["cache_creation_input_tokens"]
-            if "cache_read_input_tokens" in cost:
-                token_usage[k]["prompt_tokens"] += cost["cache_read_input_tokens"]
-                
-            if "completion_tokens" in cost:
-                token_usage[k]["completion_tokens"] += cost["completion_tokens"]
-            if "output_tokens" in cost:
-                token_usage[k]["completion_tokens"] += cost["output_tokens"]
+
+        for model_name, cost in usage.items():
+            if model_name not in token_usage:
+                token_usage[model_name] = {"prompt_tokens": 0, "completion_tokens": 0}
+
+            requests += cost.get("requests", 0)
+            token_usage[model_name]["prompt_tokens"] += cost.get("prompt_tokens", 0)
+            token_usage[model_name]["prompt_tokens"] += cost.get("input_tokens", 0)
+            token_usage[model_name]["prompt_tokens"] += cost.get("cache_creation_input_tokens", 0)
+            token_usage[model_name]["prompt_tokens"] += cost.get("cache_read_input_tokens", 0)
+
+            token_usage[model_name]["completion_tokens"] += cost.get("completion_tokens", 0)
+            token_usage[model_name]["completion_tokens"] += cost.get("output_tokens", 0)
     
     # Calculate total cost from token usage
     for k in token_usage:
