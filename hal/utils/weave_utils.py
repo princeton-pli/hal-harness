@@ -125,25 +125,37 @@ CACHED_PRICE_OVERRIDES = {
 }
 
 def _normalize_usage(cost: Dict[str, Any]) -> Tuple[int, int, int, int]:
-    """Return prompt, completion, cache‑creation, and cache‑read counts from provider usage."""
-    prompt = (
-        cost.get("prompt_tokens", 0)
-        + cost.get("input_tokens", 0)
-        + cost.get("inputTokens", 0)
-    )
+    if "prompt_tokens" in cost or "completion_tokens" in cost:
+        # OpenAI-style
+        prompt_tokens = cost.get("prompt_tokens", 0)
+        cached_input = cost.get("prompt_tokens_details", {}).get("cached_tokens", 0)
+        cache_creation = 0  # OpenAI doesn't report cache writes separately
+        
+    elif "input_tokens" in cost or "output_tokens" in cost:
+        # Anthropic-style
+        fresh_input = cost.get("input_tokens", 0)
+        cached_input = cost.get("cache_read_input_tokens", 0)
+        cache_creation = cost.get("cache_creation_input_tokens", 0)
+        prompt_tokens = fresh_input + cached_input
+        
+    elif "inputTokens" in cost or "outputTokens" in cost:
+        # Bedrock-style
+        prompt_tokens = cost.get("inputTokens", 0)
+        cached_input = cost.get("cacheReadInputTokens", 0)
+        cache_creation = cost.get("cacheWriteInputTokens", 0)
+        
+    else:
+        prompt_tokens = 0
+        cached_input = 0
+        cache_creation = 0
+    
     completion = (
         cost.get("completion_tokens", 0)
         + cost.get("output_tokens", 0)
         + cost.get("outputTokens", 0)
     )
-    cache_create = cost.get("cache_creation_input_tokens", 0) \
-        + cost.get("cacheWriteInputTokens", 0)
-    cache_read = (
-        cost.get("cache_read_input_tokens", 0)
-        + cost.get("cacheReadInputTokens", 0)
-        + cost.get("prompt_tokens_details", {}).get("cached_tokens", 0)
-    )
-    return prompt, completion, cache_create, cache_read
+    
+    return prompt_tokens, cached_input, cache_creation, completion
 
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
     """Fetch Weave calls from the API"""
@@ -256,11 +268,12 @@ def get_total_cost(client):
                     }
                 
                 requests += cost.get("requests", 0)
-                p, c, cc, cr = _normalize_usage(cost)
-                token_usage[k]["prompt_tokens"] += p
-                token_usage[k]["completion_tokens"] += c
-                token_usage[k]["cache_creation_input_tokens"] += cc
-                token_usage[k]["cache_read_input_tokens"] += cr
+                prompt_tokens, cached_input, cache_creation, completion = _normalize_usage(cost)
+                
+                token_usage[k]["prompt_tokens"] += prompt_tokens
+                token_usage[k]["completion_tokens"] += completion
+                token_usage[k]["cache_creation_input_tokens"] += cache_creation
+                token_usage[k]["cache_read_input_tokens"] += cached_input
             progress.update(task, advance=1)
             
     total_cost = 0
@@ -273,8 +286,11 @@ def get_total_cost(client):
         cache_create_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
         cache_read_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
         
+        # Calculate fresh input tokens when needed for cost calculation
+        fresh_input_tokens = usage["prompt_tokens"] - usage["cache_read_input_tokens"]
+        
         total_cost += (
-            usage["prompt_tokens"] * prices.get("prompt_tokens", 0)
+            fresh_input_tokens * prices.get("prompt_tokens", 0)
             + usage["cache_creation_input_tokens"] * cache_create_price
             + usage["cache_read_input_tokens"] * cache_read_price
             + usage["completion_tokens"] * prices.get("completion_tokens", 0)
@@ -479,11 +495,12 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
                 }
             
             requests += cost.get("requests", 0)
-            p, c, cc, cr = _normalize_usage(cost)
-            token_usage[k]["prompt_tokens"] += p
-            token_usage[k]["completion_tokens"] += c
-            token_usage[k]["cache_creation_input_tokens"] += cc
-            token_usage[k]["cache_read_input_tokens"] += cr
+            prompt_tokens, cached_input, cache_creation, completion = _normalize_usage(cost)
+            
+            token_usage[k]["prompt_tokens"] += prompt_tokens
+            token_usage[k]["completion_tokens"] += completion
+            token_usage[k]["cache_creation_input_tokens"] += cache_creation
+            token_usage[k]["cache_read_input_tokens"] += cached_input
     
     # Calculate total cost from token usage
     for k, usage in token_usage.items():
@@ -496,8 +513,11 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
         cache_create_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
         cache_read_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
         
+        # Calculate fresh input tokens when needed for cost calculation
+        fresh_input_tokens = usage["prompt_tokens"] - usage["cache_read_input_tokens"]
+        
         model_cost = (
-            usage["prompt_tokens"] * prices.get("prompt_tokens", 0)
+            fresh_input_tokens * prices.get("prompt_tokens", 0)
             + usage["cache_creation_input_tokens"] * cache_create_price
             + usage["cache_read_input_tokens"] * cache_read_price
             + usage["completion_tokens"] * prices.get("completion_tokens", 0)
