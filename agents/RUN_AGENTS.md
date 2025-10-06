@@ -151,3 +151,24 @@ hal-eval --benchmark taubench_retail \
     -A provider=openai \
     --max_concurrent 10
 ```
+
+
+### SWE-Agent
+
+First, you need to create a new conda environment using the follwoing command:
+```bash
+conda create -n swe-agent-1.0 python=3.11 -y
+conda activate swe-agent-1.0
+
+cd agents/SWE-agent-v1.0
+python -m pip install --upgrade pip && pip install --editable .
+
+conda run -n swe-agent-1.0 pip install "gql<4" # pin gql to v3
+```
+
+Run evaluations using SWE-Agent
+```bash
+model_name="claude-opus-4-1-20250805"
+
+hal-eval --benchmark "swebench_verified_mini" --agent_dir agents/SWE-agent-v1.0 --agent_function main.run --agent_name "SWE-Agent($model_name)" -A agent.model.per_instance_cost_limit=$max_cost_limit -A agent.model.name=$model_name -A config=agents/SWE-agent-v1.0/config/benchmarks/250225_anthropic_filemap_simple_review.yaml --max_concurrent 1 --conda_env_name swe-agent-1.0
+```
