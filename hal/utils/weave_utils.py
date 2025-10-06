@@ -127,6 +127,56 @@ MODEL_PRICES_DICT = {
                 "gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
 }
 
+CACHED_PRICE_OVERRIDES = {
+    "o4-mini-2025-04-16": 0.275/1e6,
+    "openai/o4-mini-2025-04-16": 0.275/1e6,
+    "o3-mini-2025-01-31": 0.55/1e6,
+    "openai/o3-mini-2025-01-31": 0.55/1e6,
+    "claude-3-7-sonnet-20250219": 0.30/1e6,
+    "anthropic/claude-3-7-sonnet-20250219": 0.30/1e6,
+    "claude-opus-4-20250514": 1.50/1e6,
+    "anthropic/claude-opus-4-20250514": 1.50/1e6,
+    "claude-opus-4.1-20250805": 1.50/1e6,
+    "anthropic/claude-opus-4.1-20250805": 1.50/1e6,
+    "gpt-4.1": 0.50/1e6,
+    "gpt-5-2025-08-07": 0.125/1e6,
+    "o3-2025-04-16": 0.5/1e6,
+    "openai/o3-2025-04-16": 0.5/1e6,
+}
+
+def _normalize_usage(cost: Dict[str, Any]) -> Tuple[int, int, int, int]:
+    if "prompt_tokens" in cost or "completion_tokens" in cost:
+        # OpenAI-style
+        prompt_tokens = cost.get("prompt_tokens", 0)
+        cached_input = cost.get("prompt_tokens_details", {}).get("cached_tokens", 0)
+        cache_creation = 0  # OpenAI doesn't report cache writes separately
+        
+    elif "input_tokens" in cost or "output_tokens" in cost:
+        # Anthropic-style
+        fresh_input = cost.get("input_tokens", 0)
+        cached_input = cost.get("cache_read_input_tokens", 0)
+        cache_creation = cost.get("cache_creation_input_tokens", 0)
+        prompt_tokens = fresh_input + cached_input
+        
+    elif "inputTokens" in cost or "outputTokens" in cost:
+        # Bedrock-style
+        prompt_tokens = cost.get("inputTokens", 0)
+        cached_input = cost.get("cacheReadInputTokens", 0)
+        cache_creation = cost.get("cacheWriteInputTokens", 0)
+        
+    else:
+        prompt_tokens = 0
+        cached_input = 0
+        cache_creation = 0
+    
+    completion = (
+        cost.get("completion_tokens", 0)
+        + cost.get("output_tokens", 0)
+        + cost.get("outputTokens", 0)
+    )
+    
+    return prompt_tokens, cached_input, cache_creation, completion
+
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
     """Fetch Weave calls from the API"""
     calls = list(client.server.calls_query_stream({
@@ -233,32 +283,42 @@ def get_total_cost(client):
             if not usage:
                 progress.update(task, advance=1)
                 continue
-
-            for model_name, cost in usage.items():
-                if model_name not in token_usage:
-                    token_usage[model_name] = {"prompt_tokens": 0, "completion_tokens": 0}
-
+            for k, cost in usage_items:   
+                if k not in token_usage:
+                    token_usage[k] = {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "cache_creation_input_tokens": 0,
+                        "cache_read_input_tokens": 0,
+                    }
+                
                 requests += cost.get("requests", 0)
-                token_usage[model_name]["prompt_tokens"] += cost.get("prompt_tokens", 0)
-                token_usage[model_name]["prompt_tokens"] += cost.get("input_tokens", 0)
-                token_usage[model_name]["prompt_tokens"] += cost.get("cache_creation_input_tokens", 0)
-                token_usage[model_name]["prompt_tokens"] += cost.get("cache_read_input_tokens", 0)
-
-                token_usage[model_name]["completion_tokens"] += cost.get("completion_tokens", 0)
-                token_usage[model_name]["completion_tokens"] += cost.get("output_tokens", 0)
-
+                prompt_tokens, cached_input, cache_creation, completion = _normalize_usage(cost)
+                
+                token_usage[k]["prompt_tokens"] += prompt_tokens
+                token_usage[k]["completion_tokens"] += completion
+                token_usage[k]["cache_creation_input_tokens"] += cache_creation
+                token_usage[k]["cache_read_input_tokens"] += cached_input
             progress.update(task, advance=1)
-
+            
     total_cost = 0
-    for model_name, usage in token_usage.items():
-        prices = MODEL_PRICES_DICT.get(model_name)
-        if prices is None:
-            print_warning(f"Model '{model_name}' not found in MODEL_PRICES_DICT. Skipping cost calculation.")
+    for k, usage in token_usage.items():
+        if k not in MODEL_PRICES_DICT:
             continue
-
+        prices = MODEL_PRICES_DICT[k]
+        
+        # Get cached token prices from overrides or fall back to prompt token price
+        cache_create_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
+        cache_read_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
+        
+        # Calculate fresh input tokens when needed for cost calculation
+        fresh_input_tokens = usage["prompt_tokens"] - usage["cache_read_input_tokens"]
+        
         total_cost += (
-            usage["prompt_tokens"] * prices["prompt_tokens"]
-            + usage["completion_tokens"] * prices["completion_tokens"]
+            fresh_input_tokens * prices.get("prompt_tokens", 0)
+            + usage["cache_creation_input_tokens"] * cache_create_price
+            + usage["cache_read_input_tokens"] * cache_read_price
+            + usage["completion_tokens"] * prices.get("completion_tokens", 0)
         )
     return total_cost, token_usage
 
@@ -457,30 +517,45 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
         usage = summary.get("usage")
         if not usage:
             continue
-
-        for model_name, cost in usage.items():
-            if model_name not in token_usage:
-                token_usage[model_name] = {"prompt_tokens": 0, "completion_tokens": 0}
-
+            
+        for k, cost in usage_items:   
+            if k not in token_usage:
+                token_usage[k] = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                }
+            
             requests += cost.get("requests", 0)
-            token_usage[model_name]["prompt_tokens"] += cost.get("prompt_tokens", 0)
-            token_usage[model_name]["prompt_tokens"] += cost.get("input_tokens", 0)
-            token_usage[model_name]["prompt_tokens"] += cost.get("cache_creation_input_tokens", 0)
-            token_usage[model_name]["prompt_tokens"] += cost.get("cache_read_input_tokens", 0)
-
-            token_usage[model_name]["completion_tokens"] += cost.get("completion_tokens", 0)
-            token_usage[model_name]["completion_tokens"] += cost.get("output_tokens", 0)
+            prompt_tokens, cached_input, cache_creation, completion = _normalize_usage(cost)
+            
+            token_usage[k]["prompt_tokens"] += prompt_tokens
+            token_usage[k]["completion_tokens"] += completion
+            token_usage[k]["cache_creation_input_tokens"] += cache_creation
+            token_usage[k]["cache_read_input_tokens"] += cached_input
     
     # Calculate total cost from token usage
-    for k in token_usage:
-        if k in MODEL_PRICES_DICT:
-            model_cost = (
-                token_usage[k]["prompt_tokens"] * MODEL_PRICES_DICT[k]["prompt_tokens"] +
-                token_usage[k]["completion_tokens"] * MODEL_PRICES_DICT[k]["completion_tokens"]
-            )
-            total_cost += model_cost
-        else:
+    for k, usage in token_usage.items():
+        if k not in MODEL_PRICES_DICT:
             print_warning(f"Model '{k}' not found in MODEL_PRICES_DICT. Skipping cost calculation.")
+            continue
+        prices = MODEL_PRICES_DICT[k]
+        
+        # Get cached token prices from overrides or fall back to prompt token price
+        cache_create_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
+        cache_read_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
+        
+        # Calculate fresh input tokens when needed for cost calculation
+        fresh_input_tokens = usage["prompt_tokens"] - usage["cache_read_input_tokens"]
+        
+        model_cost = (
+            fresh_input_tokens * prices.get("prompt_tokens", 0)
+            + usage["cache_creation_input_tokens"] * cache_create_price
+            + usage["cache_read_input_tokens"] * cache_read_price
+            + usage["completion_tokens"] * prices.get("completion_tokens", 0)
+        )
+        total_cost += model_cost
     print_step(f"Cost for task ID: {task_id} is ${total_cost} for {len(task_calls)} calls.")
     return {
         "total_cost": total_cost,
