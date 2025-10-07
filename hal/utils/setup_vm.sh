@@ -67,10 +67,8 @@ su - $USERNAME -c "bash -c '\
     if [ -f requirements.txt ]; then \
         echo \"Installing requirements...\" && \
         pip install -r requirements.txt && \
-        echo \"Installing weave...\" && \
-        pip install weave==0.51.41 && \
-        echo \"Pinning gql and wandb for Weave compatibility...\" && \
-        pip install \"gql>=3.4,<4\" \"wandb>=0.17.0\" && \
+        echo \"Installing weave and gql pin...\" && \
+        pip install weave==0.51.41 \"gql<4\" && \
         echo \"Requirements installed\"; \
     else \
         echo \"No requirements.txt found\" && \
