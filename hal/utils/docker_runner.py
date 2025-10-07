@@ -257,8 +257,13 @@ class DockerRunner:
                 verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
             
             # create env
+            create_env_cmd = (
+                "conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && "
+                "conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && "
+                "conda create -y -n agent_env python=3.12"
+            )
             proc = await asyncio.create_subprocess_exec(
-                "docker", "exec", container_id, "bash", "-c", "conda create -y -n agent_env python=3.12",
+                "docker", "exec", container_id, "bash", "-c", create_env_cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )

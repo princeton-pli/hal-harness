@@ -48,6 +48,9 @@ echo "Creating conda environment..."
 su - $USERNAME -c "bash -c '\
     echo \"Initializing conda...\" && \
     source $HOME_DIR/init_conda.sh && \
+    echo \"Accepting conda ToS...\" && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     echo \"Creating agent_env...\" && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
