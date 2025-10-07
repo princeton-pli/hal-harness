@@ -318,7 +318,7 @@ class DockerRunner:
                         
             # install weave
             proc = await asyncio.create_subprocess_exec(
-                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install weave==0.51.41",
+                "docker", "exec", container_id, "bash", "-c", "conda run -n agent_env pip install weave==0.51.41 'gql<4'",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )

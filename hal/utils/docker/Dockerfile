@@ -21,8 +21,8 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 # Add conda to PATH
 ENV PATH /opt/conda/bin:$PATH
 
-# Install weave
-RUN pip install weave==0.51.41
+# Install weave and pin gql < 4
+RUN pip install weave==0.51.41 "gql<4"
 
 # Set working directory
 WORKDIR /workspace
