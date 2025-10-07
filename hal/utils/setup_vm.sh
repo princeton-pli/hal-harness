@@ -49,6 +49,8 @@ su - $USERNAME -c "bash -c '\
     echo \"Initializing conda...\" && \
     source $HOME_DIR/init_conda.sh && \
     echo \"Creating agent_env...\" && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     if [ -f requirements.txt ]; then \
         PYTHON_VERSION=$(grep "^python==" requirements.txt | cut -d"=" -f3) && \
         if [ ! -z "$PYTHON_VERSION" ]; then \
@@ -67,6 +69,8 @@ su - $USERNAME -c "bash -c '\
         pip install -r requirements.txt && \
         echo \"Installing weave...\" && \
         pip install weave==0.51.41 && \
+        echo \"Pinning gql and wandb for Weave compatibility...\" && \
+        pip install \"gql>=3.4,<4\" \"wandb>=0.17.0\" && \
         echo \"Requirements installed\"; \
     else \
         echo \"No requirements.txt found\" && \
