@@ -1,4 +1,3 @@
-appworld @ git+https://github.com/StonyBrookNLP/appworld@8e7c06397df0c6e6c851588e63e3e15545366aa1
 openai==1.99.9
 smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c
 mammoth
@@ -11,4 +10,4 @@ youtube_transcript_api>=0.6.2
 SpeechRecognition
 tiktoken
 pandas
-litellm==1.76.0
+litellm @ git+https://github.com/BerriAI/litellm@05955042d57fcc32c73223221d69c8336ecd5994
