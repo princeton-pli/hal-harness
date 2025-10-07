@@ -1,4 +1,4 @@
-# appworld
+appworld @ git+https://github.com/StonyBrookNLP/appworld@8e7c06397df0c6e6c851588e63e3e15545366aa1
 openai==1.99.9
 smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c
 mammoth
