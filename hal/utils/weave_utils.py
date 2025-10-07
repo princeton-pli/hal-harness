@@ -283,6 +283,26 @@ def get_total_cost(client):
             if not usage:
                 progress.update(task, advance=1)
                 continue
+
+            if isinstance(usage, dict):
+                usage_items = usage.items()
+            elif isinstance(usage, list):
+                usage_items = [
+                    (model, model_usage)
+                    for entry in usage if isinstance(entry, dict)
+                    for model, model_usage in entry.items()
+                ]
+            else:
+                print_warning(
+                    f"Skipping unexpected usage payload of type {type(usage).__name__}"
+                )
+                progress.update(task, advance=1)
+                continue
+
+            if not usage_items:
+                progress.update(task, advance=1)
+                continue
+
             for k, cost in usage_items:   
                 if k not in token_usage:
                     token_usage[k] = {
@@ -517,7 +537,24 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
         usage = summary.get("usage")
         if not usage:
             continue
-            
+
+        if isinstance(usage, dict):
+            usage_items = usage.items()
+        elif isinstance(usage, list):
+            usage_items = [
+                (model, model_usage)
+                for entry in usage if isinstance(entry, dict)
+                for model, model_usage in entry.items()
+            ]
+        else:
+            print_warning(
+                f"Skipping unexpected usage payload of type {type(usage).__name__}"
+            )
+            continue
+
+        if not usage_items:
+            continue
+
         for k, cost in usage_items:   
             if k not in token_usage:
                 token_usage[k] = {
