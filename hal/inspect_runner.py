@@ -23,7 +23,7 @@ from .inspect.inspect import (
 from .inspect.log import log, log_end, log_start
 from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename, get_git_info
-from .utils.weave_utils import comput_cost_from_inspect_usage, get_weave_calls
+from .utils.weave_utils import compute_cost_from_inspect_usage, get_weave_calls
 
 from .utils.logging_utils import print_success, print_results_table, print_warning
 
@@ -200,12 +200,17 @@ def inspect_evaluate(
         # Compute the total cost from the model usage
         if benchmark in ["inspect_evals/agentharm", "inspect_evals/agentharm_benign"]:
             # If agentharm, skip gpt-4o-2024-08-06 because it is used for scoring not the agent    TODO: make this more general
-            total_cost = comput_cost_from_inspect_usage(inspect_eval_results['stats']['model_usage'], skip_models=["openai/gpt-4o-2024-08-06"])
+            total_cost = compute_cost_from_inspect_usage(
+                inspect_eval_results['stats']['model_usage'],
+                skip_models=["openai/gpt-4o-2024-08-06"]
+            )
             
             # remove token_usage for gpt-4o-2024-08-06 from inspect_eval_results
             inspect_eval_results['stats']['model_usage'] = {k: v for k, v in inspect_eval_results['stats']['model_usage'].items() if k != "openai/gpt-4o-2024-08-06"}
         else:
-            total_cost = comput_cost_from_inspect_usage(inspect_eval_results['stats']['model_usage'])
+            total_cost = compute_cost_from_inspect_usage(
+                inspect_eval_results['stats']['model_usage']
+            )
 
         # Compute the evaluation results and configuration
         inspect_eval_results_json = results_for_eval(eval_log=eval_log, total_cost=total_cost)
