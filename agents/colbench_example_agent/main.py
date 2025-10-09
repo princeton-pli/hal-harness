@@ -1,6 +1,9 @@
 from sweet_rl.environments.human_interaction_env import HumanInteractionEnv
 from sweet_rl.environments.human_design_interaction_env import HumanDesignInteractionEnv
 from openai import OpenAI
+import httpx
+import time
+import json as _json
 import concurrent.futures
 import anthropic
 import os
@@ -16,7 +19,9 @@ class APIAgent:
                  model_id,
                  agent_prompt,
                  temperature=1.0,
-                 reasoning_effort=None):
+                 reasoning_effort=None,
+                 max_retries: int = 5,
+                 timeout_secs: float = 60.0):
         super().__init__()
         self.model_id = model_id
         self.temperature = temperature
@@ -29,6 +34,33 @@ class APIAgent:
             self._is_openrouter = 'openrouter.ai' in str(getattr(self.client, 'base_url', ''))
         except Exception:
             self._is_openrouter = False
+        self.max_retries = max_retries
+        self.timeout_secs = timeout_secs
+
+    def _is_transient_error(self, err: Exception) -> bool:
+        s = str(err).lower()
+        if isinstance(err, _json.JSONDecodeError) or 'expecting value' in s:
+            return True
+        if isinstance(err, httpx.TimeoutException) or isinstance(err, httpx.ReadTimeout):
+            return True
+        for tok in ['bad gateway', '502', '503', 'connection reset', 'temporarily unavailable']:
+            if tok in s:
+                return True
+        return False
+
+    def _create_with_retry(self, **kwargs):
+        delay = 2.0
+        last_err = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                return self.client.chat.completions.create(timeout=self.timeout_secs, **kwargs)
+            except Exception as e:
+                last_err = e
+                if attempt < self.max_retries and self._is_transient_error(e):
+                    time.sleep(delay)
+                    delay = min(delay * 2, 20.0)
+                    continue
+                raise
 
     def get_action(self, messages):
         if messages is None:
@@ -53,7 +85,7 @@ class APIAgent:
                 )
             return message.content[-1].text
         elif "gemini" in self.model_id:
-            completion = self.client.chat.completions.create(
+            completion = self._create_with_retry(
                 model=self.model_id,
                 messages=messages,
                 max_tokens=16384,
@@ -65,7 +97,7 @@ class APIAgent:
             if self._is_openrouter:
                 effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
                 reasoning_tokens = effort_to_tokens.get(str(self.reasoning_effort).lower(), 2048)
-                completion = self.client.chat.completions.create(
+                completion = self._create_with_retry(
                     model=self.model_id,
                     messages=messages,
                     max_tokens=16384,
@@ -77,7 +109,7 @@ class APIAgent:
                 )
             else:
                 # OpenAI reasoning models (o3, o4-mini) require max_completion_tokens
-                completion = self.client.chat.completions.create(
+                completion = self._create_with_retry(
                     model=self.model_id,
                     messages=messages,
                     max_completion_tokens=16384,
@@ -85,7 +117,7 @@ class APIAgent:
                     reasoning_effort=self.reasoning_effort,
                 )
         else:
-            completion = self.client.chat.completions.create(
+            completion = self._create_with_retry(
                 model=self.model_id,
                 messages=messages,
                 max_tokens=16384,
@@ -139,9 +171,21 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if task_data["task_type"] == "code":
         env = HumanInteractionEnv(env_client, task_data["human_prompt"], env_model_name)    
     else:
+        # Normalize cache path for VM/local runs. The benchmark provides a host-side
+        # absolute cache path which won't exist on the VM. Use a local cache dir when needed.
+        cache_path = task_data.get('cache_path', 'cache')
+        try:
+            if not os.path.isabs(cache_path):
+                cache_path = os.path.abspath(cache_path)
+            os.makedirs(cache_path, exist_ok=True)
+        except Exception:
+            # Fallback to a writable location
+            cache_path = os.path.abspath('./cache')
+            os.makedirs(cache_path, exist_ok=True)
+
         env = HumanDesignInteractionEnv(env_client, task_data["human_prompt"], 
                                         env_model_name,
-                                        temp_path=task_data['cache_path'],
+                                        temp_path=cache_path,
                                         gpt_client=True)    
     
     

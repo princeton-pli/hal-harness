@@ -655,6 +655,7 @@ import json
 import importlib.util
 import weave
 import traceback
+import sys
 
 try:
     weave.init("{run_id}")
@@ -667,11 +668,13 @@ try:
     with open("agent_args.json", "r") as f:
         agent_args = json.load(f)
     
-    # Load the agent module
+    # Load the agent module; ensure agent base dir is importable
     module_name = "{agent_function.rsplit(".", 1)[0]}"
     function_name = "{agent_function.rsplit(".", 1)[1]}"
-    
-    spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/{username}", module_name + ".py"))
+    agent_base = "/home/{username}"
+    if agent_base not in sys.path:
+        sys.path.insert(0, agent_base)
+    spec = importlib.util.spec_from_file_location(module_name, os.path.join(agent_base, module_name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     
@@ -757,6 +760,7 @@ import json
 import importlib.util
 import weave
 import traceback
+import sys
 
 try:
     weave.init("{run_id}")
@@ -766,7 +770,10 @@ try:
         agent_args = json.load(f)
     module_name = "{agent_function.rsplit(".", 1)[0]}"
     function_name = "{agent_function.rsplit(".", 1)[1]}"
-    spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/{username}", module_name + ".py"))
+    agent_base = "/home/{username}"
+    if agent_base not in sys.path:
+        sys.path.insert(0, agent_base)
+    spec = importlib.util.spec_from_file_location(module_name, os.path.join(agent_base, module_name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     agent = getattr(module, function_name)
@@ -905,7 +912,7 @@ except Exception as e:
 
                 # Create per-task runner script in workdir
                 script_content = f'''#!/usr/bin/env python3
-import os, json, importlib.util, weave, traceback
+import os, json, importlib.util, weave, traceback, sys
 try:
     weave.init("{run_id}")
     agent_base = "/home/{username}"
@@ -915,9 +922,11 @@ try:
         input_data = json.load(f)
     with open(os.path.join(workdir, "agent_args.json"), "r") as f:
         agent_args = json.load(f)
-    # Import agent from agent base dir
+    # Import agent from agent base dir and allow sibling imports
     module_name = "{agent_function.rsplit(".", 1)[0]}"
     function_name = "{agent_function.rsplit(".", 1)[1]}"
+    if agent_base not in sys.path:
+        sys.path.insert(0, agent_base)
     spec = importlib.util.spec_from_file_location(module_name, os.path.join(agent_base, module_name + ".py"))
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     agent = getattr(module, function_name)

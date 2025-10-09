@@ -369,7 +369,7 @@ class VMRunner:
                             merged_batch_results.update(result)
                             done_ids.append(tid)
                         else:
-                            # If error.log indicates transient weave/W&B outage, attempt an automatic restart
+                            # If error.log (or agent_trace.log) indicates transient issues, attempt an automatic restart
                             err_text = await loop.run_in_executor(
                                 self._executor,
                                 functools.partial(
@@ -389,9 +389,27 @@ class VMRunner:
                                     'gql.transport.exceptions.transportservererror',
                                     'weave init failed',
                                     'wandb',
+                                    # Colbench frontend: Selenium/geckodriver transient permission issues
+                                    'geckodriver',
+                                    'webdriverexception',
+                                    'executable may have wrong permissions',
+                                    'permission denied',
+                                    'selenium'
                                 ]
                                 if any(tok in lowered for tok in transient_tokens):
                                     should_restart = True
+                            # Also inspect agent_trace.log content from this iteration
+                            if not should_restart:
+                                try:
+                                    trace_lower = (log_text or "").lower()
+                                    if any(tok in trace_lower for tok in [
+                                        'api.wandb.ai', 'bad gateway', 'gql.transport.exceptions.transportservererror',
+                                        'weave init failed', 'wandb', 'geckodriver', 'webdriverexception',
+                                        'executable may have wrong permissions', 'permission denied', 'selenium'
+                                    ]):
+                                        should_restart = True
+                                except Exception:
+                                    pass
 
                             retry_limit = int(os.getenv('VM_TASK_RETRY_LIMIT', '3'))
                             if should_restart and info.get('retries', 0) < retry_limit:

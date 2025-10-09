@@ -922,7 +922,7 @@ Here is the question and attached files are stored in your current directory:
         The answer should be a piece of raw python function.
         """
         
-        response = asyncio.run(agent.arun(instruction))
+        response = agent.run(instruction)
         
         dialogue_history = [{"role": d["role"], "content": d["content"]} for d in isolated_env.get_dialogue_history()]
         answer = isolated_env.answer
@@ -999,7 +999,7 @@ Here is the question and attached files are stored in your current directory:
         The answer should be a piece of raw html code.
         """
         
-        response = asyncio.run(agent.arun(instruction))
+        response = agent.run(instruction)
         isolated_env.driver.quit()
         dialogue_history = [{"role": d["role"], "content": d["content"]} for d in isolated_env.get_dialogue_history()]
         answer = isolated_env.answer
