@@ -48,6 +48,7 @@ class BaseBenchmark(ABC):
                        run_command: str,
                        eval_results: Dict[str, Any],
                        weave_client,
+                       agent_output: Dict[str, Any] = None,
                        upload: bool = False) -> Dict[str, Any]:
         """Process evaluation results and optionally upload"""
         
@@ -65,6 +66,13 @@ class BaseBenchmark(ABC):
             results_path = os.path.join(run_dir, f"{run_id}.json")
             with open(results_path, 'w') as f:
                 json.dump(eval_results, f, indent=2)
+        
+        # Extract task metrics from agent output if available
+        task_metrics = {}
+        if agent_output:
+            for task_id, task_data in agent_output.items():
+                if isinstance(task_data, dict) and "metrics" in task_data:
+                    task_metrics[task_id] = task_data["metrics"]
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
@@ -90,6 +98,10 @@ class BaseBenchmark(ABC):
             'total_cost': total_cost,
             "git_info": get_git_info()
         }
+        
+        # Include task metrics if available from agent output
+        if task_metrics:
+            results_summary["task_metrics"] = task_metrics
         
         # Save full results
         upload_path = os.path.join(run_dir, f"{run_id}_UPLOAD.json")

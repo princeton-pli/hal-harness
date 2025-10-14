@@ -35,13 +35,20 @@ class GaiaBenchmark(BaseBenchmark):
             
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-        """Evaluate agent outputs using Gaia evaluation"""
-        eval_results = {}
+        """Evaluate agent outputs using Gaia evaluation while capturing task metrics."""
+
+        eval_results: Dict[str, Any] = {}
+
         for task_id, agent_answer in agent_output.items():
+            answer_payload = agent_answer
+
+            if isinstance(agent_answer, dict):
+                answer_payload = agent_answer.get("answer", agent_answer.get("raw_response"))
+
             gt_answer = self.benchmark[task_id]['Final answer']
-            score, explanation = question_scorer(str(agent_answer), str(gt_answer))
+            score, explanation = question_scorer(str(answer_payload), str(gt_answer))
             eval_results[task_id] = {'score': score, 'explanation': explanation}
-            
+
         return eval_results
 
     
