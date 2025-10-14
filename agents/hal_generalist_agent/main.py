@@ -499,31 +499,67 @@ def _safe_serialize(obj: Any) -> Any:
         return str(obj)
 
 
+
+TOOL_NAMES = [
+    "web_search",
+    "visit_webpage", 
+    "python_interpreter",
+    "execute_bash",
+    "inspect_file_as_text",
+    "edit_file",
+    "file_content_search",
+    "query_vision_language_model",
+    "execute_code_to_interact_with_apis",
+    "ask_user",
+    "finish_task",
+    "book_reservation",
+    "calculate",
+    "cancel_reservation",
+    "get_reservation_details",
+    "get_user_details",
+    "list_all_airports",
+    "search_direct_flight",
+    "search_onestop_flight",
+    "send_certificate",
+    "think",
+    "transfer_to_human_agents",
+    "update_reservation_baggages",
+    "update_reservation_flights",
+    "update_reservation_passengers",
+]
+
+_TOOL_PATTERNS = [
+    re.compile(rf"(?:^|[^a-zA-Z0-9_])(?:\w+\.)*{re.escape(name)}\s*\(", re.MULTILINE)
+    for name in TOOL_NAMES
+]
+
+def _strip_strings_and_comments(code: str) -> str:
+    """Remove Python string literals and # comments to reduce false positives."""
+    if not isinstance(code, str):
+        return ""
+    code = re.sub(r"'''[\s\S]*?'''", "", code)
+    code = re.sub(r'"""[\s\S]*?"""', "", code)
+    code = re.sub(r"(?:'[^'\\]*(?:\\.[^'\\]*)*')", "", code)
+    code = re.sub(r'(?:"[^"\\]*(?:\\.[^"\\]*)*")', "", code)
+    code = re.sub(r"#.*$", "", code, flags=re.MULTILINE)
+    return code
+
 def _extract_tools_from_python_code(code: str) -> List[str]:
     """Extract actual tool calls from Python code executed by python_interpreter."""
-    if not isinstance(code, str):
+    if not isinstance(code, str) or not code.strip():
         return []
-    
-    tools_found = []
-    
-    # Look for common tool function calls in the code
-    tool_patterns = [
-        r'web_search\s*\(',
-        r'visit_webpage\s*\(',
-        r'execute_bash\s*\(',
-        r'file_content_search\s*\(',
-        r'inspect_file_as_text\s*\(',
-        # Add more patterns as needed
-    ]
-    
-    for pattern in tool_patterns:
-        if re.search(pattern, code):
-            tool_name = pattern.split(r'\s*\(')[0].replace('\\', '')
-            if tool_name not in tools_found:
-                tools_found.append(tool_name)
-    
-    return tools_found
 
+    cleaned = _strip_strings_and_comments(code)
+    found = []
+    seen = set()
+
+    for name, pat in zip(TOOL_NAMES, _TOOL_PATTERNS):
+        if pat.search(cleaned):
+            if name not in seen:
+                seen.add(name)
+                found.append(name)
+
+    return found
 
 def collect_task_metrics(agent: CodeAgent) -> Dict[str, Any]:
     action_steps = [step for step in agent.memory.steps if isinstance(step, ActionStep)]
