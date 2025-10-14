@@ -499,7 +499,6 @@ def _safe_serialize(obj: Any) -> Any:
         return str(obj)
 
 
-
 TOOL_NAMES = [
     "web_search",
     "visit_webpage", 
