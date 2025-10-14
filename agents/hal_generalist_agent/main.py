@@ -488,6 +488,115 @@ def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.gi
     except Exception as e:
         return f"Error searching files: {str(e)}"
 
+def _safe_serialize(obj: Any) -> Any:
+    """Safely serialize an object to JSON-serializable format."""
+    if obj is None:
+        return None
+    try:
+        json.dumps(obj)
+        return obj
+    except (TypeError, ValueError):
+        return str(obj)
+
+
+def _extract_tools_from_python_code(code: str) -> List[str]:
+    """Extract actual tool calls from Python code executed by python_interpreter."""
+    if not isinstance(code, str):
+        return []
+    
+    tools_found = []
+    
+    # Look for common tool function calls in the code
+    tool_patterns = [
+        r'web_search\s*\(',
+        r'visit_webpage\s*\(',
+        r'execute_bash\s*\(',
+        r'file_content_search\s*\(',
+        r'inspect_file_as_text\s*\(',
+        # Add more patterns as needed
+    ]
+    
+    for pattern in tool_patterns:
+        if re.search(pattern, code):
+            tool_name = pattern.split(r'\s*\(')[0].replace('\\', '')
+            if tool_name not in tools_found:
+                tools_found.append(tool_name)
+    
+    return tools_found
+
+
+def collect_task_metrics(agent: CodeAgent) -> Dict[str, Any]:
+    action_steps = [step for step in agent.memory.steps if isinstance(step, ActionStep)]
+    tool_call_sequence: List[str] = []
+    step_summaries: List[Dict[str, Any]] = []
+
+    # Get token usage from smolagents monitor
+    total_input_tokens = agent.monitor.total_input_token_count
+    total_output_tokens = agent.monitor.total_output_token_count
+
+    for step in action_steps:
+        tool_calls: List[Dict[str, Any]] = []
+        # Safe access to tool_calls attribute
+        step_tool_calls = getattr(step, 'tool_calls', None)
+        if step_tool_calls:
+            for call in step_tool_calls:
+                tool_name = getattr(call, 'name', str(call))
+                arguments = _safe_serialize(getattr(call, 'arguments', None))
+                
+                # Parse actual tools used within python_interpreter code
+                actual_tools = _extract_tools_from_python_code(arguments) if tool_name == 'python_interpreter' else []
+                
+                if actual_tools:
+                    # Add the actual tools found in the Python code
+                    for actual_tool in actual_tools:
+                        tool_call_sequence.append(actual_tool)
+                        tool_calls.append(
+                            {
+                                "name": actual_tool,
+                                "arguments": arguments,  # Keep the full Python code as context
+                                "id": getattr(call, 'id', None),
+                            }
+                        )
+                else:
+                    # Default behavior for non-Python tools or when no tools found
+                    tool_call_sequence.append(tool_name)
+                    tool_calls.append(
+                        {
+                            "name": tool_name,
+                            "arguments": arguments,
+                            "id": getattr(call, 'id', None),
+                        }
+                    )
+        
+        step_summary = {
+            "step_number": getattr(step, 'step_number', len(step_summaries) + 1),
+            "tool_calls": tool_calls,
+            "error": str(getattr(step, 'error', None)) if getattr(step, 'error', None) else None,
+        }
+        step_summaries.append(step_summary)
+
+    # Calculate cost using MODEL_PRICES_DICT
+    model_cost = 0.0
+    if hasattr(agent, 'model') and hasattr(agent.model, 'model_id'):
+        model_name = agent.model.model_id
+        if model_name in MODEL_PRICES_DICT:
+            model_cost = (
+                MODEL_PRICES_DICT[model_name]["prompt_tokens"] * total_input_tokens
+                + MODEL_PRICES_DICT[model_name]["completion_tokens"] * total_output_tokens
+            )
+
+    metrics = {
+        "total_input_tokens": total_input_tokens,
+        "total_output_tokens": total_output_tokens,
+        "estimated_cost": model_cost,
+        "step_count": len(action_steps),
+        "tool_call_count": len(tool_call_sequence),
+        "tool_call_sequence": tool_call_sequence,
+        "unique_tools_used": list(set(tool_call_sequence)),
+        "steps": step_summaries,
+    }
+    return metrics
+
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
@@ -906,9 +1015,20 @@ Task:
 Here is the question and attached files are stored in your current directory:
 
 {task['Question']}"""
+        # Execute agent
         response = agent.run(prompt)
+
+        # Collect metrics
+        metrics = collect_task_metrics(agent)
+        
         save_agent_steps(agent, kwargs, response, task)
-        return {task_id: response}
+        
+        return {
+            task_id: {
+                "answer": str(response).strip(),
+                "metrics": metrics,        
+            }
+        }
     
     
 
