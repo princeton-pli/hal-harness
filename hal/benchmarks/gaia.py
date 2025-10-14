@@ -35,7 +35,7 @@ class GaiaBenchmark(BaseBenchmark):
             
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-    """Evaluate agent outputs using Gaia evaluation while capturing task metrics."""
+        """Evaluate agent outputs using Gaia evaluation while capturing task metrics."""
 
         eval_results: Dict[str, Any] = {}
 
