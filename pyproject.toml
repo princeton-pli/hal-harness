@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "datasets",
     "weave==0.51.41",
+    "gql<4",
     "huggingface-hub",
     "python-dotenv",
     "setuptools>=48.0.0",
@@ -59,6 +60,18 @@ hal-agent-inspect = [
 hal-agent = [
     "smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c",
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
+    "mammoth",
+    "python_pptx>=1.0.2",
+    "pdfminer>=20191125",
+    "pdfminer.six>=20240706",
+    "puremagic>=1.28",
+    "pydub",
+    "youtube_transcript_api>=0.6.2",
+    "SpeechRecognition",
+]
+coreagent = [
+    "smolagents @ git+https://github.com/huggingface/smolagents@0c62b18dde5a163370919888290ff4f506dc918c",
+    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
     "mammoth",
     "python_pptx>=1.0.2",
     "pdfminer>=20191125",

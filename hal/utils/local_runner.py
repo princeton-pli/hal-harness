@@ -207,7 +207,7 @@ class LocalRunner:
                 # Install weave in conda environment
                 verbose_logger.debug(f"Running agent for task {task_id}")
                 process = await asyncio.create_subprocess_exec(
-                    *["conda", "run", "-n", self.conda_env, "pip", "install", "weave==0.51.41"],
+                    *["conda", "run", "-n", self.conda_env, "pip", "install", "weave==0.51.41", "gql<4"],
                     cwd=str(temp_dir),
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
