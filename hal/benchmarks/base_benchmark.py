@@ -26,6 +26,23 @@ class BaseBenchmark(ABC):
         self.requires_sandbox = requires_sandbox # Whether benchmark requires VM execution
         
 
+    def _normalize_agent_output(self, agent_output: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize agent output to handle both old and new formats:
+        - Old format: {task_id: response}
+        - New format: {task_id: {answer: response, metrics: metrics}}
+        Returns normalized format: {task_id: response}
+        """
+        normalized = {}
+        for task_id, task_data in agent_output.items():
+            if isinstance(task_data, dict) and "answer" in task_data:
+                # New format: extract the answer
+                normalized[task_id] = task_data["answer"]
+            else:
+                # Old format: use as-is
+                normalized[task_id] = task_data
+        return normalized
+
     @abstractmethod
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs"""

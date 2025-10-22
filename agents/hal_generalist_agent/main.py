@@ -764,8 +764,18 @@ No outside libraries are allowed.
         response = str(response)
         if '```python' in response:
             response = response.split('```python')[1].split('```')[0]
-            
-        return {task_id: response}
+        
+        # Collect metrics
+        metrics = collect_task_metrics(agent)
+        
+        save_agent_steps(agent, kwargs, response, task)
+        
+        return {
+            task_id: {
+                "answer": response,
+                "metrics": metrics,        
+            }
+        }
             
     elif kwargs['benchmark_name'] == 'corebench_easy':
         # Create a new agent with more steps specifically for CoreBench easy
