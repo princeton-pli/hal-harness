@@ -488,6 +488,151 @@ def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.gi
     except Exception as e:
         return f"Error searching files: {str(e)}"
 
+def _safe_serialize(obj: Any) -> Any:
+    """Safely serialize an object to JSON-serializable format."""
+    if obj is None:
+        return None
+    try:
+        json.dumps(obj)
+        return obj
+    except (TypeError, ValueError):
+        return str(obj)
+
+
+
+TOOL_NAMES = [
+    "web_search",
+    "visit_webpage", 
+    "python_interpreter",
+    "execute_bash",
+    "inspect_file_as_text",
+    "edit_file",
+    "file_content_search",
+    "query_vision_language_model",
+    "execute_code_to_interact_with_apis",
+    "ask_user",
+    "finish_task",
+    "book_reservation",
+    "calculate",
+    "cancel_reservation",
+    "get_reservation_details",
+    "get_user_details",
+    "list_all_airports",
+    "search_direct_flight",
+    "search_onestop_flight",
+    "send_certificate",
+    "think",
+    "transfer_to_human_agents",
+    "update_reservation_baggages",
+    "update_reservation_flights",
+    "update_reservation_passengers",
+]
+
+_TOOL_PATTERNS = [
+    re.compile(rf"(?:^|[^a-zA-Z0-9_])(?:\w+\.)*{re.escape(name)}\s*\(", re.MULTILINE)
+    for name in TOOL_NAMES
+]
+
+def _strip_strings_and_comments(code: str) -> str:
+    """Remove Python string literals and # comments to reduce false positives."""
+    if not isinstance(code, str):
+        return ""
+    code = re.sub(r"'''[\s\S]*?'''", "", code)
+    code = re.sub(r'"""[\s\S]*?"""', "", code)
+    code = re.sub(r"(?:'[^'\\]*(?:\\.[^'\\]*)*')", "", code)
+    code = re.sub(r'(?:"[^"\\]*(?:\\.[^"\\]*)*")', "", code)
+    code = re.sub(r"#.*$", "", code, flags=re.MULTILINE)
+    return code
+
+def _extract_tools_from_python_code(code: str) -> List[str]:
+    """Extract actual tool calls from Python code executed by python_interpreter."""
+    if not isinstance(code, str) or not code.strip():
+        return []
+
+    cleaned = _strip_strings_and_comments(code)
+    found = []
+    seen = set()
+
+    for name, pat in zip(TOOL_NAMES, _TOOL_PATTERNS):
+        if pat.search(cleaned):
+            if name not in seen:
+                seen.add(name)
+                found.append(name)
+
+    return found
+
+def collect_task_metrics(agent: CodeAgent) -> Dict[str, Any]:
+    action_steps = [step for step in agent.memory.steps if isinstance(step, ActionStep)]
+    tool_call_sequence: List[str] = []
+    step_summaries: List[Dict[str, Any]] = []
+
+    # Get token usage from smolagents monitor
+    total_input_tokens = agent.monitor.total_input_token_count
+    total_output_tokens = agent.monitor.total_output_token_count
+
+    for step in action_steps:
+        tool_calls: List[Dict[str, Any]] = []
+        # Safe access to tool_calls attribute
+        step_tool_calls = getattr(step, 'tool_calls', None)
+        if step_tool_calls:
+            for call in step_tool_calls:
+                tool_name = getattr(call, 'name', str(call))
+                arguments = _safe_serialize(getattr(call, 'arguments', None))
+                
+                # Parse actual tools used within python_interpreter code
+                actual_tools = _extract_tools_from_python_code(arguments) if tool_name == 'python_interpreter' else []
+                
+                if actual_tools:
+                    # Add the actual tools found in the Python code
+                    for actual_tool in actual_tools:
+                        tool_call_sequence.append(actual_tool)
+                        tool_calls.append(
+                            {
+                                "name": actual_tool,
+                                "arguments": arguments,  # Keep the full Python code as context
+                                "id": getattr(call, 'id', None),
+                            }
+                        )
+                else:
+                    # Default behavior for non-Python tools or when no tools found
+                    tool_call_sequence.append(tool_name)
+                    tool_calls.append(
+                        {
+                            "name": tool_name,
+                            "arguments": arguments,
+                            "id": getattr(call, 'id', None),
+                        }
+                    )
+        
+        step_summary = {
+            "step_number": getattr(step, 'step_number', len(step_summaries) + 1),
+            "tool_calls": tool_calls,
+            "error": str(getattr(step, 'error', None)) if getattr(step, 'error', None) else None,
+        }
+        step_summaries.append(step_summary)
+
+    # Calculate cost using MODEL_PRICES_DICT
+    model_cost = 0.0
+    if hasattr(agent, 'model') and hasattr(agent.model, 'model_id'):
+        model_name = agent.model.model_id
+        if model_name in MODEL_PRICES_DICT:
+            model_cost = (
+                MODEL_PRICES_DICT[model_name]["prompt_tokens"] * total_input_tokens
+                + MODEL_PRICES_DICT[model_name]["completion_tokens"] * total_output_tokens
+            )
+
+    metrics = {
+        "total_input_tokens": total_input_tokens,
+        "total_output_tokens": total_output_tokens,
+        "estimated_cost": model_cost,
+        "step_count": len(action_steps),
+        "tool_call_count": len(tool_call_sequence),
+        "tool_call_sequence": tool_call_sequence,
+        "unique_tools_used": list(set(tool_call_sequence)),
+        "steps": step_summaries,
+    }
+    return metrics
+
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
@@ -906,9 +1051,20 @@ Task:
 Here is the question and attached files are stored in your current directory:
 
 {task['Question']}"""
+        # Execute agent
         response = agent.run(prompt)
+
+        # Collect metrics
+        metrics = collect_task_metrics(agent)
+        
         save_agent_steps(agent, kwargs, response, task)
-        return {task_id: response}
+        
+        return {
+            task_id: {
+                "answer": str(response).strip(),
+                "metrics": metrics,        
+            }
+        }
     
     
 
