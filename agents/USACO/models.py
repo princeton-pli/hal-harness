@@ -192,4 +192,24 @@ def gpt_usage():
     cost += completion_tokens["gpt-3.5-turbo"] / 1000 * 0.002 + prompt_tokens["gpt-3.5-turbo"] / 1000 * 0.0015
     cost += completion_tokens["gpt-3.5-turbo-16k"] / 1000 * 0.004 + prompt_tokens["gpt-3.5-turbo-16k"] / 1000 * 0.003
     return {"completion_tokens": completion_tokens, "prompt_tokens": prompt_tokens, "cost": cost}
+
+def get_token_usage():
+    """Get current token usage and calculate totals"""
+    global completion_tokens, prompt_tokens
+    
+    total_completion = sum(completion_tokens.values())
+    total_prompt = sum(prompt_tokens.values())
+    
+    return {
+        "prompt_tokens": total_prompt,
+        "completion_tokens": total_completion, 
+        "total_tokens": total_prompt + total_completion
+    }
+
+def reset_token_usage():
+    """Reset token usage counters for per-task tracking"""
+    global completion_tokens, prompt_tokens
+    for model in completion_tokens:
+        completion_tokens[model] = 0
+        prompt_tokens[model] = 0
     
