@@ -1919,10 +1919,18 @@ def generate_dna(N: int, PWM: dict) -> tuple:
 """
         prompt = asstbench_prompt.format(task['task'])
         response = agent.run(prompt)
+        
+        # Collect metrics
+        metrics = collect_task_metrics(agent)
+        
         save_agent_steps(agent, kwargs, response, task)
         
-            
-        return {task_id: response}
+        return {
+            task_id: {
+                "answer": response,
+                "metrics": metrics,
+            }
+        }
 
     else:
         raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
