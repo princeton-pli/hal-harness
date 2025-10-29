@@ -200,17 +200,10 @@ def get_token_usage():
     total_completion = sum(completion_tokens.values())
     total_prompt = sum(prompt_tokens.values())
     
-    # Calculate cost
-    cost = completion_tokens["gpt-4"] / 1000 * 0.06 + prompt_tokens["gpt-4"] / 1000 * 0.03
-    cost += completion_tokens["gpt-4-1106-preview"] / 1000 * 0.03 + prompt_tokens["gpt-4-1106-preview"] / 1000 * 0.01
-    cost += completion_tokens["gpt-3.5-turbo"] / 1000 * 0.002 + prompt_tokens["gpt-3.5-turbo"] / 1000 * 0.0015
-    cost += completion_tokens["gpt-3.5-turbo-16k"] / 1000 * 0.004 + prompt_tokens["gpt-3.5-turbo-16k"] / 1000 * 0.003
-    
     return {
         "prompt_tokens": total_prompt,
         "completion_tokens": total_completion, 
-        "total_tokens": total_prompt + total_completion,
-        "cost": cost
+        "total_tokens": total_prompt + total_completion
     }
 
 def reset_token_usage():
