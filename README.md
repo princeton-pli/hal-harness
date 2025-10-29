@@ -176,7 +176,7 @@ You can also convert HAL experiment outputs to AppWorld experiment outputs (via 
 - Computational reproducibility benchmark for agents on real scientific papers
 - Supports fully parallelized evaluation on Azure VMs
 
-### [tau-bench](https://github.com/tau-bench/tau-bench)
+### [tau-bench](https://github.com/sierra-research/tau-bench)
 - Install benchmark specific dependencies:
 ```bash
 pip install -e .[taubench]
