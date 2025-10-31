@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import types
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Callable
@@ -117,8 +118,7 @@ def add_retry_to_runner(runner_instance, retry_config: Optional[Dict[str, Any]] 
     if hasattr(runner_instance, '_run_single_task'):
         original_method = runner_instance._run_single_task
         
-        async def _run_single_task_with_retry(*args, **kwargs):
-            task_id = str(args[0]) if args else "unknown"
-            return await handler.run_with_retry(task_id, original_method, *args, **kwargs)
+        async def _run_single_task_with_retry(self, task_id: str, *args, **kwargs):
+            return await handler.run_with_retry(task_id, original_method, task_id, *args, **kwargs)
         
-        runner_instance._run_single_task = _run_single_task_with_retry
+        runner_instance._run_single_task = types.MethodType(_run_single_task_with_retry, runner_instance)
