@@ -68,10 +68,10 @@ class RetryHandler:
         if not result:
             return True
         
+        # Check if any task has an error - if so, retry
         for task_id, value in result.items():
             if isinstance(value, str) and value.startswith("ERROR:"):
-                error_msg = value[6:].strip()
-                return is_retryable_error(error_msg)
+                return True
         
         return False
     
