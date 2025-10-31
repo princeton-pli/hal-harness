@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 from hal.benchmarks.base_benchmark import BaseBenchmark
+from hal.utils.retry_handler import add_retry_to_runner
 from rich.progress import Progress, TaskID
 
 # Get logger for verbose output
@@ -16,7 +17,7 @@ verbose_logger = logging.getLogger('agent_eval.verbose')
 class LocalRunner:
     """Handles running agents locally in isolated environments"""
     
-    def __init__(self, log_dir: str, max_concurrent: int = 1, conda_env: Optional[str] = None, benchmark: Optional[BaseBenchmark] = None):
+    def __init__(self, log_dir: str, max_concurrent: int = 1, conda_env: Optional[str] = None, benchmark: Optional[BaseBenchmark] = None, retry_config: Optional[Dict[str, Any]] = None):
         self.log_dir = log_dir
         self.max_concurrent = max_concurrent
         self.conda_env = conda_env
@@ -24,6 +25,9 @@ class LocalRunner:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
         self.benchmark = benchmark
+        
+        # Add retry functionality (enabled by default with sensible defaults)
+        add_retry_to_runner(self, retry_config)
 
     async def run_agent(self, 
                        dataset: Dict[str, Any],
