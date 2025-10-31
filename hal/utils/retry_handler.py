@@ -5,33 +5,9 @@ import logging
 import random
 import types
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Dict, Optional, Callable
 
 verbose_logger = logging.getLogger('agent_eval.verbose')
-
-
-class TaskStatus(str, Enum):
-    SUCCESS = "success"
-    RETRYABLE = "retryable"
-    FAILED = "failed"
-
-
-@dataclass(slots=True)
-class TaskOutcome:
-    status: TaskStatus
-    result: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    retry_delay: Optional[float] = None
-    response_headers: Optional[Dict[str, str]] = None
-
-
-_TRANSIENT_MARKERS = ("429", "rate limit", "too many requests", "timeout", "connection", "network", "503", "502", "504")
-
-
-def is_retryable_error(message: str) -> bool:
-    lowered = message.lower()
-    return any(marker in lowered for marker in _TRANSIENT_MARKERS)
 
 
 @dataclass
@@ -101,7 +77,7 @@ class RetryHandler:
                 error_msg = str(e)
                 last_result = {task_id: f"ERROR: {error_msg}"}
                 
-                if attempt < self.config.max_retries and is_retryable_error(error_msg):
+                if attempt < self.config.max_retries:
                     delay = self._calculate_delay(attempt)
                     verbose_logger.warning(f"Task {task_id}: Exception retry in {delay:.1f}s: {error_msg}")
                     await asyncio.sleep(delay)
