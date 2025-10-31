@@ -45,7 +45,7 @@ class RetryHandler:
             return True
         
         # Check if any task has an error - if so, retry
-        for task_id, value in result.items():
+        for value in result.values():
             if isinstance(value, str) and value.startswith("ERROR:"):
                 return True
         
