@@ -139,6 +139,7 @@ CACHED_PRICE_OVERRIDES = {
     "anthropic/claude-opus-4-20250514": 1.50/1e6,
     "claude-opus-4.1-20250805": 1.50/1e6,
     "claude-opus-4-1-20250805": 1.50/1e6,
+    "claude-sonnet-4-5-20250929": 0.30/1e6,
     "anthropic/claude-opus-4.1-20250805": 1.50/1e6,
     "anthropic/claude-opus-4-1-20250805": 1.50/1e6,
     "gpt-4.1": 0.50/1e6,
