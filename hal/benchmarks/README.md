@@ -237,3 +237,19 @@ print(metrics)
 ```bash
 hal run --agent_name "test" --agent_function "test_agent.run" --benchmark "your_benchmark"
 ```
+
+## Running Your Benchmark on VMs
+
+Currently supported Benchmarks:
+
+| Benchmarks               | Supported |
+|--------------------------|-----------|
+| Assisstant_Bench         | Yes       |
+| CoreBench                | Yes       |
+| GAIA                     | Yes       |
+| Online Mind2Web          | No        |
+| Scicode                  | Yes       |
+| ScienceAgentBench        | No        |
+| SweBench-Verified[-Mini] | Yes       |
+| TAU-Bench                | Yes       |
+| USACO                    | No        |
