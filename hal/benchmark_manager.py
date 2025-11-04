@@ -38,7 +38,8 @@ class BenchmarkManager:
                            'scienceagentbench',
                            'assistantbench',
                            "colbench_backend_programming",
-                           "colbench_frontend_design"
+                           "colbench_frontend_design",
+                           'mobilesafetybench'
                            ]
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
@@ -66,6 +67,9 @@ class BenchmarkManager:
         elif benchmark_name in ['taubench_retail', 'taubench_airline']:
             from .benchmarks.taubench import TauBenchBenchmark
             benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == "mobilesafetybench":
+            from .benchmarks.mobilesafetybench import MobileSafetyBench
+            benchmark = MobileSafetyBench(self.agent_dir, self.config)
         elif benchmark_name == 'gaia':
             from .benchmarks.gaia import GaiaBenchmark
             benchmark = GaiaBenchmark(self.agent_dir, self.config, benchmark_name)

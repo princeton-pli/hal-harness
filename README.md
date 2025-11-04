@@ -281,6 +281,21 @@ hal-eval --benchmark inspect_evals/agentharm \
   -A model_name=openai/gpt-4o-mini-2024-07-18
 ```
 
+
+### [MobileSafteyBench](https://github.com/jylee425/mobilesafetybench)
+
+- Evaluates the safety and helpfulness of agents in controlling mobile devices
+- Two types of tasks are availbale: (a) daily scenarios and (b) indirect prompt injection attack (Currently, we do not support indirect prompt injection attack tasks)
+
+For MobileSafetyBench, you will need to install Android emulator and apk files. Regarding the use of Android emulator, we leave several notes:
+
+- Follow [instruction](https://github.com/jylee425/mobilesafetybench?tab=readme-ov-file#installation-guidelines) for installation of Android emulator 
+- Due to instability of Android emulator, we encourage **not to run with max_concurrent > 1**
+
+Also, to interact with Android emulator seamlessly, MobileSafetyBench regards a pre-defined action space. 
+The text description of the action space is defined in ```agents/mobilesafetybench/main.py```, so that the user can easily integrate in the prompt when evaluating an agent.
+The user can also easily customize the action space by modifying ```hal/benchmarks/mobilesafetybench/mobile_safety/component/parser.py```.
+
 ### [CORE-Bench](https://arxiv.org/abs/2409.11363)
 
 - Begin by decrypting `hal/benchmarks/corebench/core_test.json.gpg` to access the `CORE-Bench` test set. The password for the GPG file is `reproducibility`. To decrypt the file, run the following command:
