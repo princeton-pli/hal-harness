@@ -188,6 +188,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     return {task_id: "Completed"}
 ```
 
+### AssistantBench
+
+Assistantbench Browser Agent uses Browser-Use as the open source scaffold. To run this agent you will need to run `make` in the directory to install playwright and chromium in addition to `requirements.txt`.
+
 ### Inspect AI Benchmarks
 
 Inspect AI benchmarks support two types of agents:
