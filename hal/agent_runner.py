@@ -30,8 +30,9 @@ class AgentRunner:
                  continue_run: bool = False,
                  run_command: str = None,
                  ignore_errors: bool = False,
-                 max_tasks: Optional[int] = None):
-        
+                 max_tasks: Optional[int] = None,
+                 benchmark_args: Dict[str, Any] | None = None):
+
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
             raise ValueError("Invalid agent_function format. Must be in format 'module.function' (e.g., 'my_agent.run_agent')")
@@ -50,7 +51,7 @@ class AgentRunner:
             raise ValueError("Only one of conda_env, use_vm, or use_docker can be set at a time.")
         
         # Initialize benchmark first
-        self.benchmark_manager = BenchmarkManager(agent_dir, config)
+        self.benchmark_manager = BenchmarkManager(agent_dir, config, benchmark_args=benchmark_args)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
         

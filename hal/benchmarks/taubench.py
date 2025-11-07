@@ -8,8 +8,8 @@ from hal.utils.logging_utils import print_warning
 
 class TauBenchBenchmark(BaseBenchmark):
     """TauBench benchmark implementation"""
-    
-    def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'taubench_retail'):
+
+    def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'taubench_retail', benchmark_args: Dict[str, Any] | None = None):
         self.benchmark_name = benchmark_name
         self.split = 'retail' if benchmark_name == 'taubench_retail' else 'airline'
         self.setup_script = 'hal/benchmarks/taubench/taubench_setup.sh'
@@ -19,7 +19,8 @@ class TauBenchBenchmark(BaseBenchmark):
         
         # Create benchmark dictionary
         default_train_size = 115 if self.split == 'retail' else 50
-        train_size = config.get('train_size', default_train_size)
+        if benchmark_args:
+            train_size = benchmark_args.get('train_size', default_train_size)
         self.benchmark = {}
         if self.split == 'retail':
             self.benchmark = {str(task_index): {
