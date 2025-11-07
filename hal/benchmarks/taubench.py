@@ -18,6 +18,8 @@ class TauBenchBenchmark(BaseBenchmark):
     
         
         # Create benchmark dictionary
+        default_train_size = 115 if self.split == 'retail' else 50
+        train_size = config.get('train_size', default_train_size)
         self.benchmark = {}
         if self.split == 'retail':
             self.benchmark = {str(task_index): {
@@ -27,7 +29,7 @@ class TauBenchBenchmark(BaseBenchmark):
                 'task_split': 'test',
                 'user_provider': 'openai',
                 'task_index': task_index,
-            } for task_index in range(115)}
+            } for task_index in range(train_size)}
         elif self.split == 'airline':
             self.benchmark = {str(task_index): {
                 'env': 'airline',
@@ -36,9 +38,9 @@ class TauBenchBenchmark(BaseBenchmark):
                 'task_split': 'test',
                 'user_provider': 'openai',
                 'task_index': task_index,
-            } for task_index in range(50)}
-      
-            
+            } for task_index in range(train_size)}
+
+
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs using AppWorld evaluation"""
