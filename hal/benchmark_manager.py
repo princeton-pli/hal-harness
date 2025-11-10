@@ -12,7 +12,7 @@ import os
 
 
 class BenchmarkManager:
-    def __init__(self, agent_dir: str = 'agent/', config: Optional[Dict[str, Any]] = {}, agent_args: Optional[Dict[str, Any]] = {}):
+    def __init__(self, agent_dir: str = 'agent/', config: Optional[Dict[str, Any]] = {}, agent_args: Optional[Dict[str, Any]] = {}, benchmark_args: Optional[Dict[str, Any]] = {}):
         self.config = config
         self.agent_dir = agent_dir
         self.agent_args = agent_args
@@ -40,6 +40,7 @@ class BenchmarkManager:
                            "colbench_backend_programming",
                            "colbench_frontend_design"
                            ]
+        self.benchmark_args = benchmark_args
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
@@ -65,7 +66,7 @@ class BenchmarkManager:
             benchmark = AppWorldBenchmark(self.agent_dir, self.config, benchmark_name)
         elif benchmark_name in ['taubench_retail', 'taubench_airline']:
             from .benchmarks.taubench import TauBenchBenchmark
-            benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+            benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name, self.benchmark_args)
         elif benchmark_name == 'gaia':
             from .benchmarks.gaia import GaiaBenchmark
             benchmark = GaiaBenchmark(self.agent_dir, self.config, benchmark_name)

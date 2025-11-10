@@ -8,8 +8,8 @@ from hal.utils.logging_utils import print_warning
 
 class TauBenchBenchmark(BaseBenchmark):
     """TauBench benchmark implementation"""
-    
-    def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'taubench_retail'):
+
+    def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'taubench_retail', benchmark_args: Dict[str, Any] | None = None):
         self.benchmark_name = benchmark_name
         self.split = 'retail' if benchmark_name == 'taubench_retail' else 'airline'
         self.setup_script = 'hal/benchmarks/taubench/taubench_setup.sh'
@@ -18,6 +18,9 @@ class TauBenchBenchmark(BaseBenchmark):
     
         
         # Create benchmark dictionary
+        default_train_size = 115 if self.split == 'retail' else 50
+        if benchmark_args:
+            train_size = benchmark_args.get('train_size', default_train_size)
         self.benchmark = {}
         if self.split == 'retail':
             self.benchmark = {str(task_index): {
@@ -27,7 +30,7 @@ class TauBenchBenchmark(BaseBenchmark):
                 'task_split': 'test',
                 'user_provider': 'openai',
                 'task_index': task_index,
-            } for task_index in range(115)}
+            } for task_index in range(train_size)}
         elif self.split == 'airline':
             self.benchmark = {str(task_index): {
                 'env': 'airline',
@@ -36,9 +39,9 @@ class TauBenchBenchmark(BaseBenchmark):
                 'task_split': 'test',
                 'user_provider': 'openai',
                 'task_index': task_index,
-            } for task_index in range(50)}
-      
-            
+            } for task_index in range(train_size)}
+
+
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs using AppWorld evaluation"""
