@@ -255,7 +255,7 @@ def main(
                     continue_run=continue_run,
                     run_command=run_command,
                     ignore_errors=ignore_errors,
-                    max_tasks=max_tasks
+                    max_tasks=max_tasks,
                     benchmark_args=benchmark_args
                 )
 
