@@ -76,7 +76,7 @@ class SWEBenchBenchmark(BaseBenchmark):
                 'conda', 'run', 
                 '-n', 'swebench_hal', 
                 'pip', 'install', 
-                '-e', 'git+https://github.com/benediktstroebl/SWE-bench.git#egg=swebench'], check=True)
+                '-e', 'git+https://github.com/boyiwei/SWE-bench.git#egg=swebench'], check=True)
 
             subprocess.run(command, check=True)
             
