@@ -256,6 +256,7 @@ def main(
                     run_command=run_command,
                     ignore_errors=ignore_errors,
                     max_tasks=max_tasks
+                    benchmark_args=benchmark_args
                 )
 
                 # Run evaluation
