@@ -134,5 +134,5 @@ hal-eval = "hal.cli:main"
 hal-upload = "hal.utils.upload:upload_results"
 hal-decrypt = "hal.utils.decrypt:decrypt_cli"
 
-[tool.setuptools]
-packages = ["hal"]
+[tool.setuptools.packages.find]
+where = ["hal"]
