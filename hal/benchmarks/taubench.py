@@ -15,12 +15,11 @@ class TauBenchBenchmark(BaseBenchmark):
         self.setup_script = 'hal/benchmarks/taubench/taubench_setup.sh'
         self.requires_sandbox = False
         super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
-    
-        
+
+
         # Create benchmark dictionary
         default_train_size = 115 if self.split == 'retail' else 50
-        if benchmark_args:
-            train_size = benchmark_args.get('train_size', default_train_size)
+        train_size = benchmark_args.get('train_size', default_train_size) if benchmark_args else default_train_size
         self.benchmark = {}
         if self.split == 'retail':
             self.benchmark = {str(task_index): {
@@ -46,14 +45,14 @@ class TauBenchBenchmark(BaseBenchmark):
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs using AppWorld evaluation"""
         return agent_output
-    
+
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """
         Calculate metrics from evaluation results.
-        
+
         Args:
             eval_results: Dictionary containing evaluation results
-            
+
         Returns:
             Dictionary with calculated metrics and task lists
         """
@@ -63,28 +62,26 @@ class TauBenchBenchmark(BaseBenchmark):
                 reward += task_output['reward']
             except TypeError:
                 print(f"Task {task_id} does not have a reward. Skipping...")
-            
-            
+
+
         number_of_tasks = len(self.benchmark)
-            
-            
+
+
         successful_tasks = []
         for task_id, task_output in eval_results.items():
             if not isinstance(task_output, str):
                 if task_output['reward'] > 0:
                     successful_tasks.append(task_id)
-        
+
         failed_tasks = []
         for task_id, task_output in eval_results.items():
             if isinstance(task_output, str):
                 failed_tasks.append(task_id)
             elif task_output['reward'] == 0:
                 failed_tasks.append(task_id)
-        
-        results = {'accuracy': reward/number_of_tasks, 
-                   'successful_tasks': successful_tasks, 
+
+        results = {'accuracy': reward/number_of_tasks,
+                   'successful_tasks': successful_tasks,
                    'failed_tasks': failed_tasks
                    }
         return results
-
-
