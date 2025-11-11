@@ -19,6 +19,7 @@ class TauBenchBenchmark(BaseBenchmark):
 
         # Create benchmark dictionary
         default_train_size = 115 if self.split == 'retail' else 50
+        print(f"Benchmark args provided: {benchmark_args}")
         train_size = benchmark_args.get('train_size', default_train_size) if benchmark_args else default_train_size
         self.benchmark = {}
         if self.split == 'retail':
