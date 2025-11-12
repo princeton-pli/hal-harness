@@ -1,7 +1,7 @@
 openai
 smolagents
 smolagents[all]
-os
-typing
-pathlib
 weave
+wikipedia
+wikipedia-api
+litellm
