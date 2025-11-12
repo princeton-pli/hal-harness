@@ -246,6 +246,7 @@ def main(
                     agent_dir=agent_dir,
                     agent_args=agent_args,
                     benchmark_name=benchmark,
+                    benchmark_args=benchmark_args,
                     config=config,
                     run_id=run_id,  # Now guaranteed to have a value
                     use_vm=vm,
