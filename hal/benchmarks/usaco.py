@@ -46,13 +46,15 @@ class USACOBenchmark(BaseBenchmark):
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Run USACO evaluation harness on agent outputs in Docker container"""
         try:
+            # Normalize agent output to handle both old and new formats
+            normalized_output = self._normalize_agent_output(agent_output)
             
             # pass entire task with agent output
             eval_tasks = {}
-            for task_id, task in agent_output.items():
+            for task_id, task in normalized_output.items():
                 eval_tasks[task_id] = {
                     **self.benchmark[task_id],
-                    'response': agent_output[task_id]
+                    'response': normalized_output[task_id]
                 }
             
             temp_file_path = None

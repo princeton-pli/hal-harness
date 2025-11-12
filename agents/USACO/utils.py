@@ -310,7 +310,7 @@ def run_solve(model_fn, model_name, problem_dict, attempts, return_queries=False
     # save_json([rdict, sdict, rs, ss], f'results/results_{model_name}_solve_{attempts}attempts')
     
 
-def run_retrieval(model_fn, model_name, problem_dict, attempts, solution_sets, num_retrieved, retrieval_type, return_queries=False, reflexion=False):
+def run_retrieval(model_fn, model_name, problem_dict, attempts, solution_sets, num_retrieved, retrieval_type, return_queries=False, reflexion=False, return_retrieval_data=False):
     if retrieval_type == RetrievalType.EPISODIC:
         queries = generate_episodic_retrieval_queries(num_retrieved, problem_dict, solution_sets)
     elif retrieval_type == RetrievalType.SEMANTIC:
@@ -322,10 +322,14 @@ def run_retrieval(model_fn, model_name, problem_dict, attempts, solution_sets, n
     
     if not reflexion:
         results, ss = evaluate_model(model_fn, r_prompt_fn, queries=queries, verbose=True, attempts=attempts, problem_ids=list(problem_dict.keys()))
+        if return_retrieval_data:
+            return results, ss, queries
         return results, ss
     else:
         rdict, sdict, rs, ss = evaluate_model(model_fn, r_prompt_fn, queries=queries, verbose=True, attempts=attempts, problem_ids=list(problem_dict.keys()), reflexion=reflexion)
-        return (rdict, sdict, rs, ss) if not return_queries else (rdict, sdict, rs, ss, queries)
+        if return_queries or return_retrieval_data:
+            return (rdict, sdict, rs, ss, queries)
+        return (rdict, sdict, rs, ss)
     # save_json([rdict, sdict, rs, ss], f'results/results_{model_name}_episodic_retrieval_{attempts}attempts')
 
     

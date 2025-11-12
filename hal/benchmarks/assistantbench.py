@@ -16,7 +16,10 @@ class AssistantBenchBenchmark(BaseBenchmark):
         super().__init__(agent_dir, config)
     
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-        """Evaluate agent outputs using Browsergym evaluation"""
+        """Evaluate agent outputs against gold standard answers"""
+        # Normalize agent output to handle both old and new formats
+        normalized_output = self._normalize_agent_output(agent_output)
+        
         scores = []
         answers = []
         successful_tasks = []
@@ -24,7 +27,7 @@ class AssistantBenchBenchmark(BaseBenchmark):
 
         task_num = 0
 
-        for task_id, agent_answer in agent_output.items():
+        for task_id, agent_answer in normalized_output.items():
                 task = self.benchmark.get(task_id)
                 gold_answer = task["answer"]
                 try:
