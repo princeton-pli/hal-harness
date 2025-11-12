@@ -1,169 +1,126 @@
-from typing import Dict, Any, Optional
-from .base_benchmark import BaseBenchmark
+from typing import Dict, Any
+from pathlib import Path
+import os
+import sys
+import json
+import argparse
+import time
 
 from datasets import load_dataset
-import os
-import argparse
-import json
-import sys
-import time
-from pathlib import Path
+from .base_benchmark import BaseBenchmark
 
-# get the relative path of the directory where this file is located
-this_file_dir = os.path.dirname(os.path.relpath(__file__)).replace('\\', '/')
-benchmark_path = os.path.join(this_file_dir, 'scienceagentbench', 'ScienceAgentBench', 'benchmark')
+# Base directory of this file
+this_file_dir = Path(__file__).resolve().parent
 
-submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
-sys.path.insert(0, submodule_path)
+# Directory where upstream ScienceAgentBench code is cloned
+code_root = this_file_dir / 'scienceagentbench' / 'SAB_code'
+sys.path.insert(0, str(code_root))
 
-# import this_file_dir.scienceagentbench.ScienceAgentBench.recover_pred_from_log
-# module_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench", "recover_pred_from_log.py")
-# module_name = "recover_pred_from_log"
-# spec = importlib.util.spec_from_file_location(module_name, module_path)
-# recover_utils = importlib.util.module_from_spec(spec)
-# spec.loader.exec_module(recover_utils)
-import recover_pred_from_log as recover_utils
+# Path to the benchmark datasets and config in the upstream code
+BENCHMARK_PATH = code_root / 'benchmark'
 
-# import this_file_dir.scienceagentbench.ScienceAgentBench.evaluation.harness as a package
-# submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
-# sys.path.insert(0, submodule_path)
-from evaluation.harness import run_evaluation as docker_eval, docker_build as docker_build
-
-# import this_file_dir.scienceagentbench.ScienceAgentBench.calculate_metrics
-# module_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench", "recover_pred_from_log.py")
-# module_name = "recover_pred_from_log"
-# spec = importlib.util.spec_from_file_location(module_name, module_path)
-# recover_utils = importlib.util.module_from_spec(spec)
-# spec.loader.exec_module(recover_utils)
+# Import required modules from SAB
+from recover_pred_from_log import main as recover_main
 from calculate_metrics import evaluate_best_run
-
+from evaluation.harness import run_evaluation as docker_eval, docker_build
 
 class ScienceAgentBench(BaseBenchmark):
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        self.benchmark_name = "scienceagentbench"
+        self.benchmark_name = 'scienceagentbench'
+        self.requires_sandbox = False
+        super().__init__(agent_dir, config, setup_script='hal/benchmarks/scienceagentbench/setup.sh')
 
-        ds = load_dataset("osunlp/ScienceAgentBench", split="validation")
-        self.benchmark = {}
+        # Load validation split
+        ds = load_dataset('osunlp/ScienceAgentBench', split='validation')
+        self.benchmark: Dict[str, Any] = {}
 
         for task in ds:
-            task_id = str(task['instance_id'])  # hal-harness requires the task_id to be a str, otherwise cannot match existing results
-            self.benchmark[task_id] = {}
-            for key in task:
-                self.benchmark[task_id][key] = task[key]
+            tid = str(task['instance_id'])
+            # Prepare file mapping for HAL harness
+            subpath = task['dataset_folder_tree'].split('\n')[0][4:]
+            data_src = this_file_dir / 'scienceagentbench' / 'ScienceAgentBench' / 'benchmark' / 'datasets' / subpath
+            map_key = str(Path('benchmark/datasets') / subpath)
+            self.benchmark[tid] = {**task, 'files': {map_key: str(data_src)}}
 
-            dataset_path = os.path.join("benchmark/datasets/", task["dataset_folder_tree"].split("\n")[0][4:])
-            src_dataset_path = os.path.join(submodule_path, dataset_path)
-            self.benchmark[task_id]['files'] = {
-                dataset_path: src_dataset_path,
-            }
-
-        # Optional: Set if benchmark requires VM execution
-        self.requires_sandbox = False
-        # Optional: Path to VM setup script
-        self.setup_script = "hal/benchmarks/scienceagentbench/setup.sh"
-        super().__init__(agent_dir, config, setup_script=self.setup_script)
-        
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-        """Evaluate agent solutions"""
+        # Recover programs from logs
         self._recover_pred_from_log(agent_output, run_id)
-        result_path = self._call_docker_eval(run_id)
-        with open(result_path, "r") as f:
-            result = {}
+        # Evaluate via Docker
+        result_file = self._call_docker_eval(run_id)
+
+        results: Dict[str, Any] = {}
+        with open(result_file, 'r') as f:
             for idx, line in enumerate(f, start=1):
-                if line.strip() == '':
-                    #raise ValueError("Empty line in evaluation results. This may be because the docker evaluation is not complete.")
-                    result[str(idx)] = {'valid_program': 0, 'codebert_score': 0, 'success_rate': 0, 'log_info': ''}
+                if not line.strip():
+                    results[str(idx)] = { 'valid_program': 0, 'codebert_score': 0, 'success_rate': 0, 'log_info': '' }
                 else:
-                    instance_result = json.loads(line)
-                    result[str(idx)] = instance_result
-        
-        return {'agent_output': agent_output, 'eval_result': result}
-        
+                    results[str(idx)] = json.loads(line)
+        return {'agent_output': agent_output, 'eval_result': results}
+
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract metrics from evaluation results"""
         agent_output = eval_results['agent_output']
         eval_result = eval_results['eval_result']
 
-        run_log = []
-        eval_log = []
-        for idx in range(1, len(self.benchmark) + 1):
-            if agent_output[str(idx)] == "TIMEOUT after 900 seconds" or agent_output[str(idx)] == "TIMEOUT after 7200 seconds":
-                run_log.append({
-                    "history": [
-                        {
-                            "role": "assistant",
-                            "content": "TIMEOUT",
-                        }
-                    ],
-                    "cost": 0.0 # need to rely on weave log for accurate cost
-                })
+        run_log, eval_log = [], []
+        total = len(self.benchmark)
+        for i in range(1, total + 1):
+            key = str(i)
+            entry = agent_output.get(key)
+            if isinstance(entry, str) and entry.startswith('TIMEOUT'):
+                run_log.append({'history':[{'role':'assistant','content':'TIMEOUT'}], 'cost':0.0})
             else:
-                run_log.append(agent_output[str(idx)])
-            eval_log.append(eval_result[str(idx)])
-        
-        metrics = evaluate_best_run([run_log], [eval_log])
-        return metrics
+                run_log.append(entry)
+            eval_log.append(eval_result[key])
 
+        return evaluate_best_run([run_log], [eval_log])
 
-    def _recover_pred_from_log(self, agent_output, run_id):
-        args = argparse.Namespace()
-        args.benchmark_name_or_path = benchmark_path
-        log_fname = os.path.join(self.get_run_dir(run_id), f"{run_id}_histories.jsonl")
+    def _recover_pred_from_log(self, agent_output: Dict[str, Any], run_id: str):
+        run_dir = Path(self.get_run_dir(run_id))
+        log_file = run_dir / f"{run_id}_histories.jsonl"
+        run_dir.mkdir(parents=True, exist_ok=True)
 
-        all_data = agent_output
-        with open(log_fname, "w") as f:
-            for idx in range(1, len(self.benchmark) + 1):
-                if all_data[str(idx)] == "TIMEOUT after 900 seconds" or all_data[str(idx)] == "TIMEOUT after 7200 seconds":
-                    f.write(json.dumps(
-                        {
-                            "history": [
-                                {
-                                    "role": "assistant",
-                                    "content": "TIMEOUT",
-                                }
-                            ],
-                            "cost": 0.0 # need to rely on weave log for accurate cost
-                        }
-                    ) + "\n")
-                else:
-                    f.write(json.dumps(all_data[str(idx)]) + "\n")
+        with open(log_file, 'w') as f:
+            for i in range(1, len(self.benchmark) + 1):
+                entry = agent_output.get(str(i))
+                if isinstance(entry, str) and entry.startswith('TIMEOUT'):
+                    entry = {'history':[{'role':'assistant','content':'TIMEOUT'}], 'cost':0.0}
+                f.write(json.dumps(entry) + "\n")
 
-        args.log_fname = log_fname
-        args.pred_program_path = os.path.join(self.get_run_dir(run_id), "pred_programs")
-        args.is_opendevin = False  # TODO: set this to True if using opendevin
+        args = argparse.Namespace(
+            benchmark_name_or_path=str(BENCHMARK_PATH),
+            log_fname=str(log_file),
+            pred_program_path=str(run_dir / 'pred_programs'),
+            is_opendevin=False
+        )
+        recover_main(args)
 
-        recover_utils.main(args)
+    def _call_docker_eval(self, run_id: str) -> str:
+        run_dir = Path(self.get_run_dir(run_id))
+        # Update Docker context dirs
+        docker_build.BASE_IMAGE_BUILD_DIR = run_dir / docker_build.BASE_IMAGE_BUILD_DIR
+        docker_build.INSTANCE_IMAGE_BUILD_DIR = run_dir / docker_build.INSTANCE_IMAGE_BUILD_DIR
+        docker_eval.INSTANCE_IMAGE_BUILD_DIR = run_dir / docker_eval.INSTANCE_IMAGE_BUILD_DIR
+        docker_eval.RUN_EVALUATION_LOG_DIR = run_dir / docker_eval.RUN_EVALUATION_LOG_DIR
 
-    def _call_docker_eval(self, run_id: str):
-        """Call docker eval script"""
-        # Change logs dir
-        run_path = Path(self.get_run_dir(run_id))
-        docker_build.BASE_IMAGE_BUILD_DIR = run_path / docker_build.BASE_IMAGE_BUILD_DIR
-        docker_build.INSTANCE_IMAGE_BUILD_DIR = run_path / docker_build.INSTANCE_IMAGE_BUILD_DIR
-        docker_eval.INSTANCE_IMAGE_BUILD_DIR = run_path / docker_eval.INSTANCE_IMAGE_BUILD_DIR
-        docker_eval.RUN_EVALUATION_LOG_DIR = run_path / docker_eval.RUN_EVALUATION_LOG_DIR
-
-        log_fname = os.path.join(self.get_run_dir(run_id), f"{run_id}_eval.jsonl")
-
-        docker_eval.main(  # TODO: These arguments are not configurable right now
-            benchmark_path=benchmark_path,
-            pred_program_path=os.path.join(self.get_run_dir(run_id), "pred_programs"),
-            log_fname=log_fname,
+        log_file = run_dir / f"{run_id}_eval.jsonl"
+        docker_eval.main(
+            benchmark_path=str(BENCHMARK_PATH),
+            pred_program_path=str(run_dir / 'pred_programs'),
+            log_fname=str(log_file),
             dataset_name='osunlp/ScienceAgentBench',
             split='validation',
             instance_ids=None,
             max_workers=os.cpu_count() // 2,
             force_rebuild=True,
-            cache_level="none",
+            cache_level='none',
             clean=False,
             open_file_limit=4096,
-            run_id=run_id + '_' + time.strftime("%Y%m%d-%H%M%S"),
+            run_id=f"{run_id}_{time.strftime('%Y%m%d-%H%M%S')}",
             timeout=1800,
-            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
-            azure_openai_key=os.getenv("AZURE_OPENAI_KEY", ""),
-            azure_openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
-            azure_openai_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
-            azure_openai_deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", ""),
+            openai_api_key=os.getenv('OPENAI_API_KEY',''),
+            azure_openai_key=os.getenv('AZURE_OPENAI_KEY',''),
+            azure_openai_api_version=os.getenv('AZURE_OPENAI_API_VERSION','2024-12-01-preview'),
+            azure_openai_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT',''),
+            azure_openai_deployment_name=os.getenv('AZURE_OPENAI_DEPLOYMENT_NAME','')
         )
-
-        return log_fname
+        return str(log_file)
