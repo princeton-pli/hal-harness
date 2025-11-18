@@ -9,6 +9,16 @@ from typing import Any, Dict, Optional, Callable
 
 verbose_logger = logging.getLogger('agent_eval.verbose')
 
+# Conservative list of retryable errors. We will have to expand this list over time.
+RETRYABLE_ERRORS = [
+    "overloaded_error",
+    "rate limit",
+    "overload", 
+    "request timeout",
+    "rate_limit_error",
+    "429 Too Many Requests",
+]
+
 
 @dataclass
 class RetryConfig:
@@ -44,10 +54,12 @@ class RetryHandler:
         if not result:
             return True
         
-        # Check if any task has an error - if so, retry
+        # Check if any task has a retryable error
         for value in result.values():
             if isinstance(value, str) and value.startswith("ERROR:"):
-                return True
+                error_msg = value.lower()
+                if any(retryable_error in error_msg for retryable_error in RETRYABLE_ERRORS):
+                    return True
         
         return False
     
@@ -77,11 +89,16 @@ class RetryHandler:
                 error_msg = str(e)
                 last_result = {task_id: f"ERROR: {error_msg}"}
                 
-                if attempt < self.config.max_retries:
+                # Apply conservative retry logic to exceptions as well
+                should_retry_exception = any(retryable_error in error_msg.lower() for retryable_error in RETRYABLE_ERRORS)
+                
+                if attempt < self.config.max_retries and should_retry_exception:
                     delay = self._calculate_delay(attempt)
                     verbose_logger.warning(f"Task {task_id}: Exception retry in {delay:.1f}s: {error_msg}")
                     await asyncio.sleep(delay)
                 else:
+                    if not should_retry_exception and attempt < self.config.max_retries:
+                        verbose_logger.error(f"Task {task_id}: Non-retryable exception: {error_msg}")
                     break
         
         verbose_logger.error(f"Task {task_id}: Failed after {self.config.max_retries + 1} attempts")
