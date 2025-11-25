@@ -90,7 +90,7 @@ class CoreBench(BaseBenchmark):
     def __download_and_extract_capsule(self, capsules_dir: str, capsule_id: str, task_number=None, total_tasks=None, max_retries=5, backoff_factor=1):
         """Downloads and extracts a capsule archive from the CoreBench repository."""
         capsule_dir = os.path.join(capsules_dir, capsule_id)
-        capsule_url = f"https://corebench.cs.princeton.edu/capsules/{capsule_id}.tar.gz"
+        capsule_url = f"https://corebench.<Anonymous>/capsules/{capsule_id}.tar.gz"
         tar_path = os.path.join(capsules_dir, f"{capsule_id}.tar.gz")
         
         # Download with retry and progress tracking

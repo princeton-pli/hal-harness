@@ -19,7 +19,7 @@ class SWEBenchBenchmark(BaseBenchmark):
             self.mini_instance_ids = [line.strip() for line in f.readlines()]
         
         # download swebench verified from huggingface
-        ds = load_dataset("princeton-nlp/SWE-bench_Verified", split="test")
+        ds = load_dataset("<Anonymous>/SWE-bench_Verified", split="test")
         self.benchmark = {}
         
         # Load benchmark dataset
@@ -65,7 +65,7 @@ class SWEBenchBenchmark(BaseBenchmark):
         
         
         command = ['conda', 'run', '-n', 'swebench_hal', 'python', '-m', 'swebench.harness.run_evaluation',
-           '--dataset_name', 'princeton-nlp/SWE-bench_Verified',
+           '--dataset_name', '<Anonymous>/SWE-bench_Verified',
            '--predictions_path', submissions_path,
            '--max_workers', '6',
            '--run_id', run_id]

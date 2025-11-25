@@ -2,13 +2,13 @@
 
 This repo holds the code and demos for "Can Language Models Solve Olympiad Programming?" by Quan Shi, Michael Tang, Karthik Narasimhan, and Shunyu Yao. [Paper Link](https://arxiv.org/abs/2404.10952v1)
 
-![memory_retrieval](https://github.com/princeton-nlp/USACO/assets/78577924/e225d8a3-ca88-46bf-88d1-ced17241a4fa)
+![memory_retrieval](\<Anonymous\>)
 
 ## Setup
 
 Run
 ```
-git clone https://github.com/princeton-nlp/USACO
+git clone https://github.com/<Anonymous>/USACO
 cd USACO
 pip install -r requirements.txt
 ```

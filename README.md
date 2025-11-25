@@ -541,7 +541,7 @@ See [hal/benchmarks/README.md](hal/benchmarks/README.md) for details.
 
 ## How Can I Submit My Results to the HAL Leaderboards?
 
-Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
+Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](\<Anonymous\>) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
 
 1. **During Evaluation:**
    ```bash
