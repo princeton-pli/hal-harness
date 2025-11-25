@@ -1,38 +1,38 @@
 [submodule "hal/benchmarks/SWE-bench"]
 	path = hal/benchmarks/SWE-bench
-	url = https://github.com/boyiwei/SWE-bench
+	url = https://github.com/<Anonymous>/SWE-bench
 [submodule "hal/benchmarks/USACO"]
 	path = hal/benchmarks/USACO
-	url = https://github.com/benediktstroebl/USACO
+	url = https://github.com/<Anonymous>/USACO
 [submodule "agents/SWE-agent"]
 	path = agents/SWE-agent
-	url = https://github.com/benediktstroebl/SWE-agent.git
+	url = https://github.com/<Anonymous>/SWE-agent.git
 [submodule "agents/Agentless"]
 	path = agents/Agentless
-	url = https://github.com/benediktstroebl/Agentless.git
+	url = https://github.com/<Anonymous>/Agentless.git
 [submodule "agents/auto-code-rover"]
 	path = agents/auto-code-rover
-	url = https://github.com/vminvsky/auto-code-rover.git
+	url = https://github.com/<Anonymous>/auto-code-rover.git
 [submodule "agents/Moatless/moatless-tools"]
 	path = agents/Moatless/moatless-tools
-	url = https://github.com/benediktstroebl/moatless-tools.git
+	url = https://github.com/<Anonymous>/moatless-tools.git
 [submodule "agents/usaco_bedrock_models"]
 	path = agents/usaco_bedrock_models
-	url = https://github.com/aarora79/usaco_bedrock_models.git
+	url = https://github.com/<Anonymous>/usaco_bedrock_models.git
 [submodule "hal/benchmarks/SciCode"]
 	path = hal/benchmarks/SciCode
-	url = https://github.com/peterkirgis/SciCode.git
+	url = https://github.com/<Anonymous>/SciCode.git
 [submodule "hal/benchmarks/scienceagentbench/ScienceAgentBench"]
 	path = hal/benchmarks/scienceagentbench/ScienceAgentBench
 	url = https://github.com/OSU-NLP-Group/ScienceAgentBench.git
 [submodule "agents/open_deep_research"]
 	path = agents/open_deep_research
-	url = https://github.com/benediktstroebl/smolagents.git
+	url = https://github.com/<Anonymous>/smolagents.git
 	branch = open_deep_research
 [submodule "agents/SWE-agent-v1.0"]
 	path = agents/SWE-agent-v1.0
-	url = https://github.com/boyiwei/SWE-agent.git
+	url = https://github.com/<Anonymous>/SWE-agent.git
 [submodule "agents/Enigma"]
 	path = agents/Enigma
-	url = https://github.com/boyiwei/SWE-agent.git
+	url = https://github.com/<Anonymous>/SWE-agent.git
 	branch = enigma-agent-hal

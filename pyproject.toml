@@ -15,7 +15,7 @@ dependencies = [
     "python-dotenv",
     "setuptools>=48.0.0",
     "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@d3a242f74c8a4f42a86d1219eaca12ab620c3be2",
-    "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals@15a81e27ac7161a39e28f247157e36036a61ef18",
+    "inspect-evals @ git+https://github.com/<Anonymous>/inspect_evals@15a81e27ac7161a39e28f247157e36036a61ef18",
     "tenacity>=8.2.0",
     "docker>=7.1.0",
     "cryptography>=42.0.0",
@@ -37,17 +37,17 @@ appworld = [
     "appworld-experiments[simplified,smolagents] @ git+https://github.com/stonybrooknlp/appworld.git@main#egg=appworld-experiments&subdirectory=experiments",
 ]
 taubench = [
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
+    "tau-bench @ git+https://github.com/<Anonymous>/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
 ]
 scicode = [
-  "scicode @ git+https://github.com/peterkirgis/SciCode"
+  "scicode @ git+https://github.com/<Anonymous>/SciCode"
 ]
 assistantbench = [
     "browsergym==0.13.4"
 ]
 hal-agent-inspect = [
-    "smolagents @ git+https://github.com/benediktstroebl/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
+    "smolagents @ git+https://github.com/<Anonymous>/smolagents@c77c99a855b13dbef2af66904448948d01bdc25c",
+    "tau-bench @ git+https://github.com/<Anonymous>/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
     "mammoth",
     "python_pptx>=1.0.2",
     "pdfminer>=20191125",
@@ -58,8 +58,8 @@ hal-agent-inspect = [
     "SpeechRecognition",
 ]
 hal-agent = [
-    "smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c",
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
+    "smolagents @ git+https://github.com/<Anonymous>/smolagents@0c62b18dde5a163370919888290ff4f506dc918c",
+    "tau-bench @ git+https://github.com/<Anonymous>/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
     "mammoth",
     "python_pptx>=1.0.2",
     "pdfminer>=20191125",
@@ -71,7 +71,7 @@ hal-agent = [
 ]
 coreagent = [
     "smolagents @ git+https://github.com/huggingface/smolagents@0c62b18dde5a163370919888290ff4f506dc918c",
-    "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
+    "tau-bench @ git+https://github.com/<Anonymous>/tau-bench@bef42de85cdbfb5490e6f3bd19d8e053df977e08",
     "mammoth",
     "python_pptx>=1.0.2",
     "pdfminer>=20191125",

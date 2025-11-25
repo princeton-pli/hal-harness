@@ -1,5 +1,5 @@
 openai==1.99.9
-smolagents @ git+https://github.com/benediktstroebl/smolagents@0c62b18dde5a163370919888290ff4f506dc918c
+smolagents @ git+https://github.com/<Anonymous>/smolagents@0c62b18dde5a163370919888290ff4f506dc918c
 mammoth
 python_pptx>=1.0.2
 pdfminer>=20191125
