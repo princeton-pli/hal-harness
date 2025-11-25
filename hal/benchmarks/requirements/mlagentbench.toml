@@ -153,6 +153,6 @@ xxhash = "3.4.1"
 yarl = "1.9.4"
 evaluate = "^0.4.2"
 zstandard = "0.18.0"
-MLAgentBench = { git = "https://github.com/benediktstroebl/MLAgentBench.git", rev = "5d71205cc20a8e95d43aa7cb7120e89ca3323e31" }
+MLAgentBench = { git = "https://github.com/<Anonymous>/MLAgentBench.git", rev = "5d71205cc20a8e95d43aa7cb7120e89ca3323e31" }
 dm-clrs = { git = "https://github.com/google-deepmind/clrs.git", rev = "3ba3f2d5f7e832d8076b5bb9c8c05d3dfc4bf18e" }
-crfm-helm = { git = "https://github.com/benediktstroebl/helm.git", rev = "bcce29d26219f28b4ce8f61f4bee1939887c2ee2"}
+crfm-helm = { git = "https://github.com/<Anonymous>/helm.git", rev = "bcce29d26219f28b4ce8f61f4bee1939887c2ee2"}
