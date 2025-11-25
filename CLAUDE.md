@@ -11,7 +11,7 @@ HAL (Holistic Agent Leaderboard) is a standardized evaluation harness for reprod
 ### Setup and Installation
 ```bash
 # Clone repository (recursive for submodules)
-git clone --recursive https://github.com/benediktstroebl/hal-harness.git
+git clone --recursive https://github.com/\<Anonymous\>/hal-harness.git
 cd hal-harness
 
 # Create and activate conda environment (Python 3.11+)
