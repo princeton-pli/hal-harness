@@ -1,10 +1,10 @@
 # HAL: The Holistic Agent Leaderboard
 
-[![HAL Leaderboards](https://img.shields.io/badge/Leaderboards-HAL-blue)](https://hal.cs.princeton.edu/)
+[![HAL Leaderboards](https://img.shields.io/badge/Leaderboards-HAL-blue)](\<Anonymous\>)
 [![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
 [![Inspect AI](https://img.shields.io/badge/Inspect_AI-green)](https://github.com/UKGovernmentBEIS/inspect_ai)
 
-This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and the official [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) for sharing evaluation results.
+This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking, [Inspect AI](https://github.com/UKGovernmentBEIS/inspect_ai), and the official [Holistic Agent Leaderboard (HAL)](\<Anonymous\>) for sharing evaluation results.
 
 ## Features
 
@@ -32,7 +32,7 @@ This repository provides a standardized evaluation harness for reproducible agen
   - Automatic encryption of agent traces before uploading to avoid benchmark contamination
 
 * **HAL leaderboard integration**
-  - Direct integration with the [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu)
+  - Direct integration with the [Holistic Agent Leaderboard (HAL)](\<Anonymous\>)
   - Detailed metrics and in-depth performance analysis
 
 ## Table of Contents
@@ -52,7 +52,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 
 1. **Clone the repository:**
    ```bash
-   git clone --recursive https://github.com/benediktstroebl/hal-harness.git
+   git clone --recursive <this-repo-url>
    cd hal-harness
    ```
 
@@ -107,12 +107,12 @@ This repository provides a standardized evaluation harness for reproducible agen
 
 ## Which Benchmarks Are Supported?
 
-### [SWE-bench Verified (Mini)](https://github.com/princeton-nlp/SWE-bench)
+### [SWE-bench Verified (Mini)](\<Anonymous\>)
 - Evaluates code generation and bug fixing capabilities
 - Full dataset (`swebench_verified`) or mini version (`swebench_verified_mini`)
 - Mini version is a subset of 50 randomly selected problems from the full dataset
 - Supports local, Docker, and VM execution
-- The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
+- The task ids part of SWE-Bench Verified (Mini) can be found [here](\<Anonymous\>)
 - **Does not support arm64 machines**
 
 For SWE-bench Verified, you will need to install the SWE-bench benchmark specific dependencies:
@@ -123,7 +123,7 @@ pip install -e .[swebench]
 You will also need to **install docker** following the instructions [here](https://docs.docker.com/engine/install/). Docker is used during evaluation to run the SWE-bench tasks. For linux users, you will also need to complete the linux post-installation steps [here](https://docs.docker.com/engine/install/linux-postinstall/).
  
 
-### [USACO](https://github.com/princeton-nlp/USACO)
+### [USACO](\<Anonymous\>)
 - Programming competition problems
 - Supports local, Docker, and VM execution
 
@@ -194,7 +194,7 @@ pip install -e .[taubench]
 
 For all SciCode benchmarks, you will need to download and extract the SciCode unit tests. This can be done with the following steps:
 
-1. Download the unit tests [here](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR)
+1. Download the unit tests [here](\<Anonymous\>)
 2. Move the file to `hal/benchmarks/SciCode/eval/data/`.
 3. Install benchmark specific dependencies:
 ```bash
@@ -378,7 +378,7 @@ Example script for evaluations on colbench:
 hal-eval --benchmark colbench_backend_programming --agent_dir agents/colbench_example_agent \
     --agent_name colbench_text_70b \
     --agent_function main.run -A model_name=/fsx-ram/shared/Meta-Llama-3.1-70B-Instruct \
-    -B task_path=/home/yifeizhou/hal_collaborative/temp_data/test.jsonl \
+    -B task_path=/home/Anonymous/hal_collaborative/temp_data/test.jsonl \
     -A env_model_name=/fsx-ram/shared/Meta-Llama-3.1-70B-Instruct \
     --max_concurrent 100
 
@@ -386,9 +386,9 @@ hal-eval --benchmark colbench_backend_programming --agent_dir agents/colbench_ex
 hal-eval --benchmark colbench_frontend_design --agent_dir agents/colbench_example_agent \
     --agent_name colbench_text_70b \
     --agent_function main.run -A model_name=/fsx-ram/shared/Meta-Llama-3.1-8B-Instruct \
-    -B task_path=/home/yifeizhou/hal_collaborative/temp_data/frontend_tasks/test.jsonl \
+    -B task_path=/home/Anonymous/hal_collaborative/temp_data/frontend_tasks/test.jsonl \
     -A env_model_name=/fsx-ram/shared/Qwen2-VL-72B-Instruct \
-    -A cache_path=/fsx-ram/yifeizhou/collab_llm/driver_cache/ \
+    -A cache_path=/fsx-ram/Anonymous/collab_llm/driver_cache/ \
     --max_concurrent 20
 ```
 
@@ -564,9 +564,9 @@ For submitting results to the leaderboard, upload the files ending with `_UPLOAD
 
 ## How can I use the agent traces from the HAL Leaderboard?
 
-For each benchmark and agent on [HAL](hal.cs.princeton.edu), you can download the agent traces and use them for further analysis.
+For each benchmark and agent on [HAL](\<Anonymous\>), you can download the agent traces and use them for further analysis.
 
-1. Download the agent traces from the [HAL Leaderboard](hal.cs.princeton.edu)
+1. Download the agent traces from the [HAL Leaderboard](\<Anonymous\>)
 2. Use the `hal-decrypt` command to decrypt the traces. You can either decrypt and entire directory of traces or a single trace. For example:
 
 Entire directory:
@@ -587,7 +587,7 @@ HAL addresses these challenges through two key components: 1) A central leaderbo
 
 **TLDR:** We aim to standardize AI agent evaluations by providing a third-party platform for comparing agents across various benchmarks. Our goal with HAL is to serve as a one-stop shop for agent evaluations, taking into account both accuracy and cost by default. The accompanying HAL harness offers a simple and scalable way to run agent evals - locally or in the cloud.
 
-Check out this [issue](https://github.com/princeton-pli/hal-harness/issues/16) for more details on the motivation behind HAL and what differentiates it from other agent eval frameworks.
+Check out this [issue](\<Anonymous\>) for more details on the motivation behind HAL and what differentiates it from other agent eval frameworks.
 
 ## Repository Structure
 
@@ -616,8 +616,8 @@ If you use HAL or the HAL harness in your research, please cite it by using the 
 ```bibtex
 @Misc{hal,
   title =        {HAL: A Holistic Agent Leaderboard for Centralized and Reproducible Agent Evaluation},
-  author =       {Benedikt Stroebl and Sayash Kapoor and Arvind Narayanan},
-  howpublished = {\url{https://github.com/princeton-pli/hal-harness}},
+  author =       {<Anonymous>},
+  howpublished = {\url{<Anonymous>}},
   year =         {2025}
 }
 ```
