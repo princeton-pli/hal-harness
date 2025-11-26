@@ -4,7 +4,7 @@ import urllib.request
 import tarfile
 import time
 import shutil
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import numpy as np
 from scipy.stats import t
 import math
@@ -15,7 +15,7 @@ from .base_benchmark import BaseBenchmark
 class CoreBench(BaseBenchmark):
     """Base class for CoreBench benchmarks of different difficulty levels"""
     
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], setup_script: Optional[str] = None):
         # Set benchmark_name in subclasses
         
         # Load tasks from core_test.json
@@ -57,8 +57,8 @@ class CoreBench(BaseBenchmark):
             
             # Store results
             self.benchmark_answers[capsule_id] = task["results"]
-            
-        super().__init__(agent_dir, config)
+        
+        super().__init__(agent_dir, config, setup_script=setup_script)
     
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
@@ -420,7 +420,8 @@ class CoreBenchHard(CoreBench):
     
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         self.benchmark_name = "corebench_hard"
-        super().__init__(agent_dir, config)
+        setup_script = "hal/benchmarks/corebench/setup.sh"
+        super().__init__(agent_dir, config, setup_script=setup_script)
         
     def _construct_prompt(self, task):
         """

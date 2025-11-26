@@ -2,7 +2,7 @@
 set -e  # Exit on error
 
 # Configuration
-USERNAME="$1"  # Pass username as first argument
+USERNAME="$1"
 HOME_DIR="/home/$USERNAME"
 
 echo "Starting setup for user: $USERNAME"
@@ -21,11 +21,9 @@ bash /tmp/miniconda.sh -b -p $MINICONDA_PATH
 rm /tmp/miniconda.sh
 echo "Miniconda installed"
 
-# Set ownership
 echo "Setting Miniconda ownership..."
 chown -R $USERNAME:$USERNAME $MINICONDA_PATH
 
-# Create conda initialization script
 echo "Creating conda initialization script..."
 cat > "$HOME_DIR/init_conda.sh" << EOF
 #!/bin/bash
@@ -39,11 +37,9 @@ if [ -f "\$HOME/.env" ]; then
 fi
 EOF
 
-# Make initialization script executable and set ownership
 chmod +x "$HOME_DIR/init_conda.sh"
 chown $USERNAME:$USERNAME "$HOME_DIR/init_conda.sh"
 
-# Create and activate environment as the agent user with explicit output
 echo "Creating conda environment..."
 su - $USERNAME -c "bash -c '\
     echo \"Initializing conda...\" && \
@@ -55,9 +51,9 @@ su - $USERNAME -c "bash -c '\
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     if [ -f requirements.txt ]; then \
-        PYTHON_VERSION=$(grep "^python==" requirements.txt | cut -d"=" -f3) && \
-        if [ ! -z "$PYTHON_VERSION" ]; then \
-            conda create -n agent_env python=$PYTHON_VERSION -y; \
+        PYTHON_VERSION=\$(grep \"^python==\" requirements.txt | cut -d\"=\" -f3) && \
+        if [ ! -z \"\$PYTHON_VERSION\" ]; then \
+            conda create -n agent_env python=\$PYTHON_VERSION -y; \
         else \
             conda create -n agent_env python=3.12 -y; \
         fi \
