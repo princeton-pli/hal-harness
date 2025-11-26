@@ -7,31 +7,13 @@ HOME_DIR="/home/$USERNAME"
 
 echo "Starting setup for user: $USERNAME"
 
-# === ADDITIVE: system deps needed for RMarkdown capsules ===
-echo "[ADD] Installing R system dependencies..."
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y --no-install-recommends \
-    r-base r-base-dev \
-    build-essential gfortran \
-    pandoc \
-    libssl-dev \
-    libcurl4-openssl-dev \
-    libxml2-dev \
-    libcairo2-dev \
-    libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
-    libharfbuzz-dev \
-    libfribidi-dev \
-    libtiff5 \
-    libxt6 \
-    fontconfig \
-    libudunits2-0 libudunits2-dev
+# Install system dependencies
+# echo "Installing system dependencies..."
+# apt-get update -y
+# apt-get install -y curl wget build-essential
+# echo "System dependencies installed"
 
-echo "[ADD] R base + pandoc + header libs (including udunits2) installed"
-
-# === Your original Miniconda section (unchanged) ===
+# Install Miniconda
 echo "Installing Miniconda..."
 MINICONDA_PATH="/home/$USERNAME/miniconda3"
 curl -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
