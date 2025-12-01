@@ -1660,9 +1660,12 @@ User's question: {user_question}
         print("Final user's response: ", observation)
         
         save_agent_steps(agent, kwargs, response, task)
-            
+
+        # Collect metrics
+        metrics = collect_task_metrics(agent)
+         
         ### WHEN DONE WE RETURN THE ENV STATE ###
-        return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump()}}
+        return {task_id: {"reward": isolated_env.reward, "taken_actions": [action.model_dump() for action in isolated_env.actions], "task": isolated_env.task.model_dump(), "metrics": metrics}}
     
     elif kwargs['benchmark_name'] == 'scicode':
         
