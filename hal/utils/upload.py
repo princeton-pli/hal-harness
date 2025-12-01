@@ -1,5 +1,6 @@
 import os
 import click
+import json
 from huggingface_hub import HfApi
 from ..benchmark_manager import BenchmarkManager
 from dotenv import load_dotenv
@@ -9,12 +10,56 @@ from .logging_utils import (
     print_step,
     print_success,
     print_error,
+    print_warning,
     terminal_print,
     console,
     create_progress
 )
 
 load_dotenv()
+
+def validate_eval_results(file_path):
+    """Validate that the evaluation results don't contain errors that indicate an incomplete run."""
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        
+        if 'raw_eval_results' not in data:
+            return True, None, None
+        
+        raw_eval_results = data['raw_eval_results']
+        if not isinstance(raw_eval_results, dict):
+            return True, None, None
+        
+        error_tasks = []
+        for task_id, task_result in raw_eval_results.items():
+            if isinstance(task_result, dict):
+                explanation = task_result.get('explanation', '')
+                if isinstance(explanation, str):
+                    error_patterns = [
+                        'Evaluated ERROR:',
+                        'Traceback (most recent call last)',
+                        'Exception occurred',
+                        'Failed to evaluate',
+                        'Error during evaluation'
+                    ]
+                    
+                    if any(pattern in explanation for pattern in error_patterns):
+                        error_tasks.append({
+                            'task_id': task_id,
+                            'explanation': explanation
+                        })
+        
+        if error_tasks:
+            error_message = f"Found {len(error_tasks)} tasks with evaluation errors"
+            return False, error_message, error_tasks
+        
+        return True, None, None
+        
+    except json.JSONDecodeError as e:
+        return False, f"Invalid JSON format: {str(e)}", None
+    except Exception as e:
+        return False, f"Error validating file: {str(e)}", None
 
 bm = BenchmarkManager()
 available_benchmarks = bm.list_benchmarks()
@@ -40,8 +85,13 @@ def find_upload_files(directory, require_upload_suffix=False):
 @click.option('--benchmark', '-B', help='Name of the benchmark', type=click.Choice(available_benchmarks))
 @click.option('--file', '-F', type=click.Path(exists=True), help='Path to single file to upload')
 @click.option('--directory', '-D', type=click.Path(exists=True), help='Path to directory containing files to upload')
-def upload_results(benchmark, file, directory):
-    """Upload encrypted zip files to Hugging Face Hub. Use one of: -B (benchmark), -F (file), or -D (directory)."""
+@click.option('--skip-validation', is_flag=True, help='Skip validation checks and force upload (advanced users only)')
+def upload_results(benchmark, file, directory, skip_validation):
+    """Upload encrypted zip files to Hugging Face Hub. 
+    
+    Files are automatically validated for evaluation errors before upload.
+    Use one of: -B (benchmark), -F (file), or -D (directory).
+    """
     try:
         print_header("HAL Upload Results")
         
@@ -74,6 +124,39 @@ def upload_results(benchmark, file, directory):
             return
 
         print_step(f"Found {len(file_paths)} files to process")
+        
+        if not skip_validation:
+            print_step("Validating files for evaluation errors...")
+            invalid_files = []
+            
+            for file_path in file_paths:
+                is_valid, error_msg, error_details = validate_eval_results(file_path)
+                if not is_valid:
+                    invalid_files.append({
+                        'file': os.path.basename(file_path),
+                        'error': error_msg,
+                        'details': error_details
+                    })
+            
+            if invalid_files:
+                print_error("❌ Upload rejected due to evaluation errors in the following files:")
+                for invalid_file in invalid_files:
+                    print_error(f"  • {invalid_file['file']}: {invalid_file['error']}")
+                    if invalid_file['details']:
+                        print_warning(f"    First few error tasks:")
+                        for i, task_error in enumerate(invalid_file['details'][:3]):
+                            print_warning(f"      - {task_error['task_id']}: {task_error['explanation'][:100]}...")
+                        if len(invalid_file['details']) > 3:
+                            print_warning(f"    ... and {len(invalid_file['details']) - 3} more errors")
+                
+                print_error("\n💡 Please re-run the evaluation to completion before uploading.")
+                print_error("   Use --continue_run flag to retry failed tasks, or check for infrastructure issues.")
+                print_error("   To force upload anyway, use --skip-validation flag (not recommended).")
+                return
+            
+            print_success("✅ All files passed validation")
+        else:
+            print_warning("⚠️  Skipping validation checks (--skip-validation flag used)")
         
         # Create progress bar
         with create_progress() as progress:
