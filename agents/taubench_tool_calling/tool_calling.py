@@ -20,7 +20,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         api_key = None
         model_name = kwargs['model_name']
     else:
-        # Use OpenRouter for all non-OpenAI providers
+        # Use OpenRouter for all non-OpenAI providers using OpenAI API compatibility
         user_provider = 'openai'
         api_base = "https://openrouter.ai/api/v1"
         api_key = os.getenv('OPENROUTER_API_KEY')

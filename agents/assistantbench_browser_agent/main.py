@@ -1,6 +1,5 @@
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-from langchain_together import ChatTogether
 from browser_use import Agent, Browser, BrowserConfig
 import asyncio
 import os
@@ -29,15 +28,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     effort = (kwargs.get('reasoning_effort') or '').lower()
     EFFORT_TO_TOKENS = {"low": 1024, "medium": 2048, "high": 4096}
 
-    def _reasoning_kwargs_for_openrouter(or_model: str, effort: str | None) -> dict:
-        """
-        For Anthropic through OpenRouter, translate effort -> reasoning.max_tokens.
-        For all other OpenRouter models, return {} (no-op).
-        """
-        if or_model.startswith("anthropic/") and effort in EFFORT_TO_TOKENS:
-            return {"reasoning": {"max_tokens": EFFORT_TO_TOKENS[effort]}}
-        return {}
-    
     if kwargs['model_name'].startswith('openrouter/'):
         # Strip the 'openrouter/' prefix; pass the rest directly to OpenRouter
         or_model = kwargs['model_name'].replace('openrouter/', '', 1)
@@ -53,9 +43,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             model=or_model,
             api_key=os.getenv("OPENROUTER_API_KEY"),
             base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
-            extra_body=extra_body,   # <- important: use extra_body, not model_kwargs
+            extra_body=extra_body,
         )
-        planner_llm = llm
 
     elif "openai" in kwargs['model_name']:
         if '-2025' in kwargs['model_name']:
@@ -66,14 +55,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             llm_args["reasoning_effort"] = effort
         if ('o3' in kwargs['model_name']) or ('o4' in kwargs['model_name']):
             llm = ChatOpenAI(**llm_args, disabled_params={"parallel_tool_calls": None})
-            planner_llm = ChatOpenAI(**llm_args, disabled_params={"parallel_tool_calls": None})
         else:
             llm = ChatOpenAI(**llm_args)
-            planner_llm = ChatOpenAI(**llm_args)
     elif 'anthropic' in kwargs['model_name']:
         api_key = os.getenv("ANTHROPIC_API_KEY")
         llm = ChatAnthropic(model=model_name, api_key=api_key)
-        planner_llm = ChatAnthropic(model=model_name, api_key=api_key)
     elif 'gemini' in kwargs['model_name']:
         # Route Gemini models through OpenRouter with correct model name mapping
         if model_name == "gemini-2.0-flash":
@@ -86,16 +72,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             api_key=os.getenv("OPENROUTER_API_KEY"),
             base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
         )
-        planner_llm = llm
     elif 'deepseek' in kwargs['model_name']:
         llm = ChatOpenAI(
-        model="deepseek/deepseek-R1",
-        api_key=os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1",
-        extra_body={"include_reasoning": True},  # optional for R1
-        disabled_params={"parallel_tool_calls": None},
-    )
-        planner_llm = llm
+            model=or_model,
+            api_key=os.getenv("OPENROUTER_API_KEY"),
+            base_url="https://openrouter.ai/api/v1",
+            extra_body={"include_reasoning": True},
+            disabled_params={"parallel_tool_calls": None},
+        )
     else:
         raise ValueError(f"Unrecognized model_name: {kwargs['model_name']}")
 
