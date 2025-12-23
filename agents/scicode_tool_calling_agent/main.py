@@ -4,38 +4,43 @@ import os
 from typing import Any
 from pathlib import Path
 from agent import get_agent
+import litellm
+import warnings
+
+# Suppress specific library-level warnings we can't easily fix
+warnings.filterwarnings("ignore", message=".*PydanticSerializationUnexpectedValue.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*Use 'content=<...>' to upload raw bytes/text content.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*deprecated.*", module="weave.trace_server.trace_server_interface")
 
 def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
 
-    client = OpenAI()
-
+    # Configure litellm to drop unsupported params
+    litellm.drop_params = True
+    
+    # Setup model parameters for LiteLLMModel
     model_params = {}
     model_params['model_id'] = kwargs['model_name']
+    
+    # Handle reasoning parameters based on provider
     if 'reasoning_effort' in kwargs:
-        model_params['reasoning_effort'] = kwargs['reasoning_effort']
+        if 'openrouter/' in kwargs['model_name']:
+            # OpenRouter doesn't support reasoning_effort, convert to reasoning.max_tokens
+            effort_to_tokens = {
+                'low': 1024,
+                'medium': 2048,
+                'high': 4096
+            }
+            model_params['reasoning'] = {"max_tokens": effort_to_tokens.get(kwargs['reasoning_effort'], 4096)}
+        else:
+            # For Anthropic direct and other providers that support reasoning_effort
+            model_params['reasoning_effort'] = kwargs['reasoning_effort']
+    
     if 'temperature' in kwargs:
         model_params['temperature'] = kwargs['temperature']
         
-    if 'gemini' in kwargs['model_name']:
-        model_params['model_id'] = kwargs['model_name'].replace('gemini/', 'openai/')
-        model_params['api_key'] = os.getenv('GEMINI_API_KEY')
-        model_params['api_base'] = "https://generativelanguage.googleapis.com/v1beta/openai/"
-        client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
-    
-    if 'anthropic' in kwargs['model_name']:
-        model_params['model_id'] = kwargs['model_name'].replace('anthropic/', 'openai/')
-        model_params['api_key'] = os.getenv('ANTHROPIC_API_KEY')
-        model_params['api_base'] = "https://api.anthropic.com/v1"
-        model_params['allowed_openai_params'] = ["reasoning_effort"]
-        client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
-        
-    if 'together_ai' in kwargs['model_name']:
-        model_params['model_id'] = kwargs['model_name'].replace('together_ai/', 'openai/')
-        model_params['api_key'] = os.environ.get("TOGETHERAI_API_KEY")
-        model_params['api_base'] = "https://api.together.xyz/v1"
-        client = OpenAI(api_key=model_params['api_key'], base_url=model_params['api_base'])
+    # Provider-specific configurations are handled by LiteLLM automatically
 
     agent = get_agent(model_params=model_params)
 
@@ -115,8 +120,12 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
                 prompt_template=prompt_template
             )
             
-            response = agent.run(prompt)
-            generated_code = response.replace("```python", "").replace("```", "").strip()
+            try:
+                response = agent.run(prompt)
+                generated_code = response.replace("```python", "").replace("```", "").strip()
+            except Exception as e:
+                print(f"Error running agent for {task_id}: {e}")
+                generated_code = f"# Error occurred: {str(e)}\n# Please implement the required function manually"
 
             results[task_id] = generated_code
 
@@ -150,47 +159,50 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
                     prompt_template=prompt_template
                 )
 
-                response = agent.run(prompt)
-                response = str(response)
-                response = response.replace("```python", "").replace("```", "").strip()
+                try:
+                    response = agent.run(prompt)
+                    response = str(response)
+                    response = response.replace("```python", "").replace("```", "").strip()
+                except Exception as e:
+                    print(f"Error running agent for step {i+1}: {e}")
+                    # Provide a minimal fallback response
+                    response = f"# Error occurred: {str(e)}\n# Please implement the required function manually"
 
-                model_call_name = kwargs['model_name']
-
-                if 'openai' in kwargs['model_name']:
-                    model_call_name = kwargs['model_name'].replace('openai/', '')
-                elif 'gemini' in kwargs['model_name']:
-                    model_call_name = kwargs['model_name'].replace('gemini/', '')
-                elif 'anthropic' in kwargs['model_name']:
-                    model_call_name = kwargs['model_name'].replace('anthropic/', '')
-                elif 'together_ai' in kwargs['model_name']:
-                    model_call_name = kwargs['model_name'].replace('together_ai/', '')
-
-                if 'reasoning_effort' in kwargs:
-                    
+                # Create a separate LiteLLMModel instance for the cleaning step
+                from smolagents import LiteLLMModel
+                cleaning_model_params = model_params.copy()
+                cleaning_model = LiteLLMModel(**cleaning_model_params)
                 
-                    cleaned_response = client.chat.completions.create(
-                        model=model_call_name,
-                        reasoning_effort=kwargs['reasoning_effort'],
-                        messages=[
-                            {"role": "developer", 
-                             "content":  "You are a tool that receives a block of text and python code and returns only a python function. Remove any comments, extra markdown, or stray text that would lead to syntax errors. Anything that is not valid python syntax should be on its own line with a #. Do NOT add or change any functionality inside the functions. Your response should ONLY consist of one python function. Please remove any dependencies or imports from the code and any code that is not part of a function or class. The code you generate should be a valid python code block. Your response should be in the format of ```python ```."},
-                             {"role": "user",   "content": response},
-                        
-                        ])
+                # Normalize the agent output to a string
+                raw = response if isinstance(response, str) else getattr(response, "content", "")
+                raw = (raw or "").strip()
+
+                # If there's nothing to clean, skip the cleaning call to avoid a 400
+                if not raw:
+                    generated_code = ""
                 else:
-                    cleaned_response = client.chat.completions.create(
-                        model=model_call_name,
-                        messages=[
-                            {"role": "developer", 
-                             "content":  "You are a tool that receives a block of text and python code and returns only a python function. Remove any comments, extra markdown, or stray text that would lead to syntax errors. Anything that is not valid python syntax should be on its own line with a #. Do NOT add or change any functionality inside the functions. Your response should ONLY consist of one python function. Please remove any dependencies or imports from the code and any code that is not part of a function or class. The code you generate should be a valid python code block. Your response should be in the format of ```python ```."},
-                             {"role": "user",   "content": response},
-                        
-                        ])
+                    # Build messages for cleaning call — must be non-empty, with non-empty user content
+                    cleaning_messages = [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a tool that receives a block of text and python code and returns only a python function. "
+                                "Remove any comments, extra markdown, or stray text that would lead to syntax errors. Anything that "
+                                "is not valid python syntax should be on its own line with a #. Do NOT add or change any functionality "
+                                "inside the functions. Your response should ONLY consist of one python function. "
+                                "Please remove any dependencies or imports from the code and any code that is not part of a function or class. "
+                                "The code you generate should be a valid python code block. Your response should be in the format of ```python ```."
+                            ),
+                        },
+                        {"role": "user", "content": raw},
+                    ]
 
-                final_response = cleaned_response.choices[0].message.content
+                    # Call with a keyword to avoid any arg-shape ambiguity
+                    cleaned_response = cleaning_model(messages=cleaning_messages)
 
-                # Remove the ```python and final ``` from generated_code
-                generated_code = final_response.replace("```python", "").replace("```", "").strip()
+                    # LiteLLMModel returns an object with .content
+                    final_response = getattr(cleaned_response, "content", "") or ""
+                    generated_code = final_response.replace("```python", "").replace("```", "").strip()
 
                 # Update previous_llm_code string with the generated code
                 previous_llm_code.append(generated_code)
