@@ -123,6 +123,8 @@ MODEL_PRICES_DICT = {
                 "claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4-1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "claude-opus-4-5-20251101": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                "anthropic/claude-opus-4-5-20251101": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "openai/gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gpt-5": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
