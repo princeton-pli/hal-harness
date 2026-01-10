@@ -12,7 +12,7 @@ import os
 
 from typing import Optional
 
-from smolagents import CodeAgent, tool, LiteLLMModel, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
+from smolagents import CodeAgent, tool, LiteLLMModel, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool, DuckDuckGoSearchTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
@@ -726,8 +726,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     model = LiteLLMModel(**model_params)
     
     CORE_TOOLS = [
-        # DuckDuckGoSearchTool(),
-        GoogleSearchTool(provider='serpapi'),
+        DuckDuckGoSearchTool(),
+        # GoogleSearchTool(provider='serpapi'),  # Requires SERPAPI_API_KEY (paid service)
         VisitWebpageTool(),
         PythonInterpreterTool(),
         execute_bash,
