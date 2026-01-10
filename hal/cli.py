@@ -81,6 +81,8 @@ load_dotenv()
     type=str,
     help="One or more args to pass to inspect eval (e.g. -I token_limit=1000 -I model_args='{'temperature': 0.5}'"
 )
+@click.option("--prompt_sensitivity", is_flag=True, help="Enable prompt sensitivity evaluation by generating and testing multiple prompt variations")
+@click.option("--num_variations", default=3, type=int, help="Number of prompt variations to generate for sensitivity testing (default: 3)")
 def main(
     config,
     benchmark,
@@ -99,6 +101,8 @@ def main(
     vm,
     docker,
     max_tasks,
+    prompt_sensitivity,
+    num_variations,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
@@ -163,7 +167,7 @@ def main(
         if continue_run and not set_run_id:
             raise ValueError("continue_run flag requires run_id to be set")
                 
-        # Print summary with run_id, benchmark, and the run config to terminal 
+        # Print summary with run_id, benchmark, and the run config to terminal
         print_run_config(
             run_id=run_id,
             benchmark=benchmark,
@@ -180,7 +184,9 @@ def main(
             vm=vm,
             docker=docker,
             continue_run=continue_run,
-            ignore_errors=ignore_errors
+            ignore_errors=ignore_errors,
+            prompt_sensitivity=prompt_sensitivity,
+            num_variations=num_variations
         )
         
         # get exact command used to run the evaluation from click 
@@ -255,7 +261,9 @@ def main(
                     continue_run=continue_run,
                     run_command=run_command,
                     ignore_errors=ignore_errors,
-                    max_tasks=max_tasks
+                    max_tasks=max_tasks,
+                    prompt_sensitivity=prompt_sensitivity,
+                    num_variations=num_variations
                 )
 
                 # Run evaluation

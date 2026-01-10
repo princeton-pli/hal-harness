@@ -13,10 +13,11 @@ from rich.box import ROUNDED
 from .utils.logging_utils import terminal_print
 from .inspect.inspect import is_inspect_benchmark
 from .utils.weave_utils import get_call_ids, delete_calls
+from .utils.fault_injection import FaultInjector
 class AgentRunner:
     """Handles running agents either locally or on VMs"""
 
-    def __init__(self, 
+    def __init__(self,
                  agent_function: str,
                  agent_dir: str,
                  agent_args: Dict[str, Any],
@@ -30,7 +31,9 @@ class AgentRunner:
                  continue_run: bool = False,
                  run_command: str = None,
                  ignore_errors: bool = False,
-                 max_tasks: Optional[int] = None):
+                 max_tasks: Optional[int] = None,
+                 prompt_sensitivity: bool = False,
+                 num_variations: int = 3):
         
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -110,7 +113,20 @@ class AgentRunner:
         self.continue_run = continue_run
         self.ignore_errors = ignore_errors
         self.max_tasks = max_tasks
-        
+        self.prompt_sensitivity = prompt_sensitivity
+        self.num_variations = num_variations
+
+        # Initialize fault injector if enabled
+        self.fault_injector = None
+        if agent_args.get('enable_fault_injection') == 'true':
+            fault_rate = float(agent_args.get('fault_rate', '0.2'))
+            max_recovery_attempts = int(agent_args.get('max_recovery_attempts', '3'))
+            self.fault_injector = FaultInjector(
+                fault_rate=fault_rate,
+                config={'max_recovery_attempts': max_recovery_attempts}
+            )
+            print_step(f"⚠️  Fault injection enabled (rate: {fault_rate*100:.1f}%, max recoveries: {max_recovery_attempts})")
+
 
     def get_remaining_tasks(self, dataset: Dict[str, Any]) -> Dict[str, Any]:
         """Get tasks that haven't been completed in previous runs"""
@@ -156,23 +172,36 @@ class AgentRunner:
 
     async def run(self, agent_name: str, upload: bool = False) -> Dict[str, Any]:
         """Run the full agent evaluation pipeline"""
-        
+
         # Initialize logging for main run
         print_step("Initializing logging with W&B Weave...")
         weave_client = weave.init(self.run_id)
-        
+
         # Get dataset and filter for remaining tasks if continuing
         dataset = self.benchmark.get_dataset()
         if self.continue_run and not self.ignore_errors:
             dataset = self.get_remaining_tasks(dataset)
         elif self.continue_run and self.ignore_errors:
             dataset = {}
-            
+
         # Limit the number of tasks if max_tasks is specified
         if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
             print_step(f"Limiting to the first {self.max_tasks} tasks as requested")
             task_ids = list(dataset.keys())[:self.max_tasks]
             dataset = {task_id: dataset[task_id] for task_id in task_ids}
+
+        # Handle prompt sensitivity if enabled
+        prompt_variations_map = None
+        if self.prompt_sensitivity:
+            from .utils.prompt_variation import PromptVariationGenerator, get_prompt_field_for_benchmark
+
+            prompt_field = get_prompt_field_for_benchmark(self.benchmark.benchmark_name)
+            print_step(f"Generating {self.num_variations} prompt variations for sensitivity testing...")
+            generator = PromptVariationGenerator(num_variations=self.num_variations)
+
+            # Generate variations
+            prompt_variations_map = generator.apply_variations_to_dataset(dataset, prompt_field)
+            print_success(f"Generated prompt variations for {len(prompt_variations_map)} tasks")
             
         # delete previous calls from previous run if continuing for remaining tasks
         if self.continue_run and not self.ignore_errors:
@@ -203,64 +232,155 @@ class AgentRunner:
                             submission = json.loads(line.strip())
                             previous_output.update(submission)
                     agent_output.update(previous_output)
-            
+
         else:
-            # Run agent on all tasks
-            with create_progress() as progress:
-                task = progress.add_task("Running agents... (check logs in results directory for more details)", total=len(dataset))
-                agent_output = await self.runner.run_agent(
-                    dataset=dataset,
-                    agent_function=self.agent_function,
-                    agent_dir=self.agent_dir,
-                    agent_args=self.agent_args,
-                    run_id=self.run_id,
-                    benchmark=self.benchmark,
-                    task=task,
-                    progress=progress   
-                )
-            
-            # If continuing run, merge with previous results
-            if self.continue_run:
-                results_path = os.path.join(self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_RAW_SUBMISSIONS.jsonl")
-                if os.path.exists(results_path):
-                    previous_output = {}
-                    with open(results_path) as f:
-                        for line in f:
-                            try:
-                                submission = json.loads(line.strip())
-                                previous_output.update(submission)
-                            except json.JSONDecodeError as e:
-                                print_warning(f"Skipping malformed line in submissions file: {e}")
-                                continue
-                    agent_output.update(previous_output)
+            # Handle prompt sensitivity mode vs normal mode
+            if self.prompt_sensitivity:
+                # Run agent on each prompt variation
+                all_variations_output = {}
+
+                # Determine number of variations to run
+                num_vars = self.num_variations + 1  # +1 for original
+
+                for var_idx in range(num_vars):
+                    print_step(f"Running variation {var_idx + 1}/{num_vars}...")
+
+                    # Create dataset for this variation
+                    var_dataset = {}
+                    for task_id, variations_list in prompt_variations_map.items():
+                        if var_idx < len(variations_list):
+                            var_dataset[task_id] = variations_list[var_idx]
+
+                    # Run agent on this variation
+                    with create_progress() as progress:
+                        task = progress.add_task(f"Running agents on variation {var_idx + 1}...", total=len(var_dataset))
+                        var_output = await self.runner.run_agent(
+                            dataset=var_dataset,
+                            agent_function=self.agent_function,
+                            agent_dir=self.agent_dir,
+                            agent_args=self.agent_args,
+                            run_id=self.run_id,
+                            benchmark=self.benchmark,
+                            task=task,
+                            progress=progress
+                        )
+
+                    # Store outputs with variation index
+                    for task_id, output in var_output.items():
+                        if task_id not in all_variations_output:
+                            all_variations_output[task_id] = []
+                        all_variations_output[task_id].append({
+                            'variation_id': var_idx,
+                            'output': output
+                        })
+
+                agent_output = all_variations_output
+            else:
+                # Normal mode: Run agent on all tasks once
+                with create_progress() as progress:
+                    task = progress.add_task("Running agents... (check logs in results directory for more details)", total=len(dataset))
+                    agent_output = await self.runner.run_agent(
+                        dataset=dataset,
+                        agent_function=self.agent_function,
+                        agent_dir=self.agent_dir,
+                        agent_args=self.agent_args,
+                        run_id=self.run_id,
+                        benchmark=self.benchmark,
+                        task=task,
+                        progress=progress
+                    )
+
+                # If continuing run, merge with previous results
+                if self.continue_run:
+                    results_path = os.path.join(self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_RAW_SUBMISSIONS.jsonl")
+                    if os.path.exists(results_path):
+                        previous_output = {}
+                        with open(results_path) as f:
+                            for line in f:
+                                try:
+                                    submission = json.loads(line.strip())
+                                    previous_output.update(submission)
+                                except json.JSONDecodeError as e:
+                                    print_warning(f"Skipping malformed line in submissions file: {e}")
+                                    continue
+                        agent_output.update(previous_output)
         
         print_step("Evaluating results...")
-        # Create a temporary dataset with agent_output to check remaining tasks
-        remaining = self.get_remaining_tasks(dataset)
-        if len(remaining) > 0:
-            # Create a more informative error message
-            print_warning(f"Warning - {len(remaining)} tasks are incomplete")
-            
-            # Create and display table of remaining tasks
-            table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
-            table.add_column("Task ID", style="cyan")
-            
-            for task_id, task_data in remaining.items():
-                table.add_row(task_id)
-            
-            with terminal_print():
-                console.print(table)
-            
-            print_step("Use --continue-run flag to retry the remaining tasks. Exiting...")
-            # sys.exit(1)
-            
-        # stop weave logging before harness is run to avoid lm as judge to produce additional cost 
-        weave.finish()
-        
-        if is_inspect_benchmark(self.benchmark.benchmark_name):
-            eval_results = await self.benchmark.evaluate_output(agent_output, self.run_id)
+
+        # Handle evaluation differently for prompt sensitivity mode
+        if self.prompt_sensitivity:
+            # stop weave logging before harness is run to avoid lm as judge to produce additional cost
+            weave.finish()
+
+            # Evaluate each variation separately
+            eval_results = {}
+
+            for task_id, variations in agent_output.items():
+                eval_results[task_id] = []
+
+                for var_data in variations:
+                    var_id = var_data['variation_id']
+                    var_output = var_data['output']
+
+                    # Create single-task output for evaluation
+                    single_output = {task_id: var_output}
+
+                    # Evaluate this variation
+                    if is_inspect_benchmark(self.benchmark.benchmark_name):
+                        var_eval = await self.benchmark.evaluate_output(single_output, self.run_id)
+                    else:
+                        var_eval = self.benchmark.evaluate_output(single_output, self.run_id)
+
+                    # Store result with variation id
+                    if task_id in var_eval:
+                        # Extract numeric score from evaluation result
+                        eval_result = var_eval[task_id]
+                        if isinstance(eval_result, dict):
+                            # Try common score field names
+                            score = eval_result.get('score', eval_result.get('reward', eval_result.get('accuracy', 0)))
+                            # Handle cases where score is still a dict (shouldn't happen, but be defensive)
+                            if isinstance(score, dict):
+                                # Last resort: try to find any numeric value in the dict
+                                for v in eval_result.values():
+                                    if isinstance(v, (int, float)):
+                                        score = v
+                                        break
+                                else:
+                                    score = 0  # Fallback
+                        else:
+                            score = eval_result
+
+                        eval_results[task_id].append({
+                            'variation_id': var_id,
+                            'score': float(score)
+                        })
         else:
-            eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
+            # Normal mode: Check for remaining tasks
+            remaining = self.get_remaining_tasks(dataset)
+            if len(remaining) > 0:
+                # Create a more informative error message
+                print_warning(f"Warning - {len(remaining)} tasks are incomplete")
+
+                # Create and display table of remaining tasks
+                table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
+                table.add_column("Task ID", style="cyan")
+
+                for task_id, task_data in remaining.items():
+                    table.add_row(task_id)
+
+                with terminal_print():
+                    console.print(table)
+
+                print_step("Use --continue-run flag to retry the remaining tasks. Exiting...")
+                # sys.exit(1)
+
+            # stop weave logging before harness is run to avoid lm as judge to produce additional cost
+            weave.finish()
+
+            if is_inspect_benchmark(self.benchmark.benchmark_name):
+                eval_results = await self.benchmark.evaluate_output(agent_output, self.run_id)
+            else:
+                eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
         
         print_step("Processing results...")
         results = self.benchmark.process_results(
@@ -270,6 +390,8 @@ class AgentRunner:
             run_command=self.run_command,
             eval_results=eval_results,
             weave_client=weave_client,
-            upload=upload
+            agent_output=agent_output,
+            upload=upload,
+            prompt_sensitivity=self.prompt_sensitivity
         )
         return results

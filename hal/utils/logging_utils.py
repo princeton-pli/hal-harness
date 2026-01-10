@@ -298,7 +298,9 @@ def print_run_config(
     vm: bool,
     continue_run: bool,
     docker: bool = False,
-    ignore_errors: bool = False
+    ignore_errors: bool = False,
+    prompt_sensitivity: bool = False,
+    num_variations: int = 3
 ) -> None:
     """Print a formatted table with the run configuration"""
     table = Table(title="Run Configuration", show_header=False, box=ROUNDED)
@@ -318,7 +320,10 @@ def print_run_config(
     table.add_row("Docker Execution", "✓" if docker else "✗")
     table.add_row("Continue Previous Run", "✓" if continue_run else "✗")
     table.add_row("Ignore Errors", "✓" if ignore_errors else "✗")
-    
+    table.add_row("Prompt Sensitivity", "✓" if prompt_sensitivity else "✗")
+    if prompt_sensitivity:
+        table.add_row("  Num Variations", str(num_variations))
+
     if conda_env_name:
         table.add_row("Conda Environment", conda_env_name)
     

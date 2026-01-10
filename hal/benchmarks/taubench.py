@@ -5,19 +5,31 @@ from typing_extensions import NotRequired
 from .base_benchmark import BaseBenchmark
 import docker
 from hal.utils.logging_utils import print_warning
+from hal.utils.compliance_checkers import ComplianceMonitor
 
 class TauBenchBenchmark(BaseBenchmark):
     """TauBench benchmark implementation"""
-    
+
     def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'taubench_retail'):
         self.benchmark_name = benchmark_name
         self.split = 'retail' if benchmark_name == 'taubench_retail' else 'airline'
         self.setup_script = 'hal/benchmarks/taubench/taubench_setup.sh'
         self.requires_sandbox = False
         super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
-    
-        
-        # Create benchmark dictionary
+
+        # Load actual tasks from tau-bench to get instructions
+        try:
+            if self.split == 'retail':
+                from tau_bench.envs.retail.tasks_test import TASKS
+            elif self.split == 'airline':
+                from tau_bench.envs.airline.tasks_test import TASKS
+            else:
+                TASKS = []
+        except ImportError:
+            print_warning("Could not import tau-bench tasks. Prompt sensitivity will not be available.")
+            TASKS = []
+
+        # Create benchmark dictionary with instructions
         self.benchmark = {}
         if self.split == 'retail':
             self.benchmark = {str(task_index): {
@@ -27,7 +39,8 @@ class TauBenchBenchmark(BaseBenchmark):
                 'task_split': 'test',
                 'user_provider': 'openai',
                 'task_index': task_index,
-            } for task_index in range(115)}
+                'instruction': TASKS[task_index].instruction if task_index < len(TASKS) else None,
+            } for task_index in range(min(115, len(TASKS)) if TASKS else 115)}
         elif self.split == 'airline':
             self.benchmark = {str(task_index): {
                 'env': 'airline',
@@ -36,9 +49,19 @@ class TauBenchBenchmark(BaseBenchmark):
                 'task_split': 'test',
                 'user_provider': 'openai',
                 'task_index': task_index,
-            } for task_index in range(50)}
-      
-            
+                'instruction': TASKS[task_index].instruction if task_index < len(TASKS) else None,
+            } for task_index in range(min(50, len(TASKS)) if TASKS else 50)}
+
+        # Initialize compliance monitor if enabled
+        self.compliance_monitor = None
+        if hasattr(self, 'agent_args') and self.agent_args:
+            if self.agent_args.get('enable_compliance_monitoring') == 'true':
+                constraints_str = self.agent_args.get('compliance_constraints', '')
+                constraints = [c.strip() for c in constraints_str.split(',') if c.strip()]
+
+                if constraints:
+                    self.compliance_monitor = ComplianceMonitor(constraints=constraints)
+                    print_warning(f"✓ Compliance monitoring enabled with {len(constraints)} constraints: {', '.join(constraints)}")
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs using AppWorld evaluation"""
