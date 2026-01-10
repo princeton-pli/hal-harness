@@ -19,6 +19,7 @@ MODEL_PRICES_DICT = {
                 "gpt-4-turbo-2024-04-09": {"prompt_tokens": 10/1e6, "completion_tokens": 30/1e6},
                 "gpt-4-turbo": {"prompt_tokens": 10/1e6, "completion_tokens": 30/1e6},
                 "gpt-4o-mini-2024-07-18": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
+                "gpt-4o-mini": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
                 "meta-llama/Meta-Llama-3.1-8B-Instruct": {"prompt_tokens": 0.18/1e6, "completion_tokens": 0.18/1e6},
                 "meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
                 "meta-llama/Meta-Llama-3.1-405B-Instruct": {"prompt_tokens": 5/1e6, "completion_tokens": 15/1e6},
@@ -54,6 +55,7 @@ MODEL_PRICES_DICT = {
                 "openai/gpt-4o-2024-11-20": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "openai/gpt-4o-2024-08-06": {"prompt_tokens": 2.5/1e6, "completion_tokens": 10/1e6},
                 "openai/gpt-4o-mini-2024-07-18": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
+                "openai/gpt-4o-mini": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
                 "openai/gpt-4.1-2025-04-14": {"prompt_tokens": 2/1e6, "completion_tokens": 8/1e6},
                 "openai/gpt-4.1-mini-2025-04-14": {"prompt_tokens": 0.4/1e6, "completion_tokens": 1.6/1e6},
                 "openai/gpt-4.1-nano-2025-04-14": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
@@ -69,6 +71,9 @@ MODEL_PRICES_DICT = {
                 "google/gemini-1.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 5/1e6},
                 "google/gemini-1.5-flash": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
                 "google/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gemini/gemini-1.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 5/1e6},
+                "gemini/gemini-1.5-flash": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
+                "gemini/gemini-1.5-flash-latest": {"prompt_tokens": 0.075/1e6, "completion_tokens": 0.3/1e6},
                 "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {"prompt_tokens": 3.5/1e6, "completion_tokens": 3.5/1e6},
                 "together/meta-llama/Meta-Llama-3.1-70B-Instruct": {"prompt_tokens": 0.88/1e6, "completion_tokens": 0.88/1e6},
                 "bedrock/amazon.nova-micro-v1:0": {"prompt_tokens": 0.000035/1e3, "completion_tokens": 0.00014/1e3},
@@ -89,6 +94,13 @@ MODEL_PRICES_DICT = {
                 "us.meta.llama3-3-70b-instruct-v1:0" : {"prompt_tokens": 0.00072/1e3, "completion_tokens": 0.00072/1e3}, 
                 "claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
                 "anthropic/claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "openrouter/anthropic/claude-3-7-sonnet-20250219" : {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "claude-3-5-haiku-20241022": {"prompt_tokens": 1/1e6, "completion_tokens": 5/1e6},
+                "anthropic/claude-3-5-haiku-20241022": {"prompt_tokens": 1/1e6, "completion_tokens": 5/1e6},
+                "claude-sonnet-4-5": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "anthropic/claude-sonnet-4-5": {"prompt_tokens": 3/1e6, "completion_tokens": 15/1e6},
+                "claude-opus-4-5": {"prompt_tokens": 5/1e6, "completion_tokens": 25/1e6},
+                "anthropic/claude-opus-4-5": {"prompt_tokens": 5/1e6, "completion_tokens": 25/1e6},
                 "deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
                 "deepseek-ai/DeepSeek-R1": {"prompt_tokens": 3/1e6, "completion_tokens": 7/1e6},
                 "together_ai/deepseek-ai/DeepSeek-V3": {"prompt_tokens": 1.25/1e6, "completion_tokens": 1.25/1e6},
@@ -101,8 +113,22 @@ MODEL_PRICES_DICT = {
                 "deepseek/deepseek-chat-v3.1": {"prompt_tokens": 0.27/1e6, "completion_tokens": 1.10/1e6},
                 "gemini/gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
                 "gemini-2.0-flash": {"prompt_tokens": 0.1/1e6, "completion_tokens": 0.4/1e6},
+                # Gemini 2.5 Series
+                "gemini/gemini-2.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gemini-2.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "google/gemini-2.5-pro": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gemini/gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gemini-2.5-pro-preview-03-25": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gemini/gemini-2.5-flash": {"prompt_tokens": 0.50/1e6, "completion_tokens": 2.0/1e6},
+                "gemini-2.5-flash": {"prompt_tokens": 0.50/1e6, "completion_tokens": 2.0/1e6},
+                "google/gemini-2.5-flash": {"prompt_tokens": 0.50/1e6, "completion_tokens": 2.0/1e6},
+                # Gemini 3 Series (Latest)
+                "gemini/gemini-3-pro-preview": {"prompt_tokens": 2.0/1e6, "completion_tokens": 12.0/1e6},
+                "gemini-3-pro-preview": {"prompt_tokens": 2.0/1e6, "completion_tokens": 12.0/1e6},
+                "google/gemini-3-pro-preview": {"prompt_tokens": 2.0/1e6, "completion_tokens": 12.0/1e6},
+                "gemini/gemini-3-flash-preview": {"prompt_tokens": 0.50/1e6, "completion_tokens": 3.0/1e6},
+                "gemini-3-flash-preview": {"prompt_tokens": 0.50/1e6, "completion_tokens": 3.0/1e6},
+                "google/gemini-3-flash-preview": {"prompt_tokens": 0.50/1e6, "completion_tokens": 3.0/1e6},
                 "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {"prompt_tokens": 0.27/1e6, "completion_tokens": 0.85/1e6},
                 "openrouter/openai/gpt-oss-120b": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
                 "openai/gpt-oss-120b": {"prompt_tokens": 0.15/1e6, "completion_tokens": 0.6/1e6},
@@ -123,9 +149,23 @@ MODEL_PRICES_DICT = {
                 "claude-opus-4.1": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4.1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
                 "claude-opus-4-1-20250805": {"prompt_tokens": 15/1e6, "completion_tokens": 75/1e6},
+                # Claude Opus 4.5 (Latest - Nov 2025, cheaper than 4.1)
+                "claude-opus-4.5": {"prompt_tokens": 5/1e6, "completion_tokens": 25/1e6},
+                "anthropic/claude-opus-4.5": {"prompt_tokens": 5/1e6, "completion_tokens": 25/1e6},
+                "claude-opus-4-5": {"prompt_tokens": 5/1e6, "completion_tokens": 25/1e6},
+                "anthropic/claude-opus-4-5": {"prompt_tokens": 5/1e6, "completion_tokens": 25/1e6},
+                # Claude Haiku models
+                "claude-haiku-3.5": {"prompt_tokens": 1/1e6, "completion_tokens": 5/1e6},
+                "anthropic/claude-haiku-3.5": {"prompt_tokens": 1/1e6, "completion_tokens": 5/1e6},
+                "claude-3-5-haiku-20241022": {"prompt_tokens": 1/1e6, "completion_tokens": 5/1e6},
+                "anthropic/claude-3-5-haiku-20241022": {"prompt_tokens": 1/1e6, "completion_tokens": 5/1e6},
                 "openai/gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gpt-5": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gpt-5.2-2025-12-11": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
+                "openai/gpt-5.2-2025-12-11": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
+                "gpt-5.2": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
+                "openai/gpt-5.2": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
 }
 
 CACHED_PRICE_OVERRIDES = {
@@ -135,6 +175,13 @@ CACHED_PRICE_OVERRIDES = {
     "openai/o3-mini-2025-01-31": 0.55/1e6,
     "claude-3-7-sonnet-20250219": 0.30/1e6,
     "anthropic/claude-3-7-sonnet-20250219": 0.30/1e6,
+    "openrouter/anthropic/claude-3-7-sonnet-20250219": 0.30/1e6,
+    "claude-3-5-haiku-20241022": 0.10/1e6,
+    "anthropic/claude-3-5-haiku-20241022": 0.10/1e6,
+    "claude-sonnet-4-5": 0.30/1e6,
+    "anthropic/claude-sonnet-4-5": 0.30/1e6,
+    "claude-opus-4-5": 0.50/1e6,
+    "anthropic/claude-opus-4-5": 0.50/1e6,
     "claude-opus-4-20250514": 1.50/1e6,
     "anthropic/claude-opus-4-20250514": 1.50/1e6,
     "claude-opus-4.1-20250805": 1.50/1e6,
@@ -146,8 +193,26 @@ CACHED_PRICE_OVERRIDES = {
     "gpt-4.1-2025-04-14": 0.50/1e6,
     "openai/gpt-4.1-2025-04-14": 0.50/1e6,
     "gpt-5-2025-08-07": 0.125/1e6,
+    "gpt-5.2-2025-12-11": 0.18/1e6,
+    "openai/gpt-5.2-2025-12-11": 0.18/1e6,
+    "gpt-5.2": 0.18/1e6,
+    "openai/gpt-5.2": 0.18/1e6,
     "o3-2025-04-16": 0.5/1e6,
     "openai/o3-2025-04-16": 0.5/1e6,
+    # Gemini 3 & 2.5 cached pricing (90% discount)
+    "gemini-3-flash-preview": 0.05/1e6,
+    "gemini/gemini-3-flash-preview": 0.05/1e6,
+    "google/gemini-3-flash-preview": 0.05/1e6,
+    "gemini-3-pro-preview": 0.20/1e6,
+    "gemini/gemini-3-pro-preview": 0.20/1e6,
+    "google/gemini-3-pro-preview": 0.20/1e6,
+    "gemini-2.5-flash": 0.05/1e6,
+    "gemini/gemini-2.5-flash": 0.05/1e6,
+    "google/gemini-2.5-flash": 0.05/1e6,
+    # Claude Opus 4.5 cached pricing (90% discount for cache reads)
+    "claude-opus-4.5": 0.50/1e6,
+    "anthropic/claude-opus-4.5": 0.50/1e6,
+    "claude-opus-4-5": 0.50/1e6,
 }
 
 def _normalize_usage(cost: Dict[str, Any]) -> Tuple[int, int, int, int]:
@@ -401,13 +466,18 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
         
         # Processed calls
         processed_calls = []
-        
+
         for call in calls:
+            # Skip calls that don't have weave_task_id (e.g., internal calls for prompt variation generation)
+            if 'weave_task_id' not in call.attributes:
+                progress.update(task1, advance=1)
+                continue
+
             task_id = call.attributes['weave_task_id']
             processed_call = process_weave_output(call)
             if processed_call:
                 processed_calls.append(processed_call)
-                
+
                 if task_id not in latency_dict:
                     latency_dict[task_id] = {'first_call_timestamp': processed_call['started_at'], 'last_call_timestamp': processed_call['started_at']}
                 else:
@@ -415,7 +485,7 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
                         latency_dict[task_id]['first_call_timestamp'] = processed_call['started_at']
                     if processed_call['started_at'] > latency_dict[task_id]['last_call_timestamp']:
                         latency_dict[task_id]['last_call_timestamp'] = processed_call['started_at']
-                    
+
             progress.update(task1, advance=1)
             
     for task_id in latency_dict:
