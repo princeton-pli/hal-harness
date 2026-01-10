@@ -3,8 +3,9 @@ import json
 from typing import Dict, Any, List, Optional
 from .base_benchmark import BaseBenchmark
 from .GAIA.scoring_utils import question_scorer
-from huggingface_hub import hf_hub_download, HfFolder
+from huggingface_hub import hf_hub_download, get_token, snapshot_download
 from huggingface_hub.errors import GatedRepoError, RepositoryNotFoundError, EntryNotFoundError
+from datasets import load_dataset
 
 
 GAIA_REPO_ID = 'gaia-benchmark/GAIA'
@@ -22,7 +23,7 @@ class GaiaBenchmark(BaseBenchmark):
         self.requires_sandbox = False
         super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
     
-        dataset = self._load_gaia_dataset(config_split=GAIA_DEFAULT_CONFIG, split='validation')
+        dataset = self._load_gaia_dataset(config_split=GAIA_DEFAULT_CONFIG, split='test')
 
         self.benchmark = {}
         for record in dataset:
@@ -35,7 +36,7 @@ class GaiaBenchmark(BaseBenchmark):
             
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-    """Evaluate agent outputs using Gaia evaluation while capturing task metrics."""
+        """Evaluate agent outputs using Gaia evaluation while capturing task metrics."""
 
         eval_results: Dict[str, Any] = {}
 
@@ -114,7 +115,7 @@ class GaiaBenchmark(BaseBenchmark):
 
 
     def _load_gaia_dataset(self, config_split: str, split: str) -> List[Dict[str, Any]]:
-        """Load GAIA data without relying on remote dataset scripts."""
+        """Load GAIA data using the new Parquet format."""
         try:
             year, level_suffix = config_split.split('_', 1)
         except ValueError as exc:
@@ -139,33 +140,42 @@ class GaiaBenchmark(BaseBenchmark):
                 "Set HF_TOKEN (or login with `huggingface-cli login`)."
             )
 
-        metadata_path = self._download_gaia_file(f"{year}/{split}/metadata.jsonl", token)
+        # Download the entire dataset repository using snapshot_download
+        try:
+            data_dir = snapshot_download(
+                repo_id=GAIA_REPO_ID,
+                repo_type='dataset',
+                token=token,
+            )
+        except GatedRepoError as exc:
+            raise RuntimeError(
+                "Access to gaia-benchmark/GAIA is gated. Confirm your Hugging Face account "
+                "has access and that you are logged in."
+            ) from exc
+        except RepositoryNotFoundError as exc:
+            raise RuntimeError(
+                f"Dataset repository {GAIA_REPO_ID} is unavailable."
+            ) from exc
 
         records: List[Dict[str, Any]] = []
-        attachment_cache: Dict[str, str] = {'': ''}
 
-        with open(metadata_path, 'r', encoding='utf-8') as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
+        # Load dataset for each level
+        for level in levels:
+            dataset_name = f"{year}_level{level}"
+            try:
+                dataset = load_dataset(data_dir, dataset_name, split=split)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"Failed to load GAIA dataset '{dataset_name}' split '{split}': {exc}"
+                ) from exc
 
-                record = json.loads(line)
-                level_value = record.get('Level')
-                try:
-                    level_as_int = int(level_value)
-                except (TypeError, ValueError):
-                    continue
+            for example in dataset:
+                record = dict(example)
 
-                if level_as_int not in levels:
-                    continue
-
+                # Handle file_path - join with data_dir if present
                 file_name = record.get('file_name') or ''
-                if file_name:
-                    if file_name not in attachment_cache:
-                        attachment_cache[file_name] = self._download_gaia_file(
-                            f"{year}/{split}/{file_name}", token
-                        )
-                    record['file_path'] = attachment_cache[file_name]
+                if file_name and record.get('file_path'):
+                    record['file_path'] = os.path.join(data_dir, record['file_path'])
                 else:
                     record['file_path'] = ''
 
@@ -207,4 +217,4 @@ class GaiaBenchmark(BaseBenchmark):
             token = os.environ.get(key)
             if token:
                 return token
-        return HfFolder.get_token()
+        return get_token()
