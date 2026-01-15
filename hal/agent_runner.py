@@ -33,8 +33,9 @@ class AgentRunner:
                  ignore_errors: bool = False,
                  max_tasks: Optional[int] = None,
                  prompt_sensitivity: bool = False,
-                 num_variations: int = 3):
-        
+                 num_variations: int = 3,
+                 variation_strength: str = "mild"):
+
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
             raise ValueError("Invalid agent_function format. Must be in format 'module.function' (e.g., 'my_agent.run_agent')")
@@ -115,6 +116,7 @@ class AgentRunner:
         self.max_tasks = max_tasks
         self.prompt_sensitivity = prompt_sensitivity
         self.num_variations = num_variations
+        self.variation_strength = variation_strength
 
         # Initialize fault injector if enabled
         self.fault_injector = None
@@ -196,12 +198,15 @@ class AgentRunner:
             from .utils.prompt_variation import PromptVariationGenerator, get_prompt_field_for_benchmark
 
             prompt_field = get_prompt_field_for_benchmark(self.benchmark.benchmark_name)
-            print_step(f"Generating {self.num_variations} prompt variations for sensitivity testing...")
-            generator = PromptVariationGenerator(num_variations=self.num_variations)
+            print_step(f"Generating {self.num_variations} {self.variation_strength} prompt variations for sensitivity testing...")
+            generator = PromptVariationGenerator(
+                num_variations=self.num_variations,
+                strength=self.variation_strength
+            )
 
             # Generate variations
             prompt_variations_map = generator.apply_variations_to_dataset(dataset, prompt_field)
-            print_success(f"Generated prompt variations for {len(prompt_variations_map)} tasks")
+            print_success(f"Generated {self.variation_strength} prompt variations for {len(prompt_variations_map)} tasks")
             
         # delete previous calls from previous run if continuing for remaining tasks
         if self.continue_run and not self.ignore_errors:

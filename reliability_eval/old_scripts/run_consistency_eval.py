@@ -27,50 +27,19 @@ import time
 # TauBench uses taubench_few_shot, GAIA uses hal_generalist_agent, etc.
 
 AGENT_CONFIGS = [
-    # TauBench agents with few-shot prompting
-    # OpenAI models
-    # {
-    #     "name": "taubench_toolcalling_gpt_4_turbo",
-    #     "agent_dir": "agents/taubench_tool_calling",
-    #     "agent_function": "tool_calling.run",
-    #     "model_name": "gpt-4-turbo-2024-04-09",
-    #     "benchmarks": ["taubench_airline", "taubench_retail"],
-    #     "extra_agent_args": {
-    #         "provider": "openai",
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "taubench_toolcalling_gpt_4o_mini",
-    #     "agent_dir": "agents/taubench_tool_calling",
-    #     "agent_function": "tool_calling.run",
-    #     "model_name": "gpt-4o-mini-2024-07-18",
-    #     "benchmarks": ["taubench_airline", "taubench_retail"],
-    #     "extra_agent_args": {
-    #         "provider": "openai",
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "taubench_toolcalling_gpt_o1",
-    #     "agent_dir": "agents/taubench_tool_calling",
-    #     "agent_function": "tool_calling.run",
-    #     "model_name": "o1-2024-12-17",
-    #     "benchmarks": ["taubench_airline", "taubench_retail"],
-    #     "extra_agent_args": {
-    #         "provider": "openai",
-    #         "temperature": 0.0
-    #     }
-    # },
+    # TauBench agents with tool calling
+    # GPT-4o-mini for reliability testing
     {
-        "name": "taubench_toolcalling_gpt_5_2",
+        "name": "taubench_toolcalling_gpt_4o_mini",
         "agent_dir": "agents/taubench_tool_calling",
         "agent_function": "tool_calling.run",
-        "model_name": "gpt-5.2-2025-12-11",
-        "benchmarks": ["taubench_airline", "taubench_retail"],
+        "model_name": "gpt-4o-mini-2024-07-18",
+        "benchmarks": ["taubench_airline"],
         "extra_agent_args": {
             "provider": "openai",
-            "temperature": 0.0
+            "temperature": 0.0,
+            "compute_confidence": "true",
+            "store_conversation_history": "true"
         }
     },
     # Anthropic models

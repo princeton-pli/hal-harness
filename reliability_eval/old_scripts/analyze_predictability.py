@@ -125,7 +125,26 @@ def compute_aurc(confidences: np.ndarray, successes: np.ndarray, n_points: int =
     Returns:
         Dict with aurc, aurc_optimal, excess_aurc, and P_rc
     """
+    # Filter out NaN values from both arrays
+    valid_mask = ~(np.isnan(confidences) | np.isnan(successes))
+    confidences = confidences[valid_mask]
+    successes = successes[valid_mask]
+
     N = len(confidences)
+
+    # Handle edge cases
+    if N == 0:
+        return {
+            'aurc': np.nan,
+            'aurc_optimal': np.nan,
+            'aurc_random': np.nan,
+            'excess_aurc': np.nan,
+            'excess_aurc_max': np.nan,
+            'P_rc': np.nan,
+            'coverages': np.array([]),
+            'risks': [],
+            'optimal_risks': []
+        }
 
     # Sort by decreasing confidence
     sorted_indices = np.argsort(-confidences)
@@ -199,6 +218,19 @@ def compute_ece(confidences: np.ndarray, successes: np.ndarray, n_bins: int = 10
     Returns:
         Dict with ece, P_cal, and bin statistics
     """
+    # Filter out NaN values from both arrays
+    valid_mask = ~(np.isnan(confidences) | np.isnan(successes))
+    confidences = confidences[valid_mask]
+    successes = successes[valid_mask]
+
+    # Handle edge case of no valid data
+    if len(confidences) == 0:
+        return {
+            'ece': np.nan,
+            'P_cal': np.nan,
+            'bin_stats': []
+        }
+
     bin_edges = np.linspace(0, 1, n_bins + 1)
     ece = 0.0
 

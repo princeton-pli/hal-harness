@@ -146,6 +146,17 @@ class DockerRunner:
                 except (docker.errors.NotFound, docker.errors.APIError) as e:
                     verbose_logger.debug(f"Warning: Failed to cleanup container {container_id}: {e}")
 
+    def _is_transient_error(self, error_msg: str) -> bool:
+        """Check if an error is transient and worth retrying."""
+        error_lower = error_msg.lower()
+        transient_patterns = [
+            'timeout', 'timed out', 'connection', '502', '503', '504',
+            'bad gateway', 'service unavailable', 'gateway timeout',
+            'temporarily', 'rate limit', 'too many requests', '429',
+            'reset by peer', 'broken pipe', 'network', 'dns'
+        ]
+        return any(pattern in error_lower for pattern in transient_patterns)
+
     async def _process_task(self,
                           task_id: str,
                           input_data: Any,
@@ -155,30 +166,52 @@ class DockerRunner:
                           run_id: str,
                           submissions_file: str,
                           progress: Optional[Progress] = None,
-                          task: Optional[TaskID] = None) -> Optional[Dict[str, Any]]:
-        """Process a single task with semaphore control"""
+                          task: Optional[TaskID] = None,
+                          max_retries: int = 3,
+                          base_delay: float = 5.0) -> Optional[Dict[str, Any]]:
+        """Process a single task with semaphore control and automatic retry on transient errors"""
         async with self._semaphore:
             verbose_logger.debug(f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})")
-            result = await self._run_single_task(
-                task_id=task_id,
-                input_data=input_data,
-                agent_function=agent_function,
-                agent_dir=agent_dir,
-                agent_args=agent_args,
-                run_id=run_id
-            )
-            
+
+            result = None
+            for attempt in range(max_retries):
+                result = await self._run_single_task(
+                    task_id=task_id,
+                    input_data=input_data,
+                    agent_function=agent_function,
+                    agent_dir=agent_dir,
+                    agent_args=agent_args,
+                    run_id=run_id
+                )
+
+                # Check if task succeeded
+                if result:
+                    task_result = result.get(task_id, "")
+                    if isinstance(task_result, str) and task_result.startswith("ERROR"):
+                        # Check if it's a transient error worth retrying
+                        if self._is_transient_error(task_result) and attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt)
+                            print(f"⚠️  Task {task_id} failed with transient error (attempt {attempt + 1}/{max_retries})")
+                            print(f"   Retrying in {delay:.1f}s...")
+                            await asyncio.sleep(delay)
+                            continue
+                    # Success or non-transient error - stop retrying
+                    break
+                else:
+                    # No result - stop retrying
+                    break
+
             # Write result to submissions file
             if result:
                 async with self._file_lock:
                     with open(submissions_file, "a") as f:
                         json.dump(result, f)
                         f.write("\n")
-            
+
             # Update progress after task completion
             if progress and task is not None:
                 progress.update(task, advance=1)
-            
+
             verbose_logger.debug(f"Completed task {task_id}")
             return result
 
@@ -419,17 +452,43 @@ class DockerRunner:
         Create the Python script that will run the agent
         """
         module_name, function_name = agent_function.rsplit(".", 1)
-        
+
         return f'''
 import os
 import json
 import importlib.util
 import weave
 import traceback
+import time
+
+def init_weave_with_retry(run_id, max_retries=5, base_delay=2.0):
+    """Initialize weave with retry logic for transient connection errors."""
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            return weave.init(run_id)
+        except Exception as e:
+            last_exception = e
+            error_str = str(e).lower()
+            # Check for transient errors (connection, timeout, gateway errors)
+            is_transient = any(err in error_str for err in [
+                '502', '503', '504', 'bad gateway', 'service unavailable',
+                'gateway timeout', 'connection', 'timeout', 'temporarily', 'timed out'
+            ])
+
+            if not is_transient or attempt == max_retries - 1:
+                raise
+
+            delay = base_delay * (2 ** attempt)
+            print(f"Weave init failed (attempt {{attempt + 1}}/{{max_retries}}): {{e}}")
+            print(f"Retrying in {{delay:.1f}}s...")
+            time.sleep(delay)
+
+    raise last_exception
 
 try:
-    # Initialize weave
-    weave.init("{run_id}")
+    # Initialize weave with retry logic
+    init_weave_with_retry("{run_id}")
     
     # Load input data
     with open("input.json", "r") as f:

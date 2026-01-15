@@ -19,7 +19,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from collections import defaultdict
 
 import numpy as np
@@ -33,9 +33,53 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # ========== Data Loading ==========
 
+def _has_structural_perturbation_data(raw_eval_results: Dict, data: Dict) -> Tuple[bool, str]:
+    """
+    Detect if a run contains structural perturbation data and determine the type.
+
+    Checks multiple indicators:
+    1. 'structural_perturbation' field in any task result (new format)
+    2. 'enable_structural_perturbations' in agent_args (metadata indicator)
+
+    Returns:
+        (has_perturbation, perturbation_strength) tuple
+        perturbation_strength is one of: 'baseline', 'perturbed', 'perturbed_mild', 'perturbed_medium', 'perturbed_severe'
+    """
+    # Check metadata for perturbation flag
+    agent_args = data.get('metadata', {}).get('agent_args', {})
+    if agent_args.get('enable_structural_perturbations') == 'true':
+        # Get strength from agent_args
+        strength = agent_args.get('perturbation_strength', 'medium')
+        return True, f'perturbed_{strength}' if strength != 'medium' else 'perturbed'
+
+    # Check task results for structural_perturbation field (new format)
+    for task_id, task_eval in raw_eval_results.items():
+        if isinstance(task_eval, dict) and 'structural_perturbation' in task_eval:
+            sp_data = task_eval['structural_perturbation']
+            if isinstance(sp_data, dict) and sp_data.get('enabled', False):
+                # Try to determine strength from config
+                config = sp_data.get('config', {})
+                # Use presence of perturbation count as indicator
+                count = sp_data.get('perturbation_count', 0)
+                if count > 50:
+                    return True, 'perturbed_severe'
+                elif count > 20:
+                    return True, 'perturbed_medium'
+                elif count > 0:
+                    return True, 'perturbed_mild'
+                return True, 'perturbed'
+
+    return False, 'baseline'
+
+
 def load_evaluation_results(results_dir: Path, benchmark: str) -> Dict:
     """
     Load all evaluation results for a benchmark.
+
+    This function detects structural perturbation runs based on data format, not directory names.
+    It looks for:
+    1. 'structural_perturbation' field in task results (new format)
+    2. 'enable_structural_perturbations' in agent_args (metadata indicator)
 
     Args:
         results_dir: Root results directory
@@ -56,46 +100,108 @@ def load_evaluation_results(results_dir: Path, benchmark: str) -> Dict:
         if not run_dir.is_dir():
             continue
 
-        # Load UPLOAD.json
-        upload_file = run_dir / "UPLOAD.json"
-        if not upload_file.exists():
-            print(f"⚠️  Skipping {run_dir.name}: No UPLOAD.json found")
-            continue
+        # Load UPLOAD.json (also check for *_UPLOAD.json pattern)
+        upload_files = list(run_dir.glob("*_UPLOAD.json"))
+        if not upload_files:
+            upload_file = run_dir / "UPLOAD.json"
+            if not upload_file.exists():
+                print(f"⚠️  Skipping {run_dir.name}: No UPLOAD.json found")
+                continue
+        else:
+            upload_file = upload_files[0]
 
         with open(upload_file, 'r') as f:
             data = json.load(f)
 
         agent_name = data.get('agent_name', 'unknown')
         run_id = run_dir.name
+        raw_eval = data.get('raw_eval_results', {})
 
-        # Determine run type (baseline vs perturbed)
-        if 'baseline' in agent_name.lower() or 'baseline' in run_id.lower():
-            run_type = 'baseline'
-        elif 'perturbed' in agent_name.lower() or 'perturbed' in run_id.lower():
-            # Extract perturbation strength from name
-            if 'mild' in agent_name.lower():
-                run_type = 'perturbed_mild'
-            elif 'medium' in agent_name.lower():
-                run_type = 'perturbed_medium'
-            elif 'severe' in agent_name.lower():
-                run_type = 'perturbed_severe'
+        # Detect run type based on data content, not directory/agent name
+        has_perturbation, detected_run_type = _has_structural_perturbation_data(raw_eval, data)
+
+        # Fallback to name-based detection for backwards compatibility
+        if not has_perturbation:
+            if 'baseline' in agent_name.lower() or 'baseline' in run_id.lower():
+                run_type = 'baseline'
+            elif 'perturbed' in agent_name.lower() or 'perturbed' in run_id.lower():
+                # Extract perturbation strength from name
+                if 'mild' in agent_name.lower() or 'mild' in run_id.lower():
+                    run_type = 'perturbed_mild'
+                elif 'medium' in agent_name.lower() or 'medium' in run_id.lower():
+                    run_type = 'perturbed_medium'
+                elif 'severe' in agent_name.lower() or 'severe' in run_id.lower():
+                    run_type = 'perturbed_severe'
+                else:
+                    run_type = 'perturbed'
             else:
-                run_type = 'perturbed'
+                run_type = 'baseline'  # Default assumption
         else:
-            run_type = 'baseline'  # Default assumption
+            run_type = detected_run_type
 
-        # Clean agent name (remove run type suffix)
+        # Clean agent name (remove run type suffix and special markers)
         clean_name = agent_name
-        for suffix in [' (baseline)', ' (perturbed_mild)', ' (perturbed_medium)', ' (perturbed_severe)']:
+        for suffix in [' (baseline)', ' (perturbed_mild)', ' (perturbed_medium)', ' (perturbed_severe)', ' (perturbed)']:
             clean_name = clean_name.replace(suffix, '')
+
+        # Also extract base agent name from run directory if agent_name is generic
+        if clean_name == 'unknown':
+            # Try to extract from run_dir name
+            parts = run_dir.name.split('_')
+            if run_dir.name.startswith('taubench_airline'):
+                agent_parts = parts[2:]
+            elif run_dir.name.startswith('taubench_retail'):
+                agent_parts = parts[2:]
+            else:
+                agent_parts = parts[1:]
+
+            # Remove special suffixes and timestamp
+            filtered_parts = []
+            skip_keywords = ['baseline', 'perturbed', 'mild', 'medium', 'severe']
+            for i, part in enumerate(agent_parts):
+                if part in skip_keywords:
+                    break
+                if part.isdigit() and i == len(agent_parts) - 1:
+                    break
+                filtered_parts.append(part)
+            if filtered_parts:
+                clean_name = '_'.join(filtered_parts)
+
+        # Extract perturbation info from task results if available (new format)
+        perturbation_info = {}
+        for task_id, task_eval in raw_eval.items():
+            if isinstance(task_eval, dict) and 'structural_perturbation' in task_eval:
+                sp = task_eval['structural_perturbation']
+                if sp.get('enabled'):
+                    perturbation_info[task_id] = {
+                        'perturbation_type': sp.get('perturbation_type'),
+                        'perturbation_count': sp.get('perturbation_count', 0),
+                        'applied_perturbations': sp.get('applied_perturbations', []),
+                        'config': sp.get('config', {})
+                    }
+
+        # Calculate accuracy from raw_eval_results if not present
+        accuracy = data.get('accuracy')
+        if accuracy is None:
+            # Try to calculate from results
+            results = data.get('results', {})
+            accuracy = results.get('accuracy', 0.0)
+            if accuracy == 0.0 and raw_eval:
+                # Calculate from raw_eval
+                successes = sum(
+                    1 for task_eval in raw_eval.values()
+                    if isinstance(task_eval, dict) and task_eval.get('reward', task_eval.get('success', 0)) > 0
+                )
+                accuracy = successes / len(raw_eval) if raw_eval else 0.0
 
         agent_results[clean_name][run_type] = {
             'run_id': run_id,
             'agent_name': agent_name,
-            'raw_eval_results': data.get('raw_eval_results', {}),
-            'accuracy': data.get('accuracy', 0.0),
-            'num_tasks': len(data.get('raw_eval_results', {})),
+            'raw_eval_results': raw_eval,
+            'accuracy': accuracy,
+            'num_tasks': len(raw_eval),
             'metadata': data.get('metadata', {}),
+            'perturbation_info': perturbation_info,  # New: per-task perturbation details
         }
 
     return dict(agent_results)
@@ -122,18 +228,39 @@ def calculate_R_struct(
 
     if acc_baseline == 0:
         R_struct = 0.0
+        R_struct_raw = 0.0
         degradation = 1.0
     else:
-        R_struct = min(acc_perturbed / acc_baseline, 1.0)
-        degradation = 1.0 - R_struct
+        # Raw ratio can exceed 1.0 if performance improved under perturbation
+        R_struct_raw = acc_perturbed / acc_baseline
+        # Capped version for standard reporting (bounded to [0, 1])
+        R_struct = min(R_struct_raw, 1.0)
+        degradation = max(0.0, 1.0 - R_struct_raw)  # Can be negative if improved
 
     return {
         'R_struct': R_struct,
+        'R_struct_raw': R_struct_raw,  # Uncapped version to show improvements
         'degradation': degradation,
         'acc_baseline': acc_baseline,
         'acc_perturbed': acc_perturbed,
         'relative_change': acc_perturbed - acc_baseline,
+        'improved_under_perturbation': R_struct_raw > 1.0,  # Flag for unusual cases
     }
+
+
+def _get_task_success(task_result: Dict) -> bool:
+    """Extract success from a task result, handling different key names."""
+    if not isinstance(task_result, dict):
+        return False
+
+    # Try different success indicators used by different benchmarks
+    for key in ['success', 'reward', 'score', 'accuracy']:
+        if key in task_result:
+            try:
+                return float(task_result[key]) > 0
+            except (ValueError, TypeError):
+                continue
+    return False
 
 
 def calculate_task_level_sensitivity(
@@ -159,8 +286,8 @@ def calculate_task_level_sensitivity(
         if task_id not in perturbed_tasks:
             continue
 
-        baseline_success = baseline_tasks[task_id].get('success', False)
-        perturbed_success = perturbed_tasks[task_id].get('success', False)
+        baseline_success = _get_task_success(baseline_tasks[task_id])
+        perturbed_success = _get_task_success(perturbed_tasks[task_id])
 
         # Calculate sensitivity
         if baseline_success and not perturbed_success:

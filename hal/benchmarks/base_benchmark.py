@@ -198,25 +198,31 @@ class BaseBenchmark(ABC):
             if isinstance(variation_results, list):
                 # List of scores per variation
                 for result in variation_results:
-                    if isinstance(result, dict) and 'score' in result:
-                        try:
-                            scores.append(float(result['score']))
-                        except (ValueError, TypeError) as e:
-                            # Skip invalid scores
-                            print(f"Warning: Could not convert score to float for task {task_id}: {result['score']}")
-                            continue
+                    if isinstance(result, dict):
+                        # Support both 'score' and 'reward' keys (different benchmarks use different names)
+                        score_value = result.get('score', result.get('reward', None))
+                        if score_value is not None:
+                            try:
+                                scores.append(float(score_value))
+                            except (ValueError, TypeError) as e:
+                                # Skip invalid scores
+                                print(f"Warning: Could not convert score to float for task {task_id}: {score_value}")
+                                continue
                     elif isinstance(result, (int, float)):
                         scores.append(float(result))
             elif isinstance(variation_results, dict):
                 # Dict mapping variation_id to results
                 for var_id, result in variation_results.items():
-                    if isinstance(result, dict) and 'score' in result:
-                        try:
-                            scores.append(float(result['score']))
-                        except (ValueError, TypeError) as e:
-                            # Skip invalid scores
-                            print(f"Warning: Could not convert score to float for task {task_id}: {result['score']}")
-                            continue
+                    if isinstance(result, dict):
+                        # Support both 'score' and 'reward' keys (different benchmarks use different names)
+                        score_value = result.get('score', result.get('reward', None))
+                        if score_value is not None:
+                            try:
+                                scores.append(float(score_value))
+                            except (ValueError, TypeError) as e:
+                                # Skip invalid scores
+                                print(f"Warning: Could not convert score to float for task {task_id}: {score_value}")
+                                continue
                     elif isinstance(result, (int, float)):
                         scores.append(float(result))
 

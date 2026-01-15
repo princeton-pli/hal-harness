@@ -107,6 +107,7 @@ def load_results_from_files(results_dir: Path, benchmark: str) -> Dict:
         task_costs = defaultdict(float)
         task_api_calls = defaultdict(int)
         task_trajectories = defaultdict(list)
+        task_call_latencies = defaultdict(list)  # Per-call latencies in ms
 
         for log_entry in raw_logging_results:
             task_id = log_entry.get('weave_task_id')
@@ -116,12 +117,19 @@ def load_results_from_files(results_dir: Path, benchmark: str) -> Dict:
             task_id = str(task_id)
 
             # Get usage from summary
-            summary_usage = log_entry.get('summary', {}).get('usage', {})
+            summary = log_entry.get('summary', {})
+            summary_usage = summary.get('usage', {})
             for model, usage in summary_usage.items():
                 task_tokens[task_id]['prompt'] += usage.get('prompt_tokens', 0)
                 task_tokens[task_id]['completion'] += usage.get('completion_tokens', 0)
                 task_tokens[task_id]['total'] += usage.get('total_tokens', 0)
                 task_api_calls[task_id] += 1
+
+            # Extract per-call latency from weave summary
+            weave_summary = summary.get('weave', {})
+            latency_ms = weave_summary.get('latency_ms')
+            if latency_ms is not None:
+                task_call_latencies[task_id].append(latency_ms)
 
             # Extract trajectory information (tool calls, actions)
             op_name = log_entry.get('op_name', '')
@@ -129,6 +137,25 @@ def load_results_from_files(results_dir: Path, benchmark: str) -> Dict:
                 # Extract tool/function name
                 tool_name = op_name.split('/')[-1].split(':')[0]
                 task_trajectories[task_id].append(tool_name)
+
+        # Also extract trajectories from taken_actions in raw_eval_results
+        # This is more reliable than Weave log parsing since it comes directly from the agent
+        # We prefer taken_actions when available, using Weave logs only as fallback
+        for task_id, task_eval in raw_eval_results.items():
+            task_id_str = str(task_id)
+            if isinstance(task_eval, dict):
+                taken_actions = task_eval.get('taken_actions', [])
+                if taken_actions:
+                    # If we have taken_actions, use them as the primary source
+                    # (overwrite any Weave-extracted data for this task)
+                    action_names = []
+                    for action in taken_actions:
+                        if isinstance(action, dict):
+                            tool_name = action.get('name', '')
+                            if tool_name:
+                                action_names.append(tool_name)
+                    if action_names:
+                        task_trajectories[task_id_str] = action_names
 
         # Process each task
         skipped_tasks = 0
@@ -150,6 +177,15 @@ def load_results_from_files(results_dir: Path, benchmark: str) -> Dict:
             # Tokens
             tokens = task_tokens.get(task_id_str, {'prompt': 0, 'completion': 0, 'total': 0})
 
+            # Extract num_actions and num_errors from confidence_details
+            confidence_details = task_eval.get('confidence_details', {})
+            num_actions = confidence_details.get('num_actions', 0) if isinstance(confidence_details, dict) else 0
+            num_errors = confidence_details.get('num_errors', 0) if isinstance(confidence_details, dict) else 0
+
+            # Compute mean per-call latency for this task
+            call_latencies = task_call_latencies.get(task_id_str, [])
+            mean_call_latency = np.mean(call_latencies) if call_latencies else 0.0
+
             # Store all metrics
             results_data[agent_name][run_id][task_id_str] = {
                 'success': success,
@@ -158,7 +194,10 @@ def load_results_from_files(results_dir: Path, benchmark: str) -> Dict:
                 'completion_tokens': tokens['completion'],
                 'total_tokens': tokens['total'],
                 'api_calls': task_api_calls.get(task_id_str, 0),
-                'trajectory': task_trajectories.get(task_id_str, [])
+                'trajectory': task_trajectories.get(task_id_str, []),
+                'num_actions': num_actions,
+                'num_errors': num_errors,
+                'mean_call_latency_ms': mean_call_latency
             }
 
         valid_tasks = len(raw_eval_results) - skipped_tasks
@@ -247,13 +286,21 @@ def compute_task_level_consistency(agent_data: Dict[str, Dict[str, Dict]]) -> pd
     - C_traj (trajectory consistency: 1 - mean JSD, higher = more consistent)
     - time_mean, time_std, time_cv (coefficient of variation)
     - tokens_mean, tokens_std, tokens_cv
+    - api_calls_mean, api_calls_cv
+    - actions_mean, actions_cv
+    - errors_mean, errors_cv
+    - call_latency_mean, call_latency_cv
     """
     # Collect data per task across runs
     task_metrics = defaultdict(lambda: {
         'success': [],
         'total_time': [],
         'total_tokens': [],
-        'trajectories': []
+        'trajectories': [],
+        'api_calls': [],
+        'num_actions': [],
+        'num_errors': [],
+        'mean_call_latency_ms': []
     })
 
     for run_id, tasks in agent_data.items():
@@ -262,6 +309,10 @@ def compute_task_level_consistency(agent_data: Dict[str, Dict[str, Dict]]) -> pd
             task_metrics[task_id]['total_time'].append(metrics['total_time'])
             task_metrics[task_id]['total_tokens'].append(metrics['total_tokens'])
             task_metrics[task_id]['trajectories'].append(metrics.get('trajectory', []))
+            task_metrics[task_id]['api_calls'].append(metrics.get('api_calls', 0))
+            task_metrics[task_id]['num_actions'].append(metrics.get('num_actions', 0))
+            task_metrics[task_id]['num_errors'].append(metrics.get('num_errors', 0))
+            task_metrics[task_id]['mean_call_latency_ms'].append(metrics.get('mean_call_latency_ms', 0.0))
 
     # Compute statistics
     rows = []
@@ -278,8 +329,12 @@ def compute_task_level_consistency(agent_data: Dict[str, Dict[str, Dict]]) -> pd
         # Outcome consistency: 1 - normalized standard deviation
         # Range: [0, 1] where 1 = perfectly deterministic, 0 = maximally variable
         # Use ddof=0 (population std) to match theoretical max of 0.5 for binary outcomes
+        # Note: ddof=0 is intentional here because we normalize by the theoretical maximum
+        # standard deviation (0.5) for binary {0,1} outcomes. Using ddof=1 would give
+        # incorrect normalization for small K.
         std_out = np.std(success_array, ddof=0)
-        C_out = 1 - (2 * std_out)  # Normalized by theoretical max std = 0.5
+        # Bound C_out to [0, 1] to handle edge cases
+        C_out = max(0.0, min(1.0, 1 - (2 * std_out)))  # Normalized by theoretical max std = 0.5
 
         # Time metrics
         time_array = np.array(data['total_time'])
@@ -292,6 +347,30 @@ def compute_task_level_consistency(agent_data: Dict[str, Dict[str, Dict]]) -> pd
         tokens_mean = np.mean(token_array)
         tokens_std = np.std(token_array, ddof=1)
         tokens_cv = (tokens_std / tokens_mean) if tokens_mean > 0 else 0.0
+
+        # API calls metrics
+        api_calls_array = np.array(data['api_calls'])
+        api_calls_mean = np.mean(api_calls_array)
+        api_calls_std = np.std(api_calls_array, ddof=1)
+        api_calls_cv = (api_calls_std / api_calls_mean) if api_calls_mean > 0 else 0.0
+
+        # Actions metrics
+        actions_array = np.array(data['num_actions'])
+        actions_mean = np.mean(actions_array)
+        actions_std = np.std(actions_array, ddof=1)
+        actions_cv = (actions_std / actions_mean) if actions_mean > 0 else 0.0
+
+        # Errors metrics
+        errors_array = np.array(data['num_errors'])
+        errors_mean = np.mean(errors_array)
+        errors_std = np.std(errors_array, ddof=1)
+        errors_cv = (errors_std / errors_mean) if errors_mean > 0 else 0.0
+
+        # Per-call latency metrics
+        call_latency_array = np.array(data['mean_call_latency_ms'])
+        call_latency_mean = np.mean(call_latency_array)
+        call_latency_std = np.std(call_latency_array, ddof=1)
+        call_latency_cv = (call_latency_std / call_latency_mean) if call_latency_mean > 0 else 0.0
 
         # Trajectory consistency
         C_traj = compute_trajectory_consistency(data['trajectories'])
@@ -308,7 +387,15 @@ def compute_task_level_consistency(agent_data: Dict[str, Dict[str, Dict]]) -> pd
             'time_cv': time_cv,
             'tokens_mean': tokens_mean,
             'tokens_std': tokens_std,
-            'tokens_cv': tokens_cv
+            'tokens_cv': tokens_cv,
+            'api_calls_mean': api_calls_mean,
+            'api_calls_cv': api_calls_cv,
+            'actions_mean': actions_mean,
+            'actions_cv': actions_cv,
+            'errors_mean': errors_mean,
+            'errors_cv': errors_cv,
+            'call_latency_mean': call_latency_mean,
+            'call_latency_cv': call_latency_cv
         })
 
     return pd.DataFrame(rows)
@@ -319,19 +406,32 @@ def compute_agent_level_metrics(task_df: pd.DataFrame, agent_name: str) -> Dict:
     Aggregate task-level metrics to agent level.
     """
     # C_traj may have NaN values if trajectories are missing
-    mean_C_traj = task_df['C_traj'].mean() if 'C_traj' in task_df.columns else np.nan
-    std_C_traj = task_df['C_traj'].std() if 'C_traj' in task_df.columns else np.nan
+    # Use skipna=True explicitly and track how many tasks have valid C_traj
+    if 'C_traj' in task_df.columns:
+        valid_ctraj = task_df['C_traj'].dropna()
+        mean_C_traj = valid_ctraj.mean() if len(valid_ctraj) > 0 else np.nan
+        std_C_traj = valid_ctraj.std() if len(valid_ctraj) > 1 else np.nan
+        num_tasks_with_traj = len(valid_ctraj)
+    else:
+        mean_C_traj = np.nan
+        std_C_traj = np.nan
+        num_tasks_with_traj = 0
 
     return {
         'agent': agent_name,
         'num_tasks': len(task_df),
-        'mean_C_out': task_df['C_out'].mean(),
-        'std_C_out': task_df['C_out'].std(),
+        'mean_C_out': task_df['C_out'].mean(skipna=True),
+        'std_C_out': task_df['C_out'].std(skipna=True),
         'mean_C_traj': mean_C_traj,
         'std_C_traj': std_C_traj,
-        'mean_success_rate': task_df['success_rate'].mean(),
-        'mean_time_cv': task_df['time_cv'].mean(),
-        'mean_tokens_cv': task_df['tokens_cv'].mean(),
+        'num_tasks_with_traj': num_tasks_with_traj,  # Track valid C_traj count
+        'mean_success_rate': task_df['success_rate'].mean(skipna=True),
+        'mean_time_cv': task_df['time_cv'].mean(skipna=True),
+        'mean_tokens_cv': task_df['tokens_cv'].mean(skipna=True),
+        'mean_api_calls_cv': task_df['api_calls_cv'].mean(skipna=True),
+        'mean_actions_cv': task_df['actions_cv'].mean(skipna=True),
+        'mean_errors_cv': task_df['errors_cv'].mean(skipna=True),
+        'mean_call_latency_cv': task_df['call_latency_cv'].mean(skipna=True),
         'deterministic_tasks': (task_df['C_out'] > 0.99).sum(),  # Nearly deterministic
         'variable_tasks': (task_df['C_out'] < 0.8).sum(),  # Highly variable
     }
@@ -370,6 +470,8 @@ def analyze_all_agents(results_data: Dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
         print(f"   Mean success rate: {agent_metrics['mean_success_rate']:.3f}")
         print(f"   Mean time CV: {agent_metrics['mean_time_cv']:.3f}")
         print(f"   Mean tokens CV: {agent_metrics['mean_tokens_cv']:.3f}")
+        print(f"   Mean API calls CV: {agent_metrics['mean_api_calls_cv']:.3f}")
+        print(f"   Mean actions CV: {agent_metrics['mean_actions_cv']:.3f}")
 
     task_level_df = pd.concat(all_task_rows, ignore_index=True) if all_task_rows else pd.DataFrame()
     agent_level_df = pd.DataFrame(agent_level_rows) if agent_level_rows else pd.DataFrame()
@@ -1143,6 +1245,21 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
                 f"{int(row['deterministic_tasks'])} | {int(row['variable_tasks'])} |\n"
             )
 
+    report.append("\n## Extended Resource Consistency\n\n")
+    report.append("| Agent | API Calls CV | Actions CV | Errors CV | Call Latency CV |\n")
+    report.append("|-------|--------------|------------|-----------|------------------|\n")
+
+    for _, row in agent_df.iterrows():
+        api_cv = row.get('mean_api_calls_cv', np.nan)
+        actions_cv = row.get('mean_actions_cv', np.nan)
+        errors_cv = row.get('mean_errors_cv', np.nan)
+        latency_cv = row.get('mean_call_latency_cv', np.nan)
+        report.append(
+            f"| {row['agent']} | "
+            f"{api_cv:.3f} | {actions_cv:.3f} | "
+            f"{errors_cv:.3f} | {latency_cv:.3f} |\n"
+        )
+
     report.append("\n## Metrics Explained\n\n")
 
     report.append("### Outcome Consistency (C_out)\n")
@@ -1163,8 +1280,11 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
     report.append("Coefficient of Variation (CV = std / mean) measures relative variability in resource usage.\n\n")
     report.append("- **Lower CV**: More consistent resource usage across runs\n")
     report.append("- **Higher CV**: More variable resource usage\n")
-    report.append("- **Time CV**: Consistency in execution time\n")
-    report.append("- **Token CV**: Consistency in token consumption\n\n")
+    report.append("- **Time CV**: Consistency in total execution time\n")
+    report.append("- **Token CV**: Consistency in token consumption\n")
+    report.append("- **API Calls CV**: Consistency in number of API calls made\n")
+    report.append("- **Actions CV**: Consistency in number of actions taken\n")
+    report.append("- **Call Latency CV**: Consistency in per-call latency\n\n")
 
     report.append("## Key Findings\n\n")
 
@@ -1179,10 +1299,14 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
     # Resource consistency
     best_time = agent_df.loc[agent_df['mean_time_cv'].idxmin()]
     best_token = agent_df.loc[agent_df['mean_tokens_cv'].idxmin()]
+    best_api_calls = agent_df.loc[agent_df['mean_api_calls_cv'].idxmin()]
+    best_actions = agent_df.loc[agent_df['mean_actions_cv'].idxmin()]
 
     report.append(f"### Resource Consistency\n")
     report.append(f"- **Most time-consistent**: {best_time['agent']} (CV = {best_time['mean_time_cv']:.3f})\n")
-    report.append(f"- **Most token-consistent**: {best_token['agent']} (CV = {best_token['mean_tokens_cv']:.3f})\n\n")
+    report.append(f"- **Most token-consistent**: {best_token['agent']} (CV = {best_token['mean_tokens_cv']:.3f})\n")
+    report.append(f"- **Most API-calls-consistent**: {best_api_calls['agent']} (CV = {best_api_calls['mean_api_calls_cv']:.3f})\n")
+    report.append(f"- **Most actions-consistent**: {best_actions['agent']} (CV = {best_actions['mean_actions_cv']:.3f})\n\n")
 
     # Capability
     best_acc = agent_df.loc[agent_df['mean_success_rate'].idxmax()]

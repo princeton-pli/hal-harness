@@ -83,6 +83,7 @@ load_dotenv()
 )
 @click.option("--prompt_sensitivity", is_flag=True, help="Enable prompt sensitivity evaluation by generating and testing multiple prompt variations")
 @click.option("--num_variations", default=3, type=int, help="Number of prompt variations to generate for sensitivity testing (default: 3)")
+@click.option("--variation_strength", default="mild", type=click.Choice(["mild", "medium", "strong", "naturalistic"]), help="Strength of prompt variations: mild (synonyms/formality), medium (restructuring), strong (conversational rewrites), naturalistic (realistic user typing patterns)")
 def main(
     config,
     benchmark,
@@ -103,6 +104,7 @@ def main(
     max_tasks,
     prompt_sensitivity,
     num_variations,
+    variation_strength,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
@@ -186,7 +188,8 @@ def main(
             continue_run=continue_run,
             ignore_errors=ignore_errors,
             prompt_sensitivity=prompt_sensitivity,
-            num_variations=num_variations
+            num_variations=num_variations,
+            variation_strength=variation_strength
         )
         
         # get exact command used to run the evaluation from click 
@@ -263,7 +266,8 @@ def main(
                     ignore_errors=ignore_errors,
                     max_tasks=max_tasks,
                     prompt_sensitivity=prompt_sensitivity,
-                    num_variations=num_variations
+                    num_variations=num_variations,
+                    variation_strength=variation_strength
                 )
 
                 # Run evaluation

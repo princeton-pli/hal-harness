@@ -248,15 +248,55 @@ def _normalize_usage(cost: Dict[str, Any]) -> Tuple[int, int, int, int]:
     
     return prompt_tokens, cached_input, cache_creation, completion
 
+def _retry_with_backoff(func, max_retries: int = 5, base_delay: float = 2.0):
+    """
+    Retry a function with exponential backoff on transient errors.
+
+    Args:
+        func: Callable to retry
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds (doubles each retry)
+
+    Returns:
+        Result of successful function call
+
+    Raises:
+        Last exception if all retries fail
+    """
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            last_exception = e
+            error_str = str(e).lower()
+            # Check for transient errors (502, 503, 504, connection errors, timeouts)
+            is_transient = any(err in error_str for err in [
+                '502', '503', '504', 'bad gateway', 'service unavailable',
+                'gateway timeout', 'connection', 'timeout', 'temporarily'
+            ])
+
+            if not is_transient or attempt == max_retries - 1:
+                raise
+
+            delay = base_delay * (2 ** attempt)
+            print_warning(f"Weave API error (attempt {attempt + 1}/{max_retries}): {e}")
+            print_warning(f"Retrying in {delay:.1f}s...")
+            time.sleep(delay)
+
+    raise last_exception
+
+
 def fetch_weave_calls(client) -> List[Dict[str, Any]]:
-    """Fetch Weave calls from the API"""
-    calls = list(client.server.calls_query_stream({
-        "project_id": client._project_id(),
-        "filter": {"trace_roots_only": False},
-        "sort_by": [{"field":"started_at","direction":"desc"}],
-    }))
-    
-    return calls
+    """Fetch Weave calls from the API with retry logic"""
+    def _fetch():
+        return list(client.server.calls_query_stream({
+            "project_id": client._project_id(),
+            "filter": {"trace_roots_only": False},
+            "sort_by": [{"field":"started_at","direction":"desc"}],
+        }))
+
+    return _retry_with_backoff(_fetch)
 
 def get_call_ids(task_id, client):
     """Get all call ids for calls given a task id"""
@@ -334,17 +374,21 @@ def get_total_cost(client):
     token_usage = {}
     requests = 0
 
-    # Fetch all the calls in the project
+    # Fetch all the calls in the project with retry logic
     print_step("Getting token usage data (this can take a while)...")
-    calls = list(
-        client.server.calls_query_stream(
-            CallsQueryReq(
-                project_id=client._project_id(),
-                filter=CallsFilter(trace_roots_only=False),
-                columns=["summary"],
+
+    def _fetch_calls():
+        return list(
+            client.server.calls_query_stream(
+                CallsQueryReq(
+                    project_id=client._project_id(),
+                    filter=CallsFilter(trace_roots_only=False),
+                    columns=["summary"],
+                )
             )
         )
-    )
+
+    calls = _retry_with_backoff(_fetch_calls)
 
     with create_progress() as progress:
         task = progress.add_task("Processing token usage data...", total=len(calls))
@@ -602,17 +646,20 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
     client = weave.init(run_id)
 
     print_step(f"Getting token usage data for task ID: {task_id}...")
-    
-    # Fetch all calls and filter by task_id
-    calls = list(
-        client.server.calls_query_stream(
-            CallsQueryReq(
-                project_id=client._project_id(),
-                filter=CallsFilter(trace_roots_only=False),
-                columns=["summary", "attributes"],
+
+    # Fetch all calls and filter by task_id with retry logic
+    def _fetch_calls():
+        return list(
+            client.server.calls_query_stream(
+                CallsQueryReq(
+                    project_id=client._project_id(),
+                    filter=CallsFilter(trace_roots_only=False),
+                    columns=["summary", "attributes"],
+                )
             )
         )
-    )
+
+    calls = _retry_with_backoff(_fetch_calls)
     task_calls = [call for call in calls if (getattr(call, "attributes", {}) or {}).get('weave_task_id') == task_id]
     
     for call in task_calls:

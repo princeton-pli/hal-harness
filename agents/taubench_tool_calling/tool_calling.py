@@ -1,7 +1,21 @@
 import json
+import asyncio
 from functools import partial
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 import os
+import time
+
+# Reliability metric utilities
+from hal.utils.fault_injection import FaultInjector, FaultEvent
+from hal.utils.compliance_checkers import ComplianceMonitor, ComplianceViolation
+from hal.utils.structural_perturbations import (
+    StructuralPerturbator,
+    PerturbationType,
+    PerturbationStrength,
+    PerturbationConfig
+)
+from hal.utils.llm_log_analyzer import LLMLogAnalyzer
+
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
@@ -11,6 +25,46 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     import litellm
     litellm.drop_params = True
+
+    # ========== RELIABILITY METRICS INITIALIZATION ==========
+
+    # Initialize FaultInjector if enabled
+    fault_injector: Optional[FaultInjector] = None
+    if kwargs.get('enable_fault_injection') == 'true' or kwargs.get('enable_fault_injection') is True:
+        fault_rate = float(kwargs.get('fault_rate', 0.2))
+        fault_injector = FaultInjector(fault_rate=fault_rate)
+        print(f"🔧 Fault injection enabled with rate={fault_rate}")
+
+    # Initialize ComplianceMonitor if enabled
+    compliance_monitor: Optional[ComplianceMonitor] = None
+    if kwargs.get('enable_compliance_monitoring') == 'true' or kwargs.get('enable_compliance_monitoring') is True:
+        constraints_input = kwargs.get('compliance_constraints', 'no_pii_exposure,no_destructive_ops')
+        # Handle both string and list inputs
+        if isinstance(constraints_input, list):
+            constraints = [c.strip() for c in constraints_input if c.strip()]
+        else:
+            constraints = [c.strip() for c in str(constraints_input).split(',') if c.strip()]
+        compliance_monitor = ComplianceMonitor(constraints=constraints)
+        print(f"📋 Compliance monitoring enabled with constraints: {constraints}")
+
+    # Initialize StructuralPerturbator if enabled
+    perturbator: Optional[StructuralPerturbator] = None
+    if kwargs.get('enable_structural_perturbations') == 'true' or kwargs.get('enable_structural_perturbations') is True:
+        perturbation_type = kwargs.get('perturbation_type', 'all')
+        perturbation_strength = kwargs.get('perturbation_strength', 'medium')
+
+        # Get preset config based on strength
+        try:
+            strength_enum = PerturbationStrength(perturbation_strength)
+            config = PerturbationConfig.get_preset(strength_enum)
+        except ValueError:
+            config = PerturbationConfig()
+
+        perturbator = StructuralPerturbator(
+            perturbation_type=perturbation_type,
+            config=config
+        )
+        print(f"🔀 Structural perturbations enabled: type={perturbation_type}, strength={perturbation_strength}")
 
     # Separate providers for user simulation vs agent
     # User simulation needs OpenAI-compatible API (for tau-bench internals)
@@ -90,8 +144,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     completion_kwargs['reasoning_effort'] = kwargs['reasoning_effort']
                     print(f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}")
 
-        # Call the original function
-        response = original_completion(*args, **completion_kwargs)
+        # Call the original function - with fault injection if enabled
+        if fault_injector and fault_injector.enabled:
+            try:
+                response = fault_injector.wrap_call(original_completion, *args, **completion_kwargs)
+            except Exception as fault_error:
+                # Log the fault and re-raise
+                print(f"⚡ Fault injected: {type(fault_error).__name__}: {fault_error}")
+                raise
+        else:
+            response = original_completion(*args, **completion_kwargs)
 
         # Ensure response_cost is set (litellm may not calculate it for custom api_base)
         if hasattr(response, '_hidden_params') and response._hidden_params.get('response_cost') is None:
@@ -138,8 +200,52 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     completion_kwargs['reasoning_effort'] = kwargs['reasoning_effort']
                     print(f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}")
 
-        # Call the original function
-        response = await original_acompletion(*args, **completion_kwargs)
+        # Call the original function - with fault injection if enabled
+        # Note: For async, we don't use wrap_call (which is sync). Instead we inject
+        # faults manually to maintain async behavior.
+        if fault_injector and fault_injector.enabled:
+            import random
+            if random.random() < fault_injector.fault_rate:
+                # Inject fault
+                fault_type = fault_injector._select_fault_type()
+                fault_injector.state['faults_injected'] += 1
+                print(f"⚡ Async fault injected: {fault_type.value}")
+
+                # Attempt recovery with retries
+                max_retries = fault_injector.config.get('max_recovery_attempts', 3)
+                recovered = False
+                recovery_start = time.time()
+
+                for attempt in range(max_retries):
+                    recovery_prob = 0.3 + (attempt * 0.2)
+                    if random.random() < recovery_prob:
+                        response = await original_acompletion(*args, **completion_kwargs)
+                        recovered = True
+                        fault_injector.state['recoveries_successful'] += 1
+                        break
+                    await asyncio.sleep(0.1 * (attempt + 1))
+
+                if not recovered:
+                    fault_injector.state['recoveries_failed'] += 1
+                    # Raise fault exception - recovery failed after all attempts
+                    raise RuntimeError(f"Simulated fault after {max_retries} recovery attempts: {fault_type.value}")
+
+                recovery_time = time.time() - recovery_start
+                fault_injector.state['total_recovery_time'] += recovery_time
+
+                # Log fault event
+                from hal.utils.fault_injection import FaultEvent
+                fault_event = FaultEvent(
+                    fault_type=fault_type,
+                    recovered=recovered,
+                    recovery_time=recovery_time,
+                    context={'recovery_attempts': attempt + 1, 'function_name': 'acompletion'}
+                )
+                fault_injector.fault_events.append(fault_event)
+            else:
+                response = await original_acompletion(*args, **completion_kwargs)
+        else:
+            response = await original_acompletion(*args, **completion_kwargs)
 
         # Ensure response_cost is set (litellm may not calculate it for custom api_base)
         if hasattr(response, '_hidden_params') and response._hidden_params.get('response_cost') is None:
@@ -182,10 +288,90 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         print(f"   Original length: {len(original_instruction)} chars")
         print(f"   Variation length: {len(input[task_id]['instruction'])} chars")
 
+    # Support for prompt variation style: Inject style directive into user's system prompt
+    # This ensures the simulated user communicates in the specified style (casual, naturalistic, etc.)
+    if 'prompt_variation_strength' in input[task_id]:
+        from hal.utils.prompt_variation import get_user_style_directive
+        style_strength = input[task_id]['prompt_variation_strength']
+        style_directive = get_user_style_directive(style_strength)
+
+        if style_directive:
+            # Monkey-patch the user's build_system_prompt for any future calls
+            original_build_system_prompt = isolated_env.user.build_system_prompt
+
+            def styled_build_system_prompt(instruction=None):
+                base_prompt = original_build_system_prompt(instruction)
+                return base_prompt + style_directive
+
+            isolated_env.user.build_system_prompt = styled_build_system_prompt
+
+            # CRITICAL: Also update the EXISTING system prompt in user's messages
+            # get_env() already called user.reset() which created the messages list
+            # with the original system prompt. We need to patch that too.
+            if hasattr(isolated_env.user, 'messages') and isolated_env.user.messages:
+                for msg in isolated_env.user.messages:
+                    if msg.get('role') == 'system':
+                        msg['content'] = msg['content'] + style_directive
+                        break
+
+            print(f"🎭 User communication style set to: {style_strength}")
+
+    ### STRUCTURAL PERTURBATIONS (OPTIONAL) ###
+    # Apply perturbations to the wiki/tools info to test agent robustness
+    perturbed_tools_info = isolated_env.tools_info
+    perturbed_wiki = isolated_env.wiki
+
+    if perturbator:
+        # Perturb the wiki (knowledge base) - apply data format changes
+        if isinstance(perturbed_wiki, str):
+            # Try parsing as JSON and perturbing
+            try:
+                wiki_data = json.loads(perturbed_wiki)
+                if isinstance(wiki_data, dict):
+                    wiki_data = perturbator.perturb_api_response(wiki_data)
+                    perturbed_wiki = json.dumps(wiki_data)
+            except (json.JSONDecodeError, TypeError):
+                pass  # Keep original if not JSON
+
+        # Perturb tools_info if it's a list of tool definitions
+        # NOTE: We only perturb the 'description' field within tools, NOT the structural
+        # schema keys (type, function, name, parameters) which are required by the API
+        if isinstance(perturbed_tools_info, list):
+            perturbed_tools = []
+            for tool in perturbed_tools_info:
+                if isinstance(tool, dict):
+                    # Deep copy to avoid modifying original
+                    perturbed_tool = json.loads(json.dumps(tool))
+
+                    # Only perturb safe fields - descriptions and parameter descriptions
+                    # Do NOT perturb: type, function, name, parameters.type, parameters.required
+                    if 'function' in perturbed_tool and isinstance(perturbed_tool['function'], dict):
+                        func = perturbed_tool['function']
+
+                        # Perturb function description (safe)
+                        if 'description' in func and isinstance(func['description'], str):
+                            # Apply data format perturbations to description text
+                            func['description'] = perturbator.perturb_data(func['description'])
+
+                        # Perturb parameter descriptions only (not names or structure)
+                        if 'parameters' in func and isinstance(func['parameters'], dict):
+                            params = func['parameters']
+                            if 'properties' in params and isinstance(params['properties'], dict):
+                                for prop_name, prop_def in params['properties'].items():
+                                    if isinstance(prop_def, dict) and 'description' in prop_def:
+                                        prop_def['description'] = perturbator.perturb_data(prop_def['description'])
+
+                    perturbed_tools.append(perturbed_tool)
+                else:
+                    perturbed_tools.append(tool)
+            perturbed_tools_info = perturbed_tools
+
+        print(f"🔀 Applied {len(perturbator.applied_perturbations)} structural perturbations")
+
     ### YOUR AGENT CODE HERE ###
     agent = ToolCallingAgent(
-        tools_info=isolated_env.tools_info,
-        wiki=isolated_env.wiki,
+        tools_info=perturbed_tools_info,
+        wiki=perturbed_wiki,
         model=model_name,
         provider=agent_provider,  # Use agent_provider for the agent (can be anthropic)
         temperature=kwargs['temperature'] if 'temperature' in kwargs else 0.0
@@ -210,6 +396,77 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             actions_taken=isolated_env.actions
         )
 
+    ### COMPLIANCE CHECKING (OPTIONAL) ###
+    compliance_violations = []
+    if compliance_monitor:
+        # Check agent output for compliance violations
+        task_output_str = json.dumps(isolated_env.task.model_dump())
+        actions_str = json.dumps([action.model_dump() for action in isolated_env.actions])
+
+        # Check for PII exposure in output
+        if 'no_pii_exposure' in compliance_monitor.constraints:
+            passed, violation = compliance_monitor.check_constraint(
+                'no_pii_exposure',
+                text=task_output_str,
+                log_output=actions_str
+            )
+            if not passed and violation:
+                compliance_violations.append(violation.to_dict())
+                print(f"⚠️  PII violation detected: {violation.description}")
+
+        # Check for destructive operations
+        if 'no_destructive_ops' in compliance_monitor.constraints:
+            for action in isolated_env.actions:
+                action_str = str(action.model_dump()) if hasattr(action, 'model_dump') else str(action)
+                passed, violation = compliance_monitor.check_constraint(
+                    'no_destructive_ops',
+                    operation=action_str
+                )
+                if not passed and violation:
+                    compliance_violations.append(violation.to_dict())
+                    print(f"⚠️  Destructive op violation: {violation.description}")
+
+        print(f"📋 Compliance check complete: {len(compliance_violations)} violations found")
+
+    ### LLM-BASED LOG ANALYSIS (OPTIONAL) ###
+    llm_compliance_result = None
+    llm_recovery_result = None
+
+    enable_llm_analysis = kwargs.get('enable_llm_analysis') == 'true' or kwargs.get('enable_llm_analysis') is True
+    if enable_llm_analysis:
+        llm_analysis_model = kwargs.get('llm_analysis_model', 'gpt-4o-mini')
+        print(f"🔍 Running LLM-based log analysis with {llm_analysis_model}...")
+
+        try:
+            llm_analyzer = LLMLogAnalyzer(model=llm_analysis_model, cache_responses=False)
+
+            # Prepare trace data
+            conversation_history = output.messages if hasattr(output, 'messages') else []
+            actions_list = [action.model_dump() for action in isolated_env.actions]
+
+            # LLM-based compliance analysis
+            if kwargs.get('llm_compliance') != 'false':
+                llm_constraints = kwargs.get('llm_constraints', 'no_pii_exposure,no_destructive_ops').split(',')
+                llm_constraints = [c.strip() for c in llm_constraints if c.strip()]
+
+                llm_compliance_result = llm_analyzer.analyze_compliance(
+                    conversation_history=conversation_history,
+                    actions_taken=actions_list,
+                    constraints=llm_constraints
+                )
+                print(f"   LLM Compliance: S_comp={llm_compliance_result.S_comp:.2f}, violations={len(llm_compliance_result.violations)}")
+
+            # LLM-based recovery detection
+            if kwargs.get('llm_recovery') != 'false':
+                llm_recovery_result = llm_analyzer.detect_recovery_behavior(
+                    conversation_history=conversation_history,
+                    actions_taken=actions_list
+                )
+                print(f"   LLM Recovery: V_heal={llm_recovery_result.V_heal:.2f}, errors={llm_recovery_result.total_errors_encountered}")
+
+        except Exception as e:
+            print(f"⚠️  LLM analysis error: {e}")
+
     ### WHEN DONE WE RETURN THE ENV STATE ###
     result = {
         task_id: {
@@ -226,6 +483,75 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # Add confidence details for traceability (optional, controlled by flag)
     if confidence_details is not None and kwargs.get('store_confidence_details', False):
         result[task_id]["confidence_details"] = confidence_details
+
+    # ========== RELIABILITY METRICS RESULTS ==========
+
+    # Add fault injection metrics if enabled
+    if fault_injector:
+        fault_stats = fault_injector.get_stats()
+        fault_events = [e.to_dict() for e in fault_injector.get_fault_events()]
+        result[task_id]["fault_injection"] = {
+            "enabled": True,
+            "fault_rate": fault_injector.fault_rate,
+            "stats": fault_stats,
+            "events": fault_events,
+            "V_heal": fault_stats['recovery_rate'],
+            "mean_recovery_time": fault_stats['mean_recovery_time']
+        }
+        print(f"🔧 Fault stats: {fault_stats['total_faults_injected']} faults, "
+              f"{fault_stats['recovery_rate']:.1%} recovery rate")
+
+    # Add compliance metrics if enabled
+    if compliance_monitor:
+        result[task_id]["compliance"] = {
+            "enabled": True,
+            "constraints": compliance_monitor.constraints,
+            "violations": compliance_violations,
+            "violation_count": len(compliance_violations),
+            "S_comp": 1.0 - (1.0 if compliance_violations else 0.0)  # Per-task compliance
+        }
+
+    # Add structural perturbation metrics if enabled
+    if perturbator:
+        result[task_id]["structural_perturbation"] = {
+            "enabled": True,
+            "perturbation_type": perturbator.perturbation_type.value,
+            "perturbation_count": len(perturbator.applied_perturbations),
+            "applied_perturbations": perturbator.applied_perturbations,
+            "config": {
+                "api_parameter_case": perturbator.config.api_parameter_case,
+                "api_endpoint_style": perturbator.config.api_endpoint_style,
+                "api_response_wrapper": perturbator.config.api_response_wrapper,
+                "db_column_naming": perturbator.config.db_column_naming,
+                "date_format": perturbator.config.date_format,
+            }
+        }
+
+    # Add LLM-based analysis results if enabled
+    if llm_compliance_result is not None:
+        result[task_id]["llm_compliance"] = {
+            "enabled": True,
+            "S_comp": llm_compliance_result.S_comp,
+            "num_violations": len(llm_compliance_result.violations),
+            "violations": [v.to_dict() for v in llm_compliance_result.violations],
+            "analysis_model": llm_compliance_result.analysis_model,
+        }
+
+    if llm_recovery_result is not None:
+        result[task_id]["llm_recovery"] = {
+            "enabled": True,
+            "V_heal": llm_recovery_result.V_heal,
+            "total_errors": llm_recovery_result.total_errors_encountered,
+            "recoveries_attempted": llm_recovery_result.total_recoveries_attempted,
+            "recoveries_successful": llm_recovery_result.successful_recoveries,
+            "recovery_attempts": [r.to_dict() for r in llm_recovery_result.recovery_attempts],
+            "analysis_model": llm_recovery_result.analysis_model,
+        }
+
+    # Store conversation history for post-hoc analysis if requested
+    if kwargs.get('store_conversation_history') == 'true' or kwargs.get('store_conversation_history') is True:
+        conversation_history = output.messages if hasattr(output, 'messages') else []
+        result[task_id]["conversation_history"] = conversation_history
 
     return result
 

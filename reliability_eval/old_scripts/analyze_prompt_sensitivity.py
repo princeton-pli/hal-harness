@@ -50,6 +50,10 @@ def load_results_with_sensitivity(results_dir: Path, benchmark: str) -> Dict:
     """
     Load HAL evaluation results that include prompt_sensitivity_metrics.
 
+    This function looks for sensitivity data in two places:
+    1. Pre-computed prompt_sensitivity_metrics field (preferred)
+    2. raw_eval_results with variation structure (fallback - computes metrics on the fly)
+
     Returns nested dict: {agent_name: {run_id: sensitivity_metrics}}
     """
     results_data = defaultdict(dict)
@@ -82,16 +86,106 @@ def load_results_with_sensitivity(results_dir: Path, benchmark: str) -> Dict:
         agent_name = extract_agent_name_from_run_dir(run_dir.name)
         run_id = run_dir.name
 
-        # Check if prompt sensitivity metrics are present
+        # Check if prompt sensitivity metrics are present (pre-computed)
         sensitivity_metrics = data.get('prompt_sensitivity_metrics', None)
 
         if sensitivity_metrics and sensitivity_metrics.get('num_tasks', 0) > 0:
             results_data[agent_name][run_id] = sensitivity_metrics
             print(f"✅ Loaded {agent_name} - {sensitivity_metrics['num_tasks']} tasks from {run_dir.name}")
         else:
-            print(f"⚠️  Loaded {agent_name} - {run_dir.name} (NO SENSITIVITY METRICS)")
+            # Fallback: Try to compute sensitivity from raw_eval_results
+            # This handles cases where the data is structured with variations
+            raw_eval = data.get('raw_eval_results', {})
+            metadata = data.get('metadata', {})
+
+            # Only try to compute if prompt_sensitivity flag was set
+            if metadata.get('prompt_sensitivity', False):
+                computed_metrics = _compute_sensitivity_from_raw_eval(raw_eval)
+                if computed_metrics and computed_metrics.get('num_tasks', 0) > 0:
+                    results_data[agent_name][run_id] = computed_metrics
+                    print(f"✅ Loaded {agent_name} - {computed_metrics['num_tasks']} tasks (computed from raw_eval) from {run_dir.name}")
+                else:
+                    print(f"⚠️  Loaded {agent_name} - {run_dir.name} (SENSITIVITY FLAG SET BUT NO VALID DATA)")
+            else:
+                print(f"⚠️  Loaded {agent_name} - {run_dir.name} (NO SENSITIVITY METRICS)")
 
     return results_data
+
+
+def _compute_sensitivity_from_raw_eval(raw_eval: Dict) -> Dict:
+    """
+    Compute sensitivity metrics from raw evaluation results.
+
+    This is a fallback for when prompt_sensitivity_metrics wasn't pre-computed.
+    It handles the structure: {task_id: {variation_id: result}} or {task_id: [results]}
+
+    Args:
+        raw_eval: Raw evaluation results dict
+
+    Returns:
+        Sensitivity metrics dict or None if not enough data
+    """
+    task_variances = {}
+    task_means = {}
+    task_min_max_gaps = {}
+
+    for task_id, variation_results in raw_eval.items():
+        scores = []
+
+        if isinstance(variation_results, list):
+            for result in variation_results:
+                score = _extract_score(result)
+                if score is not None:
+                    scores.append(score)
+        elif isinstance(variation_results, dict):
+            # Could be {var_id: result} or a single result with nested variations
+            for var_id, result in variation_results.items():
+                # Skip metadata keys - use a more robust check:
+                # 1. Skip known metadata keys
+                # 2. Skip keys that don't look like variation results
+                known_metadata_keys = {'task', 'taken_actions', 'metadata', 'config', 'prompt_template'}
+                if var_id in known_metadata_keys:
+                    continue
+                # Also skip if result is not a valid score-containing structure
+                if not isinstance(result, (int, float, dict)):
+                    continue
+                score = _extract_score(result)
+                if score is not None:
+                    scores.append(score)
+
+        if len(scores) > 1:
+            task_means[task_id] = float(np.mean(scores))
+            task_variances[task_id] = float(np.var(scores))
+            task_min_max_gaps[task_id] = float(np.max(scores) - np.min(scores))
+
+    if not task_variances:
+        return None
+
+    return {
+        'mean_variance': float(np.mean(list(task_variances.values()))),
+        'std_variance': float(np.std(list(task_variances.values()))),
+        'mean_min_max_gap': float(np.mean(list(task_min_max_gaps.values()))),
+        'max_min_max_gap': float(np.max(list(task_min_max_gaps.values()))),
+        'task_variances': task_variances,
+        'task_means': task_means,
+        'task_min_max_gaps': task_min_max_gaps,
+        'num_tasks': len(task_variances)
+    }
+
+
+def _extract_score(result) -> float:
+    """Extract score from a result object, handling different key names."""
+    if isinstance(result, (int, float)):
+        return float(result)
+    elif isinstance(result, dict):
+        # Try different score key names used by different benchmarks
+        for key in ['score', 'reward', 'accuracy', 'success']:
+            if key in result:
+                try:
+                    return float(result[key])
+                except (ValueError, TypeError):
+                    continue
+    return None
 
 
 def compute_agent_level_metrics(agent_data: Dict[str, Dict]) -> Dict:
@@ -121,7 +215,8 @@ def compute_agent_level_metrics(agent_data: Dict[str, Dict]) -> Dict:
             'std_variance': metrics['std_variance'],
             'mean_min_max_gap': metrics['mean_min_max_gap'],
             'max_min_max_gap': metrics['max_min_max_gap'],
-            'S_prompt': 1 - metrics['mean_variance'],  # Convert to robustness score
+            # S_prompt bounded to [0, 1]: if variance > 1, score is 0; if variance < 0, score is 1
+            'S_prompt': max(0.0, min(1.0, 1 - metrics['mean_variance'])),
         }
     else:
         # Multiple runs - aggregate
@@ -145,7 +240,8 @@ def compute_agent_level_metrics(agent_data: Dict[str, Dict]) -> Dict:
             'std_variance': np.mean(all_std_variances),
             'mean_min_max_gap': np.mean(all_mean_gaps),
             'max_min_max_gap': np.mean(all_max_gaps),
-            'S_prompt': 1 - np.mean(all_mean_variances),
+            # S_prompt bounded to [0, 1]
+            'S_prompt': max(0.0, min(1.0, 1 - np.mean(all_mean_variances))),
         }
 
 
@@ -173,7 +269,8 @@ def get_task_level_data(agent_data: Dict[str, Dict]) -> pd.DataFrame:
                 'variance': task_variances.get(task_id, 0.0),
                 'mean_score': task_means.get(task_id, 0.0),
                 'min_max_gap': task_gaps.get(task_id, 0.0),
-                'S_task': 1 - task_variances.get(task_id, 0.0)  # Task-level robustness
+                # S_task bounded to [0, 1]
+                'S_task': max(0.0, min(1.0, 1 - task_variances.get(task_id, 0.0)))
             })
 
     return pd.DataFrame(rows)

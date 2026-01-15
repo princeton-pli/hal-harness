@@ -39,21 +39,64 @@ def extract_agent_name_from_run_dir(run_dir_name: str) -> str:
     else:
         agent_parts = parts[1:]
 
-    # Remove fault rate and timestamp
+    # Remove special suffixes (fault, compliance, perturbed) and timestamp
     filtered_parts = []
+    skip_keywords = ['fault', 'compliance', 'perturbed', 'baseline']
     for i, part in enumerate(agent_parts):
-        if part == 'fault' and i + 1 < len(agent_parts) and 'pct' in agent_parts[i + 1]:
-            break  # Stop before 'fault_20pct'
+        if part in skip_keywords:
+            break  # Stop before special suffix
         if part.isdigit() and i == len(agent_parts) - 1:
             break  # Skip timestamp
+        # Also skip percentage markers like '20pct'
+        if 'pct' in part:
+            break
         filtered_parts.append(part)
 
     return '_'.join(filtered_parts)
 
 
+def _has_fault_injection_data(raw_eval_results: Dict, raw_logging_results: List, data: Dict) -> bool:
+    """
+    Detect if a run contains fault injection data.
+
+    Checks multiple indicators:
+    1. 'fault_injection' field in any task result (new format)
+    2. 'fault_injected' in logging attributes (legacy format)
+    3. 'enable_fault_injection' in agent_args (metadata indicator)
+
+    Returns:
+        True if fault injection data is detected, False otherwise
+    """
+    # Check metadata for fault injection flag
+    agent_args = data.get('metadata', {}).get('agent_args', {})
+    if agent_args.get('enable_fault_injection') == 'true':
+        return True
+
+    # Check task results for fault_injection field (new format)
+    for task_id, task_eval in raw_eval_results.items():
+        if isinstance(task_eval, dict) and 'fault_injection' in task_eval:
+            fi_data = task_eval['fault_injection']
+            if isinstance(fi_data, dict) and fi_data.get('enabled', False):
+                return True
+
+    # Check logging results for fault markers (legacy format)
+    for log_entry in raw_logging_results:
+        attributes = log_entry.get('attributes', {})
+        if 'fault_injected' in attributes:
+            return True
+
+    return False
+
+
 def load_fault_results(results_dir: Path, benchmark: str) -> Tuple[Dict, Dict]:
     """
     Load HAL evaluation results with fault injection data.
+
+    This function detects fault injection runs based on data format, not directory names.
+    It looks for:
+    1. 'fault_injection' field in task results (new format)
+    2. 'fault_injected' in logging attributes (legacy format)
+    3. 'enable_fault_injection' in agent_args (metadata indicator)
 
     Returns:
         (fault_data, baseline_data)
@@ -90,14 +133,16 @@ def load_fault_results(results_dir: Path, benchmark: str) -> Tuple[Dict, Dict]:
 
         agent_name = extract_agent_name_from_run_dir(run_dir.name)
         run_id = run_dir.name
-        is_fault_run = 'fault' in run_dir.name
 
         raw_eval_results = data.get('raw_eval_results', {})
         raw_logging_results = data.get('raw_logging_results', [])
         latencies = data.get('results', {}).get('latencies', {})
 
-        # Extract fault injection data from logging results
-        fault_events = defaultdict(lambda: {'injected': [], 'recovered': [], 'times': []})
+        # Detect fault run based on data content, not directory name
+        is_fault_run = _has_fault_injection_data(raw_eval_results, raw_logging_results, data)
+
+        # Extract fault injection data from logging results (legacy format)
+        fault_events_legacy = defaultdict(lambda: {'injected': [], 'recovered': [], 'times': []})
 
         for log_entry in raw_logging_results:
             task_id = log_entry.get('weave_task_id')
@@ -106,10 +151,10 @@ def load_fault_results(results_dir: Path, benchmark: str) -> Tuple[Dict, Dict]:
 
             task_id = str(task_id)
 
-            # Check for fault markers in the log entry
+            # Check for fault markers in the log entry (legacy format)
             attributes = log_entry.get('attributes', {})
             if 'fault_injected' in attributes:
-                fault_events[task_id]['injected'].append({
+                fault_events_legacy[task_id]['injected'].append({
                     'timestamp': log_entry.get('started_at'),
                     'fault_type': attributes.get('fault_type'),
                     'recovered': attributes.get('recovered', False)
@@ -126,17 +171,38 @@ def load_fault_results(results_dir: Path, benchmark: str) -> Tuple[Dict, Dict]:
             task_latency = latencies.get(task_id_str, {})
             total_time = task_latency.get('total_time', 0.0)
 
-            if is_fault_run:
-                # Store fault run data
-                num_faults = len(fault_events[task_id_str]['injected'])
-                num_recovered = sum(1 for f in fault_events[task_id_str]['injected'] if f['recovered'])
+            # Check for new format: fault_injection directly in task_eval
+            fault_injection_data = task_eval.get('fault_injection', {})
+            has_new_format = fault_injection_data.get('enabled', False)
+
+            if has_new_format:
+                # New format: fault data stored in raw_eval_results[task_id]["fault_injection"]
+                stats = fault_injection_data.get('stats', {})
+                events = fault_injection_data.get('events', [])
+
+                num_faults = stats.get('total_faults_injected', len(events))
+                num_recovered = stats.get('recoveries_successful', 0)
 
                 fault_data[agent_name][run_id][task_id_str] = {
                     'success': success,
                     'total_time': total_time,
                     'num_faults_injected': num_faults,
                     'num_recovered': num_recovered,
-                    'fault_events': fault_events[task_id_str]['injected']
+                    'V_heal': fault_injection_data.get('V_heal', stats.get('recovery_rate', 0)),
+                    'mean_recovery_time': fault_injection_data.get('mean_recovery_time', stats.get('mean_recovery_time', 0)),
+                    'fault_events': events
+                }
+            elif is_fault_run:
+                # Legacy format: fault data from logging results
+                num_faults = len(fault_events_legacy[task_id_str]['injected'])
+                num_recovered = sum(1 for f in fault_events_legacy[task_id_str]['injected'] if f['recovered'])
+
+                fault_data[agent_name][run_id][task_id_str] = {
+                    'success': success,
+                    'total_time': total_time,
+                    'num_faults_injected': num_faults,
+                    'num_recovered': num_recovered,
+                    'fault_events': fault_events_legacy[task_id_str]['injected']
                 }
             else:
                 # Store baseline data (no fault injection)
@@ -162,6 +228,11 @@ def compute_fault_metrics(fault_data: Dict, baseline_data: Dict) -> pd.DataFrame
     """
     Compute R_fault, V_heal, and V_ttr metrics for each agent.
 
+    Metrics:
+    - R_fault: Fault robustness (performance degradation under faults)
+    - V_heal: Self-healing ratio (fraction of faults recovered from)
+    - V_ttr: Time-to-recovery score (how quickly the agent recovers)
+
     Returns DataFrame with agent-level metrics.
     """
     agent_metrics = []
@@ -169,17 +240,32 @@ def compute_fault_metrics(fault_data: Dict, baseline_data: Dict) -> pd.DataFrame
     for agent_name, agent_runs in fault_data.items():
         # Aggregate across all runs for this agent
         all_task_metrics = []
+        all_recovery_times = []
 
         for run_id, tasks in agent_runs.items():
             for task_id, metrics in tasks.items():
                 all_task_metrics.append(metrics)
+
+                # Extract recovery times from fault events
+                fault_events = metrics.get('fault_events', [])
+                for event in fault_events:
+                    if isinstance(event, dict):
+                        recovery_time = event.get('recovery_time')
+                        if recovery_time is not None and recovery_time > 0:
+                            all_recovery_times.append(recovery_time)
+
+                # Also check for mean_recovery_time stored at task level
+                mean_rt = metrics.get('mean_recovery_time')
+                if mean_rt and mean_rt > 0 and not fault_events:
+                    all_recovery_times.append(mean_rt)
 
         if not all_task_metrics:
             continue
 
         # Compute metrics
         fault_success_rate = np.mean([m['success'] for m in all_task_metrics])
-        baseline_success_rate = np.mean(list(baseline_data.get(agent_name, {}).values()))
+        baseline_values = list(baseline_data.get(agent_name, {}).values())
+        baseline_success_rate = np.mean(baseline_values) if baseline_values else 0
 
         # R_fault: Robustness (normalized performance under faults)
         # R_fault = min(Acc_fault / Acc_baseline, 1.0)
@@ -197,10 +283,28 @@ def compute_fault_metrics(fault_data: Dict, baseline_data: Dict) -> pd.DataFrame
         else:
             V_heal = np.nan
 
-        # V_ttr: Time-to-recovery (placeholder - needs more detailed timing data)
-        # For now, use average time difference between fault and recovery
-        # In a full implementation, this would track the exact recovery times
+        # V_ttr: Time-to-recovery score
+        # Formula: V_ttr = 1 / (1 + MTTR / T_ref)
+        # Where:
+        #   - MTTR = Mean Time To Recovery (in seconds)
+        #   - T_ref = Reference time for normalization (default: 5 seconds)
+        #
+        # Interpretation:
+        #   - V_ttr ≈ 1: Very fast recovery (MTTR → 0)
+        #   - V_ttr ≈ 0.5: Recovery takes about T_ref seconds
+        #   - V_ttr → 0: Very slow recovery (MTTR → ∞)
+        T_REF = 5.0  # Reference time in seconds (adjustable)
+
+        if all_recovery_times:
+            mttr = np.mean(all_recovery_times)
+            V_ttr = 1.0 / (1.0 + mttr / T_REF)
+        else:
+            # No actual recovery time data available
+            # Don't estimate - V_ttr requires actual timing measurements
+            V_ttr = np.nan
+
         avg_time = np.mean([m['total_time'] for m in all_task_metrics])
+        mttr_value = np.mean(all_recovery_times) if all_recovery_times else np.nan
 
         agent_metrics.append({
             'agent': agent_name,
@@ -208,9 +312,11 @@ def compute_fault_metrics(fault_data: Dict, baseline_data: Dict) -> pd.DataFrame
             'fault_success_rate': fault_success_rate,
             'R_fault': R_fault,
             'V_heal': V_heal,
+            'V_ttr': V_ttr,
+            'mttr': mttr_value,  # Mean Time To Recovery (raw seconds)
             'total_faults_injected': total_faults,
             'total_recovered': total_recovered,
-            'avg_time': avg_time,
+            'avg_task_time': avg_time,
             'num_tasks': len(all_task_metrics)
         })
 
@@ -339,16 +445,20 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
     report.append(f"- **Total recovered**: {agent_df['total_recovered'].sum()}\n\n")
 
     report.append("## Agent-Level Summary\n\n")
-    report.append("| Agent | Baseline Acc | Fault Acc | R_fault | V_heal | Faults | Recovered |\n")
-    report.append("|-------|--------------|-----------|---------|--------|--------|----------|\n")
+    report.append("| Agent | Baseline Acc | Fault Acc | R_fault | V_heal | V_ttr | MTTR (s) | Faults | Recovered |\n")
+    report.append("|-------|--------------|-----------|---------|--------|-------|----------|--------|----------|\n")
 
     for _, row in agent_df.iterrows():
+        v_ttr_str = f"{row['V_ttr']:.3f}" if not np.isnan(row.get('V_ttr', np.nan)) else "N/A"
+        mttr_str = f"{row['mttr']:.2f}" if not np.isnan(row.get('mttr', np.nan)) else "N/A"
         report.append(
             f"| {row['agent']} | "
             f"{row['baseline_success_rate']:.3f} | "
             f"{row['fault_success_rate']:.3f} | "
             f"{row['R_fault']:.3f} | "
             f"{row['V_heal']:.3f} | "
+            f"{v_ttr_str} | "
+            f"{mttr_str} | "
             f"{int(row['total_faults_injected'])} | "
             f"{int(row['total_recovered'])} |\n"
         )
@@ -366,6 +476,14 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
     report.append("- **V_heal ≈ 1**: Excellent recovery (recovers from all faults)\n")
     report.append("- **V_heal ≈ 0**: Poor recovery (cannot recover from faults)\n")
     report.append("- **Formula**: `V_heal = recovered_faults / total_faults`\n\n")
+
+    report.append("### Time-to-Recovery Score (V_ttr)\n")
+    report.append("Measures how quickly the agent recovers from faults.\n\n")
+    report.append("- **V_ttr ≈ 1**: Very fast recovery (near-instant)\n")
+    report.append("- **V_ttr ≈ 0.5**: Recovery takes about 5 seconds (reference time)\n")
+    report.append("- **V_ttr → 0**: Very slow recovery\n")
+    report.append("- **Formula**: `V_ttr = 1 / (1 + MTTR / T_ref)` where T_ref = 5s\n")
+    report.append("- **MTTR**: Mean Time To Recovery in seconds\n\n")
 
     report.append("## Key Findings\n\n")
 
@@ -386,6 +504,22 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
         report.append(f"### Self-Healing\n")
         report.append(f"- **Best recovery**: {best_vheal['agent']} (V_heal = {best_vheal['V_heal']:.3f})\n")
         report.append(f"- **Worst recovery**: {worst_vheal['agent']} (V_heal = {worst_vheal['V_heal']:.3f})\n\n")
+
+    # Best/worst V_ttr
+    if 'V_ttr' in agent_df.columns:
+        valid_vttr = agent_df[agent_df['V_ttr'].notna()]
+        if not valid_vttr.empty:
+            best_vttr = valid_vttr.loc[valid_vttr['V_ttr'].idxmax()]
+            worst_vttr = valid_vttr.loc[valid_vttr['V_ttr'].idxmin()]
+
+            report.append(f"### Recovery Speed\n")
+            report.append(f"- **Fastest recovery**: {best_vttr['agent']} (V_ttr = {best_vttr['V_ttr']:.3f})\n")
+            if not np.isnan(best_vttr.get('mttr', np.nan)):
+                report.append(f"  - MTTR: {best_vttr['mttr']:.2f} seconds\n")
+            report.append(f"- **Slowest recovery**: {worst_vttr['agent']} (V_ttr = {worst_vttr['V_ttr']:.3f})\n")
+            if not np.isnan(worst_vttr.get('mttr', np.nan)):
+                report.append(f"  - MTTR: {worst_vttr['mttr']:.2f} seconds\n")
+            report.append("\n")
 
     # Write report
     output_path = output_dir / 'fault_robustness_report.md'

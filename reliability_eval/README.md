@@ -1,298 +1,292 @@
 # Reliability Evaluation Framework
 
-This directory contains scripts for running and analyzing reliability evaluations of LLM agents. The framework measures various dimensions of agent reliability beyond simple task accuracy.
+This directory contains scripts for running comprehensive reliability evaluations of AI agents and analyzing the results. The framework implements metrics from the reliability evaluation paper across four dimensions: **Consistency**, **Robustness**, **Predictability**, and **Safety**.
 
 ## Overview
 
-The reliability evaluation framework measures six key dimensions:
+The evaluation process consists of two main steps:
 
-| Metric | Symbol | Description |
-|--------|--------|-------------|
-| **Outcome Consistency** | C_out | Reproducibility of results across repeated runs |
-| **Prompt Sensitivity** | S_prompt | Robustness to semantically equivalent prompt variations |
-| **Fault Robustness** | R_fault | Resilience to API/tool failures |
-| **Predictability** | P_rc, P_cal | Quality of confidence estimates (risk-coverage, calibration) |
-| **Structural Robustness** | R_struct | Robustness to environmental changes (schemas, formats) |
-| **Compliance** | S_comp | Adherence to behavioral constraints and safety guardrails |
+1. **`run_reliability_eval.py`** - Runs the evaluation experiments
+2. **`analyze_reliability.py`** - Analyzes results and generates visualizations
 
-## Setup
+## Quick Start
 
-### Prerequisites
-
-1. Install the base HAL harness:
 ```bash
-pip install -e .
-```
+# 1. Run a quick test evaluation (2 repetitions, 5 tasks)
+python reliability_eval/run_reliability_eval.py --n 2 --max_tasks 5 --phases baseline
 
-2. Install reliability evaluation dependencies:
-```bash
-pip install -r reliability_eval/requirements.txt
-```
-
-3. Set up environment variables in `.env`:
-```bash
-OPENAI_API_KEY=your_key
-WANDB_API_KEY=your_key
-ANTHROPIC_API_KEY=your_key  # For Claude models
-GEMINI_API_KEY=your_key     # For Gemini models
+# 2. Analyze the results
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline
 ```
 
 ## Running Evaluations
 
-### 1. Outcome Consistency (C_out)
-
-Measures reproducibility by running K repetitions of the same evaluation.
+### Basic Usage
 
 ```bash
-python reliability_eval/run_consistency_eval.py \
-    --k 5 \
-    --max_tasks 20 \
-    --conda_env hal
+python reliability_eval/run_reliability_eval.py --n <repetitions> --max_tasks <num_tasks> [OPTIONS]
 ```
 
-**Options:**
-- `--k`: Number of repetitions per task (default: 5)
-- `--max_tasks`: Maximum tasks per benchmark (default: 20)
-- `--conda_env`: Conda environment name (optional)
-- `--skip_swebench`: Skip SWE-bench evaluations (requires Docker)
+### Key Arguments
 
-**Understanding C_out:**
-```
-C_out(t) = 1 - Var_out(t) / (p_t(1 - p_t) + ε)
-```
-- C_out ≈ 1: Deterministic behavior (always succeeds or always fails)
-- C_out ≈ 0: Maximum stochasticity given the success rate
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--n` | 5 | Number of runs/variations for all multi-run metrics |
+| `--k` | (uses --n) | Override: repetitions for baseline/fault phases |
+| `--max_tasks` | 50 | Maximum tasks per benchmark |
+| `--max_concurrent` | 1 | Maximum concurrent tasks per hal-eval run |
+| `--phases` | all | Which phases to run (see below) |
+| `--benchmark` | (all) | Run only on specific benchmark |
+| `--conda_env` | (current) | Conda environment name |
 
-### 2. Prompt Sensitivity (S_prompt)
+### Evaluation Phases
 
-Measures robustness to semantically equivalent prompt variations.
+The evaluation runs in phases, each measuring different reliability metrics:
+
+| Phase | Metrics | Description |
+|-------|---------|-------------|
+| `baseline` | C_out, P_rc, P_cal | K repetitions with confidence scoring |
+| `fault` | R_fault | Fault injection robustness |
+| `prompt` | R_prompt | Prompt variation robustness |
+| `structural` | R_struct | Structural perturbation robustness |
+| `safety` | S_harm, S_comp | LLM-based safety analysis on existing traces |
+
+### Examples
 
 ```bash
-python reliability_eval/run_prompt_sensitivity_eval.py \
-    --num_variations 3 \
-    --max_tasks 20 \
-    --conda_env hal
+# Run all phases with 5 repetitions on 50 tasks
+python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50
+
+# Run only baseline phase (consistency + predictability)
+python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --phases baseline
+
+# Run baseline and safety analysis
+python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --phases baseline safety
+
+# Run only safety analysis on existing results (no new experiments)
+python reliability_eval/run_reliability_eval.py --phases safety --results_dir results
+
+# Override specific phases (3 baseline reps, but use --n for other defaults)
+python reliability_eval/run_reliability_eval.py --n 5 --k 3 --max_tasks 50
+
+# Run on a specific benchmark only
+python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --benchmark taubench_airline
 ```
 
-**Options:**
-- `--num_variations`: Number of prompt variations to generate (default: 3)
-- `--max_tasks`: Maximum tasks per benchmark (default: 20)
-- `--conda_env`: Conda environment name (optional)
-- `--skip_swebench`: Skip SWE-bench evaluations
+### Phase-Specific Options
 
-**Note:** This uses the `--prompt_sensitivity` flag in `hal-eval` to generate LLM-based paraphrases of task instructions.
+**Fault Injection:**
+```bash
+--fault_rate 0.2    # Fault injection rate (default: 0.2 = 20%)
+```
 
-### 3. Fault Robustness (R_fault)
+**Prompt Sensitivity:**
+```bash
+--num_variations 5           # Number of prompt variations (default: uses --n)
+--variation_strength mild    # mild, medium, strong, or naturalistic
+```
 
-Measures resilience to injected faults (API errors, timeouts, rate limits).
+**Structural Perturbations:**
+```bash
+--perturbation_strength medium  # mild, medium, or severe
+```
+
+**Safety Analysis:**
+```bash
+--safety_model gpt-4o-mini   # LLM model for safety analysis
+--results_dir results        # Directory containing results to analyze
+```
+
+### Continuing Failed Runs
+
+If runs fail, you can retry them:
 
 ```bash
-python reliability_eval/run_fault_eval.py \
-    --k 3 \
-    --fault_rate 0.2 \
-    --max_tasks 50 \
-    --conda_env hal
+# Retry all failed runs from the log
+python reliability_eval/run_reliability_eval.py --retry_failed
+
+# Continue a specific run by ID
+python reliability_eval/run_reliability_eval.py --continue_run_id taubench_airline_agent_name_1234567890
 ```
 
-**Options:**
-- `--k`: Number of repetitions (default: 3)
-- `--fault_rate`: Probability of fault injection, 0.0-1.0 (default: 0.2 = 20%)
-- `--max_tasks`: Maximum tasks per benchmark (default: 50)
-- `--conda_env`: Conda environment name (optional)
+### Configuring Agents and Benchmarks
 
-### 4. Predictability (P_rc, P_cal)
-
-Measures quality of agent confidence estimates via self-assessment.
-
-```bash
-python reliability_eval/run_predictability_eval.py \
-    --k 3 \
-    --max_tasks 50 \
-    --conda_env hal
-```
-
-**Options:**
-- `--k`: Number of repetitions (default: 3)
-- `--max_tasks`: Maximum tasks per benchmark (default: 50)
-- `--conda_env`: Conda environment name (optional)
-
-**Note:** Requires agents with `compute_confidence=True` in their configuration.
-
-### 5. Structural Robustness (R_struct)
-
-Measures robustness to environmental changes (API formats, schemas).
-
-```bash
-python reliability_eval/run_structural_robustness_eval.py \
-    --perturbation_strength medium \
-    --max_tasks 50
-```
-
-**Options:**
-- `--perturbation_strength`: Level of perturbation (`low`, `medium`, `high`)
-- `--max_tasks`: Maximum tasks per benchmark (default: 50)
-
-### 6. Compliance (S_comp)
-
-Measures adherence to behavioral constraints during execution.
-
-```bash
-python reliability_eval/run_compliance_eval.py \
-    --k 3 \
-    --max_tasks 50 \
-    --conda_env hal
-```
-
-**Options:**
-- `--k`: Number of repetitions (default: 3)
-- `--max_tasks`: Maximum tasks per benchmark (default: 50)
-- `--conda_env`: Conda environment name (optional)
-
-**Default constraints monitored:**
-- `no_pii_exposure`: Don't expose customer PII in logs
-- `rate_limit_respect`: Respect API rate limits
-- `no_destructive_ops`: Don't perform irreversible operations
-- `data_minimization`: Only request necessary data
-
-## Configuring Agents and Benchmarks
-
-Each run script contains `AGENT_CONFIGS` and `BENCHMARK_CONFIGS` lists. Edit these to select which agents and benchmarks to evaluate.
-
-### Agent Configuration Example
+Edit the `AGENT_CONFIGS` list in `run_reliability_eval.py` to specify which models to evaluate:
 
 ```python
 AGENT_CONFIGS = [
     {
-        "name": "taubench_toolcalling_gpt_4o",
+        "name": "taubench_toolcalling_gpt_4o_mini",
         "agent_dir": "agents/taubench_tool_calling",
         "agent_function": "tool_calling.run",
-        "model_name": "gpt-4o-2024-11-20",
-        "benchmarks": ["taubench_airline", "taubench_retail"],
-        "extra_agent_args": {
-            "provider": "openai",
-            "temperature": 0.0
-        }
+        "model_name": "gpt-4o-mini-2024-07-18",
+        "provider": "openai",
+        "benchmarks": ["taubench_airline"],
     },
+    # Add more agents...
 ]
 ```
 
-### Supported Providers
-
-| Provider | Model Name Prefix | Required API Key |
-|----------|-------------------|------------------|
-| OpenAI | `gpt-4o`, `gpt-4-turbo`, etc. | `OPENAI_API_KEY` |
-| Anthropic | `claude-3-5-haiku`, `claude-sonnet-4-5`, etc. | `ANTHROPIC_API_KEY` |
-| Google Gemini | `gemini/gemini-2.5-flash`, etc. | `GEMINI_API_KEY` |
-| OpenRouter | `openrouter/anthropic/claude-3-7-sonnet` | `OPENROUTER_API_KEY` |
-| Together AI | `together_ai/meta-llama/...` | `TOGETHERAI_API_KEY` |
+Supported providers: `openai`, `anthropic`, `google`
 
 ## Analyzing Results
 
-After running evaluations, use the analysis scripts to compute metrics and generate visualizations.
-
-### Analysis Scripts
-
-| Script | Metrics Computed |
-|--------|------------------|
-| `analyze_consistency.py` | C_out per task, variance, success rates |
-| `analyze_prompt_sensitivity.py` | S_prompt, per-task sensitivity scores |
-| `analyze_fault_eval.py` | R_fault, recovery rates, time-to-recovery |
-| `analyze_predictability.py` | P_rc (risk-coverage AUC), P_cal (calibration error) |
-| `analyze_compliance.py` | S_comp, violation counts by constraint type |
-| `analyze_structural_robustness.py` | R_struct, performance degradation under perturbation |
-| `analyze_safety_metrics.py` | Combined safety and reliability analysis |
-
-### Example Usage
+### Basic Usage
 
 ```bash
-# Analyze prompt sensitivity results
-python reliability_eval/analyze_prompt_sensitivity.py \
-    --results_dir results/ \
-    --benchmark taubench_airline
-
-# Analyze consistency results
-python reliability_eval/analyze_consistency.py \
-    --results_dir results/ \
-    --benchmark taubench_airline
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark <benchmark_name>
 ```
 
-### Output
+### Key Arguments
 
-Analysis scripts generate:
-- CSV files with detailed per-task metrics
-- Aggregated summaries by agent/benchmark
-- Visualizations (heatmaps, scatter plots, etc.)
-- Markdown reports
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--results_dir` | results | Directory containing evaluation results |
+| `--benchmark` | taubench_airline | Benchmark to analyze |
+| `--output_dir` | reliability_eval/analysis | Output directory for plots and reports |
+| `--scaffold` | all | Filter to specific agent scaffold |
+| `--use_llm_safety` | (flag) | Enable LLM-as-judge for safety analysis |
+| `--llm_model` | gpt-4o-mini | LLM model for safety analysis |
+| `--harm_ref` | 5.0 | Reference severity for S_harm saturation |
 
-Output is saved to `reliability_eval/analysis/`.
+### Examples
 
-## Output Structure
+```bash
+# Basic analysis
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline
 
-Results are saved to `results/<benchmark>/<run_id>/`:
+# With LLM-based safety analysis
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --use_llm_safety
 
+# Custom output directory
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --output_dir my_analysis/
+
+# Filter to specific agent type
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --scaffold toolcalling
 ```
-results/
-└── taubench_airline/
-    └── taubench_airline_agent_name_20250109123456/
-        ├── <run_id>_UPLOAD.json          # Full results with metrics
-        ├── <run_id>_RAW_SUBMISSIONS.jsonl # Raw agent outputs
-        └── <run_id>_weave.json           # Weave trace data
+
+### Generated Outputs
+
+The analysis script produces:
+
+**Data Files:**
+- `reliability_metrics.csv` - All computed metrics in tabular format
+
+**Visualizations:**
+- `reliability_dashboard.png` - Comprehensive dashboard with all metrics
+- `reliability_heatmap.png` - Heatmap of all metrics across agents
+- `reliability_radar.png` - Dimension-level radar chart (4 dimensions)
+- `consistency_detailed.png` - Detailed consistency plots (C_out, C_traj_d, C_traj_s, C_conf, C_res)
+- `predictability_detailed.png` - Detailed predictability plots (P_rc, P_cal, P_auroc, P_brier)
+- `robustness_detailed.png` - Detailed robustness plots (R_fault, R_struct, R_prompt)
+- `safety_detailed.png` - Detailed safety plots (S_harm, S_comp, S_safety)
+
+**Reports:**
+- `reliability_report.md` - Markdown report summarizing findings
+
+## Metrics Reference
+
+### Consistency (C)
+| Metric | Description |
+|--------|-------------|
+| C_out | Outcome consistency - normalized by p(1-p) |
+| C_traj_d | Trajectory distribution consistency (what actions) |
+| C_traj_s | Trajectory sequence consistency (action order) |
+| C_conf | Confidence consistency - CV of confidence scores |
+| C_res | Resource consistency - conditioned on SUCCESS |
+
+### Robustness (R)
+| Metric | Description |
+|--------|-------------|
+| R_fault | Fault robustness - accuracy ratio under faults |
+| R_struct | Structural robustness - accuracy ratio under perturbations |
+| R_prompt | Prompt robustness - accuracy ratio under prompt variations |
+
+### Predictability (P)
+| Metric | Description |
+|--------|-------------|
+| P_rc | Risk-coverage score - excess AuRC over optimal |
+| P_cal | Calibration score - 1 - ECE |
+| P_auroc | Discrimination - AUC-ROC |
+| P_brier | Overall quality - 1 - Brier Score |
+
+### Safety (S)
+| Metric | Description |
+|--------|-------------|
+| S_harm | Harm score - severity of errors (0-10 scale normalized) |
+| S_comp | Compliance - constraint violation rate |
+| S_safety | Aggregate safety = (S_harm + S_comp) / 2 |
+
+## Environment Setup
+
+### Required Environment Variables
+
+The evaluation requires API keys for the models being tested:
+
+```bash
+# Always required
+export WANDB_API_KEY=your_key
+
+# Provider-specific (based on configured agents)
+export OPENAI_API_KEY=your_key      # For OpenAI models
+export ANTHROPIC_API_KEY=your_key   # For Anthropic models
+export GEMINI_API_KEY=your_key      # For Google models
+export OPENROUTER_API_KEY=your_key  # For OpenRouter models
 ```
 
-The `*_UPLOAD.json` file contains:
-- `config`: Run configuration
-- `results`: Aggregated metrics (accuracy, cost, latencies)
-- `raw_eval_results`: Per-task evaluation results
-- `prompt_sensitivity_metrics`: (if enabled) Variance and sensitivity scores
+You can also create a `.env` file in the project root with these variables.
 
-## Tips
+### Dependencies
 
-1. **Start small**: Use `--max_tasks 5` for initial testing
-2. **Sequential runs**: Scripts run with `--max_concurrent 1` by default to avoid rate limits
-3. **Resume on failure**: Check the `*_run_log.json` files for progress tracking
-4. **Cost awareness**: Prompt sensitivity and predictability evaluations require additional LLM calls
+The analysis script requires additional Python packages:
+
+```bash
+pip install matplotlib seaborn pandas scipy
+```
+
+## Typical Workflow
+
+1. **Configure agents** - Edit `AGENT_CONFIGS` in `run_reliability_eval.py`
+
+2. **Run baseline evaluation** (consistency + predictability):
+   ```bash
+   python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --phases baseline
+   ```
+
+3. **Run robustness evaluations** (optional):
+   ```bash
+   python reliability_eval/run_reliability_eval.py --n 3 --max_tasks 50 --phases fault prompt structural
+   ```
+
+4. **Run safety analysis** on collected traces:
+   ```bash
+   python reliability_eval/run_reliability_eval.py --phases safety
+   ```
+
+5. **Analyze results**:
+   ```bash
+   python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --use_llm_safety
+   ```
+
+6. **Review outputs** in `reliability_eval/analysis/`
 
 ## Troubleshooting
 
-### Rate Limits
+### Common Issues
 
-The scripts run evaluations sequentially with 5-second delays. If you still hit limits:
-1. Reduce `--max_tasks`
-2. Increase the delay in the run script (look for `time.sleep(5)`)
+**API Rate Limits:**
+- Use `--max_concurrent 1` (default) to avoid rate limiting
+- The script includes automatic retry logic with backoff
 
-### Missing Results
+**Missing API Keys:**
+- The script will warn about missing keys and prompt for confirmation
+- Ensure the correct provider key is set for each configured agent
 
-If analysis shows "No results found":
-1. Check evaluations completed: `ls results/<benchmark>/`
-2. Verify UPLOAD.json files exist: `find results/ -name "*_UPLOAD.json"`
-3. Check HAL logs for errors
+**Failed Runs:**
+- Check `reliability_eval/reliability_eval_log.json` for failed run details
+- Use `--retry_failed` to retry failed runs
+- Use `--continue_run_id` to continue a specific run
 
-### Docker Issues (SWE-bench)
-
-If SWE-bench fails:
-1. Ensure Docker is running: `docker ps`
-2. Use `--skip_swebench` flag
-3. SWE-bench doesn't support arm64 (M1/M2 Macs)
-
-## Files
-
-### Run Scripts
-- `run_consistency_eval.py` - Outcome consistency evaluation
-- `run_prompt_sensitivity_eval.py` - Prompt sensitivity evaluation
-- `run_fault_eval.py` - Fault robustness evaluation
-- `run_predictability_eval.py` - Predictability evaluation
-- `run_structural_robustness_eval.py` - Structural robustness evaluation
-- `run_compliance_eval.py` - Compliance evaluation
-
-### Analysis Scripts
-- `analyze_consistency.py` - Analyze consistency results
-- `analyze_prompt_sensitivity.py` - Analyze prompt sensitivity results
-- `analyze_fault_eval.py` - Analyze fault robustness results
-- `analyze_predictability.py` - Analyze predictability results
-- `analyze_structural_robustness.py` - Analyze structural robustness results
-- `analyze_compliance.py` - Analyze compliance results
-- `analyze_safety_metrics.py` - Combined safety analysis
-
-### Other
-- `requirements.txt` - Python dependencies for analysis
-- `README.md` - This file
+**No Results Found:**
+- Verify the benchmark directory exists in `results/`
+- Check that result files have the `*_UPLOAD.json` naming pattern

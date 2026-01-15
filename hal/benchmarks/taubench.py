@@ -1,11 +1,17 @@
 import os
 import json
-from typing import Dict, Any, TypedDict, List
+from typing import Dict, Any, TypedDict, List, Optional
 from typing_extensions import NotRequired
 from .base_benchmark import BaseBenchmark
 import docker
 from hal.utils.logging_utils import print_warning
 from hal.utils.compliance_checkers import ComplianceMonitor
+from hal.utils.structural_perturbations import (
+    StructuralPerturbator,
+    PerturbationType,
+    PerturbationStrength,
+    PerturbationConfig
+)
 
 class TauBenchBenchmark(BaseBenchmark):
     """TauBench benchmark implementation"""
@@ -62,6 +68,26 @@ class TauBenchBenchmark(BaseBenchmark):
                 if constraints:
                     self.compliance_monitor = ComplianceMonitor(constraints=constraints)
                     print_warning(f"✓ Compliance monitoring enabled with {len(constraints)} constraints: {', '.join(constraints)}")
+
+        # Initialize structural perturbator if enabled
+        self.perturbator: Optional[StructuralPerturbator] = None
+        if hasattr(self, 'agent_args') and self.agent_args:
+            if self.agent_args.get('enable_structural_perturbations') == 'true':
+                perturbation_type = self.agent_args.get('perturbation_type', 'all')
+                perturbation_strength = self.agent_args.get('perturbation_strength', 'medium')
+
+                # Get preset config based on strength
+                try:
+                    strength_enum = PerturbationStrength(perturbation_strength)
+                    config = PerturbationConfig.get_preset(strength_enum)
+                except ValueError:
+                    config = PerturbationConfig()
+
+                self.perturbator = StructuralPerturbator(
+                    perturbation_type=perturbation_type,
+                    config=config
+                )
+                print_warning(f"✓ Structural perturbations enabled: type={perturbation_type}, strength={perturbation_strength}")
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs using AppWorld evaluation"""
