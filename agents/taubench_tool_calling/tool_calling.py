@@ -168,6 +168,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                         if not tool_call.function.arguments or tool_call.function.arguments.strip() == "":
                             tool_call.function.arguments = "{}"
 
+            # Fix null content (Gemini returns null content when making tool calls)
+            # The OpenAI API rejects messages with null content, so we set it to empty string
+            if message.content is None:
+                message.content = ""
+
         return response
 
     # Create async wrapper
@@ -259,6 +264,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     if hasattr(tool_call, 'function') and tool_call.function:
                         if not tool_call.function.arguments or tool_call.function.arguments.strip() == "":
                             tool_call.function.arguments = "{}"
+
+            # Fix null content (Gemini returns null content when making tool calls)
+            # The OpenAI API rejects messages with null content, so we set it to empty string
+            if message.content is None:
+                message.content = ""
 
         return response
 
@@ -393,7 +403,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             task_description=isolated_env.task.model_dump(),
             conversation_history=output.messages,
             reward=isolated_env.reward,
-            actions_taken=isolated_env.actions
+            actions_taken=isolated_env.actions,
+            original_completion_fn=original_completion  # Use unwrapped litellm.completion
         )
 
     ### COMPLIANCE CHECKING (OPTIONAL) ###
@@ -556,6 +567,39 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     return result
 
 
+def _build_confidence_messages(
+    conversation_history: list,
+    confidence_prompt: str,
+) -> list:
+    """
+    Build message list for confidence assessment by appending confidence prompt
+    to the full conversation history.
+
+    This approach preserves the complete context including tool calls so the
+    model has full visibility into what it did. Uses a high token ceiling to
+    accommodate reasoning models that use internal thinking tokens.
+
+    Args:
+        conversation_history: The full conversation including tool calls
+        confidence_prompt: The prompt asking for confidence assessment
+
+    Returns:
+        Message list with full conversation history + confidence prompt
+    """
+    import copy
+
+    # Deep copy to avoid modifying the original
+    messages = copy.deepcopy(conversation_history) if conversation_history else []
+
+    # Append the confidence assessment prompt as a user message
+    messages.append({
+        "role": "user",
+        "content": confidence_prompt
+    })
+
+    return messages
+
+
 def _compute_confidence_score(
     model_name: str,
     provider: str,
@@ -564,7 +608,8 @@ def _compute_confidence_score(
     task_description: dict,
     conversation_history: list,
     reward: float,
-    actions_taken: list
+    actions_taken: list,
+    original_completion_fn=None  # Use original litellm.completion to avoid wrapper issues
 ) -> float:
     """
     Compute confidence score via self-assessment.
@@ -659,53 +704,37 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
 
     try:
         # Create message history for confidence prompt
-        # APPROACH: Continue the existing conversation (best context, reasonable cost)
+        # APPROACH: Keep full conversation history with tool calls intact
         #
-        # Instead of starting fresh with just a summary, we append to the conversation
-        # that was just used for the task. This gives the model full context about
-        # what actually happened - it literally just executed this task!
-        #
-        # Cost is reasonable because:
-        # - The conversation context is already "warm" (just used it)
-        # - We're only adding one more short turn
-        # - The model can give informed confidence based on actual execution
+        # This preserves complete context so the model knows exactly what it did.
+        # We use a high token ceiling (65536) to accommodate reasoning models
+        # that use internal thinking tokens before generating visible output.
 
-        if conversation_history and len(conversation_history) > 0:
-            # Continue the existing conversation - the model just executed this task!
-            confidence_messages = list(conversation_history)  # Copy the conversation
+        confidence_messages = _build_confidence_messages(
+            conversation_history=conversation_history,
+            confidence_prompt=confidence_prompt,
+        )
 
-            # Append the confidence assessment request as a natural follow-up
-            confidence_messages.append({
-                "role": "user",
-                "content": confidence_prompt
-            })
-        else:
-            # Fallback: If somehow we don't have conversation history, use summary
-            # (This shouldn't normally happen, but better safe than sorry)
-            confidence_messages = [
-                {
-                    "role": "system",
-                    "content": "You are a helpful assistant that provides accurate self-assessments of your task performance."
-                },
-                {
-                    "role": "user",
-                    "content": confidence_prompt
-                }
-            ]
+        # Enable litellm's automatic parameter modification to handle provider quirks
+        # Anthropic requires tools= param when conversation contains tool_calls
+        # This setting lets litellm add a dummy tool automatically
+        litellm.modify_params = True
 
         # Call the model for confidence assessment
-        # IMPORTANT: Explicitly disable tools to force text response
-        # Without this, models (especially Gemini) may try to call tools
-        # or return None content when the conversation history contains tool calls
+        # IMPORTANT: Do NOT pass tools/tool_choice at all (not even as None)
+        # Some providers (especially Gemini) behave unexpectedly when tools=None
+        # is explicitly passed - it can trigger tool-calling mode internally.
+        # By omitting these parameters entirely, we ensure text-only responses.
         kwargs_for_confidence = {
             'model': model_name,
             'messages': confidence_messages,
             'temperature': 0.0,
-            'max_tokens': 10,
-            'custom_llm_provider': provider,
-            'tools': None,  # Disable tools to prevent tool calling
-            'tool_choice': None  # Ensure no tool selection
+            'max_tokens': 65536,  # Very high limit - reasoning models use internal thinking tokens
         }
+
+        # Add provider for correct routing (gemini/ prefix alone may route to Vertex AI)
+        if provider:
+            kwargs_for_confidence['custom_llm_provider'] = provider
 
         # Add API base and key if using custom provider
         if api_base:
@@ -716,14 +745,46 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
                 'X-Title': 'HAL Harness - Confidence Assessment'
             }
 
-        # Make the confidence assessment call
-        # This will be automatically traced by Weave if it's active
-        response = litellm.completion(**kwargs_for_confidence)
+        # Debug: Log what we're sending
+        print(f"📊 Confidence assessment request for {model_name}:")
+        print(f"   Messages: {len(confidence_messages)} messages")
+        for i, m in enumerate(confidence_messages):
+            role = m.get('role', 'unknown')
+            content_preview = str(m.get('content', ''))[:100]
+            print(f"   [{i}] {role}: {content_preview}...")
+
+        # Make the confidence assessment call using the ORIGINAL completion function
+        # This bypasses our wrapper which can interfere with Gemini's response
+        completion_fn = original_completion_fn if original_completion_fn else litellm.completion
+        response = completion_fn(**kwargs_for_confidence)
+
+        # Debug: Log full response structure
+        print(f"📊 Confidence response received:")
+        print(f"   Choices: {len(response.choices) if response.choices else 0}")
+        if response.choices:
+            msg = response.choices[0].message
+            print(f"   Message content type: {type(msg.content)}")
+            print(f"   Message content: {repr(msg.content)}")
+            print(f"   Message role: {getattr(msg, 'role', 'unknown')}")
+            # Check for tool calls in response
+            if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                print(f"   ⚠️ Response contains tool_calls: {msg.tool_calls}")
+            if hasattr(msg, 'function_call') and msg.function_call:
+                print(f"   ⚠️ Response contains function_call: {msg.function_call}")
 
         # Extract and parse the confidence score
         content = response.choices[0].message.content
         if content is None:
-            raise ValueError(f"Model returned None content. Response: {response}")
+            # More detailed error for debugging
+            msg = response.choices[0].message
+            error_details = {
+                "content": msg.content,
+                "role": getattr(msg, 'role', None),
+                "tool_calls": getattr(msg, 'tool_calls', None),
+                "function_call": getattr(msg, 'function_call', None),
+                "finish_reason": getattr(response.choices[0], 'finish_reason', None),
+            }
+            raise ValueError(f"Model returned None content. Details: {error_details}")
         confidence_text = content.strip()
 
         # Try to extract a number from the response
