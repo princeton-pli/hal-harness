@@ -34,7 +34,8 @@ class AgentRunner:
                  max_tasks: Optional[int] = None,
                  prompt_sensitivity: bool = False,
                  num_variations: int = 3,
-                 variation_strength: str = "mild"):
+                 variation_strength: str = "mild",
+                 variation_index: Optional[int] = None):
 
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -117,6 +118,7 @@ class AgentRunner:
         self.prompt_sensitivity = prompt_sensitivity
         self.num_variations = num_variations
         self.variation_strength = variation_strength
+        self.variation_index = variation_index
 
         # Initialize fault injector if enabled
         self.fault_injector = None
@@ -194,19 +196,28 @@ class AgentRunner:
 
         # Handle prompt sensitivity if enabled
         prompt_variations_map = None
+        single_variation_dataset = None
         if self.prompt_sensitivity:
             from .utils.prompt_variation import PromptVariationGenerator, get_prompt_field_for_benchmark
 
             prompt_field = get_prompt_field_for_benchmark(self.benchmark.benchmark_name)
-            print_step(f"Generating {self.num_variations} {self.variation_strength} prompt variations for sensitivity testing...")
             generator = PromptVariationGenerator(
                 num_variations=self.num_variations,
                 strength=self.variation_strength
             )
 
-            # Generate variations
-            prompt_variations_map = generator.apply_variations_to_dataset(dataset, prompt_field)
-            print_success(f"Generated {self.variation_strength} prompt variations for {len(prompt_variations_map)} tasks")
+            if self.variation_index is not None:
+                # Single variation mode: only generate the specific variation needed
+                print_step(f"Generating {self.variation_strength} variation {self.variation_index} for sensitivity testing...")
+                single_variation_dataset = generator.generate_single_variation_for_dataset(
+                    dataset, prompt_field, self.variation_index
+                )
+                print_success(f"Generated variation {self.variation_index} for {len(single_variation_dataset)} tasks")
+            else:
+                # Multi-variation mode: generate all variations upfront
+                print_step(f"Generating {self.num_variations} {self.variation_strength} prompt variations for sensitivity testing...")
+                prompt_variations_map = generator.apply_variations_to_dataset(dataset, prompt_field)
+                print_success(f"Generated {self.variation_strength} prompt variations for {len(prompt_variations_map)} tasks")
             
         # delete previous calls from previous run if continuing for remaining tasks
         if self.continue_run and not self.ignore_errors:
@@ -240,8 +251,32 @@ class AgentRunner:
 
         else:
             # Handle prompt sensitivity mode vs normal mode
-            if self.prompt_sensitivity:
-                # Run agent on each prompt variation
+            if self.prompt_sensitivity and self.variation_index is not None:
+                # Single variation mode: run only the specified variation index
+                # The dataset was already generated with only this variation
+                var_idx = self.variation_index
+                print_step(f"Running variation {var_idx} ({self.variation_strength}) on {len(single_variation_dataset)} tasks...")
+
+                # Run agent on this single variation (like normal mode)
+                with create_progress() as progress:
+                    task = progress.add_task(f"Running agents on variation {var_idx}...", total=len(single_variation_dataset))
+                    agent_output = await self.runner.run_agent(
+                        dataset=single_variation_dataset,
+                        agent_function=self.agent_function,
+                        agent_dir=self.agent_dir,
+                        agent_args=self.agent_args,
+                        run_id=self.run_id,
+                        benchmark=self.benchmark,
+                        task=task,
+                        progress=progress
+                    )
+
+                # Treat as normal run from here on (not prompt_sensitivity multi-variation mode)
+                # by setting flag to False for evaluation/processing
+                self.prompt_sensitivity = False
+
+            elif self.prompt_sensitivity:
+                # Multi-variation mode: run all variations in a single run (original behavior)
                 all_variations_output = {}
 
                 # Determine number of variations to run

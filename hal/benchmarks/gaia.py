@@ -36,7 +36,11 @@ class GaiaBenchmark(BaseBenchmark):
             
 
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
-        """Evaluate agent outputs using Gaia evaluation while capturing task metrics."""
+        """Evaluate agent outputs using Gaia evaluation while capturing task metrics.
+
+        Merges evaluation results with agent's reliability metric fields (taken_actions,
+        confidence, conversation_history, etc.) for compatibility with analyze_reliability.py.
+        """
 
         eval_results: Dict[str, Any] = {}
 
@@ -48,7 +52,27 @@ class GaiaBenchmark(BaseBenchmark):
 
             gt_answer = self.benchmark[task_id]['Final answer']
             score, explanation = question_scorer(str(answer_payload), str(gt_answer))
-            eval_results[task_id] = {'score': score, 'explanation': explanation}
+
+            # Start with evaluation results
+            result = {
+                'score': score,
+                'explanation': explanation,
+                'reward': float(score),  # For consistency with analyze_reliability.py
+            }
+
+            # Merge agent's reliability metric fields if present
+            if isinstance(agent_answer, dict):
+                reliability_fields = [
+                    'taken_actions', 'confidence', 'confidence_details',
+                    'conversation_history', 'metrics', 'fault_injection',
+                    'compliance', 'structural_perturbation', 'llm_compliance',
+                    'llm_recovery'
+                ]
+                for field in reliability_fields:
+                    if field in agent_answer:
+                        result[field] = agent_answer[field]
+
+            eval_results[task_id] = result
 
         return eval_results
 

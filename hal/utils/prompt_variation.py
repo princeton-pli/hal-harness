@@ -220,7 +220,15 @@ class PromptVariationGenerator:
         """
         self.model_name = model_name
         self.num_variations = num_variations
-        self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        # Check for API key
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is required for prompt variation generation. "
+                "Set it with: export OPENAI_API_KEY=your-key"
+            )
+        self.client = OpenAI(api_key=api_key)
 
         # Parse strength level
         try:
@@ -304,6 +312,77 @@ class PromptVariationGenerator:
             # Fallback: return just the original prompt
             return [prompt]
 
+    def generate_single_variation_for_dataset(
+        self,
+        dataset: Dict[str, Any],
+        prompt_field: str,
+        variation_index: int
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Generate a single specific variation for all tasks in a dataset.
+
+        This is more efficient than generating all variations when only one is needed.
+
+        Args:
+            dataset: Dictionary mapping task_ids to task data
+            prompt_field: Name of the field containing the prompt to vary
+            variation_index: Which variation to generate (0=original, 1..N=variations)
+
+        Returns:
+            Dictionary mapping task_ids to single varied task data (not a list)
+        """
+        varied_dataset = {}
+        total_tasks = len(dataset)
+
+        if variation_index == 0:
+            # Index 0 = original prompt, no generation needed
+            print(f"Using original prompts (variation 0) for {total_tasks} tasks...")
+            for task_id, task_data in dataset.items():
+                varied_task = task_data.copy()
+                varied_task['prompt_variation_id'] = 0
+                varied_task['prompt_variation_strength'] = self.strength.value
+                varied_dataset[task_id] = varied_task
+            return varied_dataset
+
+        print(f"Generating {self.strength.value} variation {variation_index} for {total_tasks} tasks...")
+
+        for idx, (task_id, task_data) in enumerate(dataset.items()):
+            print(f"  [{idx+1}/{total_tasks}] Generating variation {variation_index} for task {task_id}...", end=" ", flush=True)
+
+            # Check if the prompt field exists
+            if prompt_field not in task_data:
+                print(f"skipped (no '{prompt_field}' field)")
+                varied_task = task_data.copy()
+                varied_task['prompt_variation_id'] = variation_index
+                varied_task['prompt_variation_strength'] = self.strength.value
+                varied_dataset[task_id] = varied_task
+                continue
+
+            # Get original prompt
+            original_prompt = task_data[prompt_field]
+
+            # Generate variations (returns [original, var1, var2, ...])
+            variations = self.generate_variations(original_prompt, task_id)
+
+            # Pick the specific variation we need
+            if variation_index < len(variations):
+                varied_prompt = variations[variation_index]
+            else:
+                # Fallback to original if requested index doesn't exist
+                print(f"warning: variation {variation_index} not available, using original...", end=" ")
+                varied_prompt = original_prompt
+
+            # Create task data for this variation
+            varied_task = task_data.copy()
+            varied_task[prompt_field] = varied_prompt
+            varied_task['prompt_variation_id'] = variation_index
+            varied_task['prompt_variation_strength'] = self.strength.value
+            varied_dataset[task_id] = varied_task
+            print("done")
+
+        print(f"Completed generating variation {variation_index} for all {total_tasks} tasks")
+        return varied_dataset
+
     def apply_variations_to_dataset(
         self,
         dataset: Dict[str, Any],
@@ -321,13 +400,15 @@ class PromptVariationGenerator:
             Each task_id maps to a list where each element is the task data with a different prompt variation
         """
         varied_dataset = {}
+        total_tasks = len(dataset)
 
-        print(f"Generating {self.strength.value} variations...")
+        print(f"Generating {self.strength.value} variations for {total_tasks} tasks...")
 
-        for task_id, task_data in dataset.items():
+        for idx, (task_id, task_data) in enumerate(dataset.items()):
+            print(f"  [{idx+1}/{total_tasks}] Generating variations for task {task_id}...", end=" ", flush=True)
             # Check if the prompt field exists
             if prompt_field not in task_data:
-                print(f"Warning: Prompt field '{prompt_field}' not found in task {task_id}. Skipping variations.")
+                print(f"skipped (no '{prompt_field}' field)")
                 varied_dataset[task_id] = [task_data]
                 continue
 
@@ -347,7 +428,9 @@ class PromptVariationGenerator:
                 varied_tasks.append(varied_task)
 
             varied_dataset[task_id] = varied_tasks
+            print(f"done ({len(variations)} variations)")
 
+        print(f"Completed generating variations for all {total_tasks} tasks")
         return varied_dataset
 
 

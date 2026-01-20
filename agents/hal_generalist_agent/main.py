@@ -1,5 +1,5 @@
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from functools import partial
 import tiktoken
 
@@ -633,6 +633,191 @@ def collect_task_metrics(agent: CodeAgent) -> Dict[str, Any]:
     return metrics
 
 
+def _extract_conversation_history(agent: CodeAgent) -> List[Dict[str, Any]]:
+    """
+    Extract conversation history from smolagents CodeAgent for reliability analysis.
+
+    Converts agent.memory.steps into a list of message dicts compatible with
+    the analyze_reliability.py script and LLM-based safety analysis.
+
+    Returns:
+        List of dicts with 'role' and 'content' keys
+    """
+    history = []
+
+    try:
+        for step in agent.memory.steps:
+            if isinstance(step, ActionStep):
+                # Add the model's thought/action as assistant message
+                step_content = []
+
+                # Add model output (the reasoning/plan)
+                if hasattr(step, 'model_output') and step.model_output:
+                    step_content.append(f"Thought: {step.model_output}")
+
+                # Add tool calls
+                if hasattr(step, 'tool_calls') and step.tool_calls:
+                    for call in step.tool_calls:
+                        tool_name = getattr(call, 'name', str(call))
+                        args = _safe_serialize(getattr(call, 'arguments', None))
+                        step_content.append(f"Action: {tool_name}({args})")
+
+                # Add observations/results
+                if hasattr(step, 'observations') and step.observations:
+                    step_content.append(f"Observation: {str(step.observations)[:500]}")
+
+                # Add error if any
+                if hasattr(step, 'error') and step.error:
+                    step_content.append(f"Error: {str(step.error)}")
+
+                if step_content:
+                    history.append({
+                        "role": "assistant",
+                        "content": "\n".join(step_content)
+                    })
+            else:
+                # System or user messages
+                if hasattr(step, 'content'):
+                    role = getattr(step, 'role', 'user')
+                    history.append({
+                        "role": str(role).lower(),
+                        "content": str(step.content)[:2000]  # Truncate long content
+                    })
+    except Exception as e:
+        print(f"Warning: Error extracting conversation history: {e}")
+        history = []
+
+    return history
+
+
+def _compute_gaia_confidence_score(
+    model: Any,
+    task_question: str,
+    agent_answer: str,
+    conversation_history: List[Dict[str, Any]],
+    metrics: Dict[str, Any],
+) -> Tuple[float, Dict[str, Any]]:
+    """
+    Compute confidence score for GAIA task via self-assessment.
+
+    Asks the model to evaluate its own performance and provide a confidence
+    score from 0-100.
+
+    Args:
+        model: The LiteLLMModel instance
+        task_question: The original GAIA question
+        agent_answer: The answer the agent produced
+        conversation_history: The conversation history
+        metrics: Metrics from collect_task_metrics
+
+    Returns:
+        Tuple of (confidence_score in [0,1], confidence_details dict)
+    """
+    import litellm
+
+    # Build summary of what happened
+    num_actions = metrics.get('tool_call_count', 0)
+    num_steps = metrics.get('step_count', 0)
+    tools_used = metrics.get('unique_tools_used', [])
+
+    # Count errors from steps
+    num_errors = sum(1 for step in metrics.get('steps', []) if step.get('error'))
+
+    confidence_prompt = f"""You just completed a question-answering task. Please assess your confidence in the correctness of your answer.
+
+Task Question: {task_question[:500]}
+
+Your Answer: {agent_answer}
+
+Task Statistics:
+- Number of steps taken: {num_steps}
+- Number of tool calls: {num_actions}
+- Tools used: {', '.join(tools_used[:10]) if tools_used else 'None'}
+- Errors encountered: {num_errors}
+
+Consider the following when rating your confidence:
+1. Did you find clear, reliable information to answer the question?
+2. Did you encounter any errors or failures during execution?
+3. How certain are you that your answer format matches what was requested?
+4. Were there any ambiguities in the question or your research?
+5. Did you verify your answer through multiple sources?
+
+Please provide a confidence score from 0 to 100, where:
+- 0-20: Very uncertain, likely incorrect
+- 21-40: Low confidence, significant doubts
+- 41-60: Moderate confidence, some uncertainty
+- 61-80: Good confidence, minor doubts
+- 81-100: Very confident, highly certain of correctness
+
+Respond with ONLY a number between 0 and 100. No explanation needed."""
+
+    try:
+        # Build messages for confidence assessment
+        messages = [
+            {"role": "user", "content": confidence_prompt}
+        ]
+
+        # Call the model for confidence assessment
+        response = litellm.completion(
+            model=model.model_id,
+            messages=messages,
+            temperature=0.0,
+            max_tokens=50,
+        )
+
+        content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("Model returned None content")
+
+        confidence_text = content.strip()
+
+        # Extract number from response
+        import re
+        numbers = re.findall(r'\d+', confidence_text)
+
+        if numbers:
+            confidence_score = float(numbers[0]) / 100.0
+            confidence_score = max(0.0, min(1.0, confidence_score))
+            print(f"✓ GAIA confidence assessment: {confidence_text} -> {confidence_score:.2f}")
+        else:
+            print(f"⚠️  Could not parse confidence from '{confidence_text}', using default 0.5")
+            confidence_score = 0.5
+
+        confidence_details = {
+            "prompt": confidence_prompt[:500],
+            "model_response": confidence_text,
+            "parsed_score": confidence_score,
+            "num_actions": num_actions,
+            "num_errors": num_errors,
+            "num_steps": num_steps,
+            "model": model.model_id,
+        }
+
+        return confidence_score, confidence_details
+
+    except Exception as e:
+        print(f"Warning: Error computing GAIA confidence score: {e}")
+        # Return heuristic-based confidence
+        if num_actions == 0:
+            heuristic_confidence = 0.1
+        else:
+            error_penalty = num_errors / max(num_actions, 1)
+            heuristic_confidence = max(0.1, 0.7 - error_penalty * 0.3)
+
+        heuristic_details = {
+            "prompt": "ERROR: Could not call model",
+            "model_response": str(e),
+            "parsed_score": heuristic_confidence,
+            "num_actions": num_actions,
+            "num_errors": num_errors,
+            "num_steps": num_steps,
+            "model": model.model_id if hasattr(model, 'model_id') else "unknown",
+            "fallback": True,
+        }
+
+        return heuristic_confidence, heuristic_details
+
+
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
@@ -681,6 +866,36 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         # Be lenient with unknown params on different backends
         litellm.drop_params = True
 
+        # Models that don't support 'stop' parameter
+        MODELS_WITHOUT_STOP_SUPPORT = ['gpt-5', 'gpt-5.2', 'gpt-5.1']
+
+        def model_requires_stop_filter(model_name: str) -> bool:
+            """Check if model requires filtering out 'stop' parameter."""
+            model_lower = model_name.lower()
+            return any(m in model_lower for m in MODELS_WITHOUT_STOP_SUPPORT)
+
+        # Wrap litellm completion to filter out 'stop' for models that don't support it
+        if model_requires_stop_filter(kwargs.get('model_name', '')):
+            original_completion_stop = getattr(litellm, 'completion', None)
+            original_acompletion_stop = getattr(litellm, 'acompletion', None)
+
+            if original_completion_stop is not None:
+                def completion_without_stop(*args, **completion_kwargs):
+                    # Remove 'stop' parameter for models that don't support it
+                    completion_kwargs.pop('stop', None)
+                    return original_completion_stop(*args, **completion_kwargs)
+
+                litellm.completion = completion_without_stop  # type: ignore
+                print(f"[INFO] Enabled 'stop' parameter filtering for model: {kwargs.get('model_name')}")
+
+            if original_acompletion_stop is not None:
+                async def acompletion_without_stop(*args, **completion_kwargs):
+                    # Remove 'stop' parameter for models that don't support it
+                    completion_kwargs.pop('stop', None)
+                    return await original_acompletion_stop(*args, **completion_kwargs)  # type: ignore
+
+                litellm.acompletion = acompletion_without_stop  # type: ignore
+
         if 'openrouter_provider_only' in kwargs and 'openrouter/' in kwargs.get('model_name', ''):
             providers_value = kwargs['openrouter_provider_only']
             if isinstance(providers_value, str):
@@ -724,10 +939,28 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         print(f"[WARNING] Failed to enable OpenRouter provider pinning: {e}")
 
     model = LiteLLMModel(**model_params)
-    
+
+    # Create a search tool that ignores filter_year to avoid overly restrictive searches
+    # We create the underlying tool and wrap it with a simple function tool
+    _google_search_tool = GoogleSearchTool(provider='serpapi')
+
+    @tool
+    def web_search(query: str) -> str:
+        """
+        Performs a google web search for your query then returns a string of the top search results.
+
+        Args:
+            query: The search query to perform.
+
+        Returns:
+            A string with the top search results.
+        """
+        # Always pass filter_year=None to avoid "no results" errors from overly restrictive searches
+        return _google_search_tool.forward(query=query, filter_year=None)
+
     CORE_TOOLS = [
-        DuckDuckGoSearchTool(),
-        # GoogleSearchTool(provider='serpapi'),  # Requires SERPAPI_API_KEY (paid service)
+        # DuckDuckGoSearchTool(),  # Unreliable - rate limited
+        web_search,  # Wrapped GoogleSearchTool that ignores year filter
         VisitWebpageTool(),
         PythonInterpreterTool(),
         execute_bash,
@@ -1050,13 +1283,13 @@ Task:
             
             
     elif kwargs['benchmark_name'] == 'gaia':
-        prompt = f"""Please answer the question below. You should:                                                                                                                   
-                                                                                                                                                                 
-- Return only your answer, which should be a number, or a short phrase with as few words as possible, or a comma separated list of numbers and/or strings.      
-- If the answer is a number, return only the number without any units unless specified otherwise.                                                               
-- If the answer is a string, don't include articles, and don't use abbreviations (e.g. for states).                                                             
-- If the answer is a comma separated list, apply the above rules to each element in the list.                                                                                                                                                                                                                    
-                                                                                                                                                                 
+        prompt = f"""Please answer the question below. You should:
+
+- Return only your answer, which should be a number, or a short phrase with as few words as possible, or a comma separated list of numbers and/or strings.
+- If the answer is a number, return only the number without any units unless specified otherwise.
+- If the answer is a string, don't include articles, and don't use abbreviations (e.g. for states).
+- If the answer is a comma separated list, apply the above rules to each element in the list.
+
 Here is the question and attached files are stored in your current directory:
 
 {task['Question']}"""
@@ -1065,15 +1298,41 @@ Here is the question and attached files are stored in your current directory:
 
         # Collect metrics
         metrics = collect_task_metrics(agent)
-        
+
         save_agent_steps(agent, kwargs, response, task)
-        
-        return {
+
+        # === RELIABILITY METRICS ===
+        result = {
             task_id: {
                 "answer": str(response).strip(),
-                "metrics": metrics,        
+                "metrics": metrics,
             }
         }
+
+        # Build taken_actions for trajectory consistency (format compatible with analyze_reliability.py)
+        taken_actions = [{"name": tool_name} for tool_name in metrics.get('tool_call_sequence', [])]
+        result[task_id]["taken_actions"] = taken_actions
+
+        # Extract conversation history from smolagents for safety analysis
+        conversation_history = _extract_conversation_history(agent)
+        if kwargs.get('store_conversation_history') == 'true' or kwargs.get('store_conversation_history') is True:
+            result[task_id]["conversation_history"] = conversation_history
+
+        # Compute confidence score if enabled
+        compute_confidence = kwargs.get('compute_confidence', False)
+        if compute_confidence == 'true' or compute_confidence is True:
+            confidence, confidence_details = _compute_gaia_confidence_score(
+                model=model,
+                task_question=task['Question'],
+                agent_answer=str(response).strip(),
+                conversation_history=conversation_history,
+                metrics=metrics,
+            )
+            result[task_id]["confidence"] = confidence
+            if kwargs.get('store_confidence_details') == 'true' or kwargs.get('store_confidence_details') is True:
+                result[task_id]["confidence_details"] = confidence_details
+
+        return result
     
     
 

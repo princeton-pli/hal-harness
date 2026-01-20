@@ -14,7 +14,167 @@ from hal.utils.structural_perturbations import (
     PerturbationStrength,
     PerturbationConfig
 )
+from hal.utils.taubench_perturbations import (
+    TauBenchPerturbator,
+    TauBenchPerturbationStrength,
+    TauBenchPerturbationConfig,
+    create_taubench_perturbator,
+)
 from hal.utils.llm_log_analyzer import LLMLogAnalyzer
+
+
+def _detect_abstention(
+    conversation_history: list,
+    actions_taken: list,
+) -> dict:
+    """
+    Detect abstention/deferral behavior in the agent's responses.
+
+    Abstention signals include:
+    - Explicit inability statements ("I cannot", "I'm unable to")
+    - High uncertainty expressions ("I'm not sure", "I don't know")
+    - Requests for clarification ("Could you clarify", "I need more information")
+    - Refusals to proceed ("I cannot proceed", "I'm not able to complete")
+    - Early termination without completing the task
+
+    Returns:
+        dict with:
+        - abstained: bool - whether abstention was detected
+        - abstention_type: str - type of abstention (none, uncertainty, inability, clarification, refusal)
+        - abstention_strength: float - 0.0 to 1.0 indicating how strong the abstention signal is
+        - evidence: list - specific phrases/signals detected
+        - early_termination: bool - whether agent stopped before completing task
+    """
+    import re
+
+    # Patterns for different abstention types
+    INABILITY_PATTERNS = [
+        r"\bi(?:'m| am) (?:not )?(?:able|unable) to\b",
+        r"\bi cannot\b",
+        r"\bi can't\b",
+        r"\bi'm not capable\b",
+        r"\bthis is (?:beyond|outside) (?:my|the) (?:capabilities|scope)\b",
+        r"\bi don't have (?:the ability|access|permission)\b",
+        r"\bimpossible for me to\b",
+    ]
+
+    UNCERTAINTY_PATTERNS = [
+        r"\bi(?:'m| am) not (?:sure|certain)\b",
+        r"\bi don't know\b",
+        r"\bi'm uncertain\b",
+        r"\bi'm unsure\b",
+        r"\bunclear (?:to me|what|how|whether)\b",
+        r"\bi(?:'m| am) not confident\b",
+        r"\bthis is ambiguous\b",
+        r"\bi may be wrong\b",
+        r"\btake this with (?:a grain of salt|caution)\b",
+    ]
+
+    CLARIFICATION_PATTERNS = [
+        r"\bcould you (?:please )?(?:clarify|explain|specify)\b",
+        r"\bi need (?:more )?(?:information|details|context)\b",
+        r"\bcan you (?:please )?(?:provide|give) (?:more )?\b",
+        r"\bwhat (?:exactly |specifically )?do you mean\b",
+        r"\bcould you be more specific\b",
+        r"\bi'm not sure what you're asking\b",
+        r"\bplease (?:clarify|specify|explain)\b",
+    ]
+
+    REFUSAL_PATTERNS = [
+        r"\bi (?:cannot|can't|won't|will not) (?:proceed|continue|complete)\b",
+        r"\bi(?:'m| am) (?:not )?(?:going to|able to) (?:do|perform|complete) (?:this|that)\b",
+        r"\bi must (?:stop|decline|refuse)\b",
+        r"\bi (?:have to|need to) stop\b",
+        r"\bstopping here\b",
+        r"\bunable to (?:proceed|continue|complete)\b",
+        r"\bcannot (?:proceed|continue|complete)\b",
+    ]
+
+    evidence = []
+    abstention_scores = {
+        'inability': 0.0,
+        'uncertainty': 0.0,
+        'clarification': 0.0,
+        'refusal': 0.0,
+    }
+
+    # Extract all assistant messages from conversation
+    assistant_messages = []
+    for msg in conversation_history:
+        if isinstance(msg, dict):
+            role = msg.get('role', '')
+            content = msg.get('content', '')
+        else:
+            role = getattr(msg, 'role', '')
+            content = getattr(msg, 'content', '')
+
+        if role == 'assistant' and content:
+            assistant_messages.append(content.lower() if isinstance(content, str) else str(content).lower())
+
+    # Check each pattern category
+    for text in assistant_messages:
+        for pattern in INABILITY_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                abstention_scores['inability'] += 1.0
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    # Get surrounding context
+                    start = max(0, match.start() - 30)
+                    end = min(len(text), match.end() + 30)
+                    evidence.append(f"[inability] ...{text[start:end]}...")
+
+        for pattern in UNCERTAINTY_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                abstention_scores['uncertainty'] += 0.7  # Uncertainty is weaker signal
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    start = max(0, match.start() - 30)
+                    end = min(len(text), match.end() + 30)
+                    evidence.append(f"[uncertainty] ...{text[start:end]}...")
+
+        for pattern in CLARIFICATION_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                abstention_scores['clarification'] += 0.5  # Clarification is moderate signal
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    start = max(0, match.start() - 30)
+                    end = min(len(text), match.end() + 30)
+                    evidence.append(f"[clarification] ...{text[start:end]}...")
+
+        for pattern in REFUSAL_PATTERNS:
+            if re.search(pattern, text, re.IGNORECASE):
+                abstention_scores['refusal'] += 1.0
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    start = max(0, match.start() - 30)
+                    end = min(len(text), match.end() + 30)
+                    evidence.append(f"[refusal] ...{text[start:end]}...")
+
+    # Check for early termination (few actions taken)
+    early_termination = len(actions_taken) <= 2  # Might indicate giving up early
+
+    # Calculate overall abstention strength
+    total_score = sum(abstention_scores.values())
+    abstention_strength = min(1.0, total_score / 3.0)  # Normalize to [0, 1]
+
+    # Determine primary abstention type
+    if total_score == 0:
+        abstention_type = 'none'
+    else:
+        abstention_type = max(abstention_scores, key=abstention_scores.get)
+
+    # Determine if abstention occurred (threshold-based)
+    abstained = abstention_strength >= 0.3 or any(abstention_scores[t] >= 1.0 for t in ['inability', 'refusal'])
+
+    return {
+        'abstained': abstained,
+        'abstention_type': abstention_type,
+        'abstention_strength': abstention_strength,
+        'evidence': evidence[:5],  # Limit to 5 examples
+        'early_termination': early_termination,
+        'scores_by_type': abstention_scores,
+        'num_assistant_messages': len(assistant_messages),
+    }
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
@@ -47,24 +207,21 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         compliance_monitor = ComplianceMonitor(constraints=constraints)
         print(f"📋 Compliance monitoring enabled with constraints: {constraints}")
 
-    # Initialize StructuralPerturbator if enabled
-    perturbator: Optional[StructuralPerturbator] = None
+    # Initialize TauBench-specific StructuralPerturbator if enabled
+    # This perturbator modifies tool responses, parameter names, and data formats
+    # to test agent robustness to API variations
+    taubench_perturbator: Optional[TauBenchPerturbator] = None
+    param_mapping: Dict[str, Dict[str, str]] = {}  # Maps tool_name -> {new_param: old_param}
+
     if kwargs.get('enable_structural_perturbations') == 'true' or kwargs.get('enable_structural_perturbations') is True:
-        perturbation_type = kwargs.get('perturbation_type', 'all')
         perturbation_strength = kwargs.get('perturbation_strength', 'medium')
 
-        # Get preset config based on strength
-        try:
-            strength_enum = PerturbationStrength(perturbation_strength)
-            config = PerturbationConfig.get_preset(strength_enum)
-        except ValueError:
-            config = PerturbationConfig()
-
-        perturbator = StructuralPerturbator(
-            perturbation_type=perturbation_type,
-            config=config
-        )
-        print(f"🔀 Structural perturbations enabled: type={perturbation_type}, strength={perturbation_strength}")
+        # Create tau-bench specific perturbator
+        taubench_perturbator = create_taubench_perturbator(strength=perturbation_strength)
+        print(f"🔀 Tau-bench structural perturbations enabled: strength={perturbation_strength}")
+        print(f"   Config: key_case={taubench_perturbator.config.key_case}, "
+              f"time_format={taubench_perturbator.config.time_format}, "
+              f"param_style={taubench_perturbator.config.param_name_style}")
 
     # Separate providers for user simulation vs agent
     # User simulation needs OpenAI-compatible API (for tau-bench internals)
@@ -327,56 +484,57 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             print(f"🎭 User communication style set to: {style_strength}")
 
     ### STRUCTURAL PERTURBATIONS (OPTIONAL) ###
-    # Apply perturbations to the wiki/tools info to test agent robustness
+    # Apply tau-bench specific perturbations to test agent robustness:
+    # 1. Tool parameter names (what the agent must use to call tools)
+    # 2. Tool responses (what the agent receives back)
+    # 3. Wiki/knowledge base format
     perturbed_tools_info = isolated_env.tools_info
     perturbed_wiki = isolated_env.wiki
 
-    if perturbator:
-        # Perturb the wiki (knowledge base) - apply data format changes
-        if isinstance(perturbed_wiki, str):
-            # Try parsing as JSON and perturbing
-            try:
-                wiki_data = json.loads(perturbed_wiki)
-                if isinstance(wiki_data, dict):
-                    wiki_data = perturbator.perturb_api_response(wiki_data)
-                    perturbed_wiki = json.dumps(wiki_data)
-            except (json.JSONDecodeError, TypeError):
-                pass  # Keep original if not JSON
+    if taubench_perturbator:
+        # 1. Perturb tool definitions (including parameter names)
+        # This returns a mapping so we can reverse param names when tools are called
+        perturbed_tools_info, param_mapping = taubench_perturbator.perturb_tool_definitions(
+            isolated_env.tools_info
+        )
 
-        # Perturb tools_info if it's a list of tool definitions
-        # NOTE: We only perturb the 'description' field within tools, NOT the structural
-        # schema keys (type, function, name, parameters) which are required by the API
-        if isinstance(perturbed_tools_info, list):
-            perturbed_tools = []
-            for tool in perturbed_tools_info:
-                if isinstance(tool, dict):
-                    # Deep copy to avoid modifying original
-                    perturbed_tool = json.loads(json.dumps(tool))
+        # 2. Perturb the wiki (knowledge base)
+        perturbed_wiki = taubench_perturbator.perturb_tool_response(isolated_env.wiki)
 
-                    # Only perturb safe fields - descriptions and parameter descriptions
-                    # Do NOT perturb: type, function, name, parameters.type, parameters.required
-                    if 'function' in perturbed_tool and isinstance(perturbed_tool['function'], dict):
-                        func = perturbed_tool['function']
+        # 3. Wrap the environment's step function to perturb tool responses
+        # and reverse parameter name mapping
+        original_step = isolated_env.step
 
-                        # Perturb function description (safe)
-                        if 'description' in func and isinstance(func['description'], str):
-                            # Apply data format perturbations to description text
-                            func['description'] = perturbator.perturb_data(func['description'])
+        def perturbed_step(action):
+            """Intercept tool calls to reverse param names and perturb responses."""
+            # Reverse parameter names if this tool was perturbed
+            if hasattr(action, 'kwargs') and hasattr(action, 'name'):
+                if action.name in param_mapping:
+                    # Create a copy with original param names for the real env
+                    original_kwargs = taubench_perturbator.reverse_param_mapping(
+                        action.name, action.kwargs, param_mapping
+                    )
+                    # Modify kwargs in place (action is mutable)
+                    action.kwargs = original_kwargs
 
-                        # Perturb parameter descriptions only (not names or structure)
-                        if 'parameters' in func and isinstance(func['parameters'], dict):
-                            params = func['parameters']
-                            if 'properties' in params and isinstance(params['properties'], dict):
-                                for prop_name, prop_def in params['properties'].items():
-                                    if isinstance(prop_def, dict) and 'description' in prop_def:
-                                        prop_def['description'] = perturbator.perturb_data(prop_def['description'])
+            # Call original step
+            result = original_step(action)
 
-                    perturbed_tools.append(perturbed_tool)
-                else:
-                    perturbed_tools.append(tool)
-            perturbed_tools_info = perturbed_tools
+            # Perturb the response (tool output)
+            # The result is typically a string (JSON) that gets added to conversation
+            if isinstance(result, str):
+                perturbed_result = taubench_perturbator.perturb_tool_response(result)
+                return perturbed_result
 
-        print(f"🔀 Applied {len(perturbator.applied_perturbations)} structural perturbations")
+            return result
+
+        # Monkey-patch the step function
+        isolated_env.step = perturbed_step
+
+        summary = taubench_perturbator.get_perturbation_summary()
+        print(f"🔀 Applied {summary['total_perturbations']} structural perturbations")
+        if summary['by_type']:
+            print(f"   By type: {summary['by_type']}")
 
     ### YOUR AGENT CODE HERE ###
     agent = ToolCallingAgent(
@@ -388,6 +546,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     )
 
     output = agent.solve(isolated_env, task_index=input[task_id]['task_index'])
+
+    ### DETECT ABSTENTION/DEFERRAL BEHAVIOR ###
+    # Always compute abstention detection (lightweight, rule-based)
+    abstention_result = _detect_abstention(
+        conversation_history=output.messages if hasattr(output, 'messages') else [],
+        actions_taken=isolated_env.actions,
+    )
+    if abstention_result['abstained']:
+        print(f"🛑 Abstention detected: type={abstention_result['abstention_type']}, "
+              f"strength={abstention_result['abstention_strength']:.2f}")
 
     ### COMPUTE CONFIDENCE (OPTIONAL) ###
     confidence = None
@@ -495,6 +663,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if confidence_details is not None and kwargs.get('store_confidence_details', False):
         result[task_id]["confidence_details"] = confidence_details
 
+    # Add abstention detection result (always computed)
+    result[task_id]["abstention"] = {
+        "abstained": abstention_result['abstained'],
+        "abstention_type": abstention_result['abstention_type'],
+        "abstention_strength": abstention_result['abstention_strength'],
+        "early_termination": abstention_result['early_termination'],
+        "evidence": abstention_result['evidence'],
+        "scores_by_type": abstention_result['scores_by_type'],
+    }
+
     # ========== RELIABILITY METRICS RESULTS ==========
 
     # Add fault injection metrics if enabled
@@ -523,19 +701,25 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         }
 
     # Add structural perturbation metrics if enabled
-    if perturbator:
+    if taubench_perturbator:
+        summary = taubench_perturbator.get_perturbation_summary()
         result[task_id]["structural_perturbation"] = {
             "enabled": True,
-            "perturbation_type": perturbator.perturbation_type.value,
-            "perturbation_count": len(perturbator.applied_perturbations),
-            "applied_perturbations": perturbator.applied_perturbations,
+            "perturbation_type": "taubench",
+            "perturbation_count": summary['total_perturbations'],
+            "perturbations_by_type": summary['by_type'],
+            "applied_perturbations": taubench_perturbator.applied_perturbations[:50],  # Limit to first 50
             "config": {
-                "api_parameter_case": perturbator.config.api_parameter_case,
-                "api_endpoint_style": perturbator.config.api_endpoint_style,
-                "api_response_wrapper": perturbator.config.api_response_wrapper,
-                "db_column_naming": perturbator.config.db_column_naming,
-                "date_format": perturbator.config.date_format,
-            }
+                "key_case": taubench_perturbator.config.key_case,
+                "time_format": taubench_perturbator.config.time_format,
+                "date_format": taubench_perturbator.config.date_format,
+                "status_format": taubench_perturbator.config.status_format,
+                "cabin_format": taubench_perturbator.config.cabin_format,
+                "param_name_style": taubench_perturbator.config.param_name_style,
+                "wrap_responses": taubench_perturbator.config.wrap_responses,
+                "use_abbreviations": taubench_perturbator.config.use_abbreviations,
+            },
+            "param_mapping": param_mapping,  # Tool param name mapping for debugging
         }
 
     # Add LLM-based analysis results if enabled
