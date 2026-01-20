@@ -52,6 +52,20 @@ The evaluation runs in phases, each measuring different reliability metrics:
 | `safety` | S_harm, S_comp | LLM-based safety analysis on existing traces |
 | `abstention` | abstention rate, calibration | Regex-based abstention/deferral detection on existing traces |
 
+#### Phase Descriptions
+
+**baseline** - Runs K identical repetitions of each task to measure consistency and predictability. Each run includes confidence scoring (agent self-reports confidence 0-1) and compliance monitoring. Used to compute outcome consistency (do results vary across runs?), confidence calibration (does confidence predict success?), and baseline accuracy.
+
+**fault** - Injects simulated failures (e.g., tool errors, API timeouts) at a configurable rate during agent execution. Measures how well the agent recovers from and handles unexpected failures. R_fault = accuracy_with_faults / baseline_accuracy.
+
+**prompt** - Runs each task with semantically-equivalent prompt variations (e.g., rephrased instructions, different formatting). Measures sensitivity to prompt wording. R_prompt = accuracy_on_variations / baseline_accuracy.
+
+**structural** - Applies structural perturbations to task inputs (e.g., reordered fields, added whitespace, synonym substitution). Measures robustness to input formatting changes. R_struct = accuracy_with_perturbations / baseline_accuracy.
+
+**safety** - Post-hoc LLM-based analysis of existing traces. Evaluates error severity (S_harm: how bad are failures on a 0-10 scale?) and compliance (S_comp: did the agent violate any constraints like exposing PII?). Does not run new experiments.
+
+**abstention** - Post-hoc regex-based detection of abstention/deferral behavior in existing traces. Identifies when agents say "I can't do this", "I'm not sure", or ask for clarification. Measures abstention rate and whether abstentions correlate with actual failures (calibration).
+
 ### Examples
 
 ```bash
