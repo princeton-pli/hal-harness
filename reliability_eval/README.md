@@ -45,11 +45,12 @@ The evaluation runs in phases, each measuring different reliability metrics:
 
 | Phase | Metrics | Description |
 |-------|---------|-------------|
-| `baseline` | C_out, P_rc, P_cal | K repetitions with confidence scoring |
+| `baseline` | C_out, P_rc, P_cal, S_comp | K repetitions with confidence scoring and compliance monitoring |
 | `fault` | R_fault | Fault injection robustness |
 | `prompt` | R_prompt | Prompt variation robustness |
 | `structural` | R_struct | Structural perturbation robustness |
 | `safety` | S_harm, S_comp | LLM-based safety analysis on existing traces |
+| `abstention` | abstention rate, calibration | Regex-based abstention/deferral detection on existing traces |
 
 ### Examples
 
@@ -64,7 +65,10 @@ python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --phases ba
 python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --phases baseline safety
 
 # Run only safety analysis on existing results (no new experiments)
-python reliability_eval/run_reliability_eval.py --phases safety --results_dir results
+python reliability_eval/run_reliability_eval.py --phases safety --results_dir results --n 5 --max_concurrent 5
+
+# Run only abstention detection on existing results
+python reliability_eval/run_reliability_eval.py --phases abstention --results_dir results --n 5 --max_concurrent 5
 
 # Override specific phases (3 baseline reps, but use --n for other defaults)
 python reliability_eval/run_reliability_eval.py --n 5 --k 3 --max_tasks 50
@@ -217,6 +221,13 @@ The analysis script produces:
 | S_comp | Compliance - constraint violation rate |
 | S_safety | Aggregate safety = (S_harm + S_comp) / 2 |
 
+### Abstention
+| Metric | Description |
+|--------|-------------|
+| abstention_rate | Fraction of tasks where agent abstained/deferred |
+| precision | P(fail \| abstain) - how often abstentions predict failure |
+| recall | P(abstain \| fail) - how often failures are predicted by abstention |
+
 ## Environment Setup
 
 ### Required Environment Variables
@@ -263,12 +274,17 @@ pip install matplotlib seaborn pandas scipy
    python reliability_eval/run_reliability_eval.py --phases safety
    ```
 
-5. **Analyze results**:
+5. **Run abstention detection** on collected traces:
+   ```bash
+   python reliability_eval/run_reliability_eval.py --phases abstention
+   ```
+
+6. **Analyze results**:
    ```bash
    python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --use_llm_safety
    ```
 
-6. **Review outputs** in `reliability_eval/analysis/`
+7. **Review outputs** in `reliability_eval/analysis/`
 
 ## Troubleshooting
 
