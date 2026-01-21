@@ -56,6 +56,8 @@ This repository provides a standardized evaluation harness for reproducible agen
    cd hal-harness
    ```
 
+   _Note: the `--recursive` flag must be passed so that benchmark submodules are downloaded_
+
 2. **Create conda environment:**
    ```bash
    conda create -n hal python=3.12
@@ -113,7 +115,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 - Mini version is a subset of 50 randomly selected problems from the full dataset
 - Supports local, Docker, and VM execution
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
-- **Does not support arm64 machines**
+- **Does not support arm64 machines (e.g., Mac M chips)**
 
 For SWE-bench Verified, you will need to install the SWE-bench benchmark specific dependencies:
 ```bash
