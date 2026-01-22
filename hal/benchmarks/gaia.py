@@ -23,7 +23,7 @@ class GaiaBenchmark(BaseBenchmark):
         self.requires_sandbox = False
         super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
     
-        dataset = self._load_gaia_dataset(config_split=GAIA_DEFAULT_CONFIG, split='test')
+        dataset = self._load_gaia_dataset(config_split=GAIA_DEFAULT_CONFIG, split='validation')
 
         self.benchmark = {}
         for record in dataset:

@@ -21,8 +21,8 @@ DOCKER_IMAGE_NAME = "hal-agent-runner:latest"
 
 class DockerRunner:
     """Handles running agents in Docker containers for isolation"""
-    
-    def __init__(self, log_dir: str, max_concurrent: int = 1, benchmark: Optional[BaseBenchmark] = None):
+
+    def __init__(self, log_dir: str, max_concurrent: int = 1, benchmark: Optional[BaseBenchmark] = None, task_timeout: int = 600):
         self.log_dir = log_dir
         self.max_concurrent = max_concurrent
         self._semaphore = asyncio.Semaphore(max_concurrent)
@@ -30,6 +30,7 @@ class DockerRunner:
         self._active_containers: List[str] = []
         self.benchmark = benchmark
         self.verbose = False
+        self.task_timeout = task_timeout  # Timeout in seconds for each task
         
         # Initialize Docker client
         self.docker_client = docker.from_env()

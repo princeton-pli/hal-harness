@@ -16,8 +16,8 @@ verbose_logger = logging.getLogger('agent_eval.verbose')
 
 class LocalRunner:
     """Handles running agents locally in isolated environments"""
-    
-    def __init__(self, log_dir: str, max_concurrent: int = 1, conda_env: Optional[str] = None, benchmark: Optional[BaseBenchmark] = None, retry_config: Optional[Dict[str, Any]] = None):
+
+    def __init__(self, log_dir: str, max_concurrent: int = 1, conda_env: Optional[str] = None, benchmark: Optional[BaseBenchmark] = None, retry_config: Optional[Dict[str, Any]] = None, task_timeout: int = 600):
         self.log_dir = log_dir
         self.max_concurrent = max_concurrent
         self.conda_env = conda_env
@@ -25,7 +25,8 @@ class LocalRunner:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
         self.benchmark = benchmark
-        
+        self.task_timeout = task_timeout  # Timeout in seconds for each task
+
         # Add retry functionality (enabled by default with sensible defaults)
         add_retry_to_runner(self, retry_config)
 
@@ -255,8 +256,8 @@ class LocalRunner:
                 # new command to run the agent
                 run_agent_cmd = ["conda", "run", "-n", self.conda_env] + run_agent_cmd
                 
-            # Run agent
-            verbose_logger.debug(f"Running agent for task {task_id}")
+            # Run agent with timeout
+            verbose_logger.debug(f"Running agent for task {task_id} (timeout: {self.task_timeout}s)")
             process = await asyncio.create_subprocess_exec(
                 *run_agent_cmd,
                 cwd=str(temp_dir),
@@ -264,14 +265,27 @@ class LocalRunner:
                 stderr=asyncio.subprocess.PIPE
             )
 
-            stdout, stderr = await process.communicate()
-            
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=self.task_timeout
+                )
+            except asyncio.TimeoutError:
+                # Kill the process if it times out
+                verbose_logger.debug(f"Task {task_id} timed out after {self.task_timeout}s, killing process")
+                try:
+                    process.kill()
+                    await process.wait()  # Wait for process to be killed
+                except Exception as kill_error:
+                    verbose_logger.debug(f"Error killing timed out process for task {task_id}: {kill_error}")
+                return {task_id: f"ERROR: Task timed out after {self.task_timeout} seconds"}
+
             # Log agent output
             if stdout:
                 verbose_logger.debug(f"Agent stdout for task {task_id}:\n{stdout.decode()}")
             if stderr:
                 verbose_logger.debug(f"Agent stderr for task {task_id}:\n{stderr.decode()}")
-            
+
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
                 verbose_logger.debug(f"Error running task {task_id}: {error_msg}")

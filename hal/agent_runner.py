@@ -35,7 +35,8 @@ class AgentRunner:
                  prompt_sensitivity: bool = False,
                  num_variations: int = 3,
                  variation_strength: str = "mild",
-                 variation_index: Optional[int] = None):
+                 variation_index: Optional[int] = None,
+                 task_timeout: int = 600):
 
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -88,20 +89,23 @@ class AgentRunner:
             self.runner = VMRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark
+                benchmark=self.benchmark,
+                task_timeout=task_timeout
             )
         elif use_docker:
             self.runner = DockerRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark
+                benchmark=self.benchmark,
+                task_timeout=task_timeout
             )
         else:
             self.runner = LocalRunner(
                 max_concurrent=max_concurrent,
                 conda_env=conda_env,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark
+                benchmark=self.benchmark,
+                task_timeout=task_timeout
             )
         
         self.agent_function = agent_function

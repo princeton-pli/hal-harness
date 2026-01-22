@@ -13,8 +13,8 @@ from rich.progress import Progress, TaskID
 
 class VMRunner:
     """Handles running agents on Azure VMs"""
-    
-    def __init__(self, log_dir: str, max_concurrent: int = 1, benchmark: Optional[BaseBenchmark] = None):
+
+    def __init__(self, log_dir: str, max_concurrent: int = 1, benchmark: Optional[BaseBenchmark] = None, task_timeout: int = 600):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
         self.vm_manager = VirtualMachineManager()
@@ -22,6 +22,7 @@ class VMRunner:
         self._file_lock = asyncio.Lock()
         self._active_vms: List[str] = []
         self.benchmark = benchmark
+        self.task_timeout = task_timeout  # Timeout in seconds for each task
         
     async def fetch_agent_logs(self, vm_name, username, ssh_private_key_path, task_id):
         """Fetch the latest agent trace log from a VM and store it locally."""

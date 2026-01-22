@@ -85,6 +85,7 @@ load_dotenv()
 @click.option("--num_variations", default=3, type=int, help="Number of prompt variations to generate for sensitivity testing (default: 3)")
 @click.option("--variation_strength", default="mild", type=click.Choice(["mild", "medium", "strong", "naturalistic"]), help="Strength of prompt variations: mild (synonyms/formality), medium (restructuring), strong (conversational rewrites), naturalistic (realistic user typing patterns)")
 @click.option("--variation_index", default=None, type=int, help="Run only a specific variation index (0=original, 1..N=variations). When set, runs single variation instead of all.")
+@click.option("--task_timeout", default=600, type=int, help="Timeout in seconds for each task (default: 600 = 10 minutes). Tasks exceeding this will be killed and marked as ERROR.")
 def main(
     config,
     benchmark,
@@ -107,6 +108,7 @@ def main(
     num_variations,
     variation_strength,
     variation_index,
+    task_timeout,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
@@ -270,7 +272,8 @@ def main(
                     prompt_sensitivity=prompt_sensitivity,
                     num_variations=num_variations,
                     variation_strength=variation_strength,
-                    variation_index=variation_index
+                    variation_index=variation_index,
+                    task_timeout=task_timeout
                 )
 
                 # Run evaluation

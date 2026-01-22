@@ -14,7 +14,7 @@ from typing import Optional
 
 from smolagents import CodeAgent, tool, LiteLLMModel, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool, DuckDuckGoSearchTool
 from smolagents.models import MessageRole, Model
-from smolagents.agents import ActionStep
+from smolagents.agents import ActionStep, TaskStep, PlanningStep
 
 # Monkey-patch smolagents to handle GPT-5
 import smolagents.models
@@ -41,6 +41,35 @@ try:
 except ImportError:
     # When running on VM or Docker, the utils module is not available
     from model_prices import MODEL_PRICES_DICT
+
+# Import fault injection utilities for reliability evaluation
+try:
+    from hal.utils.fault_injection import FaultInjector, FaultEvent
+except ImportError:
+    # When running on VM or Docker, try local import
+    try:
+        from fault_injection import FaultInjector, FaultEvent
+    except ImportError:
+        FaultInjector = None
+        FaultEvent = None
+
+# Import GAIA structural perturbation utilities for reliability evaluation
+try:
+    from hal.utils.gaia_perturbations import (
+        GaiaPerturbator, GaiaPerturbationConfig, GaiaPerturbationStrength,
+        create_gaia_perturbator, wrap_tools_with_perturbation
+    )
+except ImportError:
+    # When running on VM or Docker, try local import
+    try:
+        from gaia_perturbations import (
+            GaiaPerturbator, GaiaPerturbationConfig, GaiaPerturbationStrength,
+            create_gaia_perturbator, wrap_tools_with_perturbation
+        )
+    except ImportError:
+        GaiaPerturbator = None
+        create_gaia_perturbator = None
+        wrap_tools_with_perturbation = None
 
 AUTHORIZED_IMPORTS = [
     "requests",
@@ -640,6 +669,11 @@ def _extract_conversation_history(agent: CodeAgent) -> List[Dict[str, Any]]:
     Converts agent.memory.steps into a list of message dicts compatible with
     the analyze_reliability.py script and LLM-based safety analysis.
 
+    Handles different step types:
+    - TaskStep: User's initial task/query
+    - ActionStep: Agent's thoughts, tool calls, observations
+    - PlanningStep: Agent's planning steps
+
     Returns:
         List of dicts with 'role' and 'content' keys
     """
@@ -647,7 +681,25 @@ def _extract_conversation_history(agent: CodeAgent) -> List[Dict[str, Any]]:
 
     try:
         for step in agent.memory.steps:
-            if isinstance(step, ActionStep):
+            if isinstance(step, TaskStep):
+                # TaskStep contains the user's task/query
+                task_content = getattr(step, 'task', None)
+                if task_content:
+                    history.append({
+                        "role": "user",
+                        "content": str(task_content)[:2000]
+                    })
+
+            elif isinstance(step, PlanningStep):
+                # PlanningStep contains agent's planning
+                plan_content = getattr(step, 'plan', None) or getattr(step, 'model_output', None)
+                if plan_content:
+                    history.append({
+                        "role": "assistant",
+                        "content": f"Planning: {str(plan_content)[:1000]}"
+                    })
+
+            elif isinstance(step, ActionStep):
                 # Add the model's thought/action as assistant message
                 step_content = []
 
@@ -675,19 +727,66 @@ def _extract_conversation_history(agent: CodeAgent) -> List[Dict[str, Any]]:
                         "role": "assistant",
                         "content": "\n".join(step_content)
                     })
+
             else:
-                # System or user messages
+                # Fallback for other step types
                 if hasattr(step, 'content'):
                     role = getattr(step, 'role', 'user')
                     history.append({
                         "role": str(role).lower(),
-                        "content": str(step.content)[:2000]  # Truncate long content
+                        "content": str(step.content)[:2000]
                     })
+
     except Exception as e:
         print(f"Warning: Error extracting conversation history: {e}")
         history = []
 
     return history
+
+
+def _build_confidence_messages(
+    conversation_history: list,
+    confidence_prompt: str,
+    initial_prompt: Optional[str] = None,
+) -> list:
+    """
+    Build message list for confidence assessment by appending confidence prompt
+    to the full conversation history.
+
+    This approach preserves the complete context including tool calls so the
+    model has full visibility into what it did. Uses a high token ceiling to
+    accommodate reasoning models that use internal thinking tokens.
+
+    Args:
+        conversation_history: The full conversation including tool calls
+        confidence_prompt: The prompt asking for confidence assessment
+        initial_prompt: The initial user task/prompt (prepended as first user message)
+
+    Returns:
+        Message list with full conversation history + confidence prompt
+    """
+    import copy
+
+    messages = []
+
+    # Prepend the initial user prompt/task if provided
+    if initial_prompt:
+        messages.append({
+            "role": "user",
+            "content": initial_prompt
+        })
+
+    # Deep copy and add conversation history
+    if conversation_history:
+        messages.extend(copy.deepcopy(conversation_history))
+
+    # Append the confidence assessment prompt as a user message
+    messages.append({
+        "role": "user",
+        "content": confidence_prompt
+    })
+
+    return messages
 
 
 def _compute_gaia_confidence_score(
@@ -696,44 +795,37 @@ def _compute_gaia_confidence_score(
     agent_answer: str,
     conversation_history: List[Dict[str, Any]],
     metrics: Dict[str, Any],
+    initial_prompt: Optional[str] = None,
 ) -> Tuple[float, Dict[str, Any]]:
     """
     Compute confidence score for GAIA task via self-assessment.
 
     Asks the model to evaluate its own performance and provide a confidence
-    score from 0-100.
+    score from 0-100. Uses the FULL conversation history so the model can
+    reflect on its actual reasoning process.
 
     Args:
         model: The LiteLLMModel instance
         task_question: The original GAIA question
         agent_answer: The answer the agent produced
-        conversation_history: The conversation history
+        conversation_history: The full conversation history including tool calls
         metrics: Metrics from collect_task_metrics
+        initial_prompt: The initial user task/prompt (for context)
 
     Returns:
         Tuple of (confidence_score in [0,1], confidence_details dict)
     """
     import litellm
 
-    # Build summary of what happened
+    # Extract metrics for fallback heuristic
     num_actions = metrics.get('tool_call_count', 0)
     num_steps = metrics.get('step_count', 0)
-    tools_used = metrics.get('unique_tools_used', [])
 
     # Count errors from steps
     num_errors = sum(1 for step in metrics.get('steps', []) if step.get('error'))
 
+    # Confidence prompt - model already has full context from conversation history
     confidence_prompt = f"""You just completed a question-answering task. Please assess your confidence in the correctness of your answer.
-
-Task Question: {task_question[:500]}
-
-Your Answer: {agent_answer}
-
-Task Statistics:
-- Number of steps taken: {num_steps}
-- Number of tool calls: {num_actions}
-- Tools used: {', '.join(tools_used[:10]) if tools_used else 'None'}
-- Errors encountered: {num_errors}
 
 Consider the following when rating your confidence:
 1. Did you find clear, reliable information to answer the question?
@@ -752,22 +844,57 @@ Please provide a confidence score from 0 to 100, where:
 Respond with ONLY a number between 0 and 100. No explanation needed."""
 
     try:
-        # Build messages for confidence assessment
-        messages = [
-            {"role": "user", "content": confidence_prompt}
-        ]
+        # Build messages by appending confidence prompt to FULL conversation history
+        # This preserves complete context so the model knows exactly what it did
+        messages = _build_confidence_messages(
+            conversation_history=conversation_history,
+            confidence_prompt=confidence_prompt,
+            initial_prompt=initial_prompt,
+        )
+
+        # Enable litellm's automatic parameter modification to handle provider quirks
+        # Anthropic requires tools= param when conversation contains tool_calls
+        litellm.modify_params = True
+
+        # Debug: Log what we're sending
+        print(f"📊 GAIA confidence assessment request for {model.model_id}:")
+        print(f"   Messages: {len(messages)} messages (full conversation history)")
+
+        # Build kwargs for litellm.completion
+        # Extract api_base and api_key from model if they exist (for custom providers like Gemini)
+        completion_kwargs = {
+            'model': model.model_id,
+            'messages': messages,
+            'temperature': 0.0,
+            'max_tokens': 65536,  # High limit for reasoning models
+        }
+
+        # Add api_base and api_key if the model has custom endpoints (Gemini, Together, etc.)
+        if hasattr(model, 'api_base') and model.api_base:
+            completion_kwargs['api_base'] = model.api_base
+            print(f"   Using custom api_base: {model.api_base}")
+        if hasattr(model, 'api_key') and model.api_key:
+            completion_kwargs['api_key'] = model.api_key
 
         # Call the model for confidence assessment
-        response = litellm.completion(
-            model=model.model_id,
-            messages=messages,
-            temperature=0.0,
-            max_tokens=50,
-        )
+        response = litellm.completion(**completion_kwargs)
+
+        # Debug: Log response structure
+        print(f"📊 Confidence response received:")
+        if response.choices:
+            msg = response.choices[0].message
+            print(f"   Message content: {repr(msg.content)[:100]}...")
 
         content = response.choices[0].message.content
         if content is None:
-            raise ValueError("Model returned None content")
+            msg = response.choices[0].message
+            error_details = {
+                "content": msg.content,
+                "role": getattr(msg, 'role', None),
+                "tool_calls": getattr(msg, 'tool_calls', None),
+                "finish_reason": getattr(response.choices[0], 'finish_reason', None),
+            }
+            raise ValueError(f"Model returned None content. Details: {error_details}")
 
         confidence_text = content.strip()
 
@@ -784,13 +911,14 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
             confidence_score = 0.5
 
         confidence_details = {
-            "prompt": confidence_prompt[:500],
+            "prompt": confidence_prompt,
             "model_response": confidence_text,
             "parsed_score": confidence_score,
             "num_actions": num_actions,
             "num_errors": num_errors,
             "num_steps": num_steps,
             "model": model.model_id,
+            "conversation_messages_count": len(messages),
         }
 
         return confidence_score, confidence_details
@@ -937,6 +1065,82 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     except Exception as e:
         # Non-fatal: if litellm is unavailable or wrapping fails, continue without provider pinning
         print(f"[WARNING] Failed to enable OpenRouter provider pinning: {e}")
+
+    # ========== FAULT INJECTION SETUP (OPTIONAL) ==========
+    # Initialize FaultInjector to test agent robustness to API failures
+    fault_injector = None
+    if FaultInjector is not None and (kwargs.get('enable_fault_injection') == 'true' or kwargs.get('enable_fault_injection') is True):
+        import time
+        import random
+        import asyncio
+
+        fault_rate = float(kwargs.get('fault_rate', 0.2))
+        fault_injector = FaultInjector(fault_rate=fault_rate)
+        print(f"🔧 Fault injection enabled with rate={fault_rate}")
+
+        # Store original completion functions before wrapping
+        original_completion_for_fault = litellm.completion
+        original_acompletion_for_fault = litellm.acompletion
+
+        # Wrap sync completion with fault injection
+        def completion_with_fault_injection(*args, **completion_kwargs):
+            if fault_injector and fault_injector.enabled:
+                try:
+                    response = fault_injector.wrap_call(original_completion_for_fault, *args, **completion_kwargs)
+                except Exception as fault_error:
+                    print(f"⚡ Fault injected: {type(fault_error).__name__}: {fault_error}")
+                    raise
+            else:
+                response = original_completion_for_fault(*args, **completion_kwargs)
+            return response
+
+        # Wrap async completion with fault injection
+        async def acompletion_with_fault_injection(*args, **completion_kwargs):
+            if fault_injector and fault_injector.enabled:
+                # For async, we inject faults manually to maintain async behavior
+                if random.random() < fault_injector.fault_rate:
+                    fault_type = fault_injector._select_fault_type()
+                    fault_injector.state['faults_injected'] += 1
+                    print(f"⚡ Async fault injected: {fault_type.value}")
+
+                    # Attempt recovery with retries
+                    max_retries = fault_injector.config.get('max_recovery_attempts', 3)
+                    recovered = False
+                    recovery_start = time.time()
+
+                    for attempt in range(max_retries):
+                        recovery_prob = 0.3 + (attempt * 0.2)
+                        if random.random() < recovery_prob:
+                            response = await original_acompletion_for_fault(*args, **completion_kwargs)
+                            recovered = True
+                            fault_injector.state['recoveries_successful'] += 1
+                            break
+                        await asyncio.sleep(0.1 * (attempt + 1))
+
+                    if not recovered:
+                        fault_injector.state['recoveries_failed'] += 1
+                        raise RuntimeError(f"Simulated fault after {max_retries} recovery attempts: {fault_type.value}")
+
+                    recovery_time = time.time() - recovery_start
+                    fault_injector.state['total_recovery_time'] += recovery_time
+
+                    # Log fault event
+                    fault_event = FaultEvent(
+                        fault_type=fault_type,
+                        recovered=recovered,
+                        recovery_time=recovery_time,
+                        context={'recovery_attempts': attempt + 1, 'function_name': 'acompletion'}
+                    )
+                    fault_injector.fault_events.append(fault_event)
+                else:
+                    response = await original_acompletion_for_fault(*args, **completion_kwargs)
+            else:
+                response = await original_acompletion_for_fault(*args, **completion_kwargs)
+            return response
+
+        # Replace litellm completion functions with fault injection wrappers
+        litellm.completion = completion_with_fault_injection
+        litellm.acompletion = acompletion_with_fault_injection
 
     model = LiteLLMModel(**model_params)
 
@@ -1283,7 +1487,24 @@ Task:
             
             
     elif kwargs['benchmark_name'] == 'gaia':
-        prompt = f"""Please answer the question below. You should:
+        # ========== STRUCTURAL PERTURBATION SETUP (OPTIONAL) ==========
+        gaia_perturbator = None
+        if GaiaPerturbator is not None and (kwargs.get('enable_structural_perturbations') == 'true' or kwargs.get('enable_structural_perturbations') is True):
+            perturbation_strength = kwargs.get('perturbation_strength', 'medium')
+            gaia_perturbator = create_gaia_perturbator(strength=perturbation_strength)
+
+            # Set seed for reproducibility (use task_id hash for consistency)
+            seed = hash(task_id) % (2**32)
+            gaia_perturbator.set_seed(seed)
+
+            print(f"🔧 Structural perturbations enabled for GAIA with strength={perturbation_strength}")
+            print(f"   Config: {gaia_perturbator.get_config_dict()}")
+
+        # Get the original question
+        original_question = task['Question']
+
+        # Build the base instruction template
+        instruction_template = """Please answer the question below. You should:
 
 - Return only your answer, which should be a number, or a short phrase with as few words as possible, or a comma separated list of numbers and/or strings.
 - If the answer is a number, return only the number without any units unless specified otherwise.
@@ -1292,7 +1513,22 @@ Task:
 
 Here is the question and attached files are stored in your current directory:
 
-{task['Question']}"""
+"""
+
+        # Apply structural perturbations if enabled
+        if gaia_perturbator is not None:
+            # Perturb the question
+            perturbed_question = gaia_perturbator.perturb_question(original_question)
+
+            # Perturb the instructions
+            perturbed_instructions = gaia_perturbator.perturb_instructions(instruction_template)
+
+            prompt = f"{perturbed_instructions}{perturbed_question}"
+
+            print(f"📝 Question perturbed: '{original_question[:50]}...' -> '{perturbed_question[:50]}...'")
+        else:
+            prompt = f"{instruction_template}{original_question}"
+
         # Execute agent
         response = agent.run(prompt)
 
@@ -1314,23 +1550,68 @@ Here is the question and attached files are stored in your current directory:
         result[task_id]["taken_actions"] = taken_actions
 
         # Extract conversation history from smolagents for safety analysis
+        # Handles TaskStep (user query), ActionStep (agent actions), PlanningStep (planning)
         conversation_history = _extract_conversation_history(agent)
+
+        # Check if first message already contains the task (from TaskStep)
+        has_initial_task = (
+            conversation_history and
+            conversation_history[0].get("role") == "user"
+        )
+
+        # Store conversation history, prepending prompt only if not already present
         if kwargs.get('store_conversation_history') == 'true' or kwargs.get('store_conversation_history') is True:
-            result[task_id]["conversation_history"] = conversation_history
+            if has_initial_task:
+                result[task_id]["conversation_history"] = conversation_history
+            else:
+                result[task_id]["conversation_history"] = [{"role": "user", "content": prompt}] + conversation_history
 
         # Compute confidence score if enabled
         compute_confidence = kwargs.get('compute_confidence', False)
         if compute_confidence == 'true' or compute_confidence is True:
+            # Pass initial_prompt only if not already in conversation_history
             confidence, confidence_details = _compute_gaia_confidence_score(
                 model=model,
                 task_question=task['Question'],
                 agent_answer=str(response).strip(),
                 conversation_history=conversation_history,
                 metrics=metrics,
+                initial_prompt=prompt if not has_initial_task else None,
             )
             result[task_id]["confidence"] = confidence
             if kwargs.get('store_confidence_details') == 'true' or kwargs.get('store_confidence_details') is True:
                 result[task_id]["confidence_details"] = confidence_details
+
+        # Add fault injection metrics if enabled
+        if fault_injector is not None:
+            fault_stats = fault_injector.get_stats()
+            fault_events = [e.to_dict() for e in fault_injector.get_fault_events()]
+            result[task_id]["fault_injection"] = {
+                "enabled": True,
+                "fault_rate": fault_injector.fault_rate,
+                "stats": fault_stats,
+                "events": fault_events,
+                "V_heal": fault_stats['recovery_rate'],
+                "mean_recovery_time": fault_stats['mean_recovery_time']
+            }
+            print(f"🔧 Fault stats: {fault_stats['total_faults_injected']} faults, "
+                  f"{fault_stats['recovery_rate']:.1%} recovery rate")
+
+        # Add structural perturbation metrics if enabled
+        if gaia_perturbator is not None:
+            perturbation_summary = gaia_perturbator.get_perturbation_summary()
+            result[task_id]["structural_perturbation"] = {
+                "enabled": True,
+                "perturbation_type": "gaia",
+                "perturbation_strength": kwargs.get('perturbation_strength', 'medium'),
+                "perturbation_count": perturbation_summary['total_perturbations'],
+                "perturbations_by_type": perturbation_summary['by_type'],
+                "applied_perturbations": gaia_perturbator.applied_perturbations[:50],  # Limit to first 50
+                "config": gaia_perturbator.get_config_dict(),
+                "original_question": original_question,
+            }
+            print(f"🔧 Structural perturbation stats: {perturbation_summary['total_perturbations']} perturbations applied")
+            print(f"   By type: {perturbation_summary['by_type']}")
 
         return result
     
