@@ -42,7 +42,7 @@ python reliability_eval/run_reliability_eval.py --n <repetitions> --max_tasks <n
 | `--n` | 5 | Number of runs/variations for all multi-run metrics |
 | `--k` | (uses --n) | Override: repetitions for baseline/fault phases |
 | `--max_tasks` | 50 | Maximum tasks per benchmark |
-| `--max_concurrent` | 1 | Maximum concurrent tasks per hal-eval run |
+| `--max_concurrent` | 5 | Maximum concurrent tasks per hal-eval run |
 | `--phases` | all | Which phases to run (see below) |
 | `--benchmark` | (all) | Run only on specific benchmark |
 | `--conda_env` | (current) | Conda environment name |
@@ -347,7 +347,7 @@ pip install matplotlib seaborn pandas scipy
 ### Common Issues
 
 **API Rate Limits:**
-- Use `--max_concurrent 1` (default) to avoid rate limiting
+- Use `--max_concurrent 1` to avoid rate limiting if needed
 - The script includes automatic retry logic with backoff
 
 **Missing API Keys:**

@@ -1809,8 +1809,8 @@ Phases:
         help="Maximum tasks per benchmark (default: all tasks)"
     )
     parser.add_argument(
-        "--max_concurrent", type=int, default=1,
-        help="Maximum concurrent tasks per hal-eval run (default: 1 for clean metrics)"
+        "--max_concurrent", type=int, default=5,
+        help="Maximum concurrent tasks per hal-eval run (default: 5)"
     )
     parser.add_argument(
         "--phases", nargs="+",
