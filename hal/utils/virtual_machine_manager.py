@@ -171,6 +171,7 @@ class VirtualMachineManager:
                 "subnets": [{"name": subnet_name, "address_prefix": "10.0.0.0/24"}],
             },
         ).result()
+        print(f"Created virtual network {vnet_name} for VM {vm_name}")
         subnet = vnet.subnets[0]
 
         # Create a public IP address
@@ -184,6 +185,7 @@ class VirtualMachineManager:
                 "public_ip_allocation_method": "Static",
             },
         ).result()
+        print(f"Created public IP {public_ip_name} for VM {vm_name}")
 
         # Get the existing network security group
         network_security_group = self.network_client.network_security_groups.get(
@@ -207,6 +209,7 @@ class VirtualMachineManager:
                 "network_security_group": {"id": network_security_group.id},
             },
         ).result()
+        print(f"Created network interface {nic_name} for VM {vm_name}")
 
         # Read the SSH public key from the specified file
         with open(self.ssh_public_key_path, "r") as file:
@@ -249,6 +252,7 @@ class VirtualMachineManager:
         vm = self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group_name, vm_name, vm_parameters
         ).result()
+        print(f"Created VM instance {vm_name}")
 
         print(f"Successfully created Azure virtual machine {vm_name} with *no* GPU")
 
@@ -272,6 +276,7 @@ class VirtualMachineManager:
                 "subnets": [{"name": subnet_name, "address_prefix": "10.0.0.0/24"}],
             },
         ).result()
+        print(f"Created virtual network {vnet_name} for GPU VM {vm_name}")
         subnet = vnet.subnets[0]
 
         # Create a public IP address
@@ -285,6 +290,7 @@ class VirtualMachineManager:
                 "public_ip_allocation_method": "Static",
             },
         ).result()
+        print(f"Created public IP {public_ip_name} for GPU VM {vm_name}")
 
         # Get the existing network security group
         network_security_group = self.network_client.network_security_groups.get(
@@ -308,6 +314,7 @@ class VirtualMachineManager:
                 "network_security_group": {"id": network_security_group.id},
             },
         ).result()
+        print(f"Created network interface {nic_name} for GPU VM {vm_name}")
 
         # Read the SSH public key from the specified file
         if not self.ssh_public_key_path:
@@ -361,6 +368,7 @@ class VirtualMachineManager:
         vm = self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group_name, vm_name, vm_parameters
         ).result()
+        print(f"Created GPU VM instance {vm_name}")
 
         # Define the NVIDIA GPU driver extension configuration
         extension_name = "NvidiaGpuDriverLinux"
@@ -381,6 +389,7 @@ class VirtualMachineManager:
         self.compute_client.virtual_machine_extensions.begin_create_or_update(
             self.resource_group_name, vm_name, extension_name, extension_parameters
         ).result()
+        print(f"Added NVIDIA GPU driver extension to VM {vm_name}")
 
         return vm
 
