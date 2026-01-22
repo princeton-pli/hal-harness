@@ -712,16 +712,3 @@ except Exception as e:
         except Exception as e:
             print(f"Error fetching agent trace from {vm_name}: {e}")
             return None
-
-
-if __name__ == "__main__":
-    vm_manager = VirtualMachineManager()
-    # FIXME: these variables are not defined
-    vm_manager.create_vm(
-        "test-vm", "agent", SSH_PUBLIC_KEY_PATH, NETWORK_SECURITY_GROUP_NAME
-    )
-    vm_manager.copy_files_to_vm("agent", "test-vm", "agent", SSH_PRIVATE_KEY_PATH)
-    vm_manager.copy_files_from_vm(
-        "test-vm", "agent", SSH_PRIVATE_KEY_PATH, "/home/azureuser/agent-back"
-    )
-    vm_manager.delete_vm("test-vm")

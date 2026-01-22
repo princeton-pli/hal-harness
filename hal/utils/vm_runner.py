@@ -6,7 +6,7 @@ import tempfile
 import shutil
 import uuid
 from typing import Dict, Any, Optional, List
-from .azure_utils import VirtualMachineManager
+from .virtual_machine_manager import VirtualMachineManager
 from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
 from rich.progress import Progress, TaskID
