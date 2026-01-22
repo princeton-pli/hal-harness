@@ -445,9 +445,7 @@ class VirtualMachineManager:
             raise
 
     @retry_function()
-    def copy_files_from_vm(
-        self, vm_name, username, ssh_private_key_path, destination_directory
-    ):
+    def copy_files_from_vm(self, vm_name, ssh_private_key_path, destination_directory):
         """Copy files from the VM to local directory."""
         with get_sftp_client(
             vm_name,
@@ -456,15 +454,15 @@ class VirtualMachineManager:
             self.resource_group_name,
         ) as (sftp_client, ssh_client):
             # Remove ./miniconda3 directory from the VM
-            _, stdout, _ = ssh_client.exec_command(
-                f"rm -rf /home/{username}/miniconda3"
-            )
+            _, stdout, _ = ssh_client.exec_command("rm -rf /home/agent/miniconda3")
             for _ in stdout:
                 pass  # Block until the rm command completes
 
             # Compress all files in the home directory on the VM
-            remote_tar_file_path = f"/home/{username}/{os.path.basename(destination_directory)}_back.tar.gz"
-            remote_home_directory = f"/home/{username}"
+            remote_tar_file_path = (
+                f"/home/agent/{os.path.basename(destination_directory)}_back.tar.gz"
+            )
+            remote_home_directory = "/home/agent"
             _, stdout, _ = ssh_client.exec_command(
                 f"tar -czf {remote_tar_file_path} -C {remote_home_directory} ."
             )
@@ -486,11 +484,9 @@ class VirtualMachineManager:
     def check_task_completion(
         self,
         vm_name,
-        username,
         ssh_private_key_path,
-        task_completed_filename="output.json",
-        agent_trace_filename="agent_trace.log",
     ):
+        task_completed_filename = "output.json"
         """Check if task is complete by checking for output.json file."""
         with get_sftp_client(
             vm_name,
@@ -499,7 +495,7 @@ class VirtualMachineManager:
             self.resource_group_name,
         ) as (sftp_client, _):
             # Check for task completion via existence of output.json
-            task_completed_filepath = f"/home/{username}/{task_completed_filename}"
+            task_completed_filepath = f"/home/agent/{task_completed_filename}"
 
             try:
                 with sftp_client.open(task_completed_filepath) as file:
@@ -589,11 +585,9 @@ class VirtualMachineManager:
         agent_args,
         agent_dir,
         run_id,
-        username,
         log_dir,
         ssh_private_key_path,
         benchmark,
-        timeout=7200,
     ):
         """
         Run agent on VM with improved monitoring and error handling.
@@ -602,7 +596,7 @@ class VirtualMachineManager:
             # Setup conda environment if it exists
             self.setup_vm_environment(
                 vm_name,
-                username,
+                "agent",
                 ssh_private_key_path,
                 agent_dir,
                 log_dir,
@@ -617,9 +611,9 @@ class VirtualMachineManager:
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
                 # Write input data and agent args to files
-                with sftp_client.open(f"/home/{username}/input.json", "w") as f:
+                with sftp_client.open("/home/agent/input.json", "w") as f:
                     f.write(json.dumps({task_id: input_data}))
-                with sftp_client.open(f"/home/{username}/agent_args.json", "w") as f:
+                with sftp_client.open("/home/agent/agent_args.json", "w") as f:
                     f.write(json.dumps(agent_args))
 
                 # FIXME: stop using this approach for execution
@@ -649,7 +643,7 @@ try:
     module_name = "{agent_function.rsplit(".", 1)[0]}"
     function_name = "{agent_function.rsplit(".", 1)[1]}"
 
-    spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/{username}", module_name + ".py"))
+    spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/agent", module_name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
@@ -671,7 +665,7 @@ except Exception as e:
 '''
 
                 # Write script to VM
-                script_path = f"/home/{username}/run_agent.py"
+                script_path = "/home/agent/run_agent.py"
                 with sftp_client.open(script_path, "w") as f:
                     f.write(script_content)
 
@@ -679,7 +673,7 @@ except Exception as e:
                 ssh_client.exec_command(f"chmod +x {script_path}")
 
                 # Construct command to run script
-                cmd = f"source /home/{username}/init_conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
+                cmd = f"source /home/agent/init_conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
 
                 # Execute script
                 print(f"Running agent on VM {vm_name}")

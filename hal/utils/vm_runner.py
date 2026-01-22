@@ -17,19 +17,19 @@ class VMRunner:
     def __init__(self, log_dir: str, max_concurrent: int = 1, benchmark: Optional[BaseBenchmark] = None):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
+        # FIXME: VM Manager should take a vm_name argument in the initializer; then we can stop passing it around all the time
         self.vm_manager = VirtualMachineManager()
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
         self._active_vms: List[str] = []
         self.benchmark = benchmark
         
-    async def fetch_agent_logs(self, vm_name, username, ssh_private_key_path, task_id):
+    async def fetch_agent_logs(self, vm_name, ssh_private_key_path, task_id):
         """Fetch the latest agent trace log from a VM and store it locally."""
         try:
             result = await asyncio.to_thread(
                 self.vm_manager.get_agent_trace,
                 vm_name=vm_name,
-                username=username,
                 ssh_private_key_path=ssh_private_key_path
             )
             
@@ -81,20 +81,18 @@ class VMRunner:
                 
                 # Create VM based on GPU requirement
                 if gpu_required:
-                    print(f"Creating VM {vm_name} for task {task_id} *with* a GPU")
+                    print(f"Creating Azure virtual machine {vm_name} for task {task_id} *with* a GPU")
                     await asyncio.to_thread(
                         self.vm_manager.create_gpu_vm,
                         vm_name=vm_name,
-                        username="agent",
                         ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
                         network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
                     )
                 else:
-                    print(f"Creating VM {vm_name} for task {task_id} with *no* GPU")
+                    print(f"Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU")
                     await asyncio.to_thread(
                         self.vm_manager.create_vm,
                         vm_name=vm_name,
-                        username="agent",
                         ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
                         network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
                     )
@@ -144,14 +142,12 @@ class VMRunner:
                         self.vm_manager.copy_files_to_vm,
                         source_directory=temp_dir,
                         vm_name=vm_name,
-                        username="agent", 
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
                     )
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
                         source_directory=agent_dir,
                         vm_name=vm_name,
-                        username="agent",
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
                     )
 
@@ -168,7 +164,6 @@ class VMRunner:
                     agent_args=agent_args,
                     agent_dir="/home/agent",
                     run_id=run_id,
-                    username="agent",
                     log_dir=self.log_dir,
                     ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                     benchmark=benchmark
@@ -184,7 +179,6 @@ class VMRunner:
                         # Fetch and store trace logs
                         await self.fetch_agent_logs(
                             vm_name=vm_name,
-                            username="agent",
                             ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                             task_id=task_id,
                         )
@@ -192,7 +186,6 @@ class VMRunner:
                         result = await asyncio.to_thread(
                             self.vm_manager.check_task_completion,
                             vm_name=vm_name,
-                            username="agent",
                             ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH")
                         )
                         if result is not None:
@@ -214,7 +207,6 @@ class VMRunner:
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_from_vm,
                         vm_name=vm_name,
-                        username="agent",
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                         destination_directory=dest_dir
                     )
