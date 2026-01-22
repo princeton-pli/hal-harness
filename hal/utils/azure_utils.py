@@ -6,6 +6,7 @@ import paramiko
 import os
 import tarfile
 import json
+from contextlib import contextmanager
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 
@@ -16,6 +17,54 @@ def get_retry_decorator(max_attempts=3, initial_wait=1, max_wait=30):
         wait=wait_exponential(multiplier=initial_wait, max=max_wait),
         reraise=True,
     )
+
+
+@contextmanager
+def get_sftp_client(vm_name, username, ssh_private_key_path, compute_client, network_client, resource_group_name):
+    """
+    Context manager for SFTP client that automatically handles connection and cleanup.
+
+    Usage:
+        with get_sftp_client(vm_name, username, ssh_key_path, compute_client, network_client, rg_name) as (sftp, ssh):
+            sftp.put(local_file, remote_file)
+    """
+    ssh_client = None
+    sftp_client = None
+
+    try:
+        # Get the public IP address of the VM
+        public_ip_address = network_client.public_ip_addresses.get(
+            resource_group_name, f"{vm_name}-public-ip"
+        ).ip_address
+
+        # Create SSH client
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        # Load the SSH private key
+        ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+
+        # Connect to the VM using SSH
+        ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key)
+
+        # Create SFTP client
+        sftp_client = ssh_client.open_sftp()
+
+        yield sftp_client, ssh_client
+
+    finally:
+        # Close connections
+        if sftp_client:
+            try:
+                sftp_client.close()
+            except Exception as e:
+                print(f"Error closing SFTP client: {e}")
+
+        if ssh_client:
+            try:
+                ssh_client.close()
+            except Exception as e:
+                print(f"Error closing SSH client: {e}")
 
 
 class VirtualMachineManager:
@@ -321,108 +370,89 @@ class VirtualMachineManager:
     def copy_files_to_vm(
         self, source_directory, vm_name, username, ssh_private_key_path
     ):
-        # Get the public IP address of the VM
-        vm = self.compute_client.virtual_machines.get(self.resource_group_name, vm_name)
-        public_ip_address = self.network_client.public_ip_addresses.get(
-            self.resource_group_name, f"{vm_name}-public-ip"
-        ).ip_address
+        """Copy files from a local directory to the VM."""
+        try:
+            with get_sftp_client(vm_name, username, ssh_private_key_path,
+                               self.compute_client, self.network_client,
+                               self.resource_group_name) as (sftp_client, ssh_client):
 
-        # Create an SSH client
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                # Compress the source directory
+                source_directory = os.path.abspath(source_directory)
+                tar_file_path = f"{source_directory}.tar.gz"
 
-        # Load the SSH private key
-        ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+                print(f"Creating tar archive from {source_directory}")
+                with tarfile.open(tar_file_path, "w:gz") as tar:
+                    tar.add(source_directory, arcname=os.path.basename(source_directory))
 
-        # Connect to the VM using SSH
-        ssh_client.connect(
-            hostname=public_ip_address, username=username, pkey=ssh_private_key
-        )
+                tar_size = os.path.getsize(tar_file_path)
+                print(f"Uploading {tar_size} bytes to VM {vm_name}")
 
-        # Create an SFTP client
-        sftp_client = ssh_client.open_sftp()
+                # Copy the compressed file to the VM
+                remote_tar_file_path = f"/home/{username}/{os.path.basename(tar_file_path)}"
+                sftp_client.put(tar_file_path, remote_tar_file_path)
 
-        # Copy files from the source directory to the VM
-        # Compress the source directory
-        source_directory = os.path.abspath(source_directory)
-        tar_file_path = f"{source_directory}.tar.gz"
-        with tarfile.open(tar_file_path, "w:gz") as tar:
-            tar.add(source_directory, arcname=os.path.basename(source_directory))
+                # Extract the compressed file on the VM
+                print(f"Extracting files on VM {vm_name}")
+                _, stdout, stderr = ssh_client.exec_command(
+                    f"tar -xzf {remote_tar_file_path} --strip-components=1 -C /home/{username}"
+                )
 
-        # Copy the compressed file to the VM
-        remote_tar_file_path = f"/home/{username}/{os.path.basename(tar_file_path)}"
-        sftp_client.put(tar_file_path, remote_tar_file_path)
+                # Block until the tar command completes and check for errors
+                exit_status = stdout.channel.recv_exit_status()
+                stdout_text = stdout.read().decode()
+                stderr_text = stderr.read().decode()
 
-        # Extract the compressed file on the VM
-        _, stdout, _ = ssh_client.exec_command(
-            f"tar -xzf {remote_tar_file_path} --strip-components=1 -C /home/{username}"
-        )
-        for _ in stdout:
-            pass  # Block until the tar command completes
+                if exit_status != 0:
+                    raise Exception(f"Tar extraction failed with exit status {exit_status}. stderr: {stderr_text}")
 
-        # Remove the compressed file from the VM and the local machine
-        sftp_client.remove(remote_tar_file_path)
-        os.remove(tar_file_path)
+                if stderr_text:
+                    print(f"Warning during tar extraction: {stderr_text}")
 
-        # Close the SFTP client and SSH connection
-        sftp_client.close()
-        ssh_client.close()
+                print(f"Successfully copied files from {source_directory} to VM {vm_name}")
+
+                # Remove the compressed file from the VM and the local machine
+                sftp_client.remove(remote_tar_file_path)
+                os.remove(tar_file_path)
+
+        except Exception as e:
+            print(f"Error copying files to VM {vm_name}: {e}")
+            raise
 
     @get_retry_decorator()
     def copy_files_from_vm(
         self, vm_name, username, ssh_private_key_path, destination_directory
     ):
-        # Get the public IP address of the VM
-        vm = self.compute_client.virtual_machines.get(self.resource_group_name, vm_name)
-        public_ip_address = self.network_client.public_ip_addresses.get(
-            self.resource_group_name, f"{vm_name}-public-ip"
-        ).ip_address
+        """Copy files from the VM to local directory."""
+        with get_sftp_client(vm_name, username, ssh_private_key_path,
+                           self.compute_client, self.network_client,
+                           self.resource_group_name) as (sftp_client, ssh_client):
 
-        # Create an SSH client
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            # Remove ./miniconda3 directory from the VM
+            _, stdout, _ = ssh_client.exec_command(f"rm -rf /home/{username}/miniconda3")
+            for _ in stdout:
+                pass  # Block until the rm command completes
 
-        # Load the SSH private key
-        ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            # Compress all files in the home directory on the VM
+            remote_tar_file_path = (
+                f"/home/{username}/{os.path.basename(destination_directory)}_back.tar.gz"
+            )
+            remote_home_directory = f"/home/{username}"
+            _, stdout, _ = ssh_client.exec_command(
+                f"tar -czf {remote_tar_file_path} -C {remote_home_directory} ."
+            )
+            for _ in stdout:
+                pass  # Block until the tar command completes
 
-        # Connect to the VM using SSH
-        ssh_client.connect(
-            hostname=public_ip_address, username=username, pkey=ssh_private_key
-        )
+            # Copy the compressed file from the VM
+            sftp_client.get(remote_tar_file_path, f"{destination_directory}.tar.gz")
 
-        # Create an SFTP client
-        sftp_client = ssh_client.open_sftp()
+            # Extract the compressed file on the local machine
+            with tarfile.open(f"{destination_directory}.tar.gz", "r:gz") as tar:
+                tar.extractall(destination_directory)
 
-        # Remove ./miniconda3 directory from the VM
-        _, stdout, _ = ssh_client.exec_command(f"rm -rf /home/{username}/miniconda3")
-        for _ in stdout:
-            pass  # Block until the rm command completes
-
-        # Compress all files in the home directory on the VM
-        remote_tar_file_path = (
-            f"/home/{username}/{os.path.basename(destination_directory)}_back.tar.gz"
-        )
-        remote_home_directory = f"/home/{username}"
-        _, stdout, _ = ssh_client.exec_command(
-            f"tar -czf {remote_tar_file_path} -C {remote_home_directory} ."
-        )
-        for _ in stdout:
-            pass  # Block until the tar command completes
-
-        # Copy the compressed file from the VM
-        sftp_client.get(remote_tar_file_path, f"{destination_directory}.tar.gz")
-
-        # Extract the compressed file on the local machine
-        with tarfile.open(f"{destination_directory}.tar.gz", "r:gz") as tar:
-            tar.extractall(destination_directory)
-
-        # Remove the compressed file from the VM and the local machine
-        # sftp_client.remove(remote_tar_file_path)
-        os.remove(f"{destination_directory}.tar.gz")
-
-        # Close the SFTP client and SSH connection
-        sftp_client.close()
-        ssh_client.close()
+            # Remove the compressed file from the VM and the local machine
+            # sftp_client.remove(remote_tar_file_path)
+            os.remove(f"{destination_directory}.tar.gz")
 
     @get_retry_decorator(max_attempts=2, initial_wait=5)
     def check_task_completion(
@@ -433,45 +463,21 @@ class VirtualMachineManager:
         task_completed_filename="output.json",
         agent_trace_filename="agent_trace.log",
     ):
-        # Get the public IP address of the VM
-        vm = self.compute_client.virtual_machines.get(self.resource_group_name, vm_name)
-        public_ip_address = self.network_client.public_ip_addresses.get(
-            self.resource_group_name, f"{vm_name}-public-ip"
-        ).ip_address
+        """Check if task is complete by checking for output.json file."""
+        with get_sftp_client(vm_name, username, ssh_private_key_path,
+                           self.compute_client, self.network_client,
+                           self.resource_group_name) as (sftp_client, ssh_client):
 
-        # Create an SSH client
-        ssh_client = paramiko.SSHClient()
-        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            # Check for task completion via existence of output.json
+            task_completed_filepath = f"/home/{username}/{task_completed_filename}"
 
-        # Load the SSH private key
-        ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
+            try:
+                with sftp_client.open(task_completed_filepath) as file:
+                    result = json.loads(file.read().decode("utf-8"))
+            except FileNotFoundError:
+                result = None  # output.json does not exist
 
-        # Connect to the VM using SSH
-        ssh_client.connect(
-            hostname=public_ip_address,
-            username=username,
-            pkey=ssh_private_key,
-            timeout=15,
-        )
-
-        # Create an SFTP client
-        sftp_client = ssh_client.open_sftp()
-
-        # Check for task completion via existence of output.json
-        task_completed_filepath = f"/home/{username}/{task_completed_filename}"
-        agent_trace_filepath = f"/home/{username}/{agent_trace_filename}"
-
-        try:
-            with sftp_client.open(task_completed_filepath) as file:
-                result = json.loads(file.read().decode("utf-8"))
-        except FileNotFoundError:
-            result = None  # output.json does not exist
-
-        # Close the SFTP client and SSH connection
-        sftp_client.close()
-        ssh_client.close()
-
-        return result
+            return result
 
     @get_retry_decorator()
     def setup_vm_environment(
@@ -488,28 +494,10 @@ class VirtualMachineManager:
         Set up the VM environment using uv and a setup script.
         """
         try:
-            # Get the public IP address of the VM
-            vm = self.compute_client.virtual_machines.get(
-                self.resource_group_name, vm_name
-            )
-            public_ip_address = self.network_client.public_ip_addresses.get(
-                self.resource_group_name, f"{vm_name}-public-ip"
-            ).ip_address
+            with get_sftp_client(vm_name, username, ssh_private_key_path,
+                               self.compute_client, self.network_client,
+                               self.resource_group_name) as (sftp_client, ssh_client):
 
-            # Create SSH client
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_private_key = paramiko.RSAKey.from_private_key_file(
-                ssh_private_key_path
-            )
-            ssh_client.connect(
-                hostname=public_ip_address, username=username, pkey=ssh_private_key
-            )
-
-            # Create SFTP client
-            sftp_client = ssh_client.open_sftp()
-
-            try:
                 # Copy .env file to VM first
                 if os.path.exists(".env"):
                     print(f"Copying .env file to VM {vm_name}")
@@ -556,10 +544,6 @@ class VirtualMachineManager:
                         except Exception as e:
                             print(f"Error running setup script on VM {vm_name}: {e}")
 
-            finally:
-                sftp_client.close()
-                ssh_client.close()
-
         except Exception as e:
             print(f"Error setting up VM environment: {e}")
             raise
@@ -594,25 +578,10 @@ class VirtualMachineManager:
                 task_id,
             )
 
-            # Get the public IP address of the VM
-            public_ip_address = self.network_client.public_ip_addresses.get(
-                self.resource_group_name, f"{vm_name}-public-ip"
-            ).ip_address
+            with get_sftp_client(vm_name, username, ssh_private_key_path,
+                               self.compute_client, self.network_client,
+                               self.resource_group_name) as (sftp_client, ssh_client):
 
-            # Create SSH client
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            ssh_private_key = paramiko.RSAKey.from_private_key_file(
-                ssh_private_key_path
-            )
-            ssh_client.connect(
-                hostname=public_ip_address, username=username, pkey=ssh_private_key
-            )
-
-            # Create SFTP client
-            sftp_client = ssh_client.open_sftp()
-
-            try:
                 # Write input data and agent args to files
                 with sftp_client.open(f"/home/{username}/input.json", "w") as f:
                     f.write(json.dumps({task_id: input_data}))
@@ -629,29 +598,29 @@ import traceback
 
 try:
     weave.init("{run_id}")
-    
+
     # Load input data
     with open("input.json", "r") as f:
         input_data = json.load(f)
-    
+
     # Load agent args
     with open("agent_args.json", "r") as f:
         agent_args = json.load(f)
-    
+
     # Load the agent module
     module_name = "{agent_function.rsplit(".", 1)[0]}"
     function_name = "{agent_function.rsplit(".", 1)[1]}"
-    
+
     spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/{username}", module_name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    
+
     agent = getattr(module, function_name)
-    
+
     # Run agent with weave task_id attribute
     with weave.attributes({{"weave_task_id": "{task_id}"}}):
         result = agent(input_data, **agent_args)
-    
+
     # Save result
     with open("output.json", "w") as f:
         json.dump(result, f)
@@ -676,15 +645,11 @@ except Exception as e:
 
                 # Execute script
                 print(f"Running agent on VM {vm_name}")
-                stdin, stdout, stderr = ssh_client.exec_command(cmd)
+                _, stdout, stderr = ssh_client.exec_command(cmd)
 
                 # Close the channel to prevent hanging
                 stdout.channel.close()
                 stderr.channel.close()
-
-            finally:
-                sftp_client.close()
-                ssh_client.close()
 
         except Exception as e:
             print(f"Error running agent on VM {vm_name}: {e}")
@@ -699,43 +664,16 @@ except Exception as e:
             str: Contents of the agent trace log, or None if not available
         """
         try:
-            # Get the public IP address of the VM
-            vm = self.compute_client.virtual_machines.get(
-                self.resource_group_name, vm_name
-            )
-            public_ip_address = self.network_client.public_ip_addresses.get(
-                self.resource_group_name, f"{vm_name}-public-ip"
-            ).ip_address
+            with get_sftp_client(vm_name, username, ssh_private_key_path,
+                               self.compute_client, self.network_client,
+                               self.resource_group_name) as (sftp_client, ssh_client):
 
-            # Create an SSH client
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-            # Load the SSH private key
-            ssh_private_key = paramiko.RSAKey.from_private_key_file(
-                ssh_private_key_path
-            )
-
-            # Connect to the VM using SSH
-            ssh_client.connect(
-                hostname=public_ip_address,
-                username=username,
-                pkey=ssh_private_key,
-                timeout=15,
-            )
-
-            # Create an SFTP client
-            sftp_client = ssh_client.open_sftp()
-
-            # Try to read the agent trace file
-            try:
-                with sftp_client.open(f"/home/{username}/agent_trace.log") as f:
-                    return f.read().decode("utf-8")
-            except FileNotFoundError:
-                return None
-            finally:
-                sftp_client.close()
-                ssh_client.close()
+                # Try to read the agent trace file
+                try:
+                    with sftp_client.open(f"/home/{username}/agent_trace.log") as f:
+                        return f.read().decode("utf-8")
+                except FileNotFoundError:
+                    return None
 
         except Exception as e:
             print(f"Error fetching agent trace from {vm_name}: {e}")
