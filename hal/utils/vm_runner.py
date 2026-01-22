@@ -80,9 +80,9 @@ class VMRunner:
                     gpu_required = task_benchmark.get('gpu', False)
                 
                 # Create VM based on GPU requirement
-                print(f"Creating {'GPU ' if gpu_required else ''}VM {vm_name} for task {task_id}")
                 if gpu_required:
-                    vm = await asyncio.to_thread(
+                    print(f"Creating VM {vm_name} for task {task_id} *with* a GPU")
+                    await asyncio.to_thread(
                         self.vm_manager.create_gpu_vm,
                         vm_name=vm_name,
                         username="agent",
@@ -90,7 +90,8 @@ class VMRunner:
                         network_security_group_name=os.getenv("NETWORK_SECURITY_GROUP_NAME")
                     )
                 else:
-                    vm = await asyncio.to_thread(
+                    print(f"Creating VM {vm_name} for task {task_id} with *no* GPU")
+                    await asyncio.to_thread(
                         self.vm_manager.create_vm,
                         vm_name=vm_name,
                         username="agent",

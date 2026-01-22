@@ -20,7 +20,14 @@ def get_retry_decorator(max_attempts=3, initial_wait=1, max_wait=30):
 
 
 @contextmanager
-def get_sftp_client(vm_name, username, ssh_private_key_path, compute_client, network_client, resource_group_name):
+def get_sftp_client(
+    vm_name,
+    username,
+    ssh_private_key_path,
+    compute_client,
+    network_client,
+    resource_group_name,
+):
     """
     Context manager for SFTP client that automatically handles connection and cleanup.
 
@@ -45,7 +52,9 @@ def get_sftp_client(vm_name, username, ssh_private_key_path, compute_client, net
         ssh_private_key = paramiko.RSAKey.from_private_key_file(ssh_private_key_path)
 
         # Connect to the VM using SSH
-        ssh_client.connect(hostname=public_ip_address, username=username, pkey=ssh_private_key)
+        ssh_client.connect(
+            hostname=public_ip_address, username=username, pkey=ssh_private_key
+        )
 
         # Create SFTP client
         sftp_client = ssh_client.open_sftp()
@@ -372,23 +381,31 @@ class VirtualMachineManager:
     ):
         """Copy files from a local directory to the VM."""
         try:
-            with get_sftp_client(vm_name, username, ssh_private_key_path,
-                               self.compute_client, self.network_client,
-                               self.resource_group_name) as (sftp_client, ssh_client):
-
+            with get_sftp_client(
+                vm_name,
+                username,
+                ssh_private_key_path,
+                self.compute_client,
+                self.network_client,
+                self.resource_group_name,
+            ) as (sftp_client, ssh_client):
                 # Compress the source directory
                 source_directory = os.path.abspath(source_directory)
                 tar_file_path = f"{source_directory}.tar.gz"
 
                 print(f"Creating tar archive from {source_directory}")
                 with tarfile.open(tar_file_path, "w:gz") as tar:
-                    tar.add(source_directory, arcname=os.path.basename(source_directory))
+                    tar.add(
+                        source_directory, arcname=os.path.basename(source_directory)
+                    )
 
                 tar_size = os.path.getsize(tar_file_path)
                 print(f"Uploading {tar_size} bytes to VM {vm_name}")
 
                 # Copy the compressed file to the VM
-                remote_tar_file_path = f"/home/{username}/{os.path.basename(tar_file_path)}"
+                remote_tar_file_path = (
+                    f"/home/{username}/{os.path.basename(tar_file_path)}"
+                )
                 sftp_client.put(tar_file_path, remote_tar_file_path)
 
                 # Extract the compressed file on the VM
@@ -403,12 +420,16 @@ class VirtualMachineManager:
                 stderr_text = stderr.read().decode()
 
                 if exit_status != 0:
-                    raise Exception(f"Tar extraction failed with exit status {exit_status}. stderr: {stderr_text}")
+                    raise Exception(
+                        f"Tar extraction failed with exit status {exit_status}. stderr: {stderr_text}"
+                    )
 
                 if stderr_text:
                     print(f"Warning during tar extraction: {stderr_text}")
 
-                print(f"Successfully copied files from {source_directory} to VM {vm_name}")
+                print(
+                    f"Successfully copied files from {source_directory} to VM {vm_name}"
+                )
 
                 # Remove the compressed file from the VM and the local machine
                 sftp_client.remove(remote_tar_file_path)
@@ -423,19 +444,23 @@ class VirtualMachineManager:
         self, vm_name, username, ssh_private_key_path, destination_directory
     ):
         """Copy files from the VM to local directory."""
-        with get_sftp_client(vm_name, username, ssh_private_key_path,
-                           self.compute_client, self.network_client,
-                           self.resource_group_name) as (sftp_client, ssh_client):
-
+        with get_sftp_client(
+            vm_name,
+            username,
+            ssh_private_key_path,
+            self.compute_client,
+            self.network_client,
+            self.resource_group_name,
+        ) as (sftp_client, ssh_client):
             # Remove ./miniconda3 directory from the VM
-            _, stdout, _ = ssh_client.exec_command(f"rm -rf /home/{username}/miniconda3")
+            _, stdout, _ = ssh_client.exec_command(
+                f"rm -rf /home/{username}/miniconda3"
+            )
             for _ in stdout:
                 pass  # Block until the rm command completes
 
             # Compress all files in the home directory on the VM
-            remote_tar_file_path = (
-                f"/home/{username}/{os.path.basename(destination_directory)}_back.tar.gz"
-            )
+            remote_tar_file_path = f"/home/{username}/{os.path.basename(destination_directory)}_back.tar.gz"
             remote_home_directory = f"/home/{username}"
             _, stdout, _ = ssh_client.exec_command(
                 f"tar -czf {remote_tar_file_path} -C {remote_home_directory} ."
@@ -464,10 +489,14 @@ class VirtualMachineManager:
         agent_trace_filename="agent_trace.log",
     ):
         """Check if task is complete by checking for output.json file."""
-        with get_sftp_client(vm_name, username, ssh_private_key_path,
-                           self.compute_client, self.network_client,
-                           self.resource_group_name) as (sftp_client, ssh_client):
-
+        with get_sftp_client(
+            vm_name,
+            username,
+            ssh_private_key_path,
+            self.compute_client,
+            self.network_client,
+            self.resource_group_name,
+        ) as (sftp_client, ssh_client):
             # Check for task completion via existence of output.json
             task_completed_filepath = f"/home/{username}/{task_completed_filename}"
 
@@ -494,10 +523,14 @@ class VirtualMachineManager:
         Set up the VM environment using uv and a setup script.
         """
         try:
-            with get_sftp_client(vm_name, username, ssh_private_key_path,
-                               self.compute_client, self.network_client,
-                               self.resource_group_name) as (sftp_client, ssh_client):
-
+            with get_sftp_client(
+                vm_name,
+                username,
+                ssh_private_key_path,
+                self.compute_client,
+                self.network_client,
+                self.resource_group_name,
+            ) as (sftp_client, ssh_client):
                 # Copy .env file to VM first
                 if os.path.exists(".env"):
                     print(f"Copying .env file to VM {vm_name}")
@@ -578,15 +611,23 @@ class VirtualMachineManager:
                 task_id,
             )
 
-            with get_sftp_client(vm_name, username, ssh_private_key_path,
-                               self.compute_client, self.network_client,
-                               self.resource_group_name) as (sftp_client, ssh_client):
-
+            with get_sftp_client(
+                vm_name,
+                username,
+                ssh_private_key_path,
+                self.compute_client,
+                self.network_client,
+                self.resource_group_name,
+            ) as (sftp_client, ssh_client):
                 # Write input data and agent args to files
                 with sftp_client.open(f"/home/{username}/input.json", "w") as f:
                     f.write(json.dumps({task_id: input_data}))
                 with sftp_client.open(f"/home/{username}/agent_args.json", "w") as f:
                     f.write(json.dumps(agent_args))
+
+                # FIXME: stop using this approach for execution
+                # * All variables should be sent as ENV vars or via files or similar, *not*
+                # * via string interpoloation
 
                 # Create Python script for agent execution
                 script_content = f'''#!/usr/bin/env python3
@@ -664,10 +705,14 @@ except Exception as e:
             str: Contents of the agent trace log, or None if not available
         """
         try:
-            with get_sftp_client(vm_name, username, ssh_private_key_path,
-                               self.compute_client, self.network_client,
-                               self.resource_group_name) as (sftp_client, ssh_client):
-
+            with get_sftp_client(
+                vm_name,
+                username,
+                ssh_private_key_path,
+                self.compute_client,
+                self.network_client,
+                self.resource_group_name,
+            ) as (sftp_client, ssh_client):
                 # Try to read the agent trace file
                 try:
                     with sftp_client.open(f"/home/{username}/agent_trace.log") as f:
@@ -682,6 +727,7 @@ except Exception as e:
 
 if __name__ == "__main__":
     vm_manager = VirtualMachineManager()
+    # FIXME: these variables are not defined
     vm_manager.create_vm(
         "test-vm", "agent", SSH_PUBLIC_KEY_PATH, NETWORK_SECURITY_GROUP_NAME
     )
