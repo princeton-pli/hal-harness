@@ -20,6 +20,24 @@ def _retry_function(max_attempts=3, initial_wait=1, max_wait=30):
 
 
 class VirtualMachineManager:
+    """
+    Manages Azure Virtual Machine operations for agent execution.
+
+    This class provides stateless methods for creating, managing, and deleting Azure VMs.
+    Each method operates on a specific VM identified by vm_name parameter.
+
+    Thread-safe for concurrent operations on different VMs when using the same instance.
+    All methods require vm_name as the first parameter to avoid state conflicts.
+
+    Environment Variables Required:
+        - AZURE_SUBSCRIPTION_ID: Azure subscription ID
+        - AZURE_RESOURCE_GROUP_NAME: Resource group for VMs
+        - AZURE_LOCATION: Azure region (e.g., 'eastus')
+        - SSH_PRIVATE_KEY_PATH: Path to SSH private key file
+        - SSH_PUBLIC_KEY_PATH: Path to SSH public key file
+        - NETWORK_SECURITY_GROUP_NAME: Network security group name
+    """
+
     def __init__(self):
         # Load required environment variables
         self.subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
@@ -73,20 +91,24 @@ class VirtualMachineManager:
         self.resource_client = ResourceManagementClient(
             self.credential, self.subscription_id
         )
-        # This will get populated in the create_vm call
-        self.vm_name = None
 
     @contextmanager
     def _get_sftp_client(
         self,
+        vm_name,
         network_client,
         resource_group_name,
     ):
         """
         Context manager for SFTP client that automatically handles connection and cleanup.
 
+        Args:
+            vm_name: Name of the VM to connect to
+            network_client: Azure network client
+            resource_group_name: Azure resource group name
+
         Usage:
-            with get_sftp_client(vm_name, ssh_key_path, network_client, rg_name) as (sftp, ssh):
+            with self._get_sftp_client(vm_name, network_client, rg_name) as (sftp, ssh):
                 sftp.put(local_file, remote_file)
         """
         ssh_client = None
@@ -95,7 +117,7 @@ class VirtualMachineManager:
         try:
             # Get the public IP address of the VM
             public_ip_address = network_client.public_ip_addresses.get(
-                resource_group_name, f"{self.vm_name}-public-ip"
+                resource_group_name, f"{vm_name}-public-ip"
             ).ip_address
 
             # Create SSH client
@@ -132,9 +154,8 @@ class VirtualMachineManager:
                     print(f"Error closing SSH client: {e}")
 
     @_retry_function()
-    # FIXME: here
     def create_vm(self, vm_name):
-        self.vm_name = vm_name  # save vm name to the instance
+        """Create a standard Azure VM without GPU."""
         vm_size = "Standard_E2as_v5"
         username = "agent"
         print(f"Creating Azure virtual machine {vm_name} with *no* GPU")
@@ -235,13 +256,13 @@ class VirtualMachineManager:
 
     @_retry_function()
     def create_gpu_vm(self, vm_name):
-        self.vm_name = vm_name  # save vm name to the instance
+        """Create an Azure VM with NVIDIA GPU support."""
         username = "agent"
         vm_size = "Standard_NC4as_T4_v3"
 
         # Create a virtual network and subnet
-        vnet_name = f"{self.vm_name}-vnet"
-        subnet_name = f"{self.vm_name}-subnet"
+        vnet_name = f"{vm_name}-vnet"
+        subnet_name = f"{vm_name}-subnet"
         vnet = self.network_client.virtual_networks.begin_create_or_update(
             self.resource_group_name,
             vnet_name,
@@ -254,7 +275,7 @@ class VirtualMachineManager:
         subnet = vnet.subnets[0]
 
         # Create a public IP address
-        public_ip_name = f"{self.vm_name}-public-ip"
+        public_ip_name = f"{vm_name}-public-ip"
         public_ip = self.network_client.public_ip_addresses.begin_create_or_update(
             self.resource_group_name,
             public_ip_name,
@@ -271,7 +292,7 @@ class VirtualMachineManager:
         )
 
         # Create a network interface
-        nic_name = f"{self.vm_name}-nic"
+        nic_name = f"{vm_name}-nic"
         nic = self.network_client.network_interfaces.begin_create_or_update(
             self.resource_group_name,
             nic_name,
@@ -318,7 +339,7 @@ class VirtualMachineManager:
             },
             "hardware_profile": {"vm_size": vm_size},
             "os_profile": {
-                "computer_name": self.vm_name,
+                "computer_name": vm_name,
                 "admin_username": username,
                 "linux_configuration": {
                     "disable_password_authentication": True,
@@ -338,7 +359,7 @@ class VirtualMachineManager:
 
         # Create the GPU VM
         vm = self.compute_client.virtual_machines.begin_create_or_update(
-            self.resource_group_name, self.vm_name, vm_parameters
+            self.resource_group_name, vm_name, vm_parameters
         ).result()
 
         # Define the NVIDIA GPU driver extension configuration
@@ -358,21 +379,20 @@ class VirtualMachineManager:
 
         # Add the NVIDIA GPU driver extension to the VM
         self.compute_client.virtual_machine_extensions.begin_create_or_update(
-            self.resource_group_name, self.vm_name, extension_name, extension_parameters
+            self.resource_group_name, vm_name, extension_name, extension_parameters
         ).result()
 
         return vm
 
-    def delete_vm(self):
-        print(f"Deleting VM {self.vm_name}")
+    def delete_vm(self, vm_name):
+        """Delete an Azure VM and all associated resources."""
+        print(f"Deleting VM {vm_name}")
         # Get the VM
-        vm = self.compute_client.virtual_machines.get(
-            self.resource_group_name, self.vm_name
-        )
+        vm = self.compute_client.virtual_machines.get(self.resource_group_name, vm_name)
 
         # Delete the VM
         self.compute_client.virtual_machines.begin_delete(
-            self.resource_group_name, self.vm_name
+            self.resource_group_name, vm_name
         ).result()
 
         # Delete the associated disks
@@ -388,19 +408,19 @@ class VirtualMachineManager:
         ).result()
 
         # Delete the network interface
-        nic_name = f"{self.vm_name}-nic"
+        nic_name = f"{vm_name}-nic"
         self.network_client.network_interfaces.begin_delete(
             self.resource_group_name, nic_name
         ).result()
 
         # Delete the public IP address
-        public_ip_name = f"{self.vm_name}-public-ip"
+        public_ip_name = f"{vm_name}-public-ip"
         self.network_client.public_ip_addresses.begin_delete(
             self.resource_group_name, public_ip_name
         ).result()
 
         # Delete the virtual network (if not used by other resources)
-        vnet_name = f"{self.vm_name}-vnet"
+        vnet_name = f"{vm_name}-vnet"
         try:
             self.network_client.virtual_networks.begin_delete(
                 self.resource_group_name, vnet_name
@@ -409,11 +429,12 @@ class VirtualMachineManager:
             print(f"Failed to delete virtual network {vnet_name}: {str(e)}")
 
     @_retry_function()
-    def copy_files_to_vm(self, source_directory):
+    def copy_files_to_vm(self, vm_name, source_directory):
         """Copy files from a local directory to the VM."""
         username = "agent"
         try:
             with self._get_sftp_client(
+                vm_name,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
@@ -430,7 +451,7 @@ class VirtualMachineManager:
                     )
 
                 tar_size = os.path.getsize(tar_file_path)
-                print(f"Uploading {tar_size} bytes to VM {self.vm_name}")
+                print(f"Uploading {tar_size} bytes to VM {vm_name}")
 
                 # Copy the compressed file to the VM
                 remote_tar_file_path = (
@@ -439,7 +460,7 @@ class VirtualMachineManager:
                 sftp_client.put(tar_file_path, remote_tar_file_path)
 
                 # Extract the compressed file on the VM
-                print(f"Extracting files on VM {self.vm_name}")
+                print(f"Extracting files on VM {vm_name}")
                 _, stdout, stderr = ssh_client.exec_command(
                     f"tar -xzf {remote_tar_file_path} --strip-components=1 -C /home/{username}"
                 )
@@ -457,7 +478,7 @@ class VirtualMachineManager:
                     print(f"Warning during tar extraction: {stderr_text}")
 
                 print(
-                    f"Successfully copied files from {source_directory} to VM {self.vm_name}"
+                    f"Successfully copied files from {source_directory} to VM {vm_name}"
                 )
 
                 # Remove the compressed file from the VM and the local machine
@@ -465,13 +486,14 @@ class VirtualMachineManager:
                 os.remove(tar_file_path)
 
         except Exception as e:
-            print(f"Error copying files to VM {self.vm_name}: {e}")
+            print(f"Error copying files to VM {vm_name}: {e}")
             raise
 
     @_retry_function()
-    def copy_files_from_vm(self, destination_directory):
+    def copy_files_from_vm(self, vm_name, destination_directory):
         """Copy files from the VM to local directory."""
         with self._get_sftp_client(
+            vm_name,
             self.network_client,
             self.resource_group_name,
         ) as (sftp_client, ssh_client):
@@ -503,12 +525,11 @@ class VirtualMachineManager:
             os.remove(f"{destination_directory}.tar.gz")
 
     @_retry_function(max_attempts=2, initial_wait=5)
-    def check_task_completion(
-        self,
-    ):
-        task_completed_filename = "output.json"
+    def check_task_completion(self, vm_name):
         """Check if task is complete by checking for output.json file."""
+        task_completed_filename = "output.json"
         with self._get_sftp_client(
+            vm_name,
             self.network_client,
             self.resource_group_name,
         ) as (sftp_client, _):
@@ -525,6 +546,7 @@ class VirtualMachineManager:
 
     def run_agent_on_vm(
         self,
+        vm_name,
         agent_function,
         task_id,
         input_data,
@@ -539,7 +561,7 @@ class VirtualMachineManager:
 
         @_retry_function()
         def setup_vm_environment(
-            self,
+            vm_name: str,
             log_dir: str,
             benchmark,
             task_id: str,
@@ -549,12 +571,13 @@ class VirtualMachineManager:
             """
             try:
                 with self._get_sftp_client(
+                    vm_name,
                     self.network_client,
                     self.resource_group_name,
                 ) as (sftp_client, ssh_client):
                     # Copy .env file to VM first
                     if os.path.exists(".env"):
-                        print(f"Copying .env file to VM {self.vm_name}")
+                        print(f"Copying .env file to VM {vm_name}")
                         sftp_client.put(".env", "/home/agent/.env")
 
                     # Copy setup script to VM
@@ -568,7 +591,7 @@ class VirtualMachineManager:
                     ssh_client.exec_command(f"chmod +x {remote_setup_path}")
 
                     # Run setup script with sudo (passing username as argument)
-                    print(f"Setting up environment on VM {self.vm_name}")
+                    print(f"Setting up environment on VM {vm_name}")
                     _, stdout, stderr = ssh_client.exec_command(
                         f"sudo bash {remote_setup_path} agent"
                     )
@@ -582,7 +605,7 @@ class VirtualMachineManager:
                     if benchmark and benchmark.setup_script:
                         setup_script = os.path.join(benchmark.setup_script)
                         if os.path.exists(setup_script):
-                            print(f"Running setup script on VM {self.vm_name}")
+                            print(f"Running setup script on VM {vm_name}")
                             try:
                                 cmd = """
                                 source /home/agent/miniconda3/etc/profile.d/conda.sh && \
@@ -597,7 +620,7 @@ class VirtualMachineManager:
                                     f.write(stderr.read().decode())
                             except Exception as e:
                                 print(
-                                    f"Error running setup script on VM {self.vm_name}: {e}"
+                                    f"Error running setup script on VM {vm_name}: {e}"
                                 )
 
             except Exception as e:
@@ -607,12 +630,14 @@ class VirtualMachineManager:
         try:
             # Setup conda environment if it exists
             setup_vm_environment(
+                vm_name,
                 log_dir,
                 benchmark,
                 task_id,
             )
 
             with self._get_sftp_client(
+                vm_name,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
@@ -682,7 +707,7 @@ except Exception as e:
                 cmd = f"source /home/agent/init_conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
 
                 # Execute script
-                print(f"Running agent on VM {self.vm_name}")
+                print(f"Running agent on VM {vm_name}")
                 _, stdout, stderr = ssh_client.exec_command(cmd)
 
                 # Close the channel to prevent hanging
@@ -690,19 +715,23 @@ except Exception as e:
                 stderr.channel.close()
 
         except Exception as e:
-            print(f"Error running agent on VM {self.vm_name}: {e}")
+            print(f"Error running agent on VM {vm_name}: {e}")
             raise
 
     @_retry_function(max_attempts=2, initial_wait=5)
-    def get_agent_trace(self):
+    def get_agent_trace(self, vm_name):
         """
         Fetch the current agent trace log from a VM.
+
+        Args:
+            vm_name: Name of the VM to fetch logs from
 
         Returns:
             str: Contents of the agent trace log, or None if not available
         """
         try:
             with self._get_sftp_client(
+                vm_name,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, _):
@@ -714,5 +743,5 @@ except Exception as e:
                     return None
 
         except Exception as e:
-            print(f"Error fetching agent trace from {self.vm_name}: {e}")
+            print(f"Error fetching agent trace from {vm_name}: {e}")
             return None

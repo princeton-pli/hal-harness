@@ -79,8 +79,8 @@ class AgentRunner:
         
         # Initialize appropriate runner with benchmark
         if use_vm:
-            from .utils.vm_runner import VMRunner
-            self.runner = VMRunner(
+            from .utils.virtual_machine_runner import VirtualMachineRunner
+            self.runner = VirtualMachineRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
                 benchmark=self.benchmark

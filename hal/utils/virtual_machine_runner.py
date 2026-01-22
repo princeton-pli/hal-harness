@@ -12,7 +12,7 @@ import traceback
 from rich.progress import Progress, TaskID
 
 
-class VMRunner:
+class VirtualMachineRunner:
     """Handles running agents on Azure VMs"""
 
     def __init__(
@@ -23,7 +23,6 @@ class VMRunner:
     ):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
-        # FIXME: VM Manager should take a vm_name argument in the initializer; then we can stop passing it around all the time
         self.vm_manager = VirtualMachineManager()
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
@@ -33,7 +32,7 @@ class VMRunner:
     async def fetch_agent_logs(self, vm_name, ssh_private_key_path, task_id):
         """Fetch the latest agent trace log from a VM and store it locally."""
         try:
-            result = await asyncio.to_thread(self.vm_manager.get_agent_trace)
+            result = await asyncio.to_thread(self.vm_manager.get_agent_trace, vm_name)
 
             if result and self.log_dir:
                 trace_dir = os.path.join(self.log_dir, "agent_logs")
@@ -152,11 +151,13 @@ class VMRunner:
                     print(f"Copying files to VM {vm_name}")
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
-                        source_directory=temp_dir,
+                        vm_name,
+                        temp_dir,
                     )
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
-                        source_directory=agent_dir,
+                        vm_name,
+                        agent_dir,
                     )
 
                 finally:
@@ -165,13 +166,14 @@ class VMRunner:
                 # Run agent on VM
                 await asyncio.to_thread(
                     self.vm_manager.run_agent_on_vm,
-                    agent_function=agent_function,
-                    task_id=task_id,
-                    input_data=input_data,
-                    agent_args=agent_args,
-                    run_id=run_id,
-                    log_dir=self.log_dir,
-                    benchmark=benchmark,
+                    vm_name,
+                    agent_function,
+                    task_id,
+                    input_data,
+                    agent_args,
+                    run_id,
+                    self.log_dir,
+                    benchmark,
                 )
 
                 # Wait for completion or timeout
@@ -189,7 +191,8 @@ class VMRunner:
                         )
 
                         result = await asyncio.to_thread(
-                            self.vm_manager.check_task_completion
+                            self.vm_manager.check_task_completion,
+                            vm_name,
                         )
                         if result is not None:
                             print(f"Task {task_id} completed on VM {vm_name}")
@@ -209,7 +212,8 @@ class VMRunner:
                     os.makedirs(dest_dir, exist_ok=True)
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_from_vm,
-                        destination_directory=dest_dir,
+                        vm_name,
+                        dest_dir,
                     )
 
                 return result
@@ -222,7 +226,7 @@ class VMRunner:
             finally:
                 # Cleanup VM
                 try:
-                    await asyncio.to_thread(self.vm_manager.delete_vm)
+                    await asyncio.to_thread(self.vm_manager.delete_vm, vm_name)
                     if progress and task is not None:
                         progress.update(task, advance=1)
                 except Exception as e:
