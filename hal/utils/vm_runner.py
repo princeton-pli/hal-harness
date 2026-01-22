@@ -33,10 +33,7 @@ class VMRunner:
     async def fetch_agent_logs(self, vm_name, ssh_private_key_path, task_id):
         """Fetch the latest agent trace log from a VM and store it locally."""
         try:
-            result = await asyncio.to_thread(
-                self.vm_manager.get_agent_trace,
-                ssh_private_key_path=ssh_private_key_path,
-            )
+            result = await asyncio.to_thread(self.vm_manager.get_agent_trace)
 
             if result and self.log_dir:
                 trace_dir = os.path.join(self.log_dir, "agent_logs")
@@ -98,24 +95,13 @@ class VMRunner:
                         f"Creating Azure virtual machine {vm_name} for task {task_id} *with* a GPU"
                     )
                     await asyncio.to_thread(
-                        self.vm_manager.create_gpu_vm,
-                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
-                        network_security_group_name=os.getenv(
-                            "NETWORK_SECURITY_GROUP_NAME"
-                        ),
+                        self.vm_manager.create_gpu_vm, vm_name=vm_name
                     )
                 else:
                     print(
                         f"Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
                     )
-                    await asyncio.to_thread(
-                        self.vm_manager.create_vm,
-                        vm_name=vm_name,
-                        ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
-                        network_security_group_name=os.getenv(
-                            "NETWORK_SECURITY_GROUP_NAME"
-                        ),
-                    )
+                    await asyncio.to_thread(self.vm_manager.create_vm, vm_name=vm_name)
 
                 # Create temp directory with all necessary files
                 temp_dir = tempfile.mkdtemp()
@@ -167,12 +153,10 @@ class VMRunner:
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
                         source_directory=temp_dir,
-                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                     )
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
                         source_directory=agent_dir,
-                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                     )
 
                 finally:
@@ -185,10 +169,8 @@ class VMRunner:
                     task_id=task_id,
                     input_data=input_data,
                     agent_args=agent_args,
-                    agent_dir="/home/agent",
                     run_id=run_id,
                     log_dir=self.log_dir,
-                    ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                     benchmark=benchmark,
                 )
 
@@ -207,8 +189,7 @@ class VMRunner:
                         )
 
                         result = await asyncio.to_thread(
-                            self.vm_manager.check_task_completion,
-                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                            self.vm_manager.check_task_completion
                         )
                         if result is not None:
                             print(f"Task {task_id} completed on VM {vm_name}")
@@ -228,7 +209,6 @@ class VMRunner:
                     os.makedirs(dest_dir, exist_ok=True)
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_from_vm,
-                        ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                         destination_directory=dest_dir,
                     )
 

@@ -24,6 +24,9 @@ class VirtualMachineManager:
         self.subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
         self.resource_group_name = os.getenv("AZURE_RESOURCE_GROUP_NAME")
         self.location = os.getenv("AZURE_LOCATION")
+        self.ssh_private_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
+        self.network_security_group_name = os.getenv("NETWORK_SECURITY_GROUP_NAME")
+
         self.credential = DefaultAzureCredential()
         self.compute_client = ComputeManagementClient(
             self.credential, self.subscription_id
@@ -40,7 +43,6 @@ class VirtualMachineManager:
     @contextmanager
     def _get_sftp_client(
         self,
-        ssh_private_key_path,
         network_client,
         resource_group_name,
     ):
@@ -66,7 +68,7 @@ class VirtualMachineManager:
 
             # Load the SSH private key
             ssh_private_key = paramiko.RSAKey.from_private_key_file(
-                ssh_private_key_path
+                self.ssh_private_key_path
             )
 
             # Connect to the VM using SSH
@@ -95,21 +97,11 @@ class VirtualMachineManager:
 
     @_retry_function()
     # FIXME: here
-    def create_vm(
-        self,
-        vm_name,
-        ssh_public_key_path,
-        network_security_group_name,
-        task_id,
-        image_reference=None,
-        disk_size=80,
-    ):
+    def create_vm(self, vm_name):
         self.vm_name = vm_name  # save vm name to the instance
         vm_size = "Standard_E2as_v5"
         username = "agent"
-        print(
-            f"Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
-        )
+        print(f"Creating Azure virtual machine {vm_name} with *no* GPU")
         # Create a virtual network and subnet
         vnet_name = f"{vm_name}-vnet"
         subnet_name = f"{vm_name}-subnet"
@@ -138,7 +130,7 @@ class VirtualMachineManager:
 
         # Get the existing network security group
         network_security_group = self.network_client.network_security_groups.get(
-            self.resource_group_name, network_security_group_name
+            self.resource_group_name, self.network_security_group_name
         )
 
         # Create a network interface
@@ -160,23 +152,22 @@ class VirtualMachineManager:
         ).result()
 
         # Read the SSH public key from the specified file
-        with open(ssh_public_key_path, "r") as file:
+        with open(self.ssh_public_key_path, "r") as file:
             ssh_public_key = file.read().strip()
 
         # Define the VM configuration
-        if image_reference is None:
-            image_reference = {
-                "publisher": "Canonical",
-                "offer": "0001-com-ubuntu-server-focal",
-                "sku": "20_04-lts-gen2",
-                "version": "latest",
-            }
+        image_reference = {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-focal",
+            "sku": "20_04-lts-gen2",
+            "version": "latest",
+        }
 
         vm_parameters = {
             "location": self.location,
             "storage_profile": {
                 "image_reference": image_reference,
-                "os_disk": {"createOption": "FromImage", "diskSizeGB": disk_size},
+                "os_disk": {"createOption": "FromImage", "diskSizeGB": 80},
             },
             "hardware_profile": {"vm_size": vm_size},
             "os_profile": {
@@ -202,22 +193,16 @@ class VirtualMachineManager:
             self.resource_group_name, vm_name, vm_parameters
         ).result()
 
-        print(
-            f"Successfully created Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
-        )
+        print(f"Successfully created Azure virtual machine {vm_name} with *no* GPU")
 
         return vm
 
     @_retry_function()
-    def create_gpu_vm(
-        self,
-        ssh_public_key_path,
-        network_security_group_name,
-        image_reference=None,
-        disk_size=80,
-    ):
+    def create_gpu_vm(self, vm_name):
+        self.vm_name = vm_name  # save vm name to the instance
         username = "agent"
         vm_size = "Standard_NC4as_T4_v3"
+
         # Create a virtual network and subnet
         vnet_name = f"{self.vm_name}-vnet"
         subnet_name = f"{self.vm_name}-subnet"
@@ -246,7 +231,7 @@ class VirtualMachineManager:
 
         # Get the existing network security group
         network_security_group = self.network_client.network_security_groups.get(
-            self.resource_group_name, network_security_group_name
+            self.resource_group_name, self.network_security_group_name
         )
 
         # Create a network interface
@@ -268,33 +253,32 @@ class VirtualMachineManager:
         ).result()
 
         # Read the SSH public key from the specified file
-        if not ssh_public_key_path:
+        if not self.ssh_public_key_path:
             raise ValueError(
                 "SSH public key path is empty. Check the SSH_PUBLIC_KEY_PATH environment variable and try again."
             )
 
         try:
-            with open(ssh_public_key_path, "r") as file:
+            with open(self.ssh_public_key_path, "r") as file:
                 ssh_public_key = file.read().strip()
         except FileNotFoundError as e:
             raise FileNotFoundError(
-                f"The SSH public key file at '{ssh_public_key_path}' cannot be found. Check the SSH_PUBLIC_KEY_PATH environment variable and try again."
+                f"The SSH public key file at '{self.ssh_public_key_path}' cannot be found. Check the SSH_PUBLIC_KEY_PATH environment variable and try again."
             ) from e
 
         # Define the GPU VM configuration
-        if image_reference is None:
-            image_reference = {
-                "publisher": "Canonical",
-                "offer": "0001-com-ubuntu-server-focal",
-                "sku": "20_04-lts-gen2",
-                "version": "latest",
-            }
+        image_reference = {
+            "publisher": "Canonical",
+            "offer": "0001-com-ubuntu-server-focal",
+            "sku": "20_04-lts-gen2",
+            "version": "latest",
+        }
 
         vm_parameters = {
             "location": self.location,
             "storage_profile": {
                 "image_reference": image_reference,
-                "os_disk": {"createOption": "FromImage", "diskSizeGB": disk_size},
+                "os_disk": {"createOption": "FromImage", "diskSizeGB": 80},
             },
             "hardware_profile": {"vm_size": vm_size},
             "os_profile": {
@@ -389,12 +373,11 @@ class VirtualMachineManager:
             print(f"Failed to delete virtual network {vnet_name}: {str(e)}")
 
     @_retry_function()
-    def copy_files_to_vm(self, source_directory, ssh_private_key_path):
+    def copy_files_to_vm(self, source_directory):
         """Copy files from a local directory to the VM."""
         username = "agent"
         try:
             with self._get_sftp_client(
-                ssh_private_key_path,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
@@ -450,10 +433,9 @@ class VirtualMachineManager:
             raise
 
     @_retry_function()
-    def copy_files_from_vm(self, ssh_private_key_path, destination_directory):
+    def copy_files_from_vm(self, destination_directory):
         """Copy files from the VM to local directory."""
         with self._get_sftp_client(
-            ssh_private_key_path,
             self.network_client,
             self.resource_group_name,
         ) as (sftp_client, ssh_client):
@@ -487,12 +469,10 @@ class VirtualMachineManager:
     @_retry_function(max_attempts=2, initial_wait=5)
     def check_task_completion(
         self,
-        ssh_private_key_path,
     ):
         task_completed_filename = "output.json"
         """Check if task is complete by checking for output.json file."""
         with self._get_sftp_client(
-            ssh_private_key_path,
             self.network_client,
             self.resource_group_name,
         ) as (sftp_client, _):
@@ -507,105 +487,96 @@ class VirtualMachineManager:
 
             return result
 
-    @_retry_function()
-    def setup_vm_environment(
-        self,
-        username: str,
-        ssh_private_key_path: str,
-        agent_dir: str,
-        log_dir: str,
-        benchmark,
-        task_id: str,
-    ) -> None:
-        """
-        Set up the VM environment using uv and a setup script.
-        """
-        try:
-            with self._get_sftp_client(
-                ssh_private_key_path,
-                self.network_client,
-                self.resource_group_name,
-            ) as (sftp_client, ssh_client):
-                # Copy .env file to VM first
-                if os.path.exists(".env"):
-                    print(f"Copying .env file to VM {self.vm_name}")
-                    sftp_client.put(".env", f"/home/{username}/.env")
-
-                # Copy setup script to VM
-                setup_script_path = os.path.join(
-                    os.path.dirname(__file__), "setup_vm.sh"
-                )
-                remote_setup_path = f"/home/{username}/setup_vm.sh"
-                sftp_client.put(setup_script_path, remote_setup_path)
-
-                # Make setup script executable
-                ssh_client.exec_command(f"chmod +x {remote_setup_path}")
-
-                # Run setup script with sudo (passing username as argument)
-                print(f"Setting up environment on VM {self.vm_name}")
-                _, stdout, stderr = ssh_client.exec_command(
-                    f"sudo bash {remote_setup_path} {username}"
-                )
-
-                # Create log file
-                with open(f"{log_dir}/setup_vm_log_{task_id}.log", "w") as f:
-                    f.write(stdout.read().decode())
-                    f.write(stderr.read().decode())
-
-                # Run setup script if it exists
-                if benchmark and benchmark.setup_script:
-                    setup_script = os.path.join(benchmark.setup_script)
-                    if os.path.exists(setup_script):
-                        print(f"Running setup script on VM {self.vm_name}")
-                        try:
-                            cmd = f"""
-                            source /home/{username}/miniconda3/etc/profile.d/conda.sh && \
-                            cd /home/{username} && \
-                            bash setup_script.sh
-                            """
-                            _, stdout, stderr = ssh_client.exec_command(cmd)
-                            with open(
-                                f"{log_dir}/setup_script_log_{task_id}.log", "w"
-                            ) as f:
-                                f.write(stdout.read().decode())
-                                f.write(stderr.read().decode())
-                        except Exception as e:
-                            print(
-                                f"Error running setup script on VM {self.vm_name}: {e}"
-                            )
-
-        except Exception as e:
-            print(f"Error setting up VM environment: {e}")
-            raise
-
     def run_agent_on_vm(
         self,
         agent_function,
         task_id,
         input_data,
         agent_args,
-        agent_dir,
         run_id,
         log_dir,
-        ssh_private_key_path,
         benchmark,
     ):
         """
         Run agent on VM with improved monitoring and error handling.
         """
+
+        @_retry_function()
+        def setup_vm_environment(
+            self,
+            log_dir: str,
+            benchmark,
+            task_id: str,
+        ) -> None:
+            """
+            Set up the VM environment using uv and a setup script.
+            """
+            try:
+                with self._get_sftp_client(
+                    self.network_client,
+                    self.resource_group_name,
+                ) as (sftp_client, ssh_client):
+                    # Copy .env file to VM first
+                    if os.path.exists(".env"):
+                        print(f"Copying .env file to VM {self.vm_name}")
+                        sftp_client.put(".env", "/home/agent/.env")
+
+                    # Copy setup script to VM
+                    setup_script_path = os.path.join(
+                        os.path.dirname(__file__), "setup_vm.sh"
+                    )
+                    remote_setup_path = "/home/agent/setup_vm.sh"
+                    sftp_client.put(setup_script_path, remote_setup_path)
+
+                    # Make setup script executable
+                    ssh_client.exec_command(f"chmod +x {remote_setup_path}")
+
+                    # Run setup script with sudo (passing username as argument)
+                    print(f"Setting up environment on VM {self.vm_name}")
+                    _, stdout, stderr = ssh_client.exec_command(
+                        f"sudo bash {remote_setup_path} agent"
+                    )
+
+                    # Create log file
+                    with open(f"{log_dir}/setup_vm_log_{task_id}.log", "w") as f:
+                        f.write(stdout.read().decode())
+                        f.write(stderr.read().decode())
+
+                    # Run setup script if it exists
+                    if benchmark and benchmark.setup_script:
+                        setup_script = os.path.join(benchmark.setup_script)
+                        if os.path.exists(setup_script):
+                            print(f"Running setup script on VM {self.vm_name}")
+                            try:
+                                cmd = """
+                                source /home/agent/miniconda3/etc/profile.d/conda.sh && \
+                                cd /home/agent && \
+                                bash setup_script.sh
+                                """
+                                _, stdout, stderr = ssh_client.exec_command(cmd)
+                                with open(
+                                    f"{log_dir}/setup_script_log_{task_id}.log", "w"
+                                ) as f:
+                                    f.write(stdout.read().decode())
+                                    f.write(stderr.read().decode())
+                            except Exception as e:
+                                print(
+                                    f"Error running setup script on VM {self.vm_name}: {e}"
+                                )
+
+            except Exception as e:
+                print(f"Error setting up VM environment: {e}")
+                raise
+
         try:
             # Setup conda environment if it exists
-            self.setup_vm_environment(
-                "agent",
-                ssh_private_key_path,
-                agent_dir,
+            setup_vm_environment(
                 log_dir,
                 benchmark,
                 task_id,
             )
 
             with self._get_sftp_client(
-                ssh_private_key_path,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
@@ -687,7 +658,7 @@ except Exception as e:
             raise
 
     @_retry_function(max_attempts=2, initial_wait=5)
-    def get_agent_trace(self, ssh_private_key_path):
+    def get_agent_trace(self):
         """
         Fetch the current agent trace log from a VM.
 
@@ -696,7 +667,6 @@ except Exception as e:
         """
         try:
             with self._get_sftp_client(
-                ssh_private_key_path,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, _):
