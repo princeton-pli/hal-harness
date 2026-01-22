@@ -21,15 +21,48 @@ def _retry_function(max_attempts=3, initial_wait=1, max_wait=30):
 
 class VirtualMachineManager:
     def __init__(self):
+        # Load required environment variables
         self.subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
         self.resource_group_name = os.getenv("AZURE_RESOURCE_GROUP_NAME")
         self.location = os.getenv("AZURE_LOCATION")
-
         self.ssh_private_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
         self.ssh_public_key_path = os.getenv("SSH_PUBLIC_KEY_PATH")
-
         self.network_security_group_name = os.getenv("NETWORK_SECURITY_GROUP_NAME")
 
+        # Validate all required environment variables
+        missing_vars = []
+        if not self.subscription_id:
+            missing_vars.append("AZURE_SUBSCRIPTION_ID")
+        if not self.resource_group_name:
+            missing_vars.append("AZURE_RESOURCE_GROUP_NAME")
+        if not self.location:
+            missing_vars.append("AZURE_LOCATION")
+        if not self.ssh_private_key_path:
+            missing_vars.append("SSH_PRIVATE_KEY_PATH")
+        if not self.ssh_public_key_path:
+            missing_vars.append("SSH_PUBLIC_KEY_PATH")
+        if not self.network_security_group_name:
+            missing_vars.append("NETWORK_SECURITY_GROUP_NAME")
+
+        if missing_vars:
+            raise ValueError(
+                f"Missing required environment variables: {', '.join(missing_vars)}. "
+                "Please set them in your .env file or environment."
+            )
+
+        # Validate SSH key files exist
+        if not os.path.exists(self.ssh_private_key_path):
+            raise FileNotFoundError(
+                f"SSH private key not found at: {self.ssh_private_key_path}. "
+                f"Please ensure SSH_PRIVATE_KEY_PATH points to a valid private key file."
+            )
+        if not os.path.exists(self.ssh_public_key_path):
+            raise FileNotFoundError(
+                f"SSH public key not found at: {self.ssh_public_key_path}. "
+                f"Please ensure SSH_PUBLIC_KEY_PATH points to a valid public key file."
+            )
+
+        # Initialize Azure clients
         self.credential = DefaultAzureCredential()
         self.compute_client = ComputeManagementClient(
             self.credential, self.subscription_id
