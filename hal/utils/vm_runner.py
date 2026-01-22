@@ -100,7 +100,6 @@ class VMRunner:
                     )
                     await asyncio.to_thread(
                         self.vm_manager.create_gpu_vm,
-                        vm_name=vm_name,
                         ssh_public_key_path=os.getenv("SSH_PUBLIC_KEY_PATH"),
                         network_security_group_name=os.getenv(
                             "NETWORK_SECURITY_GROUP_NAME"
@@ -169,13 +168,11 @@ class VMRunner:
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
                         source_directory=temp_dir,
-                        vm_name=vm_name,
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                     )
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
                         source_directory=agent_dir,
-                        vm_name=vm_name,
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                     )
 
@@ -213,7 +210,6 @@ class VMRunner:
 
                         result = await asyncio.to_thread(
                             self.vm_manager.check_task_completion,
-                            vm_name=vm_name,
                             ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                         )
                         if result is not None:
@@ -234,7 +230,6 @@ class VMRunner:
                     os.makedirs(dest_dir, exist_ok=True)
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_from_vm,
-                        vm_name=vm_name,
                         ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
                         destination_directory=dest_dir,
                     )
@@ -249,8 +244,7 @@ class VMRunner:
             finally:
                 # Cleanup VM
                 try:
-                    print(f"Deleting VM {vm_name}")
-                    await asyncio.to_thread(self.vm_manager.delete_vm, vm_name)
+                    await asyncio.to_thread(self.vm_manager.delete_vm)
                     if progress and task is not None:
                         progress.update(task, advance=1)
                 except Exception as e:
