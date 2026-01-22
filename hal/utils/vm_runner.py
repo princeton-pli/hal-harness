@@ -35,7 +35,6 @@ class VMRunner:
         try:
             result = await asyncio.to_thread(
                 self.vm_manager.get_agent_trace,
-                vm_name=vm_name,
                 ssh_private_key_path=ssh_private_key_path,
             )
 
@@ -183,7 +182,6 @@ class VMRunner:
                 await asyncio.to_thread(
                     self.vm_manager.run_agent_on_vm,
                     agent_function=agent_function,
-                    vm_name=vm_name,
                     task_id=task_id,
                     input_data=input_data,
                     agent_args=agent_args,

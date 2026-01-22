@@ -578,12 +578,9 @@ class VirtualMachineManager:
             print(f"Error setting up VM environment: {e}")
             raise
 
-    # FIXME: for this method and below methods, we need to switch to self.vm_name instead of passing in
-    # vm_name!
     def run_agent_on_vm(
         self,
         agent_function,
-        vm_name,
         task_id,
         input_data,
         agent_args,
@@ -678,7 +675,7 @@ except Exception as e:
                 cmd = f"source /home/agent/init_conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
 
                 # Execute script
-                print(f"Running agent on VM {vm_name}")
+                print(f"Running agent on VM {self.vm_name}")
                 _, stdout, stderr = ssh_client.exec_command(cmd)
 
                 # Close the channel to prevent hanging
@@ -686,11 +683,11 @@ except Exception as e:
                 stderr.channel.close()
 
         except Exception as e:
-            print(f"Error running agent on VM {vm_name}: {e}")
+            print(f"Error running agent on VM {self.vm_name}: {e}")
             raise
 
     @_retry_function(max_attempts=2, initial_wait=5)
-    def get_agent_trace(self, vm_name, ssh_private_key_path):
+    def get_agent_trace(self, ssh_private_key_path):
         """
         Fetch the current agent trace log from a VM.
 
@@ -711,5 +708,5 @@ except Exception as e:
                     return None
 
         except Exception as e:
-            print(f"Error fetching agent trace from {vm_name}: {e}")
+            print(f"Error fetching agent trace from {self.vm_name}: {e}")
             return None
