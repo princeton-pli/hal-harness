@@ -24,7 +24,10 @@ class VirtualMachineManager:
         self.subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
         self.resource_group_name = os.getenv("AZURE_RESOURCE_GROUP_NAME")
         self.location = os.getenv("AZURE_LOCATION")
+
         self.ssh_private_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
+        self.ssh_public_key_path = os.getenv("SSH_PUBLIC_KEY_PATH")
+
         self.network_security_group_name = os.getenv("NETWORK_SECURITY_GROUP_NAME")
 
         self.credential = DefaultAzureCredential()
