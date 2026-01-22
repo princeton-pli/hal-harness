@@ -93,10 +93,22 @@ This repository provides a standardized evaluation harness for reproducible agen
    AZURE_SUBSCRIPTION_ID=your_subscription_id
    AZURE_RESOURCE_GROUP_NAME=your_resource_group
    AZURE_LOCATION=your_location
+   NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    SSH_PUBLIC_KEY_PATH=/path/to/your/ssh/key.pub
    SSH_PRIVATE_KEY_PATH=/path/to/your/ssh/key
-   NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    ```
+
+
+    * AZURE_SUBSCRIPTION_ID: This is the ID of your Azure subscription. Use the UUID.
+    * AZURE_RESOURCE_GROUP_NAME: This is the name of the resource group in which your VMs should be created.
+    * AZURE_LOCATION: e.g., "eastus" or "westus", etc.
+    * NETWORK_SECURITY_GROUP_NAME
+      - You will need to create a NSG in Azure for your access.
+      - Ensure that the NSG has an Inbound security rule that permits your machine to access SSH (port 22).
+      - Enter the NSG's name here.
+    * SSH_PUBLIC_KEY_PATH: This is the TK
+    * SSH_PRIVATE_KEY_PATH: This is the TK
+   
    
    Then run the following command to install the optional azure dependencies:
    ```bash

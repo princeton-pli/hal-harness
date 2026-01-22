@@ -187,8 +187,14 @@ class VirtualMachineManager:
         ).result()
 
         # Read the SSH public key from the specified file
-        with open(ssh_public_key_path, "r") as file:
-            ssh_public_key = file.read().strip()
+        if not ssh_public_key_path:
+            raise ValueError("SSH public key path is empty. Check the SSH_PUBLIC_KEY_PATH environment variable and try again.")
+
+        try:
+            with open(ssh_public_key_path, "r") as file:
+                ssh_public_key = file.read().strip()
+        except FileNotFoundError as e:
+            raise FileNotFoundError(f"The SSH public key file at '{ssh_public_key_path}' cannot be found. Check the SSH_PUBLIC_KEY_PATH environment variable and try again.") from e
 
         # Define the GPU VM configuration
         if image_reference is None:
