@@ -11,7 +11,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 # Define retry decorator with tenacity
-def get_retry_decorator(max_attempts=3, initial_wait=1, max_wait=30):
+def retry_function(max_attempts=3, initial_wait=1, max_wait=30):
     return retry(
         stop=stop_after_attempt(max_attempts),
         wait=wait_exponential(multiplier=initial_wait, max=max_wait),
@@ -22,9 +22,7 @@ def get_retry_decorator(max_attempts=3, initial_wait=1, max_wait=30):
 @contextmanager
 def get_sftp_client(
     vm_name,
-    username,
     ssh_private_key_path,
-    compute_client,
     network_client,
     resource_group_name,
 ):
@@ -32,7 +30,7 @@ def get_sftp_client(
     Context manager for SFTP client that automatically handles connection and cleanup.
 
     Usage:
-        with get_sftp_client(vm_name, username, ssh_key_path, compute_client, network_client, rg_name) as (sftp, ssh):
+        with get_sftp_client(vm_name, ssh_key_path, network_client, rg_name) as (sftp, ssh):
             sftp.put(local_file, remote_file)
     """
     ssh_client = None
@@ -53,7 +51,7 @@ def get_sftp_client(
 
         # Connect to the VM using SSH
         ssh_client.connect(
-            hostname=public_ip_address, username=username, pkey=ssh_private_key
+            hostname=public_ip_address, username="agent", pkey=ssh_private_key
         )
 
         # Create SFTP client
@@ -92,17 +90,21 @@ class VirtualMachineManager:
             self.credential, self.subscription_id
         )
 
-    @get_retry_decorator()
+    @retry_function()
     def create_vm(
         self,
         vm_name,
-        username,
         ssh_public_key_path,
         network_security_group_name,
-        vm_size="Standard_E2as_v5",
+        task_id,
         image_reference=None,
         disk_size=80,
     ):
+        vm_size = "Standard_E2as_v5"
+        username = "agent"
+        print(
+            f"Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
+        )
         # Create a virtual network and subnet
         vnet_name = f"{vm_name}-vnet"
         subnet_name = f"{vm_name}-subnet"
@@ -195,19 +197,23 @@ class VirtualMachineManager:
             self.resource_group_name, vm_name, vm_parameters
         ).result()
 
+        print(
+            f"Successfully created Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
+        )
+
         return vm
 
-    @get_retry_decorator()
+    @retry_function()
     def create_gpu_vm(
         self,
         vm_name,
-        username,
         ssh_public_key_path,
         network_security_group_name,
-        vm_size="Standard_NC4as_T4_v3",
         image_reference=None,
         disk_size=80,
     ):
+        username = "agent"
+        vm_size = "Standard_NC4as_T4_v3"
         # Create a virtual network and subnet
         vnet_name = f"{vm_name}-vnet"
         subnet_name = f"{vm_name}-subnet"
@@ -375,17 +381,14 @@ class VirtualMachineManager:
         except Exception as e:
             print(f"Failed to delete virtual network {vnet_name}: {str(e)}")
 
-    @get_retry_decorator()
-    def copy_files_to_vm(
-        self, source_directory, vm_name, username, ssh_private_key_path
-    ):
+    @retry_function()
+    def copy_files_to_vm(self, source_directory, vm_name, ssh_private_key_path):
         """Copy files from a local directory to the VM."""
+        username = "agent"
         try:
             with get_sftp_client(
                 vm_name,
-                username,
                 ssh_private_key_path,
-                self.compute_client,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
@@ -393,7 +396,9 @@ class VirtualMachineManager:
                 source_directory = os.path.abspath(source_directory)
                 tar_file_path = f"{source_directory}.tar.gz"
 
-                print(f"Creating tar archive from {source_directory}")
+                print(
+                    f"Creating tar archive from {source_directory} in {tar_file_path}"
+                )
                 with tarfile.open(tar_file_path, "w:gz") as tar:
                     tar.add(
                         source_directory, arcname=os.path.basename(source_directory)
@@ -439,16 +444,14 @@ class VirtualMachineManager:
             print(f"Error copying files to VM {vm_name}: {e}")
             raise
 
-    @get_retry_decorator()
+    @retry_function()
     def copy_files_from_vm(
         self, vm_name, username, ssh_private_key_path, destination_directory
     ):
         """Copy files from the VM to local directory."""
         with get_sftp_client(
             vm_name,
-            username,
             ssh_private_key_path,
-            self.compute_client,
             self.network_client,
             self.resource_group_name,
         ) as (sftp_client, ssh_client):
@@ -479,7 +482,7 @@ class VirtualMachineManager:
             # sftp_client.remove(remote_tar_file_path)
             os.remove(f"{destination_directory}.tar.gz")
 
-    @get_retry_decorator(max_attempts=2, initial_wait=5)
+    @retry_function(max_attempts=2, initial_wait=5)
     def check_task_completion(
         self,
         vm_name,
@@ -491,12 +494,10 @@ class VirtualMachineManager:
         """Check if task is complete by checking for output.json file."""
         with get_sftp_client(
             vm_name,
-            username,
             ssh_private_key_path,
-            self.compute_client,
             self.network_client,
             self.resource_group_name,
-        ) as (sftp_client, ssh_client):
+        ) as (sftp_client, _):
             # Check for task completion via existence of output.json
             task_completed_filepath = f"/home/{username}/{task_completed_filename}"
 
@@ -508,7 +509,7 @@ class VirtualMachineManager:
 
             return result
 
-    @get_retry_decorator()
+    @retry_function()
     def setup_vm_environment(
         self,
         vm_name: str,
@@ -525,9 +526,7 @@ class VirtualMachineManager:
         try:
             with get_sftp_client(
                 vm_name,
-                username,
                 ssh_private_key_path,
-                self.compute_client,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
@@ -613,9 +612,7 @@ class VirtualMachineManager:
 
             with get_sftp_client(
                 vm_name,
-                username,
                 ssh_private_key_path,
-                self.compute_client,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
@@ -696,8 +693,8 @@ except Exception as e:
             print(f"Error running agent on VM {vm_name}: {e}")
             raise
 
-    @get_retry_decorator(max_attempts=2, initial_wait=5)
-    def get_agent_trace(self, vm_name, username, ssh_private_key_path):
+    @retry_function(max_attempts=2, initial_wait=5)
+    def get_agent_trace(self, vm_name, ssh_private_key_path):
         """
         Fetch the current agent trace log from a VM.
 
@@ -707,15 +704,13 @@ except Exception as e:
         try:
             with get_sftp_client(
                 vm_name,
-                username,
                 ssh_private_key_path,
-                self.compute_client,
                 self.network_client,
                 self.resource_group_name,
-            ) as (sftp_client, ssh_client):
+            ) as (sftp_client, _):
                 # Try to read the agent trace file
                 try:
-                    with sftp_client.open(f"/home/{username}/agent_trace.log") as f:
+                    with sftp_client.open("/home/agent/agent_trace.log") as f:
                         return f.read().decode("utf-8")
                 except FileNotFoundError:
                     return None
