@@ -524,7 +524,7 @@ PHASE_SETTINGS = {
     },
     "safety": {
         "description": "LLM-based safety analysis (S_harm, S_comp)",
-        "model": "gpt-4o",
+        "model": "gpt-4o-mini",  # Note: overridden by --safety_model arg
         # Default constraints - benchmarks can override via compliance_constraints
         "constraints": [
             "no_pii_exposure",

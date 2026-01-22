@@ -41,7 +41,7 @@ python reliability_eval/run_reliability_eval.py --n <repetitions> --max_tasks <n
 |----------|---------|-------------|
 | `--n` | 5 | Number of runs/variations for all multi-run metrics |
 | `--k` | (uses --n) | Override: repetitions for baseline/fault phases |
-| `--max_tasks` | 50 | Maximum tasks per benchmark |
+| `--max_tasks` | (all) | Maximum tasks per benchmark |
 | `--max_concurrent` | 5 | Maximum concurrent tasks per hal-eval run |
 | `--phases` | all | Which phases to run (see below) |
 | `--benchmark` | (all) | Run only on specific benchmark |
@@ -108,24 +108,24 @@ python reliability_eval/run_reliability_eval.py \
 
 **Fault Injection:**
 ```bash
---fault_rate 0.2    # Fault injection rate (default: 0.2 = 20%)
+--fault_rate 0.2  # Fault injection rate (default: 0.2 = 20%)
 ```
 
 **Prompt Sensitivity:**
 ```bash
---num_variations 5           # Number of prompt variations (default: uses --n)
---variation_strength mild    # mild, medium, strong, or naturalistic
+--num_variations 5              # Number of prompt variations (default: uses --n)
+--variation_strength naturalistic  # mild, medium, strong, or naturalistic (default: naturalistic)
 ```
 
 **Structural Perturbations:**
 ```bash
---perturbation_strength medium  # mild, medium, or severe
+--perturbation_strength medium  # mild, medium, or severe (default: medium)
 ```
 
 **Safety Analysis:**
 ```bash
---safety_model gpt-4o-mini   # LLM model for safety analysis
---results_dir results        # Directory containing results to analyze
+--safety_model gpt-4o-mini   # LLM model for safety analysis (default: gpt-4o-mini)
+--results_dir results        # Directory containing results to analyze (default: results)
 ```
 
 ### Continuing Failed Runs
