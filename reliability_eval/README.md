@@ -9,6 +9,14 @@ The evaluation process consists of two main steps:
 1. **`run_reliability_eval.py`** - Runs the evaluation experiments
 2. **`analyze_reliability.py`** - Analyzes results and generates visualizations
 
+## Supported Benchmarks
+
+| Benchmark | Description | Key Constraints |
+|-----------|-------------|-----------------|
+| `taubench_airline` | Customer service (airline) | PII handling, destructive ops |
+| `taubench_retail` | Customer service (retail) | PII handling, destructive ops |
+| `gaia` | General Q&A tasks | PII (relaxed for Q&A), destructive ops |
+
 ## Quick Start
 
 ```bash
@@ -16,7 +24,7 @@ The evaluation process consists of two main steps:
 python reliability_eval/run_reliability_eval.py --n 2 --max_tasks 5 --phases baseline
 
 # 2. Analyze the results
-python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark gaia
 ```
 
 ## Running Evaluations
@@ -88,7 +96,12 @@ python reliability_eval/run_reliability_eval.py --phases abstention --results_di
 python reliability_eval/run_reliability_eval.py --n 5 --k 3 --max_tasks 50
 
 # Run on a specific benchmark only
-python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --benchmark taubench_airline
+python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --benchmark gaia
+
+# Full GAIA evaluation (all phases)
+python reliability_eval/run_reliability_eval.py \
+    --phases baseline fault prompt structural safety abstention \
+    --n 3 --max_concurrent 10 --benchmark gaia
 ```
 
 ### Phase-Specific Options
@@ -129,10 +142,11 @@ python reliability_eval/run_reliability_eval.py --continue_run_id taubench_airli
 
 ### Configuring Agents and Benchmarks
 
-Edit the `AGENT_CONFIGS` list in `run_reliability_eval.py` to specify which models to evaluate:
+Edit the `AGENT_CONFIGS` list in `run_reliability_eval.py` to specify which models to evaluate. Uncomment the agents you want to run:
 
 ```python
 AGENT_CONFIGS = [
+    # TauBench example (customer service)
     {
         "name": "taubench_toolcalling_gpt_4o_mini",
         "agent_dir": "agents/taubench_tool_calling",
@@ -141,11 +155,28 @@ AGENT_CONFIGS = [
         "provider": "openai",
         "benchmarks": ["taubench_airline"],
     },
+    # GAIA example (Q&A tasks)
+    {
+        "name": "gaia_generalist_gemini_2_flash",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gemini/gemini-2.0-flash",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "google",
+            "temperature": 0.0
+        }
+    },
     # Add more agents...
 ]
 ```
 
 Supported providers: `openai`, `anthropic`, `google`
+
+**Available GAIA models** (uncomment in `run_reliability_eval.py`):
+- OpenAI: `gpt-4o-mini`, `gpt-4-turbo`, `gpt-4o`, `o1`, `gpt-5.2`
+- Anthropic: `claude-3-5-haiku`, `claude-sonnet-3-7`, `claude-sonnet-4-5`, `claude-opus-4-5`
+- Google: `gemini-2.0-flash`, `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-3-pro`
 
 ## Analyzing Results
 
@@ -160,7 +191,7 @@ python reliability_eval/analyze_reliability.py --results_dir results/ --benchmar
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--results_dir` | results | Directory containing evaluation results |
-| `--benchmark` | taubench_airline | Benchmark to analyze |
+| `--benchmark` | (required) | Benchmark to analyze (`gaia`, `taubench_airline`, etc.) |
 | `--output_dir` | reliability_eval/analysis | Output directory for plots and reports |
 | `--scaffold` | all | Filter to specific agent scaffold |
 | `--use_llm_safety` | (flag) | Enable LLM-as-judge for safety analysis |
@@ -170,17 +201,20 @@ python reliability_eval/analyze_reliability.py --results_dir results/ --benchmar
 ### Examples
 
 ```bash
-# Basic analysis
+# Basic analysis (GAIA)
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark gaia
+
+# Basic analysis (TauBench)
 python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline
 
 # With LLM-based safety analysis
-python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --use_llm_safety
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark gaia --use_llm_safety
 
 # Custom output directory
-python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --output_dir my_analysis/
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark gaia --output_dir my_analysis/
 
 # Filter to specific agent type
-python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --scaffold toolcalling
+python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark gaia --scaffold generalist
 ```
 
 ### Generated Outputs
@@ -252,10 +286,13 @@ The evaluation requires API keys for the models being tested:
 # Always required
 export WANDB_API_KEY=your_key
 
+# Benchmark-specific
+export HF_TOKEN=your_key            # For GAIA dataset access (Hugging Face)
+
 # Provider-specific (based on configured agents)
-export OPENAI_API_KEY=your_key      # For OpenAI models
+export OPENAI_API_KEY=your_key      # For OpenAI models + safety analysis
 export ANTHROPIC_API_KEY=your_key   # For Anthropic models
-export GEMINI_API_KEY=your_key      # For Google models
+export GOOGLE_API_KEY=your_key      # For Google/Gemini models
 export OPENROUTER_API_KEY=your_key  # For OpenRouter models
 ```
 
@@ -271,34 +308,39 @@ pip install matplotlib seaborn pandas scipy
 
 ## Typical Workflow
 
-1. **Configure agents** - Edit `AGENT_CONFIGS` in `run_reliability_eval.py`
+1. **Configure agents** - Edit `AGENT_CONFIGS` in `run_reliability_eval.py` (uncomment desired models)
 
-2. **Run baseline evaluation** (consistency + predictability):
+2. **Set environment variables** - Ensure API keys are set for your models and benchmarks
+
+3. **Run all phases at once** (recommended):
    ```bash
+   python reliability_eval/run_reliability_eval.py \
+       --phases baseline fault prompt structural safety abstention \
+       --n 3 --max_concurrent 10 --benchmark gaia
+   ```
+
+   Or run phases separately:
+
+   ```bash
+   # Baseline evaluation (consistency + predictability)
    python reliability_eval/run_reliability_eval.py --n 5 --max_tasks 50 --phases baseline
-   ```
 
-3. **Run robustness evaluations** (optional):
-   ```bash
+   # Robustness evaluations
    python reliability_eval/run_reliability_eval.py --n 3 --max_tasks 50 --phases fault prompt structural
-   ```
 
-4. **Run safety analysis** on collected traces:
-   ```bash
+   # Safety analysis on collected traces
    python reliability_eval/run_reliability_eval.py --phases safety
-   ```
 
-5. **Run abstention detection** on collected traces:
-   ```bash
+   # Abstention detection on collected traces
    python reliability_eval/run_reliability_eval.py --phases abstention
    ```
 
-6. **Analyze results**:
+4. **Analyze results**:
    ```bash
-   python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline --use_llm_safety
+   python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark gaia --use_llm_safety
    ```
 
-7. **Review outputs** in `reliability_eval/analysis/`
+5. **Review outputs** in `reliability_eval/analysis/`
 
 ## Troubleshooting
 
