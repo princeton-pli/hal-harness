@@ -27,11 +27,6 @@ class BenchmarkManager:
             "taubench_retail",
             "taubench_airline",
             "gaia",
-            "inspect_evals/gaia",
-            "inspect_evals/cybench",
-            "inspect_evals/appworld",
-            "inspect_evals/agentharm",
-            "inspect_evals/agentharm_benign",
             "corebench_easy",
             "corebench_medium",
             "corebench_hard",
@@ -43,13 +38,7 @@ class BenchmarkManager:
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
-        if benchmark_name.startswith("inspect:") or benchmark_name.startswith(
-            "inspect_evals/"
-        ):
-            return InspectBenchmark(
-                self.agent_dir, self.config, benchmark_name, self.agent_args
-            )
-        elif benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
+        if benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
             from .benchmarks.scicode import SciCodeBenchmark
 
             benchmark = SciCodeBenchmark(self.agent_dir, self.config, benchmark_name)

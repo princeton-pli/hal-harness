@@ -8,8 +8,6 @@ import time
 import importlib
 from inspect import get_annotations
 from .agent_runner import AgentRunner
-from .inspect.inspect import is_inspect_benchmark
-from .inspect_runner import inspect_evaluate
 from dotenv import load_dotenv
 import sys
 from .utils.logging_utils import (
@@ -173,29 +171,6 @@ def main(
             )
             sys.exit(1)
 
-        # Check if VM/Docker execution is attempted with inspect solver
-        if (vm or docker) and is_inspect_benchmark(benchmark):
-            if agent_function and is_inspect_solver(agent_function, agent_dir):
-                run_type = "VM" if vm else "Docker"
-                print_error(
-                    f"{run_type} execution is not supported for inspect solvers. Please run without --{run_type.lower()} flag. Exiting..."
-                )
-                sys.exit(1)
-
-        # Check if conda environment is specified for inspect solver
-        if conda_env_name and is_inspect_benchmark(benchmark):
-            if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_error(
-                    "Conda environments are not supported for inspect solvers. Dependencies are managed by Inspect harness. Run without --conda_env_name flag. Exiting..."
-                )
-                sys.exit(1)
-
-        if max_tasks and is_inspect_benchmark(benchmark):
-            print_error(
-                "max_tasks is not supported for inspect benchmarks. Please remove the flag and run the full benchmark."
-            )
-            sys.exit(1)
-
         if continue_run and not set_run_id:
             raise ValueError("continue_run flag requires run_id to be set")
 
@@ -221,73 +196,46 @@ def main(
 
         # get exact command used to run the evaluation from click
         run_command = " ".join(["hal-eval"] + sys.argv[1:])
-
-        if is_inspect_benchmark(benchmark):
-            # if agent_function and is_inspect_solver(agent_function, agent_dir):
-            # Use original inspect_evaluate for solver agents
-            print_step(
-                "Running evaluation for inspect solver and harness (see logs for more details and monitoring)..."
-            )
-            inspect_evaluate(
-                benchmark=benchmark,
-                benchmark_args=benchmark_args,
-                agent_name=agent_name,
+        # Initialize agent runner
+        print_step("Initializing agent runner...")
+        try:
+            runner = AgentRunner(
                 agent_function=agent_function,
                 agent_dir=agent_dir,
                 agent_args=agent_args,
-                model=agent_args["model_name"],
-                run_id=run_id,
-                continue_run=continue_run,
-                upload=upload or False,
+                benchmark_name=benchmark,
+                config=config,
+                run_id=run_id,  # Now guaranteed to have a value
+                use_vm=vm,
+                use_docker=docker,
                 max_concurrent=max_concurrent,
-                conda_env_name=conda_env_name,
-                vm=vm,
-                docker=docker,
-                inspect_eval_args=inspect_eval_args,
+                conda_env=conda_env_name,
+                continue_run=continue_run,
                 run_command=run_command,
+                ignore_errors=ignore_errors,
+                max_tasks=max_tasks,
             )
 
-        else:
-            # Initialize agent runner
-            print_step("Initializing agent runner...")
-            try:
-                runner = AgentRunner(
-                    agent_function=agent_function,
-                    agent_dir=agent_dir,
-                    agent_args=agent_args,
-                    benchmark_name=benchmark,
-                    config=config,
-                    run_id=run_id,  # Now guaranteed to have a value
-                    use_vm=vm,
-                    use_docker=docker,
-                    max_concurrent=max_concurrent,
-                    conda_env=conda_env_name,
-                    continue_run=continue_run,
-                    run_command=run_command,
-                    ignore_errors=ignore_errors,
-                    max_tasks=max_tasks,
+            # Run evaluation
+            print_step("Running evaluation with custom agent and HAL harness...")
+            results = asyncio.run(
+                runner.run(agent_name=agent_name, upload=upload or False)
+            )
+
+            print_success("Evaluation completed successfully")
+            print_results_table(results)
+
+            # Only print run summary if we have a valid benchmark and run_id
+            if runner.benchmark and runner.benchmark.get_run_dir(run_id):
+                print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
+            else:
+                print_warning(
+                    "Could not generate run summary - missing benchmark or run directory"
                 )
 
-                # Run evaluation
-                print_step("Running evaluation with custom agent and HAL harness...")
-                results = asyncio.run(
-                    runner.run(agent_name=agent_name, upload=upload or False)
-                )
-
-                print_success("Evaluation completed successfully")
-                print_results_table(results)
-
-                # Only print run summary if we have a valid benchmark and run_id
-                if runner.benchmark and runner.benchmark.get_run_dir(run_id):
-                    print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
-                else:
-                    print_warning(
-                        "Could not generate run summary - missing benchmark or run directory"
-                    )
-
-            except Exception as e:
-                print_error(f"Error running evaluation: {str(e)}")
-                raise
+        except Exception as e:
+            print_error(f"Error running evaluation: {str(e)}")
+            raise
 
     except Exception as e:
         # Get the full traceback
