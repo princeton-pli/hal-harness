@@ -56,6 +56,8 @@ This repository provides a standardized evaluation harness for reproducible agen
    cd hal-harness
    ```
 
+   _Note: the `--recursive` flag must be passed so that benchmark submodules are downloaded_
+
 2. **Create conda environment:**
    ```bash
    conda create -n hal python=3.12
@@ -91,14 +93,26 @@ This repository provides a standardized evaluation harness for reproducible agen
    AZURE_SUBSCRIPTION_ID=your_subscription_id
    AZURE_RESOURCE_GROUP_NAME=your_resource_group
    AZURE_LOCATION=your_location
+   NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    SSH_PUBLIC_KEY_PATH=/path/to/your/ssh/key.pub
    SSH_PRIVATE_KEY_PATH=/path/to/your/ssh/key
-   NETWORK_SECURITY_GROUP_NAME=your_nsg_name
    ```
+
+
+    * AZURE_SUBSCRIPTION_ID: This is the ID of your Azure subscription. Use the UUID.
+    * AZURE_RESOURCE_GROUP_NAME: This is the name of the resource group in which your VMs should be created.
+    * AZURE_LOCATION: e.g., "eastus" or "westus", etc.
+    * NETWORK_SECURITY_GROUP_NAME
+      - You will need to create a NSG in Azure for your access.
+      - Ensure that the NSG has an Inbound security rule that permits your machine to access SSH (port 22).
+      - Enter the NSG's name here.
+    * SSH_PUBLIC_KEY_PATH: This is the TK
+    * SSH_PRIVATE_KEY_PATH: This is the TK
+   
    
    Then run the following command to install the optional azure dependencies:
    ```bash
-   pip install -e .[azure]
+   pip install -e ".[azure]"
    ```
    
 7. **Optional: Docker Setup**
@@ -113,7 +127,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 - Mini version is a subset of 50 randomly selected problems from the full dataset
 - Supports local, Docker, and VM execution
 - The task ids part of SWE-Bench Verified (Mini) can be found [here](https://github.com/benediktstroebl/agent-eval-harness/blob/7b231a952828022a43977f21acfd452adda5088c/agent_eval_harness/benchmarks/swebench_verified_mini_task_ids.txt)
-- **Does not support arm64 machines**
+- **Does not support arm64 machines (e.g., Mac M chips)**
 
 For SWE-bench Verified, you will need to install the SWE-bench benchmark specific dependencies:
 ```bash
@@ -289,7 +303,7 @@ gpg --output hal/benchmarks/corebench/core_test.json --decrypt hal/benchmarks/co
 ```
 - Install benchmark specific dependencies:
 ```bash
-pip install -e .[corebench,coreagent]
+pip install -e ".[corebench,coreagent]"
 ```
 - Benchmark for evaluating how agents can reproduce the results of scientific papers when provided with their code.
 - Tasks involve setting up the environment, running the code, and answering questions about the results.

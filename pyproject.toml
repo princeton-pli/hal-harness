@@ -9,7 +9,7 @@ description = "Agent evaluation harness with optional benchmark support"
 requires-python = ">=3.11"
 dependencies = [
     "datasets",
-    "weave==0.51.41",
+    "weave>=0.52.0",
     "gql<4",
     "huggingface-hub",
     "python-dotenv",
