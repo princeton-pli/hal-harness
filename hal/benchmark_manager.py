@@ -2,7 +2,6 @@
 
 from typing import Dict, Any, Optional
 from .benchmarks.base_benchmark import BaseBenchmark
-from .benchmarks.inspect_benchmark import InspectBenchmark
 
 
 class BenchmarkManager:
