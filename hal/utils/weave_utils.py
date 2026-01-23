@@ -488,50 +488,6 @@ def find_usage_dict_recursive(data):
     return found
 
 
-# def calculate_costs(usage_calls: List[Dict[str, Any]]) -> Tuple[float, Dict[str, Dict[str, int]]]:
-#     """Calculate total costs and token usage from processed calls"""
-#     unique_model_names = set(model_name for call in usage_calls for model_name in call)
-
-#     print("USAGE CALLS 153", usage_calls)
-#     # Validate models
-#     for model_name in unique_model_names:
-#         if model_name not in MODEL_PRICES_DICT:
-#             raise KeyError(f"Model '{model_name}' not found in MODEL_PRICES_DICT.")
-
-#     total_cost = 0
-#     token_usage = {model: {"prompt_tokens": 0, "completion_tokens": 0} for model in unique_model_names}
-
-#     for call in usage_calls:
-
-#         for model_name in call:
-#             if 'prompt_tokens' in call[model_name] and 'completion_tokens' in call[model_name]:
-#                 # Standard call
-#                 token_usage[model_name]["prompt_tokens"] += call[model_name]["prompt_tokens"]
-#                 token_usage[model_name]["completion_tokens"] += call[model_name]["completion_tokens"]
-#                 total_cost += (
-#                     MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"] +
-#                     MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["completion_tokens"]
-#                 )
-#             elif 'input_tokens' in call[model_name] and 'output_tokens' in call[model_name]:
-#                 # Tool use call
-#                 token_usage[model_name]["prompt_tokens"] += call[model_name]["input_tokens"]
-#                 token_usage[model_name]["completion_tokens"] += call[model_name]["output_tokens"]
-#                 total_cost += (
-#                     MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["input_tokens"] +
-#                     MODEL_PRICES_DICT[model_name]["completion_tokens"] * call[model_name]["output_tokens"]
-#                 )
-#             elif 'prompt_tokens' in call[model_name] and not ('completion_tokens' in call[model_name]):
-#                 # embedding call
-#                 token_usage[model_name]["prompt_tokens"] += call[model_name]["prompt_tokens"]
-#                 total_cost += (
-#                     MODEL_PRICES_DICT[model_name]["prompt_tokens"] * call[model_name]["prompt_tokens"]
-#                 )
-#             else:
-#                 raise ValueError(f"Error in handling usage data! {call}")
-
-#     return total_cost, token_usage
-
-
 @weave.op()
 def get_total_cost(client):
     total_cost = 0

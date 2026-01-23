@@ -181,39 +181,6 @@ class LocalRunner:
                         error_msg = f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}"
                         verbose_logger.debug(error_msg)
 
-            # Copy and run setup script if it exists
-            # if self.benchmark and self.benchmark.setup_script:
-            #     setup_script_src = Path(self.benchmark.setup_script)
-            #     if setup_script_src.exists():
-            #         setup_script_dest = temp_dir / "setup_script.sh"
-            #         shutil.copy2(setup_script_src, setup_script_dest)
-            #         setup_script_dest.chmod(0o755)
-
-            #         verbose_logger.debug(f"Running setup script for task {task_id}")
-            #         cmd = ["bash", str(setup_script_dest)]
-            #         if self.conda_env:
-            #             cmd = ["conda", "run", "-n", self.conda_env] + cmd
-
-            #         process = await asyncio.create_subprocess_exec(
-            #             *cmd,
-            #             cwd=str(temp_dir),
-            #             stdout=asyncio.subprocess.PIPE,
-            #             stderr=asyncio.subprocess.PIPE
-            #         )
-            #         stdout, stderr = await process.communicate()
-
-            #         # Log setup script output
-            #         if stdout:
-            #             verbose_logger.debug(f"Setup script stdout for task {task_id}:\n{stdout.decode()}")
-            #         if stderr:
-            #             verbose_logger.debug(f"Setup script stderr for task {task_id}:\n{stderr.decode()}")
-
-            #         if process.returncode != 0:
-            #             error_msg = stderr.decode() if stderr else "Unknown error"
-            #             verbose_logger.debug(f"Error running setup script for task {task_id}: {error_msg}")
-            #             return {task_id: f"ERROR: Setup script failed: {error_msg}"}
-
-            # Create runner script
             script = self._create_runner_script(
                 agent_function=agent_function, task_id=task_id, run_id=run_id
             )

@@ -120,24 +120,6 @@ def inspect_evaluate(
                 # Load the task
                 resolved_task = load_task(task, model, task_args=benchmark_args)
 
-                # # Run the custom agent
-                # log_start(f"Running Inspect custom agent {agent_function}")
-
-                # solver = run_agent(
-                #     resolved_task.dataset,
-                #     agent,
-                #     agent_args=agent_args,
-                #     agent_function=agent_function,
-                #     agent_dir=agent_dir,
-                #     max_concurrent=max_concurrent,
-                #     run_id=run_id,
-                #     log_dir=log_dir,
-                #     task_name=task,
-                #     conda_env_name=conda_env_name,
-                #     )
-                # log_end()
-
-                # run the task (this will be fast since it mostly just scoring)
                 log_start(f"Scoring custom agent {agent_function}")
                 if not continue_run:
                     eval_logs = eval(
