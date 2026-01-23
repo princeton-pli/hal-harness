@@ -8,6 +8,8 @@ import os
 import sys
 import ast
 from functools import partial
+from mdconvert import MarkdownConverter, DocumentConverterResult
+
 from smolagents import (
     CodeAgent,
     tool,
@@ -39,11 +41,9 @@ def supports_stop_parameter(model_id: str) -> bool:
 # Replace the function in smolagents
 smolagents.models.supports_stop_parameter = supports_stop_parameter
 
-from mdconvert import MarkdownConverter, DocumentConverterResult
-
 # Import agent_hints using absolute path
 sys.path.append(os.path.dirname(__file__))
-from agent_hints import AGENT_HINTS
+from agent_hints import AGENT_HINTS  # noqa: E402 # FIXME: smells bad
 
 
 try:

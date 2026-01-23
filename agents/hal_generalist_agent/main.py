@@ -1,6 +1,8 @@
 from typing import Optional, List, Dict, Any
 from functools import partial
 import tiktoken
+import asyncio
+from mdconvert import MarkdownConverter
 
 import subprocess
 from pathlib import Path
@@ -41,7 +43,6 @@ def supports_stop_parameter(model_id: str) -> bool:
 # Replace the function in smolagents
 smolagents.models.supports_stop_parameter = supports_stop_parameter
 
-from mdconvert import MarkdownConverter
 
 try:
     from hal.utils.weave_utils import MODEL_PRICES_DICT
