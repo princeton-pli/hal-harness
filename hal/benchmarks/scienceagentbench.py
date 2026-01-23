@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
 
 from datasets import load_dataset

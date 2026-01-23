@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
 from datasets import load_dataset
 import subprocess

@@ -1,6 +1,4 @@
 # This is an example agent that generates code for the SciCode benchmark in a zero-shot format.
-from openai import OpenAI
-import os
 from typing import Any
 from pathlib import Path
 from agent import get_agent

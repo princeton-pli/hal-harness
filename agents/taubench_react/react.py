@@ -1,6 +1,4 @@
 from tau_bench.envs import get_env
-from tau_bench.agents.base import Agent
-from tau_bench.types import EnvRunResult, RunConfig, Action
 
 from tau_bench.agents.chat_react_agent import ChatReActAgent
 

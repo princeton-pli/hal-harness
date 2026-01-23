@@ -2,15 +2,13 @@ import json
 import os
 import sys
 import time
-import datetime
 import weave  # type: ignore
 from inspect_ai import eval, eval_retry
-from pydantic_core import to_jsonable_python
 from inspect_ai.solver import bridge
 
 from typing import Any
 
-from .inspect.agent import load_agent, run_agent, validate_agent
+from .inspect.agent import load_agent, validate_agent
 from .inspect.hf import upload_results
 from .inspect.inspect import (
     config_for_eval,
@@ -25,9 +23,8 @@ from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename, get_git_info
 from .utils.weave_utils import compute_cost_from_inspect_usage, get_weave_calls
 
-from .utils.logging_utils import print_success, print_results_table, print_warning
+from .utils.logging_utils import print_success, print_results_table
 
-import datetime
 
 
 def inspect_evaluate(

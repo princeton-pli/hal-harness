@@ -1,5 +1,4 @@
 import json
-import requests
 import os
 
 def store_and_upload_results(result, benchmark_name, agent_path, model, config):

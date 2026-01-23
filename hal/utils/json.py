@@ -1,4 +1,3 @@
-import json
 
 
 def make_jsonable(data, seen=None):

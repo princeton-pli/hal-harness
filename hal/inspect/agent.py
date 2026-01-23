@@ -1,22 +1,18 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import importlib
 import inspect
 import os
 from inspect_ai.solver import solver
 from typing import Callable, cast, Dict, Any
 import shutil
-from contextlib import contextmanager
 import uuid
 import subprocess
 import json
 from concurrent.futures import ProcessPoolExecutor
 import traceback
 
-from inspect_ai.model import ChatMessage
 from inspect_ai.dataset import Dataset
 from inspect_ai.solver import Generate, Solver, TaskState
-import weave
 def load_agent(agent_function: str) -> Callable:
     # parse the agent name
     module_name, function_name = agent_function.rsplit(".", 1)
@@ -308,7 +304,7 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
             swebench_submissions_path = os.path.join(log_dir, f"{run_id}_SWE_BENCH_SUBMISSIONS.jsonl")
             with open(swebench_submissions_path, 'w') as f:
                 for key, value in merged_result.items():
-                    f.write(json.dumps({"instance_id": key, "model_patch": value, "model_name_or_path": f"swebench"}) + '\n')
+                    f.write(json.dumps({"instance_id": key, "model_patch": value, "model_name_or_path": "swebench"}) + '\n')
         
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:

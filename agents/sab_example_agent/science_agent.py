@@ -3,11 +3,8 @@ from litellm_engine import LiteLlmEngine
 from litellm import model_cost
 from litellm.utils import trim_messages
 from pathlib import Path
-from shutil import rmtree
 
-import os
 import re
-import shutil
 import subprocess
 
 SYSTEM_PROMPT = """You are an expert Python programming assistant that helps scientist users to write high-quality code to solve their tasks.

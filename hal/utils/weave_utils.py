@@ -1,10 +1,5 @@
 import weave
-import time
-import requests
-import os
-import json
 from typing import Dict, Any, Tuple, List, Optional
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from .logging_utils import print_step, print_warning, console, create_progress
 from datetime import datetime
 from weave.trace_server.trace_server_interface import CallsFilter, CallsQueryReq
@@ -369,12 +364,12 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     # convert started_at from datetime to string
     try:
         started_at = call.started_at.isoformat()
-    except Exception as e:
+    except Exception:
         print("Exception processing trace of call:", call)
         started_at = None
     try:
         ended_at = call.ended_at.isoformat()
-    except Exception as e:
+    except Exception:
         print("Exception processing trace of call:", call)
         ended_at = None
     

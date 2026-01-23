@@ -4,7 +4,6 @@ import asyncio
 import shutil
 import uuid
 import tempfile
-import subprocess
 import logging
 import docker
 import time
@@ -80,7 +79,7 @@ class DockerRunner:
                     if 'stream' in log:
                         verbose_logger.debug(log['stream'].strip())
                 
-                verbose_logger.debug(f"Docker image built successfully")
+                verbose_logger.debug("Docker image built successfully")
                 
         except docker.errors.DockerException as e:
             error_message = f"Failed to build Docker image: {str(e)}"

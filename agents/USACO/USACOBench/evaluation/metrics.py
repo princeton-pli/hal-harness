@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, Dict, Any, Tuple, Union
+from typing import List, Dict, Tuple, Union
 
 from .result_type import ResultType
 

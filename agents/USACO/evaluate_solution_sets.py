@@ -1,11 +1,9 @@
 import argparse
-import time
-from datetime import datetime
 import pickle
 from collections import Counter
 import os
 
-from USACOBench.evaluation import evaluate_agent, evaluate_solution_sets, print_metrics
+from USACOBench.evaluation import evaluate_solution_sets, print_metrics
 import json
 
 parser = argparse.ArgumentParser()

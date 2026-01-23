@@ -3,7 +3,6 @@ import os
 import urllib.request
 import tarfile
 import time
-import shutil
 from typing import Dict, Any
 import numpy as np
 from scipy.stats import t

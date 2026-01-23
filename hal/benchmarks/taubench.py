@@ -1,10 +1,5 @@
-import os
-import json
-from typing import Dict, Any, TypedDict, List
-from typing_extensions import NotRequired
+from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
-import docker
-from hal.utils.logging_utils import print_warning
 
 class TauBenchBenchmark(BaseBenchmark):
     """TauBench benchmark implementation"""

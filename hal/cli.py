@@ -3,7 +3,7 @@ import re
 import click
 import yaml
 import asyncio
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 import time
 import importlib
 from inspect import get_annotations
@@ -21,17 +21,10 @@ from .utils.logging_utils import (
     print_results_table,
     print_run_summary,
     print_warning,
-    terminal_print,
-    console,
     print_run_config
 )
-from rich.table import Table
-from rich import print
-from rich.box import ROUNDED
 import traceback
 from datetime import datetime
-from pathlib import Path
-import sys
 
 load_dotenv()
 

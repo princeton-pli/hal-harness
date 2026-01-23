@@ -1,10 +1,8 @@
 from sweet_rl.environments.human_interaction_env import HumanInteractionEnv
 from sweet_rl.environments.human_design_interaction_env import HumanDesignInteractionEnv
 from openai import OpenAI
-import concurrent.futures
 import anthropic
 
-from google import genai
 # response = client.models.generate_content(
 #     model="gemini-2.0-flash", contents="Explain how AI works in a few words"
 # )

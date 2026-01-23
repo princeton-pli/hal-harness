@@ -2,7 +2,6 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.panel import Panel
 from rich.table import Table
-from rich import print as rprint
 from typing import Optional, Any
 import logging
 import sys
@@ -278,7 +277,7 @@ def log_run_summary(run_id: str, log_dir: str) -> None:
     console.print(summary)
     
     # Log to file
-    main_logger.info(f"Run Summary:")
+    main_logger.info("Run Summary:")
     main_logger.info(f"  Run ID: {run_id}")
     main_logger.info(f"  Log Directory: {log_dir}")
 

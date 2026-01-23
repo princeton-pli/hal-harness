@@ -9,8 +9,6 @@ from .logging_utils import (
     print_step,
     print_success,
     print_error,
-    terminal_print,
-    console,
     create_progress
 )
 
@@ -62,7 +60,7 @@ def upload_results(benchmark, file, directory):
             
         elif file:
             if not file.endswith('.json'):
-                print_error(f"File must be a JSON file")
+                print_error("File must be a JSON file")
                 return
             file_paths = [file]
             
@@ -70,7 +68,7 @@ def upload_results(benchmark, file, directory):
             file_paths = list(find_upload_files(directory, require_upload_suffix=True))
         
         if not file_paths:
-            print_error(f"No upload files found")
+            print_error("No upload files found")
             return
 
         print_step(f"Found {len(file_paths)} files to process")

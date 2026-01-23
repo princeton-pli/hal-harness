@@ -1,4 +1,3 @@
-import os
 from smolagents import LiteLLMModel, CodeAgent, Tool, DuckDuckGoSearchTool, PythonInterpreterTool, FinalAnswerTool
 import time
 

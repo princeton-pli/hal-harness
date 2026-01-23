@@ -1,5 +1,4 @@
 import os
-import json
 from typing import Dict, Any, Tuple, Union
 from .base_benchmark import BaseBenchmark
 from inspect_ai import eval, TaskInfo
@@ -105,7 +104,7 @@ class InspectBenchmark(BaseBenchmark):
             elif benchmark_name == "inspect_evals/agentharm_benign":
                 eval_results["accuracy"] = eval_results["combined_scorer/inspect_evals/avg_score"]
         except Exception as e:
-            print_warning(f"Computing additional metrics failed. Output will only contain standard metrics from Inspect harness...")
+            print_warning("Computing additional metrics failed. Output will only contain standard metrics from Inspect harness...")
             log_error(f"Computing additional metrics failed: {e}")
             pass
         

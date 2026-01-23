@@ -6,7 +6,6 @@ from typing import List, Dict, Any, Union, Callable
 from .prompts import basic_generation_prompt, retrieval_generation_prompt
 from USACOBench.utils import get_code_from_solution
 from USACOBench.retrievers import Retriever
-from USACOBench.models import chatgpts_raw
 
 Problem = Dict[Any, Any]
 Solution = Dict[str, Union[str, None]]

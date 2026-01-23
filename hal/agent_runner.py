@@ -6,8 +6,7 @@ from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
-from .utils.logging_utils import print_step, print_success, print_error, create_progress, console, log_warning, print_warning
-import sys
+from .utils.logging_utils import print_step, print_error, create_progress, console, print_warning
 from rich.table import Table
 from rich.box import ROUNDED
 from .utils.logging_utils import terminal_print

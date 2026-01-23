@@ -1,9 +1,7 @@
-import os
 import click
 import json
 from zipfile import ZipFile
 from pathlib import Path
-from cryptography.fernet import Fernet
 from typing import Optional
 from ..utils.logging_utils import (
     print_step, 
@@ -17,9 +15,6 @@ from rich.table import Table
 from rich.box import ROUNDED
 from dotenv import load_dotenv
 import base64
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from .json_encryption import JsonEncryption
 
 load_dotenv()
@@ -81,7 +76,7 @@ def decrypt_file(encrypted_file_path: Path, progress=None, task=None) -> None:
         
         # Decrypt the JSON data
         if progress:
-            progress.update(task, description=f"Decrypting JSON content")
+            progress.update(task, description="Decrypting JSON content")
             
         decrypted_json = decrypt_json(
             encrypted_data['encrypted_data'],

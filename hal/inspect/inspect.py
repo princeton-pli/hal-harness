@@ -1,6 +1,6 @@
 from datetime import datetime
 from inspect import get_annotations
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
 from inspect_ai import TaskInfo, list_tasks, Task
 from inspect_ai.log import EvalLog
@@ -8,7 +8,6 @@ from inspect_ai.model import get_model
 from inspect_ai.solver import Solver
 from inspect_ai._eval.loader import load_tasks
 from hal.benchmarks.inspect_benchmark import InspectBenchmark
-from hal.utils.logging_utils import log_error, print_warning
 
 def is_inspect_benchmark(benchmark: str) -> bool:
     """

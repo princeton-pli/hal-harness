@@ -1,6 +1,5 @@
 from tau_bench.envs import get_env
-from tau_bench.agents.base import Agent
-from tau_bench.types import EnvRunResult, RunConfig, Action
+from tau_bench.types import Action
 
 from openai import OpenAI
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:

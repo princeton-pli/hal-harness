@@ -3,25 +3,12 @@ import os
 from moatless.loop import AgenticLoop
 from moatless.transitions import search_and_code_transitions
 from moatless.workspace import Workspace
-from moatless.benchmark.utils import trace_metadata
-from moatless.benchmark.swebench import get_repo_dir_name, sorted_instances, setup_swebench_repo
-from tqdm.notebook import tqdm
-from moatless.benchmark.swebench import load_instances
-import os
-import json
+from moatless.benchmark.swebench import get_repo_dir_name, setup_swebench_repo
 from moatless.index.settings import IndexSettings
 from moatless.index.code_index import CodeIndex
 from dotenv import load_dotenv
-from moatless.benchmark.swebench import get_repo_dir_name
 from moatless.index import CodeIndex, IndexSettings
 from moatless import FileRepository, Workspace
-import os
-from moatless.index import CodeIndex, IndexSettings
-from moatless import FileRepository, Workspace
-from moatless.edit import EditCode, PlanToCode
-from moatless.transitions import search_and_code_transitions
-from moatless.benchmark.evaluation import  Evaluation
-from moatless.find import DecideRelevance, IdentifyCode, SearchCode
 
 import time
 import traceback
@@ -152,7 +139,7 @@ def run_moatless(tasks: dict[str, dict], **kwargs) -> dict[str, str]:
         try:
             response = loop.run(problem_statement)
 
-        except Exception as e:
+        except Exception:
             info["error"] = traceback.format_exc()
             logging.exception(f"Error in evaluation of {instance['instance_id']} ")
 

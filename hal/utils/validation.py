@@ -1,6 +1,5 @@
 import os
 import ast
-import importlib.util
 
 def check_subprocess_usage(path):
     def check_file(file_path):

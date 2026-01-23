@@ -1,17 +1,13 @@
 import os
 import json
-from typing import Dict, Any, TypedDict, List
-from typing_extensions import NotRequired
+from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
-import docker
-from hal.utils.logging_utils import print_warning
 from sweet_rl.utils import code_evaluate
 
 
 from PIL import Image
-from sweet_rl.utils.webpage_utils import (extract_html_snippet, get_driver,
-                                          render_full_html, replace_urls)
-from torchvision.transforms import functional as F
+from sweet_rl.utils.webpage_utils import (get_driver,
+                                          render_full_html)
 from tqdm import tqdm
 from transformers import CLIPModel, CLIPProcessor
 import concurrent

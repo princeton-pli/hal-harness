@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, TypeVar, Generic
-from pydantic import BaseModel, TypeAdapter
+from typing import Dict, Any, Optional
 import json
 import os
-import subprocess
-from inspect_ai.log import EvalLog, write_eval_log
+from inspect_ai.log import EvalLog
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
 from ..utils.logging_utils import print_warning

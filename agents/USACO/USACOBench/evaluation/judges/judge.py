@@ -3,9 +3,8 @@ import time
 import random
 from tqdm import tqdm
 from typing import List, Dict, Any, Union
-from abc import ABC, abstractmethod
+from abc import ABC
 
-from USACOBench.evaluation.result_type import ResultType
 
 Problem = Dict[Any, Any]
 Solution = Dict[str, Union[str, None]]
