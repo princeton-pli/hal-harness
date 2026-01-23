@@ -17,7 +17,6 @@ class USACOBenchmark(BaseBenchmark):
         )
 
         self.benchmark_name = "usaco"
-        self.requirements_file = "usaco"
         self.requires_sandbox = False
         super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
 

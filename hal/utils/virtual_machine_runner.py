@@ -5,7 +5,7 @@ import time
 import tempfile
 import shutil
 import uuid
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from .virtual_machine_manager import VirtualMachineManager
 from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
@@ -26,7 +26,6 @@ class VirtualMachineRunner:
         self.vm_manager = VirtualMachineManager()
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
-        self._active_vms: List[str] = []
         self.benchmark = benchmark
 
     async def fetch_agent_logs(self, vm_name, ssh_private_key_path, task_id):

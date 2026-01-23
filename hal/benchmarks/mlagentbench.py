@@ -2,16 +2,10 @@ import subprocess
 from .base_benchmark import BaseBenchmark
 import json
 from typing_extensions import Dict
-import time
 import os
 import sys
-from ..utils.weave_utils import get_total_cost, get_weave_calls
 from types import SimpleNamespace
-from datetime import datetime
 from .MLAgentBench.MLAgentBench.environment import Environment
-import pprint
-
-pp = pprint.PrettyPrinter(depth=4)
 
 
 class MLAgentBenchBenchmark(BaseBenchmark):
@@ -19,7 +13,6 @@ class MLAgentBenchBenchmark(BaseBenchmark):
         super().__init__(agent_dir, config)
         self.benchmark_name = "mlagentbench"
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "MLAgentBench")
-        self.requirements_file = "mlagentbench"
         self.tasks = [
             # "llama-inference",
             # "identify-contrails",
@@ -195,111 +188,3 @@ class MLAgentBenchBenchmark(BaseBenchmark):
             # delete file
             os.remove(task_result_file_path)
         return results
-
-    def validate_agent_output(self):
-        # check if logs/ directory as created by env
-        log_path = os.path.join(self.agent_dir, "logs")
-        assert os.path.exists(log_path), f"Logs directory not found at {log_path}"
-
-    def test_run(self, agent_function, weave_client):
-        args = self.args.copy()
-
-        args["task"] = "cifar10"
-        args["log_dir"] = os.path.abspath(os.path.join(self.agent_dir, "logs"))
-        args["work_dir"] = os.path.abspath(os.path.join(self.agent_dir, "workspace"))
-        args["max_steps"] = 1  # only run 1 step for test run
-        args["max_time"] = 60  # only run for 1 minute for test run, whatever hits first
-
-        test_env = Environment(SimpleNamespace(**args))
-
-        self.mount_environment()
-        _ = self.run_agent(agent_function, test_env)
-        test_env.save("final")
-        self.unmount_environment()
-
-        # Validate agent output
-        self.validate_agent_output()
-
-        # remove logs/ and workspace/ directories
-        os.system(
-            f"rm -rf {os.path.abspath(os.path.join(self.agent_dir, 'logs'))} {os.path.abspath(os.path.join(self.agent_dir, 'workspace'))}"
-        )
-
-        # validate that there was cost associated with the test run
-        time.sleep(5)  # wait to finish usage calculation on weave
-        self.validate_logging(weave_client, test_weave_task_id="cifar10")
-
-        return True
-
-    @property
-    def type_adapter(self):
-        # For MLAgentBench, there is no files to validate
-        pass
-
-    def process_and_upload_results(
-        self,
-        agent_name: str,
-        run_id: str,
-        eval_results: Dict,
-        weave_client,
-        config,
-        upload=False,
-    ):
-        # move logs/ direcotry to results/benchmark_name/logs
-        out_path = f"results/{self.benchmark_name}/{run_id}"
-        os.makedirs(out_path, exist_ok=True)
-
-        # store results
-        with open(os.path.join(out_path, f"{run_id}.json"), "w") as f:
-            json.dump(eval_results, f)
-
-        # store other logs that harness created
-        os.system(f"mv {self.agent_dir}/{run_id}_logs {out_path}")
-
-        total_cost, total_token_usage = get_total_cost(weave_client)
-
-        # New dict
-        import numpy as np
-
-        upload_dict = {
-            "config": {
-                "agent_name": agent_name,
-                "benchmark_name": self.benchmark_name,
-                "date": datetime.now().strftime("%Y-%m-%d"),
-                "run_id": run_id,
-            },
-            "results": {
-                "overall_score": np.mean(
-                    [
-                        eval_results[task][list(eval_results[task].keys())[0]][
-                            "final_score"
-                        ]
-                        for task in eval_results
-                    ]
-                ),  # mean across all tasks
-                **{
-                    f"{task}_score": eval_results[task][
-                        list(eval_results[task].keys())[0]
-                    ]["final_score"]
-                    for task in eval_results
-                },  # final score for each task
-                "total_cost": total_cost,
-            },
-            "raw_eval_results": eval_results,
-            "raw_logging_results": get_weave_calls(weave_client),
-            "total_usage": total_token_usage,
-        }
-
-        # Store the upload results locally
-        with open(os.path.join(out_path, f"{run_id}_UPLOAD.json"), "w") as f:
-            json.dump(upload_dict, f)
-
-        if upload:
-            self.upload_results(run_id, upload_dict)
-
-        # pretty print results_summary dict
-        print("\n\n=====Results Summary=====")
-        pp.pprint(upload_dict)
-        print("=====")
-
-        return upload_dict["results"]

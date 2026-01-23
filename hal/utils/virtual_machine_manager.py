@@ -1,6 +1,5 @@
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
-from azure.mgmt.resource import ResourceManagementClient
 from azure.identity import DefaultAzureCredential
 import paramiko
 import os
@@ -86,9 +85,6 @@ class VirtualMachineManager:
             self.credential, self.subscription_id
         )
         self.network_client = NetworkManagementClient(
-            self.credential, self.subscription_id
-        )
-        self.resource_client = ResourceManagementClient(
             self.credential, self.subscription_id
         )
 
