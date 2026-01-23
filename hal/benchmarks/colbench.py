@@ -6,8 +6,7 @@ from sweet_rl.utils import code_evaluate
 
 
 from PIL import Image
-from sweet_rl.utils.webpage_utils import (get_driver,
-                                          render_full_html)
+from sweet_rl.utils.webpage_utils import get_driver, render_full_html
 from tqdm import tqdm
 from transformers import CLIPModel, CLIPProcessor
 import concurrent
@@ -44,60 +43,92 @@ You should PRIORITIZE MOST OUTSTANDING DIFFERENCES. DESCRIBE CONCRETELY HOW EACH
 2) The second image will be the image that the human user wants
 """
 
-#benchmark args is not actually passed to the benchmark
-BACKEND_TASK_PATH = os.path.join(os.path.dirname(__file__), 'colbench/data/backend_test.jsonl')
-FRONTEND_TASK_PATH = os.path.join(os.path.dirname(__file__), 'colbench/data/frontend_test.jsonl')
-CACHE_PATH = os.path.join(os.path.dirname(__file__), 'colbench/cache')
+# benchmark args is not actually passed to the benchmark
+BACKEND_TASK_PATH = os.path.join(
+    os.path.dirname(__file__), "colbench/data/backend_test.jsonl"
+)
+FRONTEND_TASK_PATH = os.path.join(
+    os.path.dirname(__file__), "colbench/data/frontend_test.jsonl"
+)
+CACHE_PATH = os.path.join(os.path.dirname(__file__), "colbench/cache")
+
 
 class ColBenchBenchmark(BaseBenchmark):
     """ColBench benchmark implementation"""
-    
-    def __init__(self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = 'colbench_backend_programming', 
-                 num_tasks: int = 0):
-        assert os.path.exists(os.path.join(os.path.dirname(__file__), 'colbench/data')), "data folder in Colbench directory (hal/benchmarks/colbench) not found. Please download and extract the USACO dataset as described in the README."
+
+    def __init__(
+        self,
+        agent_dir: str,
+        config: Dict[str, Any],
+        benchmark_name: str = "colbench_backend_programming",
+        num_tasks: int = 0,
+    ):
+        assert os.path.exists(
+            os.path.join(os.path.dirname(__file__), "colbench/data")
+        ), (
+            "data folder in Colbench directory (hal/benchmarks/colbench) not found. Please download and extract the USACO dataset as described in the README."
+        )
         self.benchmark_name = benchmark_name
-        self.setup_script = 'hal/benchmarks/colbench/colbench_setup.sh'
+        self.setup_script = "hal/benchmarks/colbench/colbench_setup.sh"
         self.requires_sandbox = False
         if not os.path.exists(CACHE_PATH):
             os.makedirs(CACHE_PATH)
         # print("="*100)
         # print("task_path", task_path)
         # print("="*100)
-        
-        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox, setup_script=self.setup_script)
-    
-        task_path = BACKEND_TASK_PATH if benchmark_name == 'colbench_backend_programming' else FRONTEND_TASK_PATH
+
+        super().__init__(
+            agent_dir,
+            config,
+            requires_sandbox=self.requires_sandbox,
+            setup_script=self.setup_script,
+        )
+
+        task_path = (
+            BACKEND_TASK_PATH
+            if benchmark_name == "colbench_backend_programming"
+            else FRONTEND_TASK_PATH
+        )
         if num_tasks == 0:
-            if benchmark_name == 'colbench_backend_programming':
+            if benchmark_name == "colbench_backend_programming":
                 num_tasks = 1000
             else:
                 num_tasks = 100
         with open(task_path, "r") as fb:
             tasks = [json.loads(line) for line in fb]
-            tasks = tasks[:num_tasks] if benchmark_name == 'colbench_backend_programming' else tasks[:num_tasks]
-        
+            tasks = (
+                tasks[:num_tasks]
+                if benchmark_name == "colbench_backend_programming"
+                else tasks[:num_tasks]
+            )
+
         # Create benchmark dictionary
         self.benchmark = {}
-        if benchmark_name == 'colbench_backend_programming':
+        if benchmark_name == "colbench_backend_programming":
             for task_index, task in enumerate(tasks):
-                self.benchmark[str(task_index)] = {"problem_description": task["problem_description"], 
-                                                   "hidden_information": task["hidden_information"], 
-                                                   "test_cases": task["test_cases"],
-                                                   "human_prompt": CODE_USER_PROMPT,
-                                                   "task_type": "code"}
-        elif benchmark_name == 'colbench_frontend_design':
+                self.benchmark[str(task_index)] = {
+                    "problem_description": task["problem_description"],
+                    "hidden_information": task["hidden_information"],
+                    "test_cases": task["test_cases"],
+                    "human_prompt": CODE_USER_PROMPT,
+                    "task_type": "code",
+                }
+        elif benchmark_name == "colbench_frontend_design":
             for task_index, task in enumerate(tasks):
-                self.benchmark[str(task_index)] = {"problem_description": task["problem_description"], 
-                                                   "hidden_information": task["ground_truth"],
-                                                   "human_prompt": HTML_USER_PROMPT,
-                                                   "task_type": "html",
-                                                   "cache_path": CACHE_PATH}
-             
+                self.benchmark[str(task_index)] = {
+                    "problem_description": task["problem_description"],
+                    "hidden_information": task["ground_truth"],
+                    "human_prompt": HTML_USER_PROMPT,
+                    "task_type": "html",
+                    "cache_path": CACHE_PATH,
+                }
 
-    def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
+    def evaluate_output(
+        self, agent_output: Dict[str, Any], run_id: str
+    ) -> Dict[str, Any]:
         """Evaluate agent outputs using AppWorld evaluation"""
         annotation_results = list(agent_output.values())
-        if self.benchmark_name == 'colbench_backend_programming':
+        if self.benchmark_name == "colbench_backend_programming":
             return code_evaluate(annotation_results)
         evaluation_batch_size = min(20, len(annotation_results))
         answer_images = [a["answer"] for a in annotation_results]
@@ -110,7 +141,9 @@ class ColBenchBenchmark(BaseBenchmark):
         print("Rendering images")
         rendered_images = []
         for i in tqdm(range(0, len(annotation_results), evaluation_batch_size)):
-            actual_drivers = drivers[:len(ground_truth_images[i:i+evaluation_batch_size])]
+            actual_drivers = drivers[
+                : len(ground_truth_images[i : i + evaluation_batch_size])
+            ]
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 jobs = [
                     executor.submit(
@@ -154,30 +187,31 @@ class ColBenchBenchmark(BaseBenchmark):
         image_features1 = image_features1 / image_features1.norm(dim=-1, keepdim=True)
         image_features2 = image_features2 / image_features2.norm(dim=-1, keepdim=True)
         # Calculate cosine similarity
-        similarities = torch.sum(image_features1 * image_features2, dim=-1).cpu().numpy().tolist()
-        
-        #remove all files in cache folder
+        similarities = (
+            torch.sum(image_features1 * image_features2, dim=-1).cpu().numpy().tolist()
+        )
+
+        # remove all files in cache folder
         for file in os.listdir(CACHE_PATH):
             os.remove(os.path.join(CACHE_PATH, file))
         return similarities
-    
+
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """
         Calculate metrics from evaluation results.
-        
+
         Args:
             eval_results: Dictionary containing evaluation results
-            
+
         Returns:
             Dictionary with calculated metrics and task lists
         """
-        if self.benchmark_name == 'colbench_backend_programming':
-            results = {"average_correctness": sum(eval_results)/len(eval_results),
-                       "accuracy": sum([1 for correctness in eval_results if correctness == 1])/len(eval_results)}
+        if self.benchmark_name == "colbench_backend_programming":
+            results = {
+                "average_correctness": sum(eval_results) / len(eval_results),
+                "accuracy": sum([1 for correctness in eval_results if correctness == 1])
+                / len(eval_results),
+            }
         else:
-            results = {"average_correctness": sum(eval_results)/len(eval_results)}
+            results = {"average_correctness": sum(eval_results) / len(eval_results)}
         return results
-
-
-
-

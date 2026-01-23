@@ -9,6 +9,7 @@ from inspect_ai.solver import Solver
 from inspect_ai._eval.loader import load_tasks
 from hal.benchmarks.inspect_benchmark import InspectBenchmark
 
+
 def is_inspect_benchmark(benchmark: str) -> bool:
     """
     Determines whether a benchmark string is an inspect benchmark
@@ -51,7 +52,9 @@ def resolve_task(task: str) -> list[TaskInfo] | list[str]:
         return list_tasks(task)
 
 
-def resolve_solver(agent_function: Callable, agent_args: dict[str, Any]) -> Solver | None:
+def resolve_solver(
+    agent_function: Callable, agent_args: dict[str, Any]
+) -> Solver | None:
     """
     Resolves an agent function into an Inspect solver
 
@@ -155,10 +158,11 @@ def results_for_eval(eval_log: EvalLog, total_cost: float | None) -> dict[str, A
         }
     elif eval_log.status == "canceled":
         eval_results = {"status": "canceled"}
-        
-        
-    eval_results = InspectBenchmark.add_additional_metrics(inspect_eval_log=eval_log, eval_results=eval_results)
-        
+
+    eval_results = InspectBenchmark.add_additional_metrics(
+        inspect_eval_log=eval_log, eval_results=eval_results
+    )
+
     return eval_results
 
 
@@ -171,12 +175,14 @@ def load_task(task: str, model: str, task_args: dict[str, Any] = {}) -> Task:
         model (str): The model for this task
 
     Returns:
-        Task: The task 
+        Task: The task
     """
     tasks = load_tasks([task], get_model(model), task_args=task_args)
     if len(tasks) == 0:
         raise RuntimeError(f"The task {task} for model {model} could not be found.")
     elif len(tasks) > 1:
-        raise RuntimeError(f"The task {task} for model {model} matched more than a single task.")
+        raise RuntimeError(
+            f"The task {task} for model {model} matched more than a single task."
+        )
     else:
         return tasks[0]

@@ -1,6 +1,7 @@
 from litellm import completion
 
-class LiteLlmEngine():
+
+class LiteLlmEngine:
     def __init__(self, model_name, reasoning_effort=None):
         self.llm_engine_name = model_name
         self.reasoning_effort = reasoning_effort
@@ -24,4 +25,8 @@ class LiteLlmEngine():
                 num_retries=10,
             )
 
-        return responses.choices[0].message.content, responses.usage.prompt_tokens, responses.usage.completion_tokens
+        return (
+            responses.choices[0].message.content,
+            responses.usage.prompt_tokens,
+            responses.usage.completion_tokens,
+        )

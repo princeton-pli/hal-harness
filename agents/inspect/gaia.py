@@ -2,8 +2,12 @@ from textwrap import dedent
 from inspect_ai.solver import Solver, basic_agent, system_message
 from inspect_ai.tool import bash, python, web_browser
 
+
 def default_agent(
-    max_attempts: int = 5, max_messages: int = 75, code_timeout: int = 180, model_name: str = "openai/gpt-4o"
+    max_attempts: int = 5,
+    max_messages: int = 75,
+    code_timeout: int = 180,
+    model_name: str = "openai/gpt-4o",
 ) -> Solver:
     return basic_agent(
         init=system_message(
