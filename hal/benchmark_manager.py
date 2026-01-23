@@ -26,7 +26,6 @@ class BenchmarkManager:
             "appworld_test_challenge",
             "taubench_retail",
             "taubench_airline",
-            "gaia",
             "corebench_easy",
             "corebench_medium",
             "corebench_hard",
@@ -65,10 +64,6 @@ class BenchmarkManager:
             from .benchmarks.taubench import TauBenchBenchmark
 
             benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
-        elif benchmark_name == "gaia":
-            from .benchmarks.gaia import GaiaBenchmark
-
-            benchmark = GaiaBenchmark(self.agent_dir, self.config, benchmark_name)
         elif benchmark_name == "corebench_easy":
             from .benchmarks.corebench import CoreBenchEasy
 

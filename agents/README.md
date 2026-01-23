@@ -199,43 +199,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
 Assistantbench Browser Agent uses Browser-Use as the open source scaffold. To run this agent you will need to run `make` in the directory to install playwright and chromium in addition to `requirements.txt`.
 
-### Inspect AI Benchmarks
-
-Inspect AI benchmarks support two types of agents:
-
-1. **Custom Agents**: Implement custom agents as described in this document that can be run locally or on VMs.
-2. **Inspect Solver Agents**: Use the `@solver` decorator from the Inspect AI framework. See the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/agents.html) for details on how to implement solver agents.
-
-#### GAIA
-
-**Input Format**:
-
-```python
-{
-    "sample_id": {
-        "id": "[truncated]",
-        "input": "[truncated]",
-        "choices": null,
-        "target": "[truncated]",
-        "metadata": {
-            "level": "999",
-            "Annotator Metadata": {
-                "Steps": "[truncated]",
-                "Number of steps": "999",
-                "How long did this take?": "[truncated]",
-                "Tools": "[truncated]",
-                "Number of tools": "999"
-            }
-        },
-        "files": {},
-        "setup": "[truncated]"
-    }
-}
-```
-
-**Output Format**: Return a dictionary mapping sample IDs to concise answers following the prompt's instructions (typically numbers, short phrases, or comma-separated lists).
-
-#### CyBench
+#### CyBench FIXME: remove
 
 **Input Format**:
 
@@ -262,33 +226,6 @@ Inspect AI benchmarks support two types of agents:
 ```
 
 **Output Format**: Return a dictionary mapping sample IDs to solutions.
-
-### Example Custom Agent for Inspect Benchmarks (GAIA and Cybench)
-
-```python
-def run(input: dict, **kwargs):
-    assert 'model_name' in kwargs, 'model_name is required'
-
-    responses = {}
-    for sample_id, sample in input.items():
-        # Generate response using specified model
-        response = generate_response(
-            sample["input"],
-            model=kwargs['model_name']
-        )
-        responses[sample_id] = response
-    return responses
-```
-
-### Example Inspect Solver Agent
-
-Can be found in `agents/inspect/gaia.py` and `agents/inspect/cybench.py`.
-
-**Special Requirements**:
-
-- For custom agents, use `-A` flags to pass keyword arguments
-- For Inspect solvers, use `-I` flags to pass arguments to the inspect eval() function as detailed in the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/models.html#generation-config)
-- For SWE-Agent-v0.7 / Enigma-Agent, please add `keys.cfg` in the SWE-Agent / Enigma-Agent directory. For SWE-Agent-v1.0, please add `.env` in the SWE-Agent-v1.0 directory.
 
 ### ScienceAgentBench
 

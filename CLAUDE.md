@@ -137,7 +137,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 - **AppWorld**: Interactive coding agents
   - `appworld_test_normal`: Normal test suite
   - `appworld_test_challenge`: Challenge test suite
-- **GAIA**: General AI assistants (`gaia` - direct implementation)
 
 ### Specialized Benchmarks
 

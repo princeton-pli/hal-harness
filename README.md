@@ -8,7 +8,7 @@ This repository provides a standardized evaluation harness for reproducible agen
 ## Features
 
 - **Unified `hal-eval` CLI across all benchmarks and agent types**
-  - HAL supports SWE-bench Verified, USACO, AppWorld, CORE-bench, GAIA, Cybench, tau-bench, with support for more coming soon
+  - HAL supports SWE-bench Verified, USACO, AppWorld, CORE-bench, tau-bench, with support for more coming soon
   - Run your and existing agents on HAL with the same CLI across benchmarks (see [How Do I Run Evaluations?](#how-do-i-run-evaluations))
 
 - **Evaluations locally or in the cloud AND fully parallelized**
@@ -454,18 +454,6 @@ Available Bedrock models and their corresponding prompt templates:
 | Amazon Nova Lite | bedrock/amazon.nova-lite-v1:0 | nova.txt |
 | Amazon Nova Micro | bedrock/amazon.nova-micro-v1:0 | nova.txt |
 | Llama-3.3 70B | bedrock/us.meta.llama3-3-70b-instruct-v1:0 | llama.txt |
-
-5. **Running Inspect AI benchmark:**
-
-```bash
-hal-eval --benchmark inspect_evals/gaia \
-  --agent_dir agents/inspect/ \
-  --agent_function gaia.default_agent \
-  --agent_name "Gaia Agent (gpt-4o-mini-2024-07-18)" \
-  -A model_name=openai/gpt-4o-mini-2024-07-18 \
-  -I token_limit=4000 \
-  -I temperature=0.4
-```
 
 3. **Running ScienceAgentBench locally:**
 
