@@ -3,9 +3,6 @@
 from typing import Dict, Any, Optional
 from .benchmarks.base_benchmark import BaseBenchmark
 from .benchmarks.inspect_benchmark import InspectBenchmark
-# from .benchmarks.swe_bench import SWEBenchBenchmark
-# from .benchmarks.usaco import USACOBenchmark
-# from .benchmarks.mlagentbench import MLAgentBenchBenchmark
 
 
 class BenchmarkManager:

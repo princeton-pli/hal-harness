@@ -73,9 +73,6 @@ class ColBenchBenchmark(BaseBenchmark):
         self.requires_sandbox = False
         if not os.path.exists(CACHE_PATH):
             os.makedirs(CACHE_PATH)
-        # print("="*100)
-        # print("task_path", task_path)
-        # print("="*100)
 
         super().__init__(
             agent_dir,
