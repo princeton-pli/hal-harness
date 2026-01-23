@@ -5,7 +5,7 @@ import time
 import tempfile
 import shutil
 import uuid
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from .virtual_machine_manager import VirtualMachineManager
 from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
