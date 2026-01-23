@@ -1,11 +1,6 @@
 from pathlib import Path
 from tqdm import tqdm
-import numpy as np
-import time
 from datetime import datetime
-import random
-import subprocess
-import os
 from typing import List, Dict, Any, Union
 
 from USACOBench.evaluation.result_type import ResultType

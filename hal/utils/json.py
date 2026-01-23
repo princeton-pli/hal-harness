@@ -1,6 +1,3 @@
-import json
-
-
 def make_jsonable(data, seen=None):
     if seen is None:
         seen = set()

@@ -11,11 +11,10 @@ from inspect_ai.tool import python
 ## For example, run this task like:
 ## agent-eval --agent_name basic-agent --benchmark inspect:agents/simple_task/task.py@ascii_art --model openai/gpt-4o -B to_draw=circle --agent_dir=agents/inspect-task --agent_function=solver_agent.basic_agent -A timeout=30
 
+
 @solver
 def basic_agent(timeout: int = 60, model_name: str = "openai/gpt-4o-mini") -> Solver:
-
     async def solve(state: TaskState, generate: Generate):
-
         # Add tools
         state.tools.append(python(timeout=timeout))
 
@@ -31,10 +30,13 @@ def basic_agent(timeout: int = 60, model_name: str = "openai/gpt-4o-mini") -> So
 
             # make tool calls or terminate if there are none
             if output.message.tool_calls:
-                tool_output = await call_tools(output.message, [python(timeout=timeout)])
+                tool_output = await call_tools(
+                    output.message, [python(timeout=timeout)]
+                )
                 state.messages.extend(tool_output)
             else:
                 break
 
         return state
+
     return solve

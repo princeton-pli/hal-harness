@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, Any
 import tiktoken
 import subprocess
 from pathlib import Path
@@ -8,14 +8,12 @@ import os
 import sys
 import ast
 from functools import partial
-from typing import Optional
 from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, Tool, PythonInterpreterTool, VisitWebpageTool
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
 # Monkey-patch smolagents to handle GPT-5
 import smolagents.models
-import re
 
 def supports_stop_parameter(model_id: str) -> bool:
     """
@@ -37,7 +35,6 @@ from mdconvert import MarkdownConverter, DocumentConverterResult
 sys.path.append(os.path.dirname(__file__))
 from agent_hints import AGENT_HINTS
 
-import litellm
 
 try:
     from hal.utils.weave_utils import MODEL_PRICES_DICT
@@ -350,7 +347,7 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
             with open(path, 'r') as f:
                 file_content = f.read()
             if old_str not in file_content:
-                return f"Error: Could not find exact match for replacement string"
+                return "Error: Could not find exact match for replacement string"
             new_content = file_content.replace(old_str, new_str)
             with open(path, 'w') as f:
                 f.write(new_content)
@@ -360,7 +357,7 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
             if not path.is_file():
                 return f"Error: {path} is not a file"
             if line_number is None:
-                return f"Error: Line number is required for insert operation"
+                return "Error: Line number is required for insert operation"
             with open(path, 'r') as f:
                 lines = f.readlines()
             if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines) + 1:
@@ -374,7 +371,7 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
             if not path.is_file():
                 return f"Error: {path} is not a file"
             if line_number is None:
-                return f"Error: Line number is required for delete operation"
+                return "Error: Line number is required for delete operation"
             with open(path, 'r') as f:
                 lines = f.readlines()
             if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines):
@@ -544,7 +541,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if kwargs.get('base_agent', False):
         # Use base agent regardless of benchmark name
         agent_type = 'base'
-        print(f"Using base agent (no hints) as requested by base_agent flag")
+        print("Using base agent (no hints) as requested by base_agent flag")
     elif benchmark_name in AGENT_HINTS:
         # Use the benchmark name directly as the agent type
         agent_type = benchmark_name

@@ -10,7 +10,6 @@ import re
 import json
 import os
 
-from typing import Optional
 
 from smolagents import CodeAgent, tool, LiteLLMModel, Tool, PythonInterpreterTool, VisitWebpageTool, GoogleSearchTool
 from smolagents.models import MessageRole, Model
@@ -18,7 +17,6 @@ from smolagents.agents import ActionStep
 
 # Monkey-patch smolagents to handle GPT-5
 import smolagents.models
-import re
 
 def supports_stop_parameter(model_id: str) -> bool:
     """
@@ -361,7 +359,7 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
             with open(path, 'r') as f:
                 file_content = f.read()
             if old_str not in file_content:
-                return f"Error: Could not find exact match for replacement string"
+                return "Error: Could not find exact match for replacement string"
             new_content = file_content.replace(old_str, new_str)
             with open(path, 'w') as f:
                 f.write(new_content)
@@ -371,7 +369,7 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
             if not path.is_file():
                 return f"Error: {path} is not a file"
             if line_number is None:
-                return f"Error: Line number is required for insert operation"
+                return "Error: Line number is required for insert operation"
             with open(path, 'r') as f:
                 lines = f.readlines()
             if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines) + 1:
@@ -385,7 +383,7 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
             if not path.is_file():
                 return f"Error: {path} is not a file"
             if line_number is None:
-                return f"Error: Line number is required for delete operation"
+                return "Error: Line number is required for delete operation"
             with open(path, 'r') as f:
                 lines = f.readlines()
             if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines):
@@ -904,7 +902,6 @@ The code of the project is cloned to {task['repo'].split('/')[-1]}. After you ar
         return {task_id: model_patch}
         
     elif kwargs['benchmark_name'] == 'appworld_test_normal':
-        from appworld.task import Task
         
         def tool_generator(name_: str, description_: str, inputs_: dict, output_type_: dict, function: callable):
             class GeneratedTool(Tool):

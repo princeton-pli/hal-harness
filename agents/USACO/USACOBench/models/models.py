@@ -1,6 +1,6 @@
 import numpy as np
 import tiktoken
-from typing import Any, List, Dict, Union
+from typing import Any, List, Dict
 
 from .gpt import gpts, chatgpts_raw
 from USACOBench.tools import tools, tool_dict, invoke_tool

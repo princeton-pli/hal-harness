@@ -1,8 +1,7 @@
-from typing import Any, List, Dict, Union
+from typing import Any, Dict
 import json
 
-from USACOBench.utils import get_code_from_solution
-from .sandbox import run_code, DEFAULT_SANDBOX_DIR
+from .sandbox import run_code
 from .pdb_tool import debug_init, debug_interact, debug_end
 
 # no saved state

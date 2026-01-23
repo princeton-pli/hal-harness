@@ -1,6 +1,6 @@
 import json
-import requests
 import os
+
 
 def store_and_upload_results(result, benchmark_name, agent_path, model, config):
     # Create the base results directory if it doesn't exist
@@ -16,13 +16,14 @@ def store_and_upload_results(result, benchmark_name, agent_path, model, config):
     file_path = os.path.join(benchmark_dir, filename)
 
     # Store results locally
-    with open(file_path, 'w') as f:
+    with open(file_path, "w") as f:
         json.dump(result, f)
 
     print(f"Results stored locally at: {file_path}")
 
     # Upload to HuggingFace space
     # upload_to_huggingface(filename, config['huggingface_token'], config['huggingface_repo'])
+
 
 def upload_to_huggingface(filename, token, repo):
     # Implement HuggingFace upload logic here

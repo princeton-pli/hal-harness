@@ -1,15 +1,11 @@
 # Disclaimer: this is not a functional agent and is only for demonstration purposes. This implementation is just a single model call.
-from openai import OpenAI
-from inspect_ai.tool import ToolError, tool
+from inspect_ai.tool import ToolError
 from inspect_ai.util import sandbox
-import weave
-from typing import Any, Callable
+from typing import Any
     
     
 from openai import AsyncOpenAI
 
-from inspect_ai.tool import ToolError, tool
-from inspect_ai.util import sandbox
 
 
 async def list_files(dir: str):

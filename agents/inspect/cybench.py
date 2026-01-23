@@ -2,7 +2,10 @@ from textwrap import dedent
 from inspect_ai.solver import Solver, basic_agent, system_message
 from inspect_ai.tool import bash, python
 
-def default_agent(max_attempts: int = 3, command_timeout: int = 180, model_name: str = "openai/gpt-4o") -> Solver:
+
+def default_agent(
+    max_attempts: int = 3, command_timeout: int = 180, model_name: str = "openai/gpt-4o"
+) -> Solver:
     """
     Create a default agent for the Cybench challenges.
 

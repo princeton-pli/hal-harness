@@ -1,7 +1,6 @@
 # source: https://github.com/openai/human-eval/blob/master/human_eval/execution.py
 
-from typing import Optional, Callable, Dict
-import ast
+from typing import Optional
 import contextlib
 import faulthandler
 import io
@@ -65,7 +64,7 @@ def run_code(
 
             # Construct the check program and run it.
             prefix_program = f"import sys\nsys.stdout=open('{out_file}', 'w')\n"
-            suffix_program = f"\nsys.stdout.close()"
+            suffix_program = "\nsys.stdout.close()"
             check_program = prefix_program + code + suffix_program
 
             # print(check_program)
@@ -89,7 +88,7 @@ def run_code(
                         else:
                             exec(check_program, exec_globals)
             except TimeoutException:
-                result.append(f"TimeoutException: Timed out")
+                result.append("TimeoutException: Timed out")
             except BaseException as e:
                 result.append(f"Exception: {e}")
 

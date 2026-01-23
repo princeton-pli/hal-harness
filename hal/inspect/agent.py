@@ -1,22 +1,20 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import importlib
 import inspect
 import os
 from inspect_ai.solver import solver
 from typing import Callable, cast, Dict, Any
 import shutil
-from contextlib import contextmanager
 import uuid
 import subprocess
 import json
 from concurrent.futures import ProcessPoolExecutor
 import traceback
 
-from inspect_ai.model import ChatMessage
 from inspect_ai.dataset import Dataset
 from inspect_ai.solver import Generate, Solver, TaskState
-import weave
+
+
 def load_agent(agent_function: str) -> Callable:
     # parse the agent name
     module_name, function_name = agent_function.rsplit(".", 1)
@@ -24,22 +22,22 @@ def load_agent(agent_function: str) -> Callable:
     # attempt to load it from the module
     module = importlib.import_module(module_name)
     loaded_agent = getattr(module, function_name)
-    
+
     return loaded_agent
 
 
 def validate_agent(agent: Callable) -> None:
-
     # Get the signature of the function
     sig = inspect.signature(agent)
 
-    # Get the parameters and return annotation
+    # Get the parameters
     parameters = sig.parameters
-    return_annotation = sig.return_annotation
 
     # Check the number of parameters (should be exactly one)
     if len(parameters) not in [1, 2]:
-        raise RuntimeError("The agent function should accept only a single argument or a single argument and kwargs.")
+        raise RuntimeError(
+            "The agent function should accept only a single argument or a single argument and kwargs."
+        )
 
     # Get the parameter name and annotation
     param_name, param_info = next(iter(parameters.items()))
@@ -53,13 +51,22 @@ def validate_agent(agent: Callable) -> None:
     # # Validate the return type
     # if return_annotation != dict[str, str]:
     #     raise RuntimeError("The return type must be 'dict[str, str]'.")
-    
+
 
 # Track created directories
 temp_dirs = []
 
 
-def run_single_agent(single_input, agent_dir, agent_function, agent_args, module_name, run_id, conda_env_name, log_dir=None):
+def run_single_agent(
+    single_input,
+    agent_dir,
+    agent_function,
+    agent_args,
+    module_name,
+    run_id,
+    conda_env_name,
+    log_dir=None,
+):
     # Create a unique directory in /tmp/
     temp_dir = f"/tmp/agent_run_{uuid.uuid4()}"
     os.makedirs(temp_dir, exist_ok=True)
@@ -71,18 +78,19 @@ def run_single_agent(single_input, agent_dir, agent_function, agent_args, module
     shutil.copytree(agent_dir, temp_dir, dirs_exist_ok=True)
 
     # Serialize the input data to a JSON file in the temp directory
-    input_file = os.path.join(temp_dir, 'input.json')
-    with open(input_file, 'w') as f:
-        json.dump({single_input['id']: single_input}, f)
+    input_file = os.path.join(temp_dir, "input.json")
+    with open(input_file, "w") as f:
+        json.dump({single_input["id"]: single_input}, f)
 
     # Prepare the agent arguments
-    agent_args_file = os.path.join(temp_dir, 'agent_args.json')
-    with open(agent_args_file, 'w') as f:
+    agent_args_file = os.path.join(temp_dir, "agent_args.json")
+    with open(agent_args_file, "w") as f:
         json.dump(agent_args, f)
 
     # Construct the command to run the agent function
     command = [
-        'python', '-c',
+        "python",
+        "-c",
         f'''
 import os
 import json
@@ -107,7 +115,7 @@ with open("input.json", "r") as f:
 with open("agent_args.json", "r") as f:
     agent_args = json.load(f)
 
-single_input_id = "{single_input['id']}"  
+single_input_id = "{single_input["id"]}"  
 
 # Run the agent function
 with weave.attributes({{"weave_task_id": single_input_id}}):
@@ -116,30 +124,31 @@ with weave.attributes({{"weave_task_id": single_input_id}}):
 # Save the result
 with open("output.json", "w") as f:
     json.dump(result, f)
-'''
+''',
     ]
 
     if conda_env_name:
         print(f"Running agent in conda environment: {conda_env_name}")
-        command = [
-            'conda', 'run', '-n', conda_env_name] + command
+        command = ["conda", "run", "-n", conda_env_name] + command
 
     try:
         # Run the agent in a subprocess with the temp_dir as cwd
         subprocess.run(command, cwd=temp_dir, check=True)
 
         # Load the result from output.json
-        output_file = os.path.join(temp_dir, 'output.json')
-        with open(output_file, 'r') as f:
+        output_file = os.path.join(temp_dir, "output.json")
+        with open(output_file, "r") as f:
             result = json.load(f)
 
         if log_dir:
-            raw_submissions_path = os.path.join(log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl")
+            raw_submissions_path = os.path.join(
+                log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl"
+            )
             os.makedirs(log_dir, exist_ok=True)
 
             with open(raw_submissions_path, "a") as f:
                 json.dump(result, f)
-                f.write('\n')
+                f.write("\n")
 
         # delete the temp directory
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -147,7 +156,7 @@ with open("output.json", "w") as f:
     except Exception as e:
         print(f"Error running agent: {e}")
         traceback.print_exc()
-        result = {single_input['id']: f"ERROR RUNNING AGENT: {e}"}
+        result = {single_input["id"]: f"ERROR RUNNING AGENT: {e}"}
 
         # delete the temp directory
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -155,7 +164,18 @@ with open("output.json", "w") as f:
     return result
 
 
-async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict, agent_function: str, agent_dir: str, run_id: str,  max_concurrent: int = 5, log_dir: str = None, task_name: str = None, conda_env_name: str = None) -> Solver:
+async def run_agent_parallel(
+    dataset: Dataset,
+    agent: Callable,
+    agent_args: Dict,
+    agent_function: str,
+    agent_dir: str,
+    run_id: str,
+    max_concurrent: int = 5,
+    log_dir: str = None,
+    task_name: str = None,
+    conda_env_name: str = None,
+) -> Solver:
     # add sample ids to dataset if they aren't there (start at 1 not 0)
     agent_input = {}
     id = 1
@@ -186,12 +206,7 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
         input_str = (
             sample.input
             if isinstance(sample.input, str)
-            else "\n".join(
-                [
-                    message.text
-                    for message in sample.input
-                ]
-            )
+            else "\n".join([message.text for message in sample.input])
         )
 
         agent_input[sample.id] = {
@@ -205,25 +220,31 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
         }
 
     if log_dir:
-        raw_submissions_path = os.path.join(log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl")
-        
+        raw_submissions_path = os.path.join(
+            log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl"
+        )
+
         if os.path.exists(raw_submissions_path):
             # read in previous submissions and remove from agent_input
             with open(raw_submissions_path, "r") as f:
                 previous_submissions = [json.loads(line) for line in f]
-            
-            previous_ids = {list(submission.keys())[0] for submission in previous_submissions}
-            agent_input = {k: v for k, v in agent_input.items() if k not in previous_ids}
 
-            print( f"Previous submissions found. {len(previous_ids)} submissions removed from agent input.")
+            previous_ids = {
+                list(submission.keys())[0] for submission in previous_submissions
+            }
+            agent_input = {
+                k: v for k, v in agent_input.items() if k not in previous_ids
+            }
 
+            print(
+                f"Previous submissions found. {len(previous_ids)} submissions removed from agent input."
+            )
 
     module_name, _ = agent_function.rsplit(".", 1)
 
     original_dir = os.getcwd()
 
     abs_log_dir = os.path.abspath(log_dir) if log_dir else None
-
 
     # Run the agent in parallel using ProcessPoolExecutor
     with ProcessPoolExecutor(max_workers=max_concurrent) as executor:
@@ -239,7 +260,7 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
                 module_name,
                 run_id,
                 conda_env_name,
-                abs_log_dir
+                abs_log_dir,
             )
             for input_data in agent_input.values()
         ]
@@ -247,30 +268,28 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
 
     for result in results:
         print(result)
-        
+
     os.chdir(original_dir)
 
     # Delete all created directories after processing all jobs
     for temp_dir in temp_dirs:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        
+
     # "composio" in agent_dir.lower() then extract cost from results first
     if "composio" in agent_dir.lower():
         usage_logs = {}
-        
-        
+
         raw_usage_path = os.path.join(log_dir, f"{run_id}_USAGE.json")
         usage_logs = {}
         # for each key in results, extract the cost
         for key, value in results.items():
-            
             usage_logs[key] = {
-                'total_cost': value['total_cost'],
+                "total_cost": value["total_cost"],
                 "prompt_tokens": value["prompt_tokens"],
                 "completion_tokens": value["completion_tokens"],
-                "total_tokens": value["total_tokens"]
+                "total_tokens": value["total_tokens"],
             }
-        
+
         with open(raw_usage_path, "w") as f:
             json.dump(usage_logs, f, indent=2)
 
@@ -279,16 +298,17 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
 
     # add all results from _RAW_SUBMISSIONS_DURING.jsonl to merged_result
     if log_dir:
-        raw_submissions_path = os.path.join(log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl")
-        
+        raw_submissions_path = os.path.join(
+            log_dir, f"{run_id}_RAW_SUBMISSIONS_DURING.jsonl"
+        )
+
         if os.path.exists(raw_submissions_path):
             # read in previous submissions and remove from agent_input
             with open(raw_submissions_path, "r") as f:
                 previous_submissions = [json.loads(line) for line in f]
-            
+
             for submission in previous_submissions:
                 merged_result.update(submission)
-        
 
     print(f"Results: {merged_result}")
 
@@ -300,16 +320,26 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
         with open(raw_submissions_path, "w") as f:
             for key, value in merged_result.items():
                 json.dump({key: value}, f)
-                f.write('\n')
+                f.write("\n")
 
     # save swebench results in special format. TODO: make this more general
     if task_name:
         if "swe_bench" in task_name:
-            swebench_submissions_path = os.path.join(log_dir, f"{run_id}_SWE_BENCH_SUBMISSIONS.jsonl")
-            with open(swebench_submissions_path, 'w') as f:
+            swebench_submissions_path = os.path.join(
+                log_dir, f"{run_id}_SWE_BENCH_SUBMISSIONS.jsonl"
+            )
+            with open(swebench_submissions_path, "w") as f:
                 for key, value in merged_result.items():
-                    f.write(json.dumps({"instance_id": key, "model_patch": value, "model_name_or_path": f"swebench"}) + '\n')
-        
+                    f.write(
+                        json.dumps(
+                            {
+                                "instance_id": key,
+                                "model_patch": value,
+                                "model_name_or_path": "swebench",
+                            }
+                        )
+                        + "\n"
+                    )
 
     async def solve(state: TaskState, generate: Generate) -> TaskState:
         # the sample
@@ -326,8 +356,32 @@ async def run_agent_parallel(dataset: Dataset, agent: Callable, agent_args: Dict
 
     return cast(Solver, solve)
 
+
 # Wrapper function to maintain the original function signature
 @solver
-def run_agent(dataset: Dataset, agent: Callable, agent_args: Dict, agent_function: str, agent_dir: str, run_id: str, max_concurrent: int = 5, log_dir: str = None, task_name: str = None, conda_env_name: str = None) -> Solver:
-    return asyncio.run(run_agent_parallel(dataset, agent, agent_args, agent_function, agent_dir=agent_dir, run_id=run_id, max_concurrent=max_concurrent, log_dir=log_dir, task_name=task_name, conda_env_name=conda_env_name))
-
+def run_agent(
+    dataset: Dataset,
+    agent: Callable,
+    agent_args: Dict,
+    agent_function: str,
+    agent_dir: str,
+    run_id: str,
+    max_concurrent: int = 5,
+    log_dir: str = None,
+    task_name: str = None,
+    conda_env_name: str = None,
+) -> Solver:
+    return asyncio.run(
+        run_agent_parallel(
+            dataset,
+            agent,
+            agent_args,
+            agent_function,
+            agent_dir=agent_dir,
+            run_id=run_id,
+            max_concurrent=max_concurrent,
+            log_dir=log_dir,
+            task_name=task_name,
+            conda_env_name=conda_env_name,
+        )
+    )

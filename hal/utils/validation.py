@@ -1,10 +1,10 @@
 import os
 import ast
-import importlib.util
+
 
 def check_subprocess_usage(path):
     def check_file(file_path):
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             try:
                 tree = ast.parse(file.read())
             except SyntaxError:
@@ -14,14 +14,20 @@ def check_subprocess_usage(path):
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    if alias.name == 'subprocess':
+                    if alias.name == "subprocess":
                         return True
             elif isinstance(node, ast.ImportFrom):
-                if node.module == 'subprocess':
+                if node.module == "subprocess":
                     return True
             elif isinstance(node, ast.Call):
                 if isinstance(node.func, ast.Attribute):
-                    if node.func.attr in ['Popen', 'call', 'check_call', 'check_output', 'run']:
+                    if node.func.attr in [
+                        "Popen",
+                        "call",
+                        "check_call",
+                        "check_output",
+                        "run",
+                    ]:
                         return True
 
         return False
@@ -29,7 +35,7 @@ def check_subprocess_usage(path):
     def check_directory(dir_path):
         for root, dirs, files in os.walk(dir_path):
             for file in files:
-                if file.endswith('.py'):
+                if file.endswith(".py"):
                     file_path = os.path.join(root, file)
                     if check_file(file_path):
                         return file_path

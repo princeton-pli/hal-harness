@@ -1,33 +1,28 @@
+# Logs
 logs/**
 *.log
+
+# Env
 .env
+
+# Python
 .eggs/**
 **/__pycache__/**
+
+# Results
 results/**
 hal.egg-info/**
-agents/Moatless/evaluations/**
-agents/Moatless/index_store/**
-hal/scratch.ipynb
-agents/Agentless
-agents/SWE-agent
-agents/Moatless/ingest.ipynb
-scratch.py
-scratch.ipynb
-write_swebench_upload_file.py
-write_upload_file.ipynb
-run_models.sh
-data/*
-hal/benchmarks/corebench/capsules
-uv.lock
-hal/benchmarks/corebench/capsules/*
-.compose.yaml
-.vscode
-hal/benchmarks/corebench/core_test.json
-agents/appworld_example_agent/data/*
-hal/benchmarks/scienceagentbench/benchmark
-experiments/*
-archive/*
-agents/USACO/data/.DS_Store
 
-# Claude Code settings
+# Benchmarks
+hal/benchmarks/corebench/capsules
+hal/benchmarks/corebench/core_test.json
+hal/benchmarks/corebench/capsules/*
+hal/benchmarks/scienceagentbench/benchmark
+
+# Misc
+uv.lock
+.compose.yaml
+*.DS_Store
+
+# Claude Code
 .claude/settings.local.json
