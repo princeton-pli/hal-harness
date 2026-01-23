@@ -1047,7 +1047,7 @@ The code of the project is cloned to {task["repo"].split("/")[-1]}. After you ar
         ) as world:
             instruction = world.task.instruction  # To see task instruction.
             supervisor = world.task.supervisor
-            tools = get_smolagents_tools(world.task)
+            get_smolagents_tools(world.task)
 
             prompt = f"""Using the available APIs you can interact with on my behalf through the "interact_with_apis" tool, generate code to solve the following task.
             
@@ -2155,7 +2155,7 @@ def generate_dna(N: int, PWM: dict) -> tuple:
             full_code += f"\n{generated_code}"
 
             # Store the generated code for the current step
-            if easy == True:
+            if easy:
                 steps_results[f"{task_id}.{i + 1}"] = full_code
             else:
                 steps_results[f"{task_id}.{i + 1}"] = dependencies + full_code

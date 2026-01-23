@@ -149,10 +149,6 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 15 / 1e6,
     },
-    "anthropic/claude-opus-4-20250514": {
-        "prompt_tokens": 15 / 1e6,
-        "completion_tokens": 75 / 1e6,
-    },
     "google/gemini-1.5-pro": {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 5 / 1e6,
@@ -206,10 +202,6 @@ MODEL_PRICES_DICT = {
         "completion_tokens": 0.075 / 1e3,
     },
     "bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0": {
-        "prompt_tokens": 0.003 / 1e3,
-        "completion_tokens": 0.015 / 1e3,
-    },
-    "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {
         "prompt_tokens": 0.003 / 1e3,
         "completion_tokens": 0.015 / 1e3,
     },

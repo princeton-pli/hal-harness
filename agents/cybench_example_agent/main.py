@@ -28,7 +28,7 @@ async def run(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
     result = await list_files(".")
 
     client = AsyncOpenAI()
-    completion = await client.chat.completions.create(
+    await client.chat.completions.create(
         model="inspect",
         messages=sample["input"],
     )

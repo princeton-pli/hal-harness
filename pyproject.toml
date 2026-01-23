@@ -147,6 +147,9 @@ extend-exclude = [
     "agents/Moatless",
     "agents/SWE-agent-v1.0",
     "agents/SWE-agent",
+    "agents/USACO", # this isn't a submodule but appears to be copy/pasted from
+                    # another git repo: https://github.com/princeton-nlp/USACO/tree/main/USACOBench
+                    # in this commit: https://github.com/princeton-pli/hal-harness/commit/7cc8fe4abc57acbfe665353a3b7ce30861401cdc
     "agents/usaco_bedrock_models",
     "hal/benchmarks/SciCode",
     "hal/benchmarks/scienceagentbench/ScienceAgentBench",
