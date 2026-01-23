@@ -4,8 +4,7 @@ import ast
 
 def check_subprocess_usage(path):
     def check_file(file_path):
-        # FIXME: should fail CI
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             try:
                 tree = ast.parse(file.read())
             except SyntaxError:
