@@ -6,7 +6,7 @@ class LiteLlmEngine():
         self.reasoning_effort = reasoning_effort
 
     def respond(self, messages, temperature, top_p, max_tokens):
-        if self.reasoning_effort != None:
+        if self.reasoning_effort is not None:
             responses = completion(
                 model=self.llm_engine_name,
                 messages=messages,

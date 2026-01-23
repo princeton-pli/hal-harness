@@ -207,7 +207,7 @@ def run(input: dict[str, Any], **kwargs) -> dict[str, str]:
                 full_code += f'\n{generated_code}'
 
                 # Store the generated code for the current step
-                if easy == True:
+                if easy:
                     steps_results[f'{task_id}.{i + 1}'] = full_code
                 else:
                     steps_results[f'{task_id}.{i + 1}'] = dependencies + full_code

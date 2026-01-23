@@ -53,7 +53,7 @@ class SciCodeBenchmark(BaseBenchmark):
             # Write evaluation files (one per agent_output entry).
             for problem_id, subtasks in agent_output.items():
                 try:
-                    items = subtasks.items()
+                    _ = subtasks.items()
                 except Exception as e:
                     print(f"Error processing {problem_id}: {e}")
                     continue

@@ -230,7 +230,7 @@ class CoreBench(BaseBenchmark):
                     if '%' in reported_result[key]:
                         reported_result[key] = reported_result[key].replace('%', '')
                     reported_result[key] = float(reported_result[key])
-                except:
+                except Exception:
                     pass
 
             # Calculate mean and standard error for numeric keys
@@ -253,17 +253,23 @@ class CoreBench(BaseBenchmark):
                     if key in numeric_keys:
                         lower_bound, upper_bound = prediction_interval_bounds[key]
                         if (lower_bound <= reported_result[key] <= upper_bound):
-                            if 'fig' in key: correct_vision_answers += 1
-                            else: correct_written_answers += 1
+                            if 'fig' in key:
+                                correct_vision_answers += 1
+                            else:
+                                correct_written_answers += 1
                     elif key in list_keys:
                         # Direct list comparison
                         if reported_result[key] == gt_result[0][key]:
-                            if 'fig' in key: correct_vision_answers += 1
-                            else: correct_written_answers += 1
+                            if 'fig' in key:
+                                correct_vision_answers += 1
+                            else:
+                                correct_written_answers += 1
                     elif key in string_keys:
                         if str(reported_result[key]).lower() == str(gt_result[0][key]).lower():
-                            if 'fig' in key: correct_vision_answers += 1
-                            else: correct_written_answers += 1
+                            if 'fig' in key:
+                                correct_vision_answers += 1
+                            else:
+                                correct_written_answers += 1
             except Exception:
                 pass
         except Exception as e:

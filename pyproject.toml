@@ -136,3 +136,23 @@ hal-decrypt = "hal.utils.decrypt:decrypt_cli"
 
 [tool.setuptools]
 packages = ["hal"]
+
+[tool.ruff]
+# Ignore all git submodules and external agent code
+extend-exclude = [
+    "agents/Agentless",
+    "agents/Enigma",
+    "agents/Moatless",
+    "agents/SWE-agent",
+    "agents/SWE-agent-v1.0",
+    "agents/auto-code-rover",
+    "agents/open_deep_research",
+    "agents/usaco_bedrock_models",
+    "agents/USACO",
+    "agents/core_agent",
+    "agents/hal_generalist_agent",
+    "agents/cybench_example_agent",
+    "hal/benchmarks/USACO",
+    "hal/benchmarks/scienceagentbench/ScienceAgentBench",
+    "hal/benchmarks/SWE-bench",
+]

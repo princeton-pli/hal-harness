@@ -139,7 +139,7 @@ class DockerRunner:
             # Cleanup any remaining containers
             for container_id in self._active_containers:
                 try:
-                    container = self.docker_client.containers.get(container_id)
+                    _ = self.docker_client.containers.get(container_id)
                     # container.stop()
                     # container.remove()
                 except (docker.errors.NotFound, docker.errors.APIError) as e:

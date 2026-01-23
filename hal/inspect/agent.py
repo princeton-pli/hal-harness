@@ -29,9 +29,8 @@ def validate_agent(agent: Callable) -> None:
     # Get the signature of the function
     sig = inspect.signature(agent)
 
-    # Get the parameters and return annotation
+    # Get the parameters
     parameters = sig.parameters
-    return_annotation = sig.return_annotation
 
     # Check the number of parameters (should be exactly one)
     if len(parameters) not in [1, 2]:

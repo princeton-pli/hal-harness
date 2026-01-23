@@ -183,9 +183,9 @@ class MLAgentBenchBenchmark(BaseBenchmark):
         args['max_time'] = 60 # only run for 1 minute for test run, whatever hits first
 
         test_env = Environment(SimpleNamespace(**args))
-        
+
         self.mount_environment()
-        final_message = self.run_agent(agent_function, test_env)
+        _ = self.run_agent(agent_function, test_env)
         test_env.save("final")
         self.unmount_environment()
 
