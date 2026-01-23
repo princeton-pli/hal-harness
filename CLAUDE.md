@@ -211,7 +211,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 - **SWE-bench**: Requires Docker, does not support arm64 machines
 - **USACO**: Requires Docker for evaluation
 - **AppWorld**: Must run with `--vm` flag, requires special setup
-- **Cybench**: Requires Docker configuration, does not support arm64
 - **CORE-bench**: Requires decryption of test file with password "reproducibility"
 
 ### Development Practices

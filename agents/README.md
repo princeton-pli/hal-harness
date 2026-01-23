@@ -199,34 +199,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
 Assistantbench Browser Agent uses Browser-Use as the open source scaffold. To run this agent you will need to run `make` in the directory to install playwright and chromium in addition to `requirements.txt`.
 
-#### CyBench FIXME: remove
-
-**Input Format**:
-
-```python
-{
-    "sample_id": {
-        "id": "[truncated]",
-        "input": "[truncated]",
-        "choices": null,
-        "target": "[truncated]",
-        "metadata": {
-            "variant": "[truncated]",
-            "challenge_metadata": {
-                "first_solve_time": 999,
-                "category": "[truncated]",
-                "competition": "[truncated]"
-            },
-            "variant_metadata": {}
-        },
-        "files": {},
-        "setup": null
-    }
-}
-```
-
-**Output Format**: Return a dictionary mapping sample IDs to solutions.
-
 ### ScienceAgentBench
 
 **Input Format**:
