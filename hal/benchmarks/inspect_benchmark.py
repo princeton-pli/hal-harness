@@ -23,7 +23,6 @@ class InspectBenchmark(BaseBenchmark):
         agent_args: Dict[str, Any],
     ):
         self.benchmark_name = task_name
-        self.requirements_file = "inspect"
         self.requires_sandbox = False
         self.agent_args = agent_args
         super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)

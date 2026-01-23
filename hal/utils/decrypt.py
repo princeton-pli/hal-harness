@@ -20,13 +20,6 @@ from .json_encryption import JsonEncryption
 load_dotenv()
 
 
-# Replace the hardcoded key with proper key generation/loading
-def get_encryption_key() -> bytes:
-    """Get the encryption key in Fernet-compatible format."""
-    base_key = "hal1234".ljust(32, "0")  # Pad with zeros to make it 32 bytes
-    return base64.urlsafe_b64encode(base_key.encode())
-
-
 def decrypt_json(encrypted_data: str, salt: str) -> dict:
     """Decrypt JSON data.
 

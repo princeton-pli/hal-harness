@@ -22,7 +22,6 @@ class BaseBenchmark(ABC):
         self.agent_dir = agent_dir
         self.config = config
         self.benchmark_name: str
-        self.requirements_file: str
         self.setup_script = (
             setup_script  # Path to setup script relative to benchmark dir
         )

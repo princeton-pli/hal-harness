@@ -34,8 +34,6 @@ class AssistantBenchBenchmark(BaseBenchmark):
         successful_tasks = []
         failed_tasks = []
 
-        task_num = 0
-
         for task_id, agent_answer in normalized_output.items():
             task = self.benchmark.get(task_id)
             gold_answer = task["answer"]
@@ -47,7 +45,6 @@ class AssistantBenchBenchmark(BaseBenchmark):
                 has_answer = 0
             scores.append(score)
             answers.append(has_answer)
-            task_num += 1
 
             if agent_answer == gold_answer:
                 successful_tasks.append(task_id)

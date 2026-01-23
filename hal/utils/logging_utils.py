@@ -48,9 +48,6 @@ class OutputRedirector(io.StringIO):
         if text.strip():  # Only log non-empty strings
             self.logger.debug(text.rstrip())
 
-    def flush(self):
-        pass
-
 
 class PrintInterceptor:
     """Intercepts all print statements and redirects them to logging"""
@@ -159,11 +156,6 @@ def terminal_print():
         sys.stdout = original_stdout
         sys.stderr = original_stderr
         print_interceptor.start()
-
-
-def log_verbose(message: str, level: int = logging.INFO) -> None:
-    """Log verbose information to verbose log file only"""
-    verbose_logger.log(level, message)
 
 
 def log_step(message: str, level: int = logging.INFO) -> None:

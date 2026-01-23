@@ -341,7 +341,7 @@ async def run_agent_parallel(
                         + "\n"
                     )
 
-    async def solve(state: TaskState, generate: Generate) -> TaskState:
+    async def solve(state: TaskState, _: Generate) -> TaskState:
         # the sample
         id = state.sample_id
 
