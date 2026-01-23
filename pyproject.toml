@@ -155,4 +155,5 @@ extend-exclude = [
     "hal/benchmarks/USACO",
     "hal/benchmarks/scienceagentbench/ScienceAgentBench",
     "hal/benchmarks/SWE-bench",
+    "hal/benchmarks/SciCode",
 ]
