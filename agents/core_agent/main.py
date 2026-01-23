@@ -8,23 +8,33 @@ import os
 import sys
 import ast
 from functools import partial
-from smolagents import CodeAgent, tool, LiteLLMModel, DuckDuckGoSearchTool, Tool, PythonInterpreterTool, VisitWebpageTool
+from smolagents import (
+    CodeAgent,
+    tool,
+    LiteLLMModel,
+    DuckDuckGoSearchTool,
+    Tool,
+    PythonInterpreterTool,
+    VisitWebpageTool,
+)
 from smolagents.models import MessageRole, Model
 from smolagents.agents import ActionStep
 
 # Monkey-patch smolagents to handle GPT-5
 import smolagents.models
 
+
 def supports_stop_parameter(model_id: str) -> bool:
     """
     Check if the model supports the `stop` parameter.
-    
+
     Not supported with reasoning models openai/o3, openai/o4-mini, and gpt-5 (and their versioned variants).
     """
     model_name = model_id.split("/")[-1]
     # o3, o4-mini, and gpt-5 (including versioned variants) don't support stop parameter
     pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5[-\d]*)$"
     return not re.match(pattern, model_name)
+
 
 # Replace the function in smolagents
 smolagents.models.supports_stop_parameter = supports_stop_parameter
@@ -69,26 +79,34 @@ AUTHORIZED_IMPORTS = [
     "csv",
 ]
 
+
 def save_agent_steps(agent, kwargs, response, sample):
     for step in agent.memory.steps:
         if isinstance(step, ActionStep):
             step.agent_memory = None
     intermediate_steps = str(agent.memory.steps)
     with open("steps.json", "w") as f:
-        json.dump({
-            "agent_args": kwargs,
-            "intermediate_steps": intermediate_steps,
-            "response": str(response),
-            "sample": sample
-            }, f, indent=2)
+        json.dump(
+            {
+                "agent_args": kwargs,
+                "intermediate_steps": intermediate_steps,
+                "response": str(response),
+                "sample": sample,
+            },
+            f,
+            indent=2,
+        )
 
 
 def check_budget_exceeded(agent: CodeAgent, budget: float, model_name: str) -> bool:
     total_input_tokens = agent.monitor.total_input_token_count
     total_output_tokens = agent.monitor.total_output_token_count
-    
-    cost = MODEL_PRICES_DICT[model_name]["prompt_tokens"] * total_input_tokens + MODEL_PRICES_DICT[model_name]["completion_tokens"] * total_output_tokens
-    
+
+    cost = (
+        MODEL_PRICES_DICT[model_name]["prompt_tokens"] * total_input_tokens
+        + MODEL_PRICES_DICT[model_name]["completion_tokens"] * total_output_tokens
+    )
+
     print(f"Current cost: {cost}")
     if cost >= budget:
         return True
@@ -125,7 +143,7 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         _, file_extension = os.path.splitext(file_path)
         if not file_extension:
             # Treat files without extensions as text files
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 text_content = f.read()
             # Create a DocumentConverterResult with the text content
             result = DocumentConverterResult(title=None, text_content=text_content)
@@ -134,7 +152,9 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
             result = self.md_converter.convert(file_path)
 
         if file_path[-4:] in [".png", ".jpg"]:
-            raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
+            raise Exception(
+                "Cannot use inspect_file_as_text tool with images: use visualizer instead!"
+            )
 
         if ".zip" in file_path:
             return result.text_content
@@ -177,7 +197,7 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
         _, file_extension = os.path.splitext(file_path)
         if not file_extension:
             # Treat files without extensions as text files
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+            with open(file_path, "r", encoding="utf-8", errors="replace") as f:
                 text_content = f.read()
             # Create a DocumentConverterResult with the text content
             result = DocumentConverterResult(title=None, text_content=text_content)
@@ -186,7 +206,9 @@ This tool handles the following file extensions: [".html", ".htm", ".xlsx", ".pp
             result = self.md_converter.convert(file_path)
 
         if file_path[-4:] in [".png", ".jpg"]:
-            raise Exception("Cannot use inspect_file_as_text tool with images: use visualizer instead!")
+            raise Exception(
+                "Cannot use inspect_file_as_text tool with images: use visualizer instead!"
+            )
 
         if ".zip" in file_path:
             return result.text_content
@@ -244,16 +266,16 @@ def query_vision_language_model(query: str, image_path: str) -> str:
     try:
         import base64
         from litellm import completion
-        
+
         # Check if the image file exists
         if not os.path.exists(image_path):
             return f"Error: Image file not found at {image_path}"
-        
+
         # Read and encode the image
         with open(image_path, "rb") as image_file:
             image_content = image_file.read()
             base64_image = base64.b64encode(image_content).decode("utf-8")
-        
+
         # Create the message with text and image
         response = completion(
             model="gpt-4o-2024-11-20",
@@ -261,24 +283,21 @@ def query_vision_language_model(query: str, image_path: str) -> str:
                 {
                     "role": "user",
                     "content": [
-                        {
-                            "type": "text",
-                            "text": query
-                        },
+                        {"type": "text", "text": query},
                         {
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/jpeg;base64,{base64_image}"
-                            }
-                        }
-                    ]
+                            },
+                        },
+                    ],
                 }
             ],
         )
-        
+
         # Return the model's response
         return response.choices[0].message.content
-    
+
     except Exception as e:
         return f"Error processing vision query: {str(e)}"
 
@@ -295,22 +314,30 @@ def execute_bash(command: str) -> str:
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         output = f"Exit Code: {result.returncode}\nStdout:\n{result.stdout}\nStderr:\n{result.stderr}"
-        
+
         # Limit output to 1000 tokens
         encoding = tiktoken.get_encoding("cl100k_base")
         tokens = encoding.encode(output)
         if len(tokens) > 1000:
-            output = encoding.decode(tokens[:1000]) + "\n... (output truncated to 1000 tokens)"
-        
+            output = (
+                encoding.decode(tokens[:1000])
+                + "\n... (output truncated to 1000 tokens)"
+            )
+
         return output
     except Exception as e:
         return f"Error executing command: {str(e)}"
-    
-    
+
+
 @tool
-def edit_file(command: str, path: str, content: Optional[str] = None, 
-              line_number: Optional[int] = None, old_str: Optional[str] = None,
-              new_str: Optional[str] = None) -> str:
+def edit_file(
+    command: str,
+    path: str,
+    content: Optional[str] = None,
+    line_number: Optional[int] = None,
+    old_str: Optional[str] = None,
+    new_str: Optional[str] = None,
+) -> str:
     """
     Edit files in the project with various operations.
     Args:
@@ -329,27 +356,27 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
             elif path.is_dir():
                 return f"Path {path} is a directory"
             else:
-                with open(path, 'r') as f:
+                with open(path, "r") as f:
                     content = f.read()
-                    return content[:5000] + ('...' if len(content) > 5000 else '')
+                    return content[:5000] + ("..." if len(content) > 5000 else "")
 
         elif command == "create":
             if path.exists():
                 return f"Error: {path} already exists"
             path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 f.write(content or "")
             return f"Created file {path}"
 
         elif command == "str_replace":
             if not path.is_file():
                 return f"Error: {path} is not a file"
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 file_content = f.read()
             if old_str not in file_content:
                 return "Error: Could not find exact match for replacement string"
             new_content = file_content.replace(old_str, new_str)
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 f.write(new_content)
             return f"Successfully replaced content in {path}"
 
@@ -358,26 +385,34 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
                 return f"Error: {path} is not a file"
             if line_number is None:
                 return "Error: Line number is required for insert operation"
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 lines = f.readlines()
-            if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines) + 1:
+            if (
+                not isinstance(line_number, int)
+                or line_number < 1
+                or line_number > len(lines) + 1
+            ):
                 return f"Error: Invalid line number {line_number}"
-            lines.insert(line_number - 1, content + '\n')
-            with open(path, 'w') as f:
+            lines.insert(line_number - 1, content + "\n")
+            with open(path, "w") as f:
                 f.writelines(lines)
             return f"Inserted content at line {line_number} in {path}"
-        
+
         elif command == "delete":
             if not path.is_file():
                 return f"Error: {path} is not a file"
             if line_number is None:
                 return "Error: Line number is required for delete operation"
-            with open(path, 'r') as f:
+            with open(path, "r") as f:
                 lines = f.readlines()
-            if not isinstance(line_number, int) or line_number < 1 or line_number > len(lines):
+            if (
+                not isinstance(line_number, int)
+                or line_number < 1
+                or line_number > len(lines)
+            ):
                 return f"Error: Invalid line number {line_number}"
             del lines[line_number - 1]
-            with open(path, 'w') as f:
+            with open(path, "w") as f:
                 f.writelines(lines)
             return f"Deleted line {line_number} from {path}"
 
@@ -386,7 +421,10 @@ def edit_file(command: str, path: str, content: Optional[str] = None,
 
 
 @tool
-def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.git*,__pycache__,*.bin,*.exe,*.dll,*.so") -> str:
+def file_content_search(
+    query: str,
+    exclude_pattern: Optional[str] = "*.pyc,*.git*,__pycache__,*.bin,*.exe,*.dll,*.so",
+) -> str:
     """
     Search files in the current directory and subdirectories for specific content. This will only search the content of the files, not the files themselves.
     Args:
@@ -397,25 +435,25 @@ def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.gi
     """
     if not query.strip():
         return "Error: Empty search pattern. Please provide a valid search term."
-        
+
     results = []
     matches_found = 0
     files_searched = 0
-    
+
     context_lines = 3  # Reduced from 100 to keep output manageable
     max_matches = 10
     max_files = 50
-    
-    exclude_patterns = exclude_pattern.split(',') if exclude_pattern else []
-    
+
+    exclude_patterns = exclude_pattern.split(",") if exclude_pattern else []
+
     try:
-        all_files = list(Path('.').rglob('*'))
-        
+        all_files = list(Path(".").rglob("*"))
+
         files_to_search = []
         for file_path in all_files:
             if not file_path.is_file():
                 continue
-                
+
             # Skip excluded patterns
             skip = False
             for pattern in exclude_patterns:
@@ -423,55 +461,66 @@ def file_content_search(query: str, exclude_pattern: Optional[str] = "*.pyc,*.gi
                 if file_path.match(pattern):
                     skip = True
                     break
-                
+
             # skip input.json, agent_args.json, and steps.json
-            if file_path.name in ["input.json", "agent_args.json", "steps.json", "main.py"]:
+            if file_path.name in [
+                "input.json",
+                "agent_args.json",
+                "steps.json",
+                "main.py",
+            ]:
                 skip = True
-            
+
             if not skip:
                 files_to_search.append(file_path)
-        
+
         # Limit to max_files
         files_to_search = files_to_search[:max_files]
-        
+
         for file_path in files_to_search:
             if matches_found >= max_matches:
                 break
-                
+
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                
+
                 files_searched += 1
-                
+
                 for i, line in enumerate(lines):
                     if matches_found >= max_matches:
                         break
-                        
+
                     if re.search(query, line, re.IGNORECASE):
                         start = max(0, i - context_lines)
                         end = min(len(lines), i + context_lines + 1)
-                        
-                        context = ''.join(lines[start:end])
+
+                        context = "".join(lines[start:end])
                         # Truncate very long contexts
                         if len(context) > 1000:
-                            context = context[:500] + "\n... (truncated) ...\n" + context[-500:]
-                            
-                        results.append(f"File: {file_path} (line {i+1}):\n{context}\n---")
+                            context = (
+                                context[:500]
+                                + "\n... (truncated) ...\n"
+                                + context[-500:]
+                            )
+
+                        results.append(
+                            f"File: {file_path} (line {i + 1}):\n{context}\n---"
+                        )
                         matches_found += 1
-                        
+
             except (UnicodeDecodeError, IOError):
                 # Skip binary or unreadable files
                 continue
-    
+
         if not results:
             return f"No matches found for '{query}' in {files_searched} files."
-        
+
         summary = f"Found {matches_found} matches for '{query}' in {files_searched} files.\n\n"
         full_output = summary + "\n".join(results)
-        
+
         return full_output
-    
+
     except Exception as e:
         return f"Error searching files: {str(e)}"
 
@@ -481,123 +530,144 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     print("=== Package Versions and Environment Information ===")
     try:
         # Run conda list command and print output
-        conda_output = subprocess.run(['conda', 'list'], capture_output=True, text=True)
+        conda_output = subprocess.run(["conda", "list"], capture_output=True, text=True)
         print(conda_output.stdout)
     except Exception as e:
         print(f"[WARNING] Failed to run 'conda list': {str(e)}")
     print("=== End of Package Versions and Environment Information ===")
-    
+
     # Create symbolic links
     try:
         cwd = os.getcwd()
-        os.symlink(f'{cwd}/environment/data', '/data', target_is_directory=True)
-        os.symlink(f'{cwd}/environment/code', '/code', target_is_directory=True)
-        os.symlink(f'{cwd}/environment/results', '/results', target_is_directory=True)
+        os.symlink(f"{cwd}/environment/data", "/data", target_is_directory=True)
+        os.symlink(f"{cwd}/environment/code", "/code", target_is_directory=True)
+        os.symlink(f"{cwd}/environment/results", "/results", target_is_directory=True)
     except Exception as e:
-        print(f"[WARNING] Failed to create symbolic links for /data, /code, and /results: {str(e)}")
+        print(
+            f"[WARNING] Failed to create symbolic links for /data, /code, and /results: {str(e)}"
+        )
 
-    assert 'model_name' in kwargs, 'model_name is required'
-    assert len(input) == 1, 'input must contain only one task'
-    
-    BUDGET = kwargs['budget'] if 'budget' in kwargs else None
-    
+    assert "model_name" in kwargs, "model_name is required"
+    assert len(input) == 1, "input must contain only one task"
+
+    BUDGET = kwargs["budget"] if "budget" in kwargs else None
+
     model_params = {}
-    model_params['model_id'] = kwargs['model_name']
+    model_params["model_id"] = kwargs["model_name"]
 
     # Handle reasoning parameters based on provider
-    if 'reasoning_effort' in kwargs:
-        if 'openrouter/' in kwargs['model_name']:
+    if "reasoning_effort" in kwargs:
+        if "openrouter/" in kwargs["model_name"]:
             # OpenRouter doesn't support reasoning_effort, convert to reasoning.max_tokens
-            effort_to_tokens = {
-                'low': 1024,
-                'medium': 2048,
-                'high': 4096
+            effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
+            model_params["reasoning"] = {
+                "max_tokens": effort_to_tokens.get(kwargs["reasoning_effort"], 4096)
             }
-            model_params['reasoning'] = {"max_tokens": effort_to_tokens.get(kwargs['reasoning_effort'], 4096)}
         else:
             # For Anthropic direct and other providers that support reasoning_effort
-            model_params['reasoning_effort'] = kwargs['reasoning_effort']
+            model_params["reasoning_effort"] = kwargs["reasoning_effort"]
 
-    if 'temperature' in kwargs:
-        model_params['temperature'] = kwargs['temperature']
-        
-    if 'gemini' in kwargs['model_name']:
-        model_params['model_id'] = kwargs['model_name'].replace('gemini/', 'openai/')
-        model_params['api_key'] = os.getenv('GEMINI_API_KEY')
-        model_params['api_base'] = "https://generativelanguage.googleapis.com/v1beta/openai/"
-        
-    if 'together_ai' in kwargs['model_name']:
-        model_params['model_id'] = kwargs['model_name'].replace('together_ai/', 'openai/')
-        model_params['api_key'] = os.environ.get("TOGETHERAI_API_KEY")
-        model_params['api_base'] = "https://api.together.xyz/v1"
+    if "temperature" in kwargs:
+        model_params["temperature"] = kwargs["temperature"]
 
-    if kwargs['benchmark_name'] != 'corebench_easy' and kwargs['benchmark_name'] != 'corebench_medium' and kwargs['benchmark_name'] != 'corebench_hard':
-        raise ValueError(f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}")
-    
+    if "gemini" in kwargs["model_name"]:
+        model_params["model_id"] = kwargs["model_name"].replace("gemini/", "openai/")
+        model_params["api_key"] = os.getenv("GEMINI_API_KEY")
+        model_params["api_base"] = (
+            "https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+
+    if "together_ai" in kwargs["model_name"]:
+        model_params["model_id"] = kwargs["model_name"].replace(
+            "together_ai/", "openai/"
+        )
+        model_params["api_key"] = os.environ.get("TOGETHERAI_API_KEY")
+        model_params["api_base"] = "https://api.together.xyz/v1"
+
+    if (
+        kwargs["benchmark_name"] != "corebench_easy"
+        and kwargs["benchmark_name"] != "corebench_medium"
+        and kwargs["benchmark_name"] != "corebench_hard"
+    ):
+        raise ValueError(
+            f"Unknown benchmark. HAL agent does not support this benchmark: {kwargs['benchmark_name']}"
+        )
+
     # Determine agent type based on benchmark name or flags
-    benchmark_name = kwargs['benchmark_name']
-    
+    benchmark_name = kwargs["benchmark_name"]
+
     # Check if base_agent flag is set to true
-    if kwargs.get('base_agent', False):
+    if kwargs.get("base_agent", False):
         # Use base agent regardless of benchmark name
-        agent_type = 'base'
+        agent_type = "base"
         print("Using base agent (no hints) as requested by base_agent flag")
     elif benchmark_name in AGENT_HINTS:
         # Use the benchmark name directly as the agent type
         agent_type = benchmark_name
-        
+
     # Validate agent type
     if agent_type not in AGENT_HINTS:
-        raise ValueError(f"Invalid agent_type: {agent_type}. Must be one of: {', '.join(AGENT_HINTS.keys())}")
-    
+        raise ValueError(
+            f"Invalid agent_type: {agent_type}. Must be one of: {', '.join(AGENT_HINTS.keys())}"
+        )
+
     # Get hints based on agent type
     hints = AGENT_HINTS[agent_type]
-        
+
     task_id, task = list(input.items())[0]
-    
+
     results = {}
 
     # Inject OpenRouter provider selection via litellm extra_body if requested
     try:
         import litellm  # type: ignore
+
         # Be lenient with unknown params on different backends
         litellm.drop_params = True
 
-        if 'openrouter_provider_only' in kwargs and 'openrouter/' in kwargs.get('model_name', ''):
-            providers_value = kwargs['openrouter_provider_only']
+        if "openrouter_provider_only" in kwargs and "openrouter/" in kwargs.get(
+            "model_name", ""
+        ):
+            providers_value = kwargs["openrouter_provider_only"]
             if isinstance(providers_value, str):
-                providers = [p.strip() for p in providers_value.split(',') if p.strip()]
+                providers = [p.strip() for p in providers_value.split(",") if p.strip()]
             elif isinstance(providers_value, (list, tuple)):
                 providers = [str(p) for p in providers_value]
             else:
                 providers = [str(providers_value)]
 
-            original_completion = getattr(litellm, 'completion', None)
-            original_acompletion = getattr(litellm, 'acompletion', None)
+            original_completion = getattr(litellm, "completion", None)
+            original_acompletion = getattr(litellm, "acompletion", None)
 
             if not original_completion and not original_acompletion:
-                print("[WARNING] OpenRouter provider pinning requested but litellm completion hooks not found; skipping provider pinning.")
+                print(
+                    "[WARNING] OpenRouter provider pinning requested but litellm completion hooks not found; skipping provider pinning."
+                )
             else:
-                print(f"[INFO] Enabling OpenRouter provider pinning: providers={providers}")
+                print(
+                    f"[INFO] Enabling OpenRouter provider pinning: providers={providers}"
+                )
 
             if original_completion is not None:
+
                 def completion_with_provider(*args, **completion_kwargs):
-                    model_field = completion_kwargs.get('model')
-                    if isinstance(model_field, str) and 'openrouter/' in model_field:
-                        extra_body = completion_kwargs.get('extra_body', {}) or {}
-                        extra_body['provider'] = {'only': providers}
-                        completion_kwargs['extra_body'] = extra_body
+                    model_field = completion_kwargs.get("model")
+                    if isinstance(model_field, str) and "openrouter/" in model_field:
+                        extra_body = completion_kwargs.get("extra_body", {}) or {}
+                        extra_body["provider"] = {"only": providers}
+                        completion_kwargs["extra_body"] = extra_body
                     return original_completion(*args, **completion_kwargs)
 
                 litellm.completion = completion_with_provider  # type: ignore
 
             if original_acompletion is not None:
+
                 async def acompletion_with_provider(*args, **completion_kwargs):
-                    model_field = completion_kwargs.get('model')
-                    if isinstance(model_field, str) and 'openrouter/' in model_field:
-                        extra_body = completion_kwargs.get('extra_body', {}) or {}
-                        extra_body['provider'] = {'only': providers}
-                        completion_kwargs['extra_body'] = extra_body
+                    model_field = completion_kwargs.get("model")
+                    if isinstance(model_field, str) and "openrouter/" in model_field:
+                        extra_body = completion_kwargs.get("extra_body", {}) or {}
+                        extra_body["provider"] = {"only": providers}
+                        completion_kwargs["extra_body"] = extra_body
                     return await original_acompletion(*args, **completion_kwargs)  # type: ignore
 
                 litellm.acompletion = acompletion_with_provider  # type: ignore
@@ -606,17 +676,19 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         print(f"[WARNING] Failed to enable OpenRouter provider pinning: {e}")
 
     model = LiteLLMModel(**model_params)
-    
+
     # Prepend hints to the task prompt if available
-    prompt = task['prompt']
+    prompt = task["prompt"]
     if hints:
         prompt = f"{hints}\n\n{prompt}"
-    
+
     # Create a custom FinalAnswerTool that includes key validation and LLM-based giving-up detection
     class CustomFinalAnswerTool(Tool):
         name = "final_answer"
         description = "Provides a final answer to the given problem."
-        inputs = {"answer": {"type": "any", "description": "The final answer to the problem"}}
+        inputs = {
+            "answer": {"type": "any", "description": "The final answer to the problem"}
+        }
         output_type = "any"
 
         def __init__(self, base_agent_flag, task_prompt, model=None):
@@ -624,8 +696,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             self.base_agent_flag = base_agent_flag
             self.task_prompt = task_prompt
             self.model = model  # Store the model for LLM-based checks
-            print(f"[DEBUG] CustomFinalAnswerTool created with base_agent_flag={base_agent_flag}")
-            
+            print(
+                f"[DEBUG] CustomFinalAnswerTool created with base_agent_flag={base_agent_flag}"
+            )
+
         def extract_dict_keys(self, prompt):
             """Extract dictionary keys from the task prompt using ast.literal_eval."""
             # Regular expression to find the dict_keys part
@@ -641,16 +715,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                 return array
             else:
                 raise ValueError("No dict_keys pattern found in the prompt.")
-        
+
         def check_if_giving_up(self, answer):
             """Use the LLM to determine if the answer indicates giving up on the task."""
             if self.model is None:
                 print("[DEBUG] No model provided for giving-up check, skipping")
                 return False, "No model available for check"
-                
+
             # Convert answer to string representation for analysis
             answer_str = str(answer)
-            
+
             # Create a prompt for the LLM to analyze the answer
             messages = [
                 {
@@ -664,80 +738,80 @@ All tasks are possible to complete, and the agent should never give up by saying
 
 Analyze the answer and determine if it indicates giving up (e.g., contains phrases like "unobtainable", "unavailable", "NOT REPRODUCIBLE", "ERROR", "NOT FOUND", "unknown", or null values).
 
-Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEMPT" if it appears to be a genuine attempt at solving the problem."""
+Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEMPT" if it appears to be a genuine attempt at solving the problem.""",
                         }
-                    ]
+                    ],
                 },
                 {
                     "role": MessageRole.USER,
                     "content": [
                         {
                             "type": "text",
-                            "text": f"Analyze this answer to determine if the agent is giving up:\n\n{answer_str}"
+                            "text": f"Analyze this answer to determine if the agent is giving up:\n\n{answer_str}",
                         }
-                    ]
-                }
+                    ],
+                },
             ]
-            
+
             # Get the LLM's evaluation
             try:
                 evaluation = self.model(messages).content.strip()
                 print(f"[DEBUG] LLM evaluation of answer: {evaluation}")
-                
+
                 # Check if the LLM determined the agent is giving up
                 is_giving_up = "GIVING_UP" in evaluation
-                
+
                 if is_giving_up:
                     feedback = "The answer indicates giving up on the task. Remember that all tasks are possible to complete. Please try a different approach to get the answer."
                 else:
                     feedback = "The answer appears to be a genuine attempt at solving the problem."
-                    
+
                 return is_giving_up, feedback
             except Exception as e:
                 print(f"[DEBUG] Error during LLM evaluation: {str(e)}")
                 return False, f"Error during evaluation: {str(e)}"
-            
+
         def forward(self, answer: Any) -> Any:
             """Process the final answer with key validation if base_agent is False."""
             print(f"[DEBUG] CustomFinalAnswerTool.forward called with answer: {answer}")
             print(f"[DEBUG] base_agent_flag is {self.base_agent_flag}")
-            
+
             # First, check if the agent is giving up
             is_giving_up, feedback = self.check_if_giving_up(answer)
             if is_giving_up:
                 error_msg = f"Submission rejected: {feedback}"
                 print(f"[DEBUG] {error_msg}")
                 raise Exception(error_msg)
-            
+
             if not self.base_agent_flag:
                 # Extract expected keys from the task prompt
                 expected_keys = self.extract_dict_keys(self.task_prompt)
-                
+
                 # Validate that the answer is a dictionary with the expected keys
                 if expected_keys:
                     if not isinstance(answer, dict):
                         error_msg = f"The submitted answer must be a dictionary with the following keys: {expected_keys}"
                         print(f"[DEBUG] Validation failed: {error_msg}")
                         raise Exception(error_msg)
-                    
+
                     # Check if all expected keys are in the answer
                     missing_keys = [key for key in expected_keys if key not in answer]
                     if missing_keys:
                         error_msg = f"The submitted answer is missing the following keys: {missing_keys}"
                         print(f"[DEBUG] Validation failed: {error_msg}")
                         raise Exception(error_msg)
-                    
+
                     # Check if there are any extra keys in the answer
                     extra_keys = [key for key in answer if key not in expected_keys]
                     if extra_keys:
                         error_msg = f"The submitted answer contains extra keys: {extra_keys}. Expected keys: {expected_keys}"
                         print(f"[DEBUG] Validation failed: {error_msg}")
                         raise Exception(error_msg)
-                    
+
                     print(f"[DEBUG] Validation passed for answer: {answer}")
             else:
                 print("[DEBUG] Skipping validation because base_agent_flag is True")
-            
+
             # If validation passes or base_agent is True, return the answer
             print(f"[DEBUG] Returning final answer: {answer}")
             return answer
@@ -745,11 +819,11 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
     # Create the custom FinalAnswerTool instance
     # This will replace the default FinalAnswerTool in the agent because they share the same name
     custom_final_answer_tool = CustomFinalAnswerTool(
-        base_agent_flag=kwargs.get('base_agent', False),
+        base_agent_flag=kwargs.get("base_agent", False),
         task_prompt=prompt,
-        model=model  # Pass the model for LLM-based checks
+        model=model,  # Pass the model for LLM-based checks
     )
-    
+
     # Include the custom tool directly in the CORE_TOOLS list
     CORE_TOOLS = [
         DuckDuckGoSearchTool(),
@@ -762,7 +836,7 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
         query_vision_language_model,
         custom_final_answer_tool,  # Add the custom tool directly to the list
     ]
-    
+
     # Create the agent
     agent = CodeAgent(
         tools=CORE_TOOLS,
@@ -770,11 +844,15 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
         max_steps=40,
         model=model,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
-        budget_exceeded_callback=partial(check_budget_exceeded, budget=BUDGET, model_name=kwargs['model_name']) if BUDGET else None,
+        budget_exceeded_callback=partial(
+            check_budget_exceeded, budget=BUDGET, model_name=kwargs["model_name"]
+        )
+        if BUDGET
+        else None,
     )
 
     response = agent.run(prompt)
     save_agent_steps(agent, kwargs, response, task)
     results[task_id] = response
-        
+
     return results

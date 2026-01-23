@@ -2,10 +2,9 @@
 from inspect_ai.tool import ToolError
 from inspect_ai.util import sandbox
 from typing import Any
-    
-    
-from openai import AsyncOpenAI
 
+
+from openai import AsyncOpenAI
 
 
 async def list_files(dir: str):
@@ -25,16 +24,13 @@ async def list_files(dir: str):
 
 
 async def run(sample: dict[str, Any], **kwargs) -> dict[str, Any]:
-    
     # Example command executed in the sandbox
     result = await list_files(".")
-    
+
     client = AsyncOpenAI()
     completion = await client.chat.completions.create(
         model="inspect",
         messages=sample["input"],
     )
-    
-    return {
-        "output": str(result)
-    }
+
+    return {"output": str(result)}
