@@ -193,14 +193,14 @@ AGENT_CONFIGS = [
     # -------------------------------------------------------------------------
     # OpenAI Models
     # -------------------------------------------------------------------------
-    {
-        "name": "taubench_toolcalling_gpt_4o_mini",
-        "agent_dir": "agents/taubench_tool_calling",
-        "agent_function": "tool_calling.run",
-        "model_name": "gpt-4o-mini-2024-07-18",
-        "provider": "openai",
-        "benchmarks": ["taubench_airline"],
-    },
+    # {
+    #     "name": "taubench_toolcalling_gpt_4o_mini",
+    #     "agent_dir": "agents/taubench_tool_calling",
+    #     "agent_function": "tool_calling.run",
+    #     "model_name": "gpt-4o-mini-2024-07-18",
+    #     "provider": "openai",
+    #     "benchmarks": ["taubench_airline"],
+    # },
     # {
     #     "name": "taubench_toolcalling_gpt_4_turbo",
     #     "agent_dir": "agents/taubench_tool_calling",
@@ -370,16 +370,16 @@ AGENT_CONFIGS = [
     # },
 
     # -------------------------------------------------------------------------
-    # Anthropic Models (GAIA)
+    # Anthropic Models (GAIA) - via OpenRouter
     # -------------------------------------------------------------------------
     # {
     #     "name": "gaia_generalist_claude_haiku_3_5",
     #     "agent_dir": "agents/hal_generalist_agent",
     #     "agent_function": "main.run",
-    #     "model_name": "claude-3-5-haiku-20241022",
+    #     "model_name": "openrouter/anthropic/claude-3-5-haiku",
     #     "benchmarks": ["gaia"],
     #     "extra_agent_args": {
-    #         "provider": "anthropic",
+    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
     #         "temperature": 0.0
     #     }
     # },
@@ -387,7 +387,7 @@ AGENT_CONFIGS = [
     #     "name": "gaia_generalist_claude_sonnet_3_7",
     #     "agent_dir": "agents/hal_generalist_agent",
     #     "agent_function": "main.run",
-    #     "model_name": "openrouter/anthropic/claude-3-7-sonnet-20250219",
+    #     "model_name": "openrouter/anthropic/claude-3.7-sonnet",
     #     "benchmarks": ["gaia"],
     #     "extra_agent_args": {
     #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
@@ -398,10 +398,10 @@ AGENT_CONFIGS = [
     #     "name": "gaia_generalist_claude_sonnet_4_5",
     #     "agent_dir": "agents/hal_generalist_agent",
     #     "agent_function": "main.run",
-    #     "model_name": "claude-sonnet-4-5",
+    #     "model_name": "openrouter/anthropic/claude-sonnet-4.5",
     #     "benchmarks": ["gaia"],
     #     "extra_agent_args": {
-    #         "provider": "anthropic",
+    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
     #         "temperature": 0.0
     #     }
     # },
@@ -409,10 +409,10 @@ AGENT_CONFIGS = [
     #     "name": "gaia_generalist_claude_opus_4_5",
     #     "agent_dir": "agents/hal_generalist_agent",
     #     "agent_function": "main.run",
-    #     "model_name": "claude-opus-4-5",
+    #     "model_name": "openrouter/anthropic/claude-opus-4.5",
     #     "benchmarks": ["gaia"],
     #     "extra_agent_args": {
-    #         "provider": "anthropic",
+    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
     #         "temperature": 0.0
     #     }
     # },
@@ -471,23 +471,30 @@ BENCHMARK_CONFIGS = {
     #     "benchmark_name": "taubench_airline",
     #     "requires_docker": False,
     #     "requires_vm": False,
-    #     "max_concurrent": 1,  # Sequential to avoid rate limits
+    #     "max_concurrent": 5,  # Can run in parallel
     #     "compliance_constraints": [
     #         "pii_handling_customer_service",  # Customer service context - legitimate PII exchange allowed
     #         "destructive_ops_customer_service",  # Cancellations/mods with user confirmation are OK
     #         "data_minimization_customer_service",  # Accessing customer data to help them is OK
-    #         # Note: rate_limit_respect removed - not applicable in benchmark environments
+    #         "policy_circumvention_customer_service",  # Detect agents manipulated to bypass policies
+    #         "financial_accuracy_customer_service",  # Detect wrong refund/charge amounts
+    #         "authentication_bypass_customer_service",  # Detect improper identity verification
+    #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
     #     ],
     # },
     # "taubench_retail": {
     #     "benchmark_name": "taubench_retail",
     #     "requires_docker": False,
     #     "requires_vm": False,
-    #     "max_concurrent": 1,
+    #     "max_concurrent": 5,  # Can run in parallel
     #     "compliance_constraints": [
     #         "pii_handling_customer_service",  # Customer service context
     #         "destructive_ops_customer_service",  # Cancellations/mods with user confirmation are OK
     #         "data_minimization_customer_service",  # Accessing customer data to help them is OK
+    #         "policy_circumvention_customer_service",  # Detect agents manipulated to bypass policies
+    #         "financial_accuracy_customer_service",  # Detect wrong refund/charge amounts
+    #         "authentication_bypass_customer_service",  # Detect improper identity verification
+    #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
     #     ],
     # },
     "gaia": {

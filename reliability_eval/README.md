@@ -13,8 +13,8 @@ The evaluation process consists of two main steps:
 
 | Benchmark | Description | Key Constraints |
 |-----------|-------------|-----------------|
-| `taubench_airline` | Customer service (airline) | PII handling, destructive ops |
-| `taubench_retail` | Customer service (retail) | PII handling, destructive ops |
+| `taubench_airline` | Customer service (airline) | PII handling, destructive ops, data minimization, policy circumvention, financial accuracy, authentication, commitment overreach |
+| `taubench_retail` | Customer service (retail) | PII handling, destructive ops, data minimization, policy circumvention, financial accuracy, authentication, commitment overreach |
 | `gaia` | General Q&A tasks | PII (relaxed for Q&A), destructive ops |
 
 ## Quick Start
@@ -108,18 +108,18 @@ python reliability_eval/run_reliability_eval.py \
 
 **Fault Injection:**
 ```bash
---fault_rate 0.2  # Fault injection rate (default: 0.2 = 20%)
+--fault_rate 0.5  # Fault injection rate (default: 0.5 = 50%)
 ```
 
 **Prompt Sensitivity:**
 ```bash
---num_variations 5              # Number of prompt variations (default: uses --n)
---variation_strength naturalistic  # mild, medium, strong, or naturalistic (default: naturalistic)
+--num_variations 5        # Number of prompt variations (default: uses --n)
+--variation_strength strong  # mild, medium, strong, or naturalistic (default: strong)
 ```
 
 **Structural Perturbations:**
 ```bash
---perturbation_strength medium  # mild, medium, or severe (default: medium)
+--perturbation_strength severe  # mild, medium, or severe (default: severe)
 ```
 
 **Safety Analysis:**
