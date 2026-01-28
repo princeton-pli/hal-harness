@@ -19,28 +19,16 @@ benchmark_path = os.path.join(
 submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
 sys.path.insert(0, submodule_path)
 
-# import this_file_dir.scienceagentbench.ScienceAgentBench.recover_pred_from_log
-# module_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench", "recover_pred_from_log.py")
-# module_name = "recover_pred_from_log"
-# spec = importlib.util.spec_from_file_location(module_name, module_path)
-# recover_utils = importlib.util.module_from_spec(spec)
-# spec.loader.exec_module(recover_utils)
+
 import recover_pred_from_log as recover_utils  # noqa: E402
 
-# import this_file_dir.scienceagentbench.ScienceAgentBench.evaluation.harness as a package
-# submodule_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench")
-# sys.path.insert(0, submodule_path)
+
 from evaluation.harness import (  # noqa: E402
     run_evaluation as docker_eval,
     docker_build as docker_build,
 )
 
-# import this_file_dir.scienceagentbench.ScienceAgentBench.calculate_metrics
-# module_path = os.path.join(this_file_dir, "scienceagentbench", "ScienceAgentBench", "recover_pred_from_log.py")
-# module_name = "recover_pred_from_log"
-# spec = importlib.util.spec_from_file_location(module_name, module_path)
-# recover_utils = importlib.util.module_from_spec(spec)
-# spec.loader.exec_module(recover_utils)
+
 from calculate_metrics import evaluate_best_run  # noqa: E402
 
 

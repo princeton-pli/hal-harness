@@ -2,10 +2,6 @@
 
 from typing import Dict, Any, Optional
 from .benchmarks.base_benchmark import BaseBenchmark
-from .benchmarks.inspect_benchmark import InspectBenchmark
-# from .benchmarks.swe_bench import SWEBenchBenchmark
-# from .benchmarks.usaco import USACOBenchmark
-# from .benchmarks.mlagentbench import MLAgentBenchBenchmark
 
 
 class BenchmarkManager:
@@ -29,12 +25,6 @@ class BenchmarkManager:
             "appworld_test_challenge",
             "taubench_retail",
             "taubench_airline",
-            "gaia",
-            "inspect_evals/gaia",
-            "inspect_evals/cybench",
-            "inspect_evals/appworld",
-            "inspect_evals/agentharm",
-            "inspect_evals/agentharm_benign",
             "corebench_easy",
             "corebench_medium",
             "corebench_hard",
@@ -46,13 +36,7 @@ class BenchmarkManager:
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
-        if benchmark_name.startswith("inspect:") or benchmark_name.startswith(
-            "inspect_evals/"
-        ):
-            return InspectBenchmark(
-                self.agent_dir, self.config, benchmark_name, self.agent_args
-            )
-        elif benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
+        if benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
             from .benchmarks.scicode import SciCodeBenchmark
 
             benchmark = SciCodeBenchmark(self.agent_dir, self.config, benchmark_name)
@@ -79,10 +63,6 @@ class BenchmarkManager:
             from .benchmarks.taubench import TauBenchBenchmark
 
             benchmark = TauBenchBenchmark(self.agent_dir, self.config, benchmark_name)
-        elif benchmark_name == "gaia":
-            from .benchmarks.gaia import GaiaBenchmark
-
-            benchmark = GaiaBenchmark(self.agent_dir, self.config, benchmark_name)
         elif benchmark_name == "corebench_easy":
             from .benchmarks.corebench import CoreBenchEasy
 

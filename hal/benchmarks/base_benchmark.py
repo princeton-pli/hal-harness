@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 import json
 import os
-from inspect_ai.log import EvalLog
+
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
 from ..utils.logging_utils import print_warning
@@ -85,22 +85,9 @@ class BaseBenchmark(ABC):
         run_dir = self.get_run_dir(run_id)
 
         # Store raw results
-        if isinstance(eval_results, EvalLog):
-            # read json file that does not contain "SUBMISSION" and is most recently created (workaround because we cant set the filename and not convert the eval_results to json serializable variable from inspect output)
-            json_files = [
-                f
-                for f in os.listdir(run_dir)
-                if f.endswith(".json") and "SUBMISSION" not in f
-            ]
-            latest_file = max(
-                json_files, key=lambda x: os.path.getctime(os.path.join(run_dir, x))
-            )
-            with open(os.path.join(run_dir, latest_file), "r") as f:
-                inspect_eval_results = json.load(f)
-        else:
-            results_path = os.path.join(run_dir, f"{run_id}.json")
-            with open(results_path, "w") as f:
-                json.dump(eval_results, f, indent=2)
+        results_path = os.path.join(run_dir, f"{run_id}.json")
+        with open(results_path, "w") as f:
+            json.dump(eval_results, f, indent=2)
 
         # Extract task metrics from agent output if available
         task_metrics = {}
@@ -128,9 +115,7 @@ class BaseBenchmark(ABC):
                 "total_cost": total_cost,
                 "latencies": latency_dict,
             },
-            "raw_eval_results": inspect_eval_results
-            if isinstance(eval_results, EvalLog)
-            else eval_results,
+            "raw_eval_results": eval_results,
             "raw_logging_results": raw_logging,
             "total_usage": total_usage,
             "total_cost": total_cost,
