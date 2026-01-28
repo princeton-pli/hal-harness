@@ -98,6 +98,19 @@ def setup_logging(run_id, log_dir, use_vm=False):
     # Apply all handlers to loggers
 ```
 
+#### 1.3 Milestone and testing
+
+1. **Unit Tests**: Test LoggerAdapter context injection
+2. **Smoke Test**: Run single VM task with Azure logging enabled
+3. **Validation**:
+   - Verify file outputs unchanged
+
+- [ ] Test with curl and verify that logs show up in Azure as expected
+  - Verify no broken functionality
+  - Verify logs appear in Azure Log Analytics
+
+PAUSE DEVELOPMENT AT THIS POINT AND ONLY CONTINUE ONCE THE ABOVE TEST PASSES
+
 ### Phase 2: VM Code Refactoring (Replace print() with logging)
 
 #### 2.1 Refactor hal/utils/virtual_machine_manager.py
@@ -275,18 +288,9 @@ After `terraform apply`, outputs will be:
 - `data_collection_rule_id`: Copy to `AZURE_MONITOR_DATA_COLLECTION_RULE_ID`
 - `workspace_id`: For querying logs in Azure Portal
 
-### Phase 5: Testing & Rollout
+### Phase 5: Rollout
 
-#### 5.1 Testing Strategy
-
-1. **Unit Tests**: Test LoggerAdapter context injection
-2. **Integration Test**: Run single VM task with Azure logging enabled
-3. **Validation**:
-   - Verify logs appear in Azure Log Analytics
-   - Verify file outputs unchanged
-   - Verify no broken functionality
-
-#### 5.2 Rollout Approach
+#### 5.1 Rollout Approach
 
 **Critical Requirement: Fail-Fast on Azure Errors**
 
@@ -350,7 +354,7 @@ class AzureMonitorHandler(logging.Handler):
 - [ ] Weave integration still works
 - [ ] Azure Monitor failures properly propagate (don't suppress errors)
 
-#### 5.3 Validation Queries
+#### 5.2 Validation Queries
 
 After first successful run, validate with KQL:
 
