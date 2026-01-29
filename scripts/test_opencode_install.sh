@@ -15,13 +15,20 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="${SCRIPT_DIR}/.."
 IMAGE_NAME="opencode-install-test"
+
+# Assemble a minimal build context (avoids sending the entire repo to the daemon)
+BUILD_CTX="$(mktemp -d)"
+trap 'rm -rf "${BUILD_CTX}"' EXIT
+cp "${SCRIPT_DIR}/test_opencode_install.py" "${BUILD_CTX}/"
+cp "${REPO_ROOT}/agents/opencode_agent/opencode_setup.py" "${BUILD_CTX}/"
 
 echo "══════════════════════════════════════════════════════════"
 echo "  Building Docker image: ${IMAGE_NAME}"
 echo "══════════════════════════════════════════════════════════"
 
-docker build -t "${IMAGE_NAME}" -f - "${SCRIPT_DIR}" <<'DOCKERFILE'
+DOCKER_BUILDKIT=1 docker build -t "${IMAGE_NAME}" -f - "${BUILD_CTX}" <<'DOCKERFILE'
 FROM python:3.12-slim
 
 # Minimal bootstrap – the test script installs everything else
@@ -31,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /workspace
 
 COPY test_opencode_install.py /test_opencode_install.py
+COPY opencode_setup.py /opencode_setup.py
 
 # -u = unbuffered stdout so logs stream in real-time
 ENTRYPOINT ["python", "-u", "/test_opencode_install.py"]

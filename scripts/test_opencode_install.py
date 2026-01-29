@@ -50,38 +50,18 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from opencode_setup import (
+    KNOWN_BINARY_LOCATIONS,
+    OPENCODE_CONFIG,
+    OPENCODE_INSTALL_CMD,
+    find_opencode_binary,
+    install_system_deps,
+    setup_global_config,
+    setup_opencode_config,
+)
+
 
 # ── Constants ────────────────────────────────────────────────
-
-OPENCODE_INSTALL_CMD = "curl -fsSL https://opencode.ai/install | bash"
-
-KNOWN_BINARY_LOCATIONS = [
-    "~/.local/bin/opencode",
-    "~/.opencode/bin/opencode",
-    "~/.local/share/opencode/bin/opencode",
-    "/usr/local/bin/opencode",
-    "/usr/bin/opencode",
-    "/opt/homebrew/bin/opencode",
-]
-
-OPENCODE_CONFIG = {
-    "$schema": "https://opencode.ai/config.json",
-    "permission": {
-        "*": "allow",
-        "external_directory": "allow",
-        "doom_loop": "allow",
-        "edit": "allow",
-        "bash": "allow",
-        "webfetch": "allow",
-        "websearch": "allow",
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "list": "allow",
-        "task": "allow",
-        "skill": "allow",
-    },
-}
 
 DEFAULT_SMOKE_PROMPT = (
     'Write the JSON object {"smoke_test": "ok", "value": 42} '
@@ -219,33 +199,6 @@ def run_cmd(
     return result
 
 
-def find_opencode_binary(log: logging.Logger) -> Optional[str]:
-    """Search for the opencode binary in PATH and known locations."""
-    # 1. PATH
-    found = shutil.which("opencode")
-    if found:
-        log.info(f"  Found on PATH: {found}")
-        return found
-
-    # 2. Known locations
-    for loc in KNOWN_BINARY_LOCATIONS:
-        expanded = os.path.expanduser(loc)
-        if os.path.isfile(expanded) and os.access(expanded, os.X_OK):
-            log.info(f"  Found at known location: {expanded}")
-            return expanded
-
-    # 3. Broad search
-    search_roots = [os.path.expanduser("~"), "/usr/local", "/usr", "/opt"]
-    for root in search_roots:
-        for sub in ("bin", "local/bin", "local/share/opencode/bin"):
-            candidate = os.path.join(root, sub, "opencode")
-            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
-                log.info(f"  Found via search: {candidate}")
-                return candidate
-
-    return None
-
-
 def collect_environment() -> Dict[str, Any]:
     """Collect environment info for the report."""
     return {
@@ -280,37 +233,12 @@ def phase_system_deps(log: logging.Logger) -> PhaseResult:
             log.info(f"  ✗ {binary} not found, will install")
             steps.append(StepLog(f"check-{binary}", False, "not found"))
 
-    # Clean stale apt lists (common in GPU images)
+    # Install system deps via shared helper
     try:
-        run_cmd(
-            "rm -f /etc/apt/sources.list.d/cuda.list /etc/apt/sources.list.d/nvidia-ml.list 2>/dev/null || true",
-            log, shell=True, timeout=10,
-        )
-    except Exception:
-        pass
-
-    # apt-get update
-    try:
-        log.info("  Running apt-get update ...")
+        log.info("  Installing system dependencies ...")
         st = time.monotonic()
-        r = run_cmd(["apt-get", "update"], log, timeout=120)
-        steps.append(StepLog("apt-get-update", r.returncode == 0, "", time.monotonic() - st))
-        if r.returncode != 0:
-            return PhaseResult("system-deps", "fail", time.monotonic() - t0,
-                               error=f"apt-get update failed: {r.stderr[:500]}", steps=steps)
-    except Exception as e:
-        return PhaseResult("system-deps", "fail", time.monotonic() - t0,
-                           error=str(e), steps=steps)
-
-    # apt-get install
-    try:
-        log.info("  Running apt-get install git curl procps ...")
-        st = time.monotonic()
-        r = run_cmd(["apt-get", "install", "-y", "git", "curl", "procps"], log, timeout=180)
-        steps.append(StepLog("apt-get-install", r.returncode == 0, "", time.monotonic() - st))
-        if r.returncode != 0:
-            return PhaseResult("system-deps", "fail", time.monotonic() - t0,
-                               error=f"apt-get install failed: {r.stderr[:500]}", steps=steps)
+        install_system_deps()
+        steps.append(StepLog("install-system-deps", True, "", time.monotonic() - st))
     except Exception as e:
         return PhaseResult("system-deps", "fail", time.monotonic() - t0,
                            error=str(e), steps=steps)
@@ -340,7 +268,7 @@ def phase_install_cli(log: logging.Logger) -> PhaseResult:
     steps: List[StepLog] = []
 
     # Check if already installed
-    existing = find_opencode_binary(log)
+    existing = find_opencode_binary()
     if existing:
         log.info(f"  OpenCode already installed: {existing}")
         steps.append(StepLog("pre-check", True, existing))
@@ -369,7 +297,7 @@ def phase_install_cli(log: logging.Logger) -> PhaseResult:
                            error=str(e), steps=steps)
 
     # Locate binary after install
-    binary = find_opencode_binary(log)
+    binary = find_opencode_binary()
     if not binary:
         # Extra diagnostics
         log.error("  Binary not found after install. Searching filesystem ...")
@@ -486,15 +414,8 @@ def phase_write_config(log: logging.Logger, workspace: str) -> PhaseResult:
         steps.append(StepLog("git-init", False, str(e)))
 
     # ── 4b. Write project-level config (.opencode/config.json) ──
-    config_dir = os.path.join(workspace, ".opencode")
-    config_path = os.path.join(config_dir, "config.json")
-
     try:
-        os.makedirs(config_dir, exist_ok=True)
-        steps.append(StepLog("mkdir-project", True, config_dir))
-
-        with open(config_path, "w") as f:
-            json.dump(OPENCODE_CONFIG, f, indent=2)
+        config_path = setup_opencode_config(workspace)
         steps.append(StepLog("write-project-config", True, config_path))
 
         # Verify it reads back correctly
@@ -511,20 +432,8 @@ def phase_write_config(log: logging.Logger, workspace: str) -> PhaseResult:
                            error=str(e), steps=steps)
 
     # ── 4c. Write global config (~/.config/opencode/config.json) ──
-    global_config_dir = os.path.expanduser("~/.config/opencode")
-    global_config_path = os.path.join(global_config_dir, "config.json")
-
     try:
-        os.makedirs(global_config_dir, exist_ok=True)
-        global_config = {
-            "$schema": "https://opencode.ai/config.json",
-            "provider": {
-                "anthropic": {},
-                "openai": {},
-            },
-        }
-        with open(global_config_path, "w") as f:
-            json.dump(global_config, f, indent=2)
+        global_config_path = setup_global_config()
         steps.append(StepLog("write-global-config", True, global_config_path))
         log.info(f"  Global config written: {global_config_path}")
     except Exception as e:
