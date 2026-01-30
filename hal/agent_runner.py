@@ -7,17 +7,9 @@ from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
-from .utils.logging_utils import (
-    print_step,
-    print_error,
-    create_progress,
-    console,
-)
+from .utils.logging_utils import create_progress
 
 logger = logging.getLogger("agent_eval")
-from rich.table import Table
-from rich.box import ROUNDED
-from .utils.logging_utils import terminal_print
 from .inspect.inspect import is_inspect_benchmark
 from .utils.weave_utils import get_call_ids, delete_calls
 
@@ -183,14 +175,14 @@ class AgentRunner:
             return remaining_tasks
 
         except Exception as e:
-            print_error(f"Error loading previous submissions: {e}")
+            logger.error(f"Error loading previous submissions: {e}")
             return dataset
 
     async def run(self, agent_name: str, upload: bool = False) -> Dict[str, Any]:
         """Run the full agent evaluation pipeline"""
 
         # Initialize logging for main run
-        print_step("Initializing logging with W&B Weave...")
+        logger.info("Initializing logging with W&B Weave...")
         weave_client = weave.init(self.run_id)
 
         # Get dataset and filter for remaining tasks if continuing
@@ -202,13 +194,13 @@ class AgentRunner:
 
         # Limit the number of tasks if max_tasks is specified
         if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
-            print_step(f"Limiting to the first {self.max_tasks} tasks as requested")
+            logger.info(f"Limiting to the first {self.max_tasks} tasks as requested")
             task_ids = list(dataset.keys())[: self.max_tasks]
             dataset = {task_id: dataset[task_id] for task_id in task_ids}
 
         # delete previous calls from previous run if continuing for remaining tasks
         if self.continue_run and not self.ignore_errors:
-            print_step("Cleaning up calls from previous run...")
+            logger.info("Cleaning up calls from previous run...")
             for task_id in dataset:
                 call_ids = get_call_ids(task_id, weave_client)
                 if len(call_ids) > 0:
@@ -221,12 +213,12 @@ class AgentRunner:
                 self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_UPLOAD.json"
             )
             if os.path.exists(results_path):
-                print_step("Loading previous results...")
+                logger.info("Loading previous results...")
                 with open(results_path) as f:
                     previous_results = json.load(f)
                 return previous_results["results"]
             else:
-                print_step(
+                logger.info(
                     "No previous results found. Running evaluation harness on previous raw submissions..."
                 )
                 # If continuing run, merge with previous results
@@ -281,7 +273,7 @@ class AgentRunner:
                                 continue
                     agent_output.update(previous_output)
 
-        print_step("Evaluating results...")
+        logger.info("Evaluating results...")
         # Create a temporary dataset with agent_output to check remaining tasks
         remaining = self.get_remaining_tasks(dataset)
         if len(remaining) > 0:
@@ -295,11 +287,8 @@ class AgentRunner:
             for task_id, task_data in remaining.items():
                 table.add_row(task_id)
 
-            with terminal_print():
-                console.print(table)
-
-            print_step(
-                "Use --continue-run flag to retry the remaining tasks. Exiting..."
+            logger.info(
+                f"Warning - {len(remaining)} tasks incomplete. Use --continue-run flag to retry the remaining tasks. Exiting..."
             )
             # sys.exit(1)
 
@@ -313,7 +302,7 @@ class AgentRunner:
         else:
             eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
 
-        print_step("Processing results...")
+        logger.info("Processing results...")
         results = self.benchmark.process_results(
             agent_name=agent_name,
             run_id=self.run_id,

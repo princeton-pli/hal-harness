@@ -15,10 +15,6 @@ import sys
 import logging
 from .utils.logging_utils import (
     setup_logging,
-    print_header,
-    print_step,
-    print_success,
-    print_error,
     print_results_table,
     print_run_summary,
     print_run_config,
@@ -131,7 +127,7 @@ def main(
     """Run agent evaluation on specified benchmark with given model."""
     try:
         # Parse agent and benchmark args
-        print_step("Parsing configuration...")
+        logger.info("Parsing configuration...")
         agent_args = parse_cli_args(a)
         benchmark_args = parse_cli_args(b)
         inspect_eval_args = parse_cli_args(i)
@@ -159,7 +155,7 @@ def main(
         verbose_log_path = os.path.join(log_dir, f"{run_id}_verbose.log")
         setup_logging(log_dir, run_id, use_vm=vm)
 
-        print_header("HAL Harness")
+        logger.info("HAL Harness")
 
         # add benchmark name to agent_args
         agent_args["benchmark_name"] = benchmark
@@ -170,7 +166,7 @@ def main(
 
         # Validate runner options
         if sum([bool(conda_env_name), vm, docker]) > 1:
-            print_error(
+            logger.error(
                 "Only one of --conda_env_name, --vm, or --docker can be specified. Exiting..."
             )
             sys.exit(1)
@@ -179,7 +175,7 @@ def main(
         if (vm or docker) and is_inspect_benchmark(benchmark):
             if agent_function and is_inspect_solver(agent_function, agent_dir):
                 run_type = "VM" if vm else "Docker"
-                print_error(
+                logger.error(
                     f"{run_type} execution is not supported for inspect solvers. Please run without --{run_type.lower()} flag. Exiting..."
                 )
                 sys.exit(1)
@@ -187,13 +183,13 @@ def main(
         # Check if conda environment is specified for inspect solver
         if conda_env_name and is_inspect_benchmark(benchmark):
             if agent_function and is_inspect_solver(agent_function, agent_dir):
-                print_error(
+                logger.error(
                     "Conda environments are not supported for inspect solvers. Dependencies are managed by Inspect harness. Run without --conda_env_name flag. Exiting..."
                 )
                 sys.exit(1)
 
         if max_tasks and is_inspect_benchmark(benchmark):
-            print_error(
+            logger.error(
                 "max_tasks is not supported for inspect benchmarks. Please remove the flag and run the full benchmark."
             )
             sys.exit(1)
@@ -227,7 +223,7 @@ def main(
         if is_inspect_benchmark(benchmark):
             # if agent_function and is_inspect_solver(agent_function, agent_dir):
             # Use original inspect_evaluate for solver agents
-            print_step(
+            logger.info(
                 "Running evaluation for inspect solver and harness (see logs for more details and monitoring)..."
             )
             inspect_evaluate(
@@ -250,7 +246,7 @@ def main(
             )
             # else:
             #     # Use AgentRunner with InspectBenchmark for non-solver agents
-            #     print_step("Running inspect evaluation for custom agent and inspect harness...")
+            #     logger.info("Running inspect evaluation for custom agent and inspect harness...")
             #     runner = AgentRunner(
             #         agent_function=agent_function,
             #         agent_dir=agent_dir,
@@ -268,7 +264,7 @@ def main(
             #         upload=upload or False
             #     ))
 
-            #     print_success("Evaluation completed successfully")
+            #     logger.info("Evaluation completed successfully")
             #     print_results_table(results)
 
             #     # Only print run summary if we have a valid benchmark and run_id
@@ -278,7 +274,7 @@ def main(
             #         print_warning("Could not generate run summary - missing benchmark or run directory")
         else:
             # Initialize agent runner
-            print_step("Initializing agent runner...")
+            logger.info("Initializing agent runner...")
             try:
                 runner = AgentRunner(
                     agent_function=agent_function,
@@ -298,12 +294,12 @@ def main(
                 )
 
                 # Run evaluation
-                print_step("Running evaluation with custom agent and HAL harness...")
+                logger.info("Running evaluation with custom agent and HAL harness...")
                 results = asyncio.run(
                     runner.run(agent_name=agent_name, upload=upload or False)
                 )
 
-                print_success("Evaluation completed successfully")
+                logger.info("Evaluation completed successfully")
                 print_results_table(results)
 
                 # Only print run summary if we have a valid benchmark and run_id
@@ -315,7 +311,7 @@ def main(
                     )
 
             except Exception as e:
-                print_error(f"Error running evaluation: {str(e)}")
+                logger.error(f"Error running evaluation: {str(e)}")
                 raise
 
     except Exception as e:
@@ -330,8 +326,8 @@ def main(
             f.write("\n=== END ERROR TRACEBACK ===\n")
 
         # Print clean error message to terminal
-        print_error(f"An error occurred: {str(e)}")
-        print_error(
+        logger.error(f"An error occurred: {str(e)}")
+        logger.error(
             f"For detailed error information, check: {verbose_log_path}",
             verbose_log_path,
         )
@@ -395,7 +391,7 @@ def is_inspect_solver(agent_function: str, agent_dir: str) -> bool:
         sys.path.remove(agent_dir)
         return return_type == "Solver"
     except Exception as e:
-        print_error(f"Error checking if agent function is a solver: {str(e)}")
+        logger.error(f"Error checking if agent function is a solver: {str(e)}")
         return False
 
 
@@ -407,7 +403,7 @@ def validate_model_pricing(model_name: str) -> None:
     model_name = model_name.replace("together_ai/", "")
 
     if model_name not in MODEL_PRICES_DICT:
-        print_error(
+        logger.error(
             f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py. Exiting..."
         )
         sys.exit(1)

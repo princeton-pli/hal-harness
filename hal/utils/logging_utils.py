@@ -6,7 +6,6 @@ from rich.progress import (
     BarColumn,
     TaskProgressColumn,
 )
-from rich.panel import Panel
 from rich.table import Table
 from typing import Optional, Any, Dict
 import logging
@@ -133,34 +132,6 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     # Initial setup logging
     logger.info(f"Logging initialized - {datetime.now().isoformat()}")
     logger.info(f"Log directory: {log_dir}")
-
-
-# FIXME: remove these print_* methods and their usage
-def print_step(message: str, level: int = logging.INFO) -> None:
-    """Log a step with both console formatting and file logging"""
-    console.print(f"[bold cyan]→[/] {message}")
-    logger.log(level, f"STEP: {message}")
-
-
-def print_success(message: str) -> None:
-    """Log a success message"""
-    console.print(f"[bold green]✓[/] {message}")
-    logger.info(f"SUCCESS: {message}")
-
-
-def print_error(message: str, log_file_path: Optional[str] = None):
-    """Print error message with optional log file reference"""
-    console.print(f"[bold red]✗[/] {message}")
-    logger.error(f"ERROR: {message}")
-
-    if log_file_path:
-        console.print(f"[yellow]📝 For details, check: {log_file_path}[/]")
-
-
-def print_header(title: str) -> None:
-    """Print and log a formatted header"""
-    console.print(Panel(f"[bold blue]{title}[/]", expand=False))
-    logger.info(f"=== {title} ===")
 
 
 def create_progress() -> Progress:

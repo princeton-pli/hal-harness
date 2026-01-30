@@ -1,6 +1,6 @@
 import weave
 from typing import Dict, Any, Tuple, List, Optional
-from .logging_utils import print_step, console, create_progress
+from .logging_utils import create_progress
 from datetime import datetime
 from weave.trace_server.trace_server_interface import CallsFilter, CallsQueryReq
 import logging
@@ -541,7 +541,7 @@ def get_total_cost(client):
     token_usage = {}
 
     # Fetch all the calls in the project
-    print_step("Getting token usage data (this can take a while)...")
+    logger.info("Getting token usage data (this can take a while)...")
     calls = list(
         client.server.calls_query_stream(
             CallsQueryReq(
@@ -669,7 +669,7 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
-    print_step("Getting Weave traces (this can take a while)...")
+    logger.info("Getting Weave traces (this can take a while)...")
 
     # dict to store latency for each task
     latency_dict = {}

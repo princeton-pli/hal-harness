@@ -23,7 +23,10 @@ from .inspect.weave import weave_tracing
 from .utils.utils import safe_filename, get_git_info
 from .utils.weave_utils import compute_cost_from_inspect_usage, get_weave_calls
 
-from .utils.logging_utils import print_success, print_results_table
+from .utils.logging_utils import print_results_table
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 
 def inspect_evaluate(
@@ -261,5 +264,5 @@ def inspect_evaluate(
         log(f"\n{log_abs_path}\n")
         log_end()
 
-        print_success("Evaluation completed successfully")
+        logger.info("Evaluation completed successfully")
         print_results_table(final_result)
