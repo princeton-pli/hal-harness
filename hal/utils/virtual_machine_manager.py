@@ -11,7 +11,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Set up loggers
 logger = logging.getLogger("agent_eval")
-verbose_logger = logging.getLogger("agent_eval.verbose")
 
 
 # Define retry decorator with tenacity

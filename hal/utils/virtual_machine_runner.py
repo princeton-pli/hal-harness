@@ -14,7 +14,6 @@ from rich.progress import Progress, TaskID
 
 # Set up loggers
 logger = logging.getLogger("agent_eval")
-verbose_logger = logging.getLogger("agent_eval.verbose")
 
 
 class VirtualMachineRunner:
@@ -186,7 +185,7 @@ class VirtualMachineRunner:
 
                 while time.time() - start_time < timeout:
                     try:
-                        verbose_logger.debug(f"Checking task completion on VM {vm_name}")
+                        logger.info(f"Checking task completion on VM {vm_name}")
                         # Fetch and store trace logs
                         await self.fetch_agent_logs(
                             vm_name=vm_name,

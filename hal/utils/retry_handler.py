@@ -7,7 +7,7 @@ import types
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Callable
 
-verbose_logger = logging.getLogger("agent_eval.verbose")
+logger = logging.getLogger("agent_eval")
 
 # Conservative list of retryable errors. We will have to expand this list over time.
 RETRYABLE_ERRORS = [
@@ -76,7 +76,7 @@ class RetryHandler:
 
                 if not self._should_retry(result):
                     if attempt > 0:
-                        verbose_logger.info(
+                        logger.info(
                             f"Task {task_id}: Succeeded after {attempt + 1} attempts"
                         )
                     return result
@@ -85,7 +85,7 @@ class RetryHandler:
 
                 if attempt < self.config.max_retries:
                     delay = self._calculate_delay(attempt)
-                    verbose_logger.warning(
+                    logger.warning(
                         f"Task {task_id}: Retrying in {delay:.1f}s (attempt {attempt + 1})"
                     )
                     await asyncio.sleep(delay)
@@ -102,18 +102,18 @@ class RetryHandler:
 
                 if attempt < self.config.max_retries and should_retry_exception:
                     delay = self._calculate_delay(attempt)
-                    verbose_logger.warning(
+                    logger.warning(
                         f"Task {task_id}: Exception retry in {delay:.1f}s: {error_msg}"
                     )
                     await asyncio.sleep(delay)
                 else:
                     if not should_retry_exception and attempt < self.config.max_retries:
-                        verbose_logger.error(
+                        logger.error(
                             f"Task {task_id}: Non-retryable exception: {error_msg}"
                         )
                     break
 
-        verbose_logger.error(
+        logger.error(
             f"Task {task_id}: Failed after {self.config.max_retries + 1} attempts"
         )
         return last_result or {task_id: "ERROR: All retry attempts failed"}
