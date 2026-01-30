@@ -317,153 +317,153 @@ AGENT_CONFIGS = [
     # -------------------------------------------------------------------------
     # OpenAI Models (GAIA)
     # -------------------------------------------------------------------------
-    # {
-    #     "name": "gaia_generalist_gpt_4o_mini",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-4o-mini-2024-07-18",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_4_turbo",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-4-turbo-2024-04-09",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_o1",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "o1-2024-12-17",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_5_2",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-5.2-2025-12-11",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_5_2_xhigh",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-5.2-2025-12-11",
-    #     "reasoning_effort": "xhigh",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
+    {
+        "name": "gaia_generalist_gpt_4o_mini",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-4o-mini-2024-07-18",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gpt_4_turbo",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-4-turbo-2024-04-09",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gpt_o1",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "o1-2024-12-17",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gpt_5_2",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-5.2-2025-12-11",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gpt_5_2_medium",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-5.2-2025-12-11",
+        "reasoning_effort": "medium",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
 
     # -------------------------------------------------------------------------
     # Anthropic Models (GAIA) - via OpenRouter
     # -------------------------------------------------------------------------
-    # {
-    #     "name": "gaia_generalist_claude_haiku_3_5",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "openrouter/anthropic/claude-3-5-haiku",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_claude_sonnet_3_7",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "openrouter/anthropic/claude-3.7-sonnet",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_claude_sonnet_4_5",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "openrouter/anthropic/claude-sonnet-4.5",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_claude_opus_4_5",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "openrouter/anthropic/claude-opus-4.5",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-    #         "temperature": 0.0
-    #     }
-    # },
+    {
+        "name": "gaia_generalist_claude_haiku_3_5",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "openrouter/anthropic/claude-3-5-haiku",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_claude_sonnet_3_7",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "openrouter/anthropic/claude-3.7-sonnet",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_claude_sonnet_4_5",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "openrouter/anthropic/claude-sonnet-4.5",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_claude_opus_4_5",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "openrouter/anthropic/claude-opus-4.5",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+            "temperature": 0.0
+        }
+    },
 
     # -------------------------------------------------------------------------
     # Google Gemini Models (GAIA)
     # -------------------------------------------------------------------------
-    # {
-    #     "name": "gaia_generalist_gemini_2_flash",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gemini/gemini-2.0-flash",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "google",
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gemini_2_5_flash",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gemini/gemini-2.5-flash",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "google",
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gemini_2_5_pro",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gemini/gemini-2.5-pro",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "google",
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gemini_3_pro",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gemini/gemini-3-pro-preview",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "provider": "google",
-    #         "temperature": 0.0
-    #     }
-    # },
+    {
+        "name": "gaia_generalist_gemini_2_flash",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gemini/gemini-2.0-flash",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "google",
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gemini_2_5_flash",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gemini/gemini-2.5-flash",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "google",
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gemini_2_5_pro",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gemini/gemini-2.5-pro",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "google",
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gemini_3_pro",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gemini/gemini-3-pro-preview",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "provider": "google",
+            "temperature": 0.0
+        }
+    },
 ]
 
 BENCHMARK_CONFIGS = {
@@ -505,6 +505,8 @@ BENCHMARK_CONFIGS = {
         "compliance_constraints": [
             "pii_handling_gaia",  # Q&A context - providing requested info is expected
             "no_destructive_ops",
+            "safe_code_execution",  # Check for harmful code patterns
+            "no_unauthorized_access",  # Check for unauthorized resource access
         ],
     },
 }
@@ -531,7 +533,7 @@ PHASE_SETTINGS = {
     },
     "safety": {
         "description": "LLM-based safety analysis (S_harm, S_comp)",
-        "model": "gpt-4o-mini",  # Note: overridden by --safety_model arg
+        "model": "gpt-4o",  # Note: overridden by --safety_model arg
         # Default constraints - benchmarks can override via compliance_constraints
         "constraints": [
             "no_pii_exposure",
@@ -1852,8 +1854,8 @@ Phases:
         help="Structural perturbation strength (default: medium)"
     )
     parser.add_argument(
-        "--safety_model", type=str, default="gpt-4o-mini",
-        help="LLM model for safety analysis (default: gpt-4o-mini)"
+        "--safety_model", type=str, default="gpt-4o",
+        help="LLM model for safety analysis (default: gpt-4o)"
     )
     parser.add_argument(
         "--results_dir", type=str, default="results",

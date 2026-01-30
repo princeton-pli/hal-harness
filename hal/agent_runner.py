@@ -12,7 +12,7 @@ from rich.table import Table
 from rich.box import ROUNDED
 from .utils.logging_utils import terminal_print
 from .inspect.inspect import is_inspect_benchmark
-from .utils.weave_utils import get_call_ids, delete_calls
+from .utils.weave_utils import delete_calls
 from .utils.fault_injection import FaultInjector
 class AgentRunner:
     """Handles running agents either locally or on VMs"""
@@ -224,12 +224,21 @@ class AgentRunner:
                 print_success(f"Generated {self.variation_strength} prompt variations for {len(prompt_variations_map)} tasks")
             
         # delete previous calls from previous run if continuing for remaining tasks
-        if self.continue_run and not self.ignore_errors:
+        if self.continue_run and not self.ignore_errors and dataset:
             print_step("Cleaning up calls from previous run...")
-            for task_id in dataset:
-                call_ids = get_call_ids(task_id, weave_client)
-                if len(call_ids) > 0:
+            # Fetch all calls once instead of once per task (O(1) vs O(N) API calls)
+            all_calls = weave_client.get_calls()
+            # Group calls by task_id for tasks that need cleanup
+            calls_to_delete = {}
+            for call in all_calls:
+                task_id = call.attributes.get('weave_task_id')
+                if task_id in dataset:
+                    calls_to_delete.setdefault(task_id, []).append(call.id)
+            # Delete calls for each task
+            for task_id, call_ids in calls_to_delete.items():
+                if call_ids:
                     delete_calls(call_ids, weave_client)
+            print_success(f"Cleaned up calls for {len(calls_to_delete)} tasks")
         
         if not dataset:
             print_warning("No remaining tasks to run")
