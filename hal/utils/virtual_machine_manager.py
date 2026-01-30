@@ -5,8 +5,13 @@ import paramiko
 import os
 import tarfile
 import json
+import logging
 from contextlib import contextmanager
 from tenacity import retry, stop_after_attempt, wait_exponential
+
+# Set up loggers
+logger = logging.getLogger("agent_eval")
+verbose_logger = logging.getLogger("agent_eval.verbose")
 
 
 # Define retry decorator with tenacity
@@ -141,20 +146,20 @@ class VirtualMachineManager:
                 try:
                     sftp_client.close()
                 except Exception as e:
-                    print(f"Error closing SFTP client: {e}")
+                    logger.error(f"Error closing SFTP client: {e}")
 
             if ssh_client:
                 try:
                     ssh_client.close()
                 except Exception as e:
-                    print(f"Error closing SSH client: {e}")
+                    logger.error(f"Error closing SSH client: {e}")
 
     @_retry_function()
     def create_vm(self, vm_name):
         """Create a standard Azure VM without GPU."""
         vm_size = "Standard_E2as_v5"
         username = "agent"
-        print(f"Creating Azure virtual machine {vm_name} with *no* GPU")
+        logger.info(f"Creating Azure virtual machine {vm_name} with *no* GPU")
         # Create a virtual network and subnet
         vnet_name = f"{vm_name}-vnet"
         subnet_name = f"{vm_name}-subnet"
@@ -167,7 +172,7 @@ class VirtualMachineManager:
                 "subnets": [{"name": subnet_name, "address_prefix": "10.0.0.0/24"}],
             },
         ).result()
-        print(f"Created virtual network {vnet_name} for VM {vm_name}")
+        logger.info(f"Created virtual network {vnet_name} for VM {vm_name}")
         subnet = vnet.subnets[0]
 
         # Create a public IP address
@@ -181,7 +186,7 @@ class VirtualMachineManager:
                 "public_ip_allocation_method": "Static",
             },
         ).result()
-        print(f"Created public IP {public_ip_name} for VM {vm_name}")
+        logger.info(f"Created public IP {public_ip_name} for VM {vm_name}")
 
         # Get the existing network security group
         network_security_group = self.network_client.network_security_groups.get(
@@ -205,7 +210,7 @@ class VirtualMachineManager:
                 "network_security_group": {"id": network_security_group.id},
             },
         ).result()
-        print(f"Created network interface {nic_name} for VM {vm_name}")
+        logger.info(f"Created network interface {nic_name} for VM {vm_name}")
 
         # Read the SSH public key from the specified file
         with open(self.ssh_public_key_path, "r") as file:
@@ -248,9 +253,9 @@ class VirtualMachineManager:
         vm = self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group_name, vm_name, vm_parameters
         ).result()
-        print(f"Created VM instance {vm_name}")
+        logger.info(f"Created VM instance {vm_name}")
 
-        print(f"Successfully created Azure virtual machine {vm_name} with *no* GPU")
+        logger.info(f"Successfully created Azure virtual machine {vm_name} with *no* GPU")
 
         return vm
 
@@ -272,7 +277,7 @@ class VirtualMachineManager:
                 "subnets": [{"name": subnet_name, "address_prefix": "10.0.0.0/24"}],
             },
         ).result()
-        print(f"Created virtual network {vnet_name} for GPU VM {vm_name}")
+        logger.info(f"Created virtual network {vnet_name} for GPU VM {vm_name}")
         subnet = vnet.subnets[0]
 
         # Create a public IP address
@@ -286,7 +291,7 @@ class VirtualMachineManager:
                 "public_ip_allocation_method": "Static",
             },
         ).result()
-        print(f"Created public IP {public_ip_name} for GPU VM {vm_name}")
+        logger.info(f"Created public IP {public_ip_name} for GPU VM {vm_name}")
 
         # Get the existing network security group
         network_security_group = self.network_client.network_security_groups.get(
@@ -310,7 +315,7 @@ class VirtualMachineManager:
                 "network_security_group": {"id": network_security_group.id},
             },
         ).result()
-        print(f"Created network interface {nic_name} for GPU VM {vm_name}")
+        logger.info(f"Created network interface {nic_name} for GPU VM {vm_name}")
 
         # Read the SSH public key from the specified file
         if not self.ssh_public_key_path:
@@ -364,7 +369,7 @@ class VirtualMachineManager:
         vm = self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group_name, vm_name, vm_parameters
         ).result()
-        print(f"Created GPU VM instance {vm_name}")
+        logger.info(f"Created GPU VM instance {vm_name}")
 
         # Define the NVIDIA GPU driver extension configuration
         extension_name = "NvidiaGpuDriverLinux"
@@ -385,13 +390,13 @@ class VirtualMachineManager:
         self.compute_client.virtual_machine_extensions.begin_create_or_update(
             self.resource_group_name, vm_name, extension_name, extension_parameters
         ).result()
-        print(f"Added NVIDIA GPU driver extension to VM {vm_name}")
+        logger.info(f"Added NVIDIA GPU driver extension to VM {vm_name}")
 
         return vm
 
     def delete_vm(self, vm_name):
         """Delete an Azure VM and all associated resources."""
-        print(f"Deleting VM {vm_name}")
+        logger.info(f"Deleting VM {vm_name}")
         # Get the VM
         vm = self.compute_client.virtual_machines.get(self.resource_group_name, vm_name)
 
@@ -431,7 +436,7 @@ class VirtualMachineManager:
                 self.resource_group_name, vnet_name
             ).result()
         except Exception as e:
-            print(f"Failed to delete virtual network {vnet_name}: {str(e)}")
+            logger.error(f"Failed to delete virtual network {vnet_name}: {str(e)}")
 
     @_retry_function()
     def copy_files_to_vm(self, vm_name, source_directory):
@@ -447,7 +452,7 @@ class VirtualMachineManager:
                 source_directory = os.path.abspath(source_directory)
                 tar_file_path = f"{source_directory}.tar.gz"
 
-                print(
+                logger.debug(
                     f"Creating tar archive from {source_directory} in {tar_file_path}"
                 )
                 with tarfile.open(tar_file_path, "w:gz") as tar:
@@ -456,7 +461,7 @@ class VirtualMachineManager:
                     )
 
                 tar_size = os.path.getsize(tar_file_path)
-                print(f"Uploading {tar_size} bytes to VM {vm_name}")
+                logger.info(f"Uploading {tar_size} bytes to VM {vm_name}")
 
                 # Copy the compressed file to the VM
                 remote_tar_file_path = (
@@ -465,7 +470,7 @@ class VirtualMachineManager:
                 sftp_client.put(tar_file_path, remote_tar_file_path)
 
                 # Extract the compressed file on the VM
-                print(f"Extracting files on VM {vm_name}")
+                logger.info(f"Extracting files on VM {vm_name}")
                 _, stdout, stderr = ssh_client.exec_command(
                     f"tar -xzf {remote_tar_file_path} --strip-components=1 -C /home/{username}"
                 )
@@ -480,9 +485,9 @@ class VirtualMachineManager:
                     )
 
                 if stderr_text:
-                    print(f"Warning during tar extraction: {stderr_text}")
+                    logger.warning(f"Warning during tar extraction: {stderr_text}")
 
-                print(
+                logger.info(
                     f"Successfully copied files from {source_directory} to VM {vm_name}"
                 )
 
@@ -491,7 +496,7 @@ class VirtualMachineManager:
                 os.remove(tar_file_path)
 
         except Exception as e:
-            print(f"Error copying files to VM {vm_name}: {e}")
+            logger.error(f"Error copying files to VM {vm_name}: {e}")
             raise
 
     @_retry_function()
@@ -582,7 +587,7 @@ class VirtualMachineManager:
                 ) as (sftp_client, ssh_client):
                     # Copy .env file to VM first
                     if os.path.exists(".env"):
-                        print(f"Copying .env file to VM {vm_name}")
+                        logger.info(f"Copying .env file to VM {vm_name}")
                         sftp_client.put(".env", "/home/agent/.env")
 
                     # Copy setup script to VM
@@ -596,7 +601,7 @@ class VirtualMachineManager:
                     ssh_client.exec_command(f"chmod +x {remote_setup_path}")
 
                     # Run setup script with sudo (passing username as argument)
-                    print(f"Setting up environment on VM {vm_name}")
+                    logger.info(f"Setting up environment on VM {vm_name}")
                     _, stdout, stderr = ssh_client.exec_command(
                         f"sudo bash {remote_setup_path} agent"
                     )
@@ -610,7 +615,7 @@ class VirtualMachineManager:
                     if benchmark and benchmark.setup_script:
                         setup_script = os.path.join(benchmark.setup_script)
                         if os.path.exists(setup_script):
-                            print(f"Running setup script on VM {vm_name}")
+                            logger.info(f"Running setup script on VM {vm_name}")
                             try:
                                 cmd = """
                                 source /home/agent/miniconda3/etc/profile.d/conda.sh && \
@@ -624,12 +629,12 @@ class VirtualMachineManager:
                                     f.write(stdout.read().decode())
                                     f.write(stderr.read().decode())
                             except Exception as e:
-                                print(
+                                logger.error(
                                     f"Error running setup script on VM {vm_name}: {e}"
                                 )
 
             except Exception as e:
-                print(f"Error setting up VM environment: {e}")
+                logger.error(f"Error setting up VM environment: {e}")
                 raise
 
         try:
@@ -712,7 +717,7 @@ except Exception as e:
                 cmd = f"source /home/agent/init_conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
 
                 # Execute script
-                print(f"Running agent on VM {vm_name}")
+                logger.info(f"Running agent on VM {vm_name}")
                 _, stdout, stderr = ssh_client.exec_command(cmd)
 
                 # Close the channel to prevent hanging
@@ -720,7 +725,7 @@ except Exception as e:
                 stderr.channel.close()
 
         except Exception as e:
-            print(f"Error running agent on VM {vm_name}: {e}")
+            logger.error(f"Error running agent on VM {vm_name}: {e}")
             raise
 
     @_retry_function(max_attempts=2, initial_wait=5)
@@ -748,5 +753,5 @@ except Exception as e:
                     return None
 
         except Exception as e:
-            print(f"Error fetching agent trace from {vm_name}: {e}")
+            logger.error(f"Error fetching agent trace from {vm_name}: {e}")
             return None
