@@ -8,7 +8,7 @@ from rich.progress import (
 )
 from rich.panel import Panel
 from rich.table import Table
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 import logging
 import sys
 import os
@@ -79,8 +79,14 @@ class PrintInterceptor:
 print_interceptor = PrintInterceptor()
 
 
-def setup_logging(log_dir: str, run_id: str) -> None:
-    """Setup logging configuration"""
+def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
+    """Setup logging configuration with optional Azure Monitor integration.
+
+    Args:
+        log_dir: Directory for log files
+        run_id: Unique run identifier
+        use_vm: If True, enables Azure Monitor logging (for VM runs)
+    """
     # Create absolute path for log directory to avoid path duplication
     log_dir = os.path.abspath(log_dir)
     os.makedirs(log_dir, exist_ok=True)
@@ -129,6 +135,44 @@ def setup_logging(log_dir: str, run_id: str) -> None:
     main_logger.addHandler(console_handler)
 
     verbose_logger.addHandler(verbose_file_handler)
+
+    # NEW: Add Azure Monitor handler for VM runs
+    if use_vm:
+        try:
+            from .azure_logging import AzureMonitorHandler
+
+            # Get Azure Monitor configuration from environment
+            dce_endpoint = os.getenv("AZURE_MONITOR_DATA_COLLECTION_ENDPOINT")
+            dcr_id = os.getenv("AZURE_MONITOR_DATA_COLLECTION_RULE_ID")
+            stream_name = os.getenv("AZURE_MONITOR_STREAM_NAME", "Custom-BenchmarkRuns_CL")
+
+            if not dce_endpoint or not dcr_id:
+                raise ValueError(
+                    "Azure Monitor logging is enabled (--vm flag) but required environment "
+                    "variables are missing. Please set:\n"
+                    "  - AZURE_MONITOR_DATA_COLLECTION_ENDPOINT\n"
+                    "  - AZURE_MONITOR_DATA_COLLECTION_RULE_ID"
+                )
+
+            # Create and add Azure Monitor handler
+            azure_handler = AzureMonitorHandler(
+                dce_endpoint=dce_endpoint,
+                dcr_id=dcr_id,
+                stream_name=stream_name,
+            )
+            azure_handler.setLevel(logging.INFO)  # Send INFO+ to Azure
+            main_logger.addHandler(azure_handler)
+
+            main_logger.info("Azure Monitor logging enabled")
+
+        except ImportError:
+            raise RuntimeError(
+                "Azure Monitor logging requires azure-monitor-ingestion package. "
+                "Install with: pip install 'hal-harness[azure]'"
+            )
+        except Exception as e:
+            # Fail fast: If Azure logging fails, we want to know immediately
+            raise RuntimeError(f"Failed to initialize Azure Monitor logging: {e}")
 
     # Start intercepting print statements
     print_interceptor.start()
@@ -410,3 +454,37 @@ print_success = log_success
 print_warning = log_warning
 print_results_table = log_results_table
 print_run_summary = log_run_summary
+
+
+def get_context_logger(
+    logger_name: str, context: Dict[str, Any]
+) -> logging.LoggerAdapter:
+    """Create a context-aware logger with automatic property injection.
+
+    This function creates a BenchmarkLoggerAdapter that automatically injects
+    context properties (RunID, Benchmark, AgentName, etc.) into all log messages.
+
+    Args:
+        logger_name: Name of the base logger (e.g., "agent_eval")
+        context: Context dictionary with properties (RunID, Benchmark, etc.)
+
+    Returns:
+        BenchmarkLoggerAdapter with context injected
+
+    Raises:
+        ValueError: If required fields are missing from context
+        ImportError: If azure_logging module is not available
+
+    Example:
+        context = {
+            "RunID": "abc-123",
+            "Benchmark": "swebench_verified",
+            "AgentName": "My Agent (gpt-4o)",
+            "ExecutionMode": "vm"
+        }
+        logger = get_context_logger("agent_eval", context)
+        logger.info("Starting task", extra={"TaskID": "task-1"})
+    """
+    from .azure_logging import get_context_logger as azure_get_context_logger
+
+    return azure_get_context_logger(logger_name, context)

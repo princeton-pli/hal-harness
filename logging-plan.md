@@ -242,51 +242,61 @@ AZURE_MONITOR_STREAM_NAME=Custom-Benchmark-Runs
 EXECUTED_BY=YourName
 ```
 
-#### 4.3 Workspace Setup via Terraform
+#### 4.3 Workspace Setup via Bash Script
 
-**Automated Setup (Terraform/ARM Templates):**
-Create `infrastructure/azure/logging/` directory with:
+**Automated Setup (Bash Script):**
+Created `infrastructure/azure/setup-logging.sh` that automatically creates:
 
-- `main.tf`: Main Terraform configuration
-- `variables.tf`: Input variables (region, resource group, etc.)
-- `outputs.tf`: Output DCE URL, DCR ID for .env
-- `table-schema.json`: Custom table schema
+**Resources Created:**
 
-**Resources to Create:**
+1. **Log Analytics Workspace**: Central repository for logs (`hal-logs-workspace`)
+2. **Data Collection Endpoint (DCE)**: Ingestion endpoint (`hal-logs-dce`)
+3. **Data Collection Rule (DCR)**: Defines schema and routing (`hal-logs-dcr`)
+4. **Custom Table**: `BenchmarkRuns_CL` with schema below
+5. **Role Assignments**: Grants Monitoring Metrics Publisher role to current user
 
-1. **Log Analytics Workspace**: Central repository for logs
-2. **Data Collection Endpoint (DCE)**: Ingestion endpoint
-3. **Data Collection Rule (DCR)**: Defines schema and routing
-4. **Custom Table**: `HAL-Benchmark-Runs` with schema below
-5. **Role Assignments**: Grant Monitoring Metrics Publisher role to service principal
+**Table Schema (BenchmarkRuns_CL):**
 
-**Table Schema (HAL-Benchmark-Runs):**
-
-```json
-{
-  "columns": [
-    { "name": "TimeGenerated", "type": "datetime" },
-    { "name": "Level", "type": "string" },
-    { "name": "Message", "type": "string" },
-    { "name": "LoggerName", "type": "string" },
-    { "name": "RunID", "type": "string" },
-    { "name": "Benchmark", "type": "string" },
-    { "name": "AgentName", "type": "string" },
-    { "name": "TaskID", "type": "string" },
-    { "name": "LogType", "type": "string" },
-    { "name": "VMName", "type": "string" },
-    { "name": "ExecutionMode", "type": "string" },
-    { "name": "Properties", "type": "dynamic" }
-  ]
-}
+```
+TimeGenerated: datetime
+Level: string
+Message: string
+LoggerName: string
+RunID: string
+Benchmark: string
+AgentName: string
+TaskID: string
+LogType: string
+VMName: string
+ExecutionMode: string
+ExecutedBy: string
+Properties: dynamic
 ```
 
-**Terraform Outputs:**
-After `terraform apply`, outputs will be:
+**Running the Setup:**
+```bash
+# 1. Ensure you're logged into Azure CLI
+az login
 
-- `data_collection_endpoint`: Copy to `AZURE_MONITOR_DATA_COLLECTION_ENDPOINT`
-- `data_collection_rule_id`: Copy to `AZURE_MONITOR_DATA_COLLECTION_RULE_ID`
-- `workspace_id`: For querying logs in Azure Portal
+# 2. Set environment variables (optional, uses defaults from HAL config)
+export AZURE_RESOURCE_GROUP_NAME=HAL_GROUP
+export AZURE_LOCATION=eastus
+
+# 3. Run the setup script
+./infrastructure/azure/setup-logging.sh
+
+# 4. Copy the output values to your .env file
+```
+
+**Script Outputs:**
+After running, the script outputs:
+
+- `AZURE_MONITOR_DATA_COLLECTION_ENDPOINT`: DCE endpoint URL
+- `AZURE_MONITOR_DATA_COLLECTION_RULE_ID`: DCR immutable ID
+- `AZURE_MONITOR_STREAM_NAME`: Custom-BenchmarkRuns_CL
+- Azure Portal URL for querying logs
+
+**Note:** Script includes idempotency - safe to run multiple times
 
 ### Phase 5: Rollout
 
@@ -377,17 +387,12 @@ HAL-Benchmark-Runs
 
 ## Implementation Order
 
-### Step 0: Azure Infrastructure Setup (Terraform)
+### Step 0: Azure Infrastructure Setup (Bash Script)
 
-1. Create `infrastructure/azure/logging/` directory
-2. Write Terraform configuration for:
-   - Log Analytics Workspace
-   - Data Collection Endpoint (DCE)
-   - Data Collection Rule (DCR)
-   - Custom table schema (HAL-Benchmark-Runs)
-   - IAM role assignments
-3. Run `terraform apply`
-4. Copy outputs to .env file
+1. Install Azure CLI and login: `az login`
+2. Run setup script: `./infrastructure/azure/setup-logging.sh`
+3. Copy outputs to .env file
+4. Wait 5-10 minutes for table to be ready for ingestion
 
 ### Step 1: Infrastructure (No Breaking Changes)
 
@@ -465,21 +470,18 @@ HAL-Benchmark-Runs
 
 ### New Files:
 
-1. `hal/utils/azure_logging.py` - New logging infrastructure
-2. `infrastructure/azure/logging/main.tf` - Terraform main config
-3. `infrastructure/azure/logging/variables.tf` - Terraform variables
-4. `infrastructure/azure/logging/outputs.tf` - Terraform outputs
-5. `infrastructure/azure/logging/table-schema.json` - Custom table schema
-6. `infrastructure/azure/logging/README.md` - Setup instructions
+1. `hal/utils/azure_logging.py` - New logging infrastructure ✅
+2. `infrastructure/azure/setup-logging.sh` - Bash script for Azure setup ✅
+3. `test_azure_logging.py` - Test script to verify logging works ✅
 
 ### Modified Files:
 
-1. `hal/utils/logging_utils.py` - Add Azure handler setup
-2. `hal/utils/virtual_machine_manager.py` - Replace print() with logging
-3. `hal/utils/virtual_machine_runner.py` - Add context injection
-4. `pyproject.toml` - Add azure-monitor-ingestion dependency
-5. `.env.template` - Add Azure Monitor config vars
-6. `README.md` or `CLAUDE.md` - Document Azure setup (optional)
+1. `hal/utils/logging_utils.py` - Add Azure handler setup ✅
+2. `hal/utils/virtual_machine_manager.py` - Replace print() with logging (TODO)
+3. `hal/utils/virtual_machine_runner.py` - Add context injection (TODO)
+4. `pyproject.toml` - Add azure-monitor-ingestion dependency ✅
+5. `.env.template` - Add Azure Monitor config vars ✅
+6. `hal/cli.py` - Pass use_vm to setup_logging() ✅
 
 ### Files to Read Before Implementation:
 

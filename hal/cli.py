@@ -155,7 +155,7 @@ def main(
         log_dir = os.path.join("results", benchmark, run_id)
         os.makedirs(log_dir, exist_ok=True)
         verbose_log_path = os.path.join(log_dir, f"{run_id}_verbose.log")
-        setup_logging(log_dir, run_id)
+        setup_logging(log_dir, run_id, use_vm=vm)
 
         print_header("HAL Harness")
 
