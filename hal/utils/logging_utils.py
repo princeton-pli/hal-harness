@@ -137,41 +137,66 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     verbose_logger.addHandler(verbose_file_handler)
 
     # NEW: Add Azure Monitor handler for VM runs
+    # IMPORTANT: Only enable Azure logging if actually running INSIDE an Azure VM
+    # The orchestrator machine (local laptop) should NOT use Azure logging
     if use_vm:
         try:
-            from .azure_logging import AzureMonitorHandler
+            from .azure_logging import AzureMonitorHandler, is_running_in_azure_vm
 
-            # Get Azure Monitor configuration from environment
-            dce_endpoint = os.getenv("AZURE_MONITOR_DATA_COLLECTION_ENDPOINT")
-            dcr_id = os.getenv("AZURE_MONITOR_DATA_COLLECTION_RULE_ID")
-            stream_name = os.getenv("AZURE_MONITOR_STREAM_NAME", "Custom-BenchmarkRuns_CL")
-
-            if not dce_endpoint or not dcr_id:
-                raise ValueError(
-                    "Azure Monitor logging is enabled (--vm flag) but required environment "
-                    "variables are missing. Please set:\n"
-                    "  - AZURE_MONITOR_DATA_COLLECTION_ENDPOINT\n"
-                    "  - AZURE_MONITOR_DATA_COLLECTION_RULE_ID"
+            # Check if we're actually in an Azure VM
+            if not is_running_in_azure_vm():
+                # Running on orchestrator machine - skip Azure logging
+                main_logger.info(
+                    "Azure logging skipped: Not running in Azure VM (orchestrator machine)"
                 )
+            else:
+                # We're inside an Azure VM - enable Azure logging
+                # Get Azure Monitor configuration from environment
+                dce_endpoint = os.getenv("AZURE_MONITOR_DATA_COLLECTION_ENDPOINT")
+                dcr_id = os.getenv("AZURE_MONITOR_DATA_COLLECTION_RULE_ID")
+                stream_name = os.getenv("AZURE_MONITOR_STREAM_NAME", "Custom-BenchmarkRuns_CL")
 
-            # Create and add Azure Monitor handler
-            azure_handler = AzureMonitorHandler(
-                dce_endpoint=dce_endpoint,
-                dcr_id=dcr_id,
-                stream_name=stream_name,
+                if not dce_endpoint or not dcr_id:
+                    raise ValueError(
+                        "Azure Monitor logging is enabled (inside Azure VM) but required environment "
+                        "variables are missing. Please set:\n"
+                        "  - AZURE_MONITOR_DATA_COLLECTION_ENDPOINT\n"
+                        "  - AZURE_MONITOR_DATA_COLLECTION_RULE_ID"
+                    )
+
+                # Create and add Azure Monitor handler
+                azure_handler = AzureMonitorHandler(
+                    dce_endpoint=dce_endpoint,
+                    dcr_id=dcr_id,
+                    stream_name=stream_name,
+                )
+                azure_handler.setLevel(logging.INFO)  # Send INFO+ to Azure
+                main_logger.addHandler(azure_handler)
+
+                main_logger.info("Azure Monitor logging enabled (running in Azure VM)")
+
+        except ImportError as e:
+            # Fail loudly with clear error message
+            error_msg = (
+                "\n" + "=" * 70 + "\n"
+                "ERROR: Azure Monitor logging requires azure-monitor-ingestion package\n"
+                "Install with: pip install 'hal-harness[azure]'\n"
+                "=" * 70
             )
-            azure_handler.setLevel(logging.INFO)  # Send INFO+ to Azure
-            main_logger.addHandler(azure_handler)
-
-            main_logger.info("Azure Monitor logging enabled")
-
-        except ImportError:
+            print(error_msg, file=sys.stderr)
             raise RuntimeError(
                 "Azure Monitor logging requires azure-monitor-ingestion package. "
-                "Install with: pip install 'hal-harness[azure]'"
+                f"Install with: pip install 'hal-harness[azure]'. Details: {e}"
             )
         except Exception as e:
-            # Fail fast: If Azure logging fails, we want to know immediately
+            # Fail loudly with clear error message
+            error_msg = (
+                "\n" + "=" * 70 + "\n"
+                f"ERROR: Failed to initialize Azure Monitor logging: {e}\n"
+                "Check your Azure credentials and permissions.\n"
+                "=" * 70
+            )
+            print(error_msg, file=sys.stderr)
             raise RuntimeError(f"Failed to initialize Azure Monitor logging: {e}")
 
     # Start intercepting print statements

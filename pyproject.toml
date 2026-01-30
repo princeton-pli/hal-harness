@@ -32,6 +32,7 @@ azure = [
     "azure-identity>=1.12.0",
     "azure-monitor-ingestion>=1.0.3",
     "paramiko==3.5.0",
+    "requests>=2.31.0",  # For Azure VM detection via IMDS
 ]
 appworld = [
     "appworld @ git+https://github.com/stonybrooknlp/appworld.git",

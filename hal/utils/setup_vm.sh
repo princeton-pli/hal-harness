@@ -72,6 +72,8 @@ su - $USERNAME -c "bash -c '\
         pip install -r requirements.txt && \
         echo \"Installing weave and gql pin...\" && \
         pip install weave==0.51.41 \"gql<4\" && \
+        echo \"Installing Azure logging dependencies...\" && \
+        pip install azure-monitor-ingestion>=1.0.3 azure-identity>=1.12.0 requests>=2.31.0 && \
         echo \"Requirements installed\"; \
     else \
         echo \"No requirements.txt found\" && \

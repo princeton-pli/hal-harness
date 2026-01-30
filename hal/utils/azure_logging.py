@@ -15,10 +15,41 @@ try:
     from azure.monitor.ingestion import LogsIngestionClient
     from azure.core.exceptions import HttpResponseError
     from azure.identity import DefaultAzureCredential
+    import requests  # Part of azure extras
 
     AZURE_AVAILABLE = True
 except ImportError:
     AZURE_AVAILABLE = False
+    requests = None  # type: ignore
+
+
+def is_running_in_azure_vm() -> bool:
+    """Detect if code is running inside an Azure VM using Instance Metadata Service.
+
+    The Azure Instance Metadata Service (IMDS) is only available from within Azure VMs.
+    This allows us to distinguish between:
+    - Orchestrator machine (local laptop) -> should NOT use Azure logging
+    - Azure VM (actual execution environment) -> should use Azure logging
+
+    Returns:
+        True if running in Azure VM, False otherwise
+    """
+    if requests is None:
+        # requests not available (Azure extras not installed)
+        return False
+
+    try:
+        # Azure Instance Metadata Service endpoint (only accessible from Azure VMs)
+        metadata_url = "http://169.254.169.254/metadata/instance?api-version=2021-02-01"
+        response = requests.get(
+            metadata_url,
+            headers={"Metadata": "true"},
+            timeout=2  # Fast timeout - if not in Azure, fail quickly
+        )
+        return response.status_code == 200
+    except Exception:
+        # Any error means we're not in an Azure VM
+        return False
 
 
 class CloudJSONFormatter(logging.Formatter):
@@ -199,7 +230,14 @@ class AzureMonitorHandler(logging.Handler):
                 endpoint=dce_endpoint, credential=credential
             )
         except Exception as e:
-            raise RuntimeError(f"Failed to initialize Azure Monitor client: {e}")
+            raise RuntimeError(
+                f"Failed to initialize Azure Monitor client: {e}\n"
+                "Common causes:\n"
+                "  - Not running in Azure VM (no managed identity available)\n"
+                "  - Missing Azure CLI login (az login)\n"
+                "  - Insufficient permissions on Data Collection Rule\n"
+                "This error should not occur if is_running_in_azure_vm() was checked first."
+            )
 
         # Buffer for batching logs
         self.buffer: List[Dict[str, Any]] = []
@@ -286,10 +324,20 @@ class AzureMonitorHandler(logging.Handler):
     def close(self) -> None:
         """Close the handler and flush all remaining logs.
 
-        Ensures no logs are lost on shutdown.
+        Ensures no logs are lost on shutdown. If flush fails (e.g., 403 permissions),
+        logs the error but doesn't raise to prevent hanging on shutdown.
         """
         try:
             self.flush()
+        except Exception as e:
+            # During shutdown, log error but don't raise to avoid hanging
+            # This prevents Ctrl+C from hanging when Azure logging has permission issues
+            import sys
+            print(
+                f"\nWARNING: Failed to flush Azure Monitor logs during shutdown: {e}\n"
+                "Some logs may not have been uploaded to Azure.",
+                file=sys.stderr
+            )
         finally:
             super().close()
 
