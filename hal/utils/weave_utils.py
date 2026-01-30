@@ -1,8 +1,11 @@
 import weave
 from typing import Dict, Any, Tuple, List, Optional
-from .logging_utils import print_step, print_warning, console, create_progress
+from .logging_utils import print_step, console, create_progress
 from datetime import datetime
 from weave.trace_server.trace_server_interface import CallsFilter, CallsQueryReq
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 MODEL_PRICES_DICT = {
     "text-embedding-3-small": {"prompt_tokens": 0.02 / 1e6, "completion_tokens": 0},
@@ -568,7 +571,7 @@ def get_total_cost(client):
                     for model, model_usage in entry.items()
                 ]
             else:
-                print_warning(
+                logger.warning(
                     f"Skipping unexpected usage payload of type {type(usage).__name__}"
                 )
                 progress.update(task, advance=1)

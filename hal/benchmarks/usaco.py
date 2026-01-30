@@ -4,8 +4,11 @@ import json
 import os
 import tempfile
 from typing import Dict, Any
+import logging
 
 from .base_benchmark import BaseBenchmark
+
+logger = logging.getLogger("agent_eval")
 
 
 class USACOBenchmark(BaseBenchmark):
@@ -83,9 +86,9 @@ class USACOBenchmark(BaseBenchmark):
                     "pip install -r requirements.txt", stream=True
                 )
 
-                print("Installing dependencies for USACO harness...")
+                logger.info("Installing dependencies for USACO harness...")
                 for line in result.output:
-                    print(line.decode(), end="")
+                    logger.info(line.decode().rstrip())
 
                 # Create required directories
                 container.exec_run(
@@ -96,7 +99,7 @@ class USACOBenchmark(BaseBenchmark):
                 cmd = f"python harness.py --problem_dict_with_responses /app/responses_{run_id}.json --run_id {run_id}"
                 result = container.exec_run(cmd, stream=True)
                 for line in result.output:
-                    print(line.decode(), end="")
+                    logger.info(line.decode().rstrip())
 
                 # Read results directly from container
                 rdict_cmd = f"cat /app/results/rdict_{run_id}.json"

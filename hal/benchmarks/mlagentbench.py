@@ -6,6 +6,9 @@ import os
 import sys
 from types import SimpleNamespace
 from .MLAgentBench.MLAgentBench.environment import Environment
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 
 class MLAgentBenchBenchmark(BaseBenchmark):
@@ -40,7 +43,7 @@ class MLAgentBenchBenchmark(BaseBenchmark):
 
     def mount_environment(self):
         # copy benchmark tasks to agent_dir
-        print(f"Setting up env in {self.agent_dir}")
+        logger.info(f"Setting up env in {self.agent_dir}")
         os.system(
             f"cp -r {self.benchmark_dir}/MLAgentBench/benchmarks {self.agent_dir}MLAgentBench/"
         )
@@ -68,7 +71,7 @@ class MLAgentBenchBenchmark(BaseBenchmark):
         )
 
         super().mount_environment()
-        print("Environment set up successfully")
+        logger.info("Environment set up successfully")
 
     def unmount_environment(self):
         super().unmount_environment()
@@ -78,7 +81,7 @@ class MLAgentBenchBenchmark(BaseBenchmark):
 
         # for each task run the agent
         for task in self.tasks:
-            print(f"\n\nRunning task: {task}")
+            logger.info(f"\n\nRunning task: {task}")
             log_path = f"{run_id}_logs/{task}"
             workspace_path = f"{run_id}_workspace"
 
@@ -95,15 +98,15 @@ class MLAgentBenchBenchmark(BaseBenchmark):
             final_message = self.run_agent(agent_function, env)
             env.save("final")
             if final_message:
-                print(f"Final agent message: {final_message}")
-            print(f"\n\nTask: {task} completed")
+                logger.info(f"Final agent message: {final_message}")
+            logger.info(f"\n\nTask: {task} completed")
 
         self.unmount_environment()
 
         # Run the SWE-bench evaluation harness
         self.mount_benchmark()
         for task in self.tasks:
-            print(f"\n\nRunning evaluation harness for task: {task}")
+            logger.info(f"\n\nRunning evaluation harness for task: {task}")
             result = self._run_evaluation_harness(task, run_id)
 
         # Parse the evaluation results
@@ -139,10 +142,10 @@ class MLAgentBenchBenchmark(BaseBenchmark):
                 stderr_line = process.stderr.readline()
 
                 if stdout_line:
-                    print(stdout_line.strip())
+                    logger.info(stdout_line.strip())
                     stdout_output.append(stdout_line)
                 if stderr_line:
-                    print(stderr_line.strip(), file=sys.stderr)
+                    logger.info(stderr_line.strip())
                     stderr_output.append(stderr_line)
 
                 if (
@@ -165,9 +168,9 @@ class MLAgentBenchBenchmark(BaseBenchmark):
             return None
 
         except subprocess.CalledProcessError as e:
-            print(f"Error running SWE-bench evaluation harness: {e}")
-            print(f"Stdout: {e.output}")
-            print(f"Stderr: {e.stderr}")
+            logger.error(f"Error running SWE-bench evaluation harness: {e}")
+            logger.error(f"Stdout: {e.output}")
+            logger.error(f"Stderr: {e.stderr}")
             raise
 
     def _parse_evaluation_result(self, run_id):
@@ -177,7 +180,7 @@ class MLAgentBenchBenchmark(BaseBenchmark):
                 os.path.join(self.agent_dir, f"{run_id}_{task}.json")
             )
             if not os.path.exists(task_result_file_path):
-                print(
+                logger.warning(
                     f"WARNING: Task {task} did not produce a result file. This run can't be uploaded to the leaderboard. Skipping..."
                 )
                 continue

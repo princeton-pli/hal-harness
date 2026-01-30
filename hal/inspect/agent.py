@@ -10,9 +10,12 @@ import subprocess
 import json
 from concurrent.futures import ProcessPoolExecutor
 import traceback
+import logging
 
 from inspect_ai.dataset import Dataset
 from inspect_ai.solver import Generate, Solver, TaskState
+
+logger = logging.getLogger("agent_eval")
 
 
 def load_agent(agent_function: str) -> Callable:
@@ -128,7 +131,7 @@ with open("output.json", "w") as f:
     ]
 
     if conda_env_name:
-        print(f"Running agent in conda environment: {conda_env_name}")
+        logger.info(f"Running agent in conda environment: {conda_env_name}")
         command = ["conda", "run", "-n", conda_env_name] + command
 
     try:
@@ -154,7 +157,7 @@ with open("output.json", "w") as f:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     except Exception as e:
-        print(f"Error running agent: {e}")
+        logger.error(f"Error running agent: {e}")
         traceback.print_exc()
         result = {single_input["id"]: f"ERROR RUNNING AGENT: {e}"}
 
@@ -236,7 +239,7 @@ async def run_agent_parallel(
                 k: v for k, v in agent_input.items() if k not in previous_ids
             }
 
-            print(
+            logger.info(
                 f"Previous submissions found. {len(previous_ids)} submissions removed from agent input."
             )
 
@@ -267,7 +270,7 @@ async def run_agent_parallel(
         results = await asyncio.gather(*tasks)
 
     for result in results:
-        print(result)
+        logger.info(result)
 
     os.chdir(original_dir)
 
@@ -310,7 +313,7 @@ async def run_agent_parallel(
             for submission in previous_submissions:
                 merged_result.update(submission)
 
-    print(f"Results: {merged_result}")
+    logger.info(f"Results: {merged_result}")
 
     # save raw submissions as jsonl file with each line being a submission
     if log_dir:

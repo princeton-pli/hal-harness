@@ -274,6 +274,7 @@ Properties: dynamic
 ```
 
 **Running the Setup:**
+
 ```bash
 # 1. Ensure you're logged into Azure CLI
 az login
@@ -490,3 +491,8 @@ HAL-Benchmark-Runs
 3. `hal/utils/virtual_machine_runner.py` - Understand orchestration flow
 4. `hal/agent_runner.py` - Understand run initialization
 5. `hal/cli.py` - Understand CLI entry point
+
+# Notes from implementation:
+
+1. We want to remove the agent_eval.verbose logs for now -- we should have only one logger
+2. We _may_ want to add another logger that differentiates agent logs and scaffold logs, but it's likely we'll want these all to be in Azure

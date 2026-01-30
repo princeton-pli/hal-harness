@@ -12,6 +12,7 @@ from .inspect.inspect import is_inspect_benchmark
 from .inspect_runner import inspect_evaluate
 from dotenv import load_dotenv
 import sys
+import logging
 from .utils.logging_utils import (
     setup_logging,
     print_header,
@@ -20,9 +21,10 @@ from .utils.logging_utils import (
     print_error,
     print_results_table,
     print_run_summary,
-    print_warning,
     print_run_config,
 )
+
+logger = logging.getLogger("agent_eval")
 import traceback
 from datetime import datetime
 
@@ -308,7 +310,7 @@ def main(
                 if runner.benchmark and runner.benchmark.get_run_dir(run_id):
                     print_run_summary(run_id, runner.benchmark.get_run_dir(run_id))
                 else:
-                    print_warning(
+                    logger.warning(
                         "Could not generate run summary - missing benchmark or run directory"
                     )
 

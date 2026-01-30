@@ -1,12 +1,18 @@
+import logging
+
+logger = logging.getLogger("agent_eval")
+
+
+# FIXME: remove this file
 def log_start(msg: str) -> None:
-    print(f"====={msg}=====")
+    logger.info(f"====={msg}=====")
 
 
 def log(msg: str = "") -> None:
-    print(msg)
+    logger.info(msg)
 
 
 def log_end(msg: str | None = None) -> None:
     if msg:
-        print(msg)
-    print("===============\n")
+        logger.info(msg)
+    logger.info("===============\n")

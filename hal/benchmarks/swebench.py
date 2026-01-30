@@ -4,6 +4,9 @@ from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
 from datasets import load_dataset
 import subprocess
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 
 class SWEBenchBenchmark(BaseBenchmark):
@@ -129,9 +132,9 @@ class SWEBenchBenchmark(BaseBenchmark):
             return results
 
         except subprocess.CalledProcessError as e:
-            print(f"Error running SWE-bench evaluation harness: {e}")
-            print(f"Stdout: {e.output}")
-            print(f"Stderr: {e.stderr}")
+            logger.error(f"Error running SWE-bench evaluation harness: {e}")
+            logger.error(f"Stdout: {e.output}")
+            logger.error(f"Stderr: {e.stderr}")
             raise
 
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:

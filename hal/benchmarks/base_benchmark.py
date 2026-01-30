@@ -5,8 +5,10 @@ import os
 from inspect_ai.log import EvalLog
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
-from ..utils.logging_utils import print_warning
 from ..utils.utils import make_json_serializable, get_git_info
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 
 class BaseBenchmark(ABC):
@@ -147,7 +149,7 @@ class BaseBenchmark(ABC):
             with open(upload_path, "w") as f:
                 json.dump(results_summary, f, indent=2)
         except TypeError as e:
-            print_warning(
+            logger.warning(
                 f"Error serializing results summary: {e}. Converting to json serializable."
             )
             with open(upload_path, "w") as f:

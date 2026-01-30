@@ -14,8 +14,6 @@ import sys
 import os
 import json
 from datetime import datetime
-import builtins
-import io
 from contextlib import contextmanager
 from rich.box import ROUNDED
 
@@ -35,48 +33,6 @@ class VerboseFilter(logging.Filter):
 
     def filter(self, record):
         return not record.name.startswith("agent_eval.verbose")
-
-
-class OutputRedirector(io.StringIO):
-    """Redirects stdout/stderr to our logging system"""
-
-    def __init__(self, logger):
-        super().__init__()
-        self.logger = logger
-
-    def write(self, text):
-        if text.strip():  # Only log non-empty strings
-            self.logger.debug(text.rstrip())
-
-
-class PrintInterceptor:
-    """Intercepts all print statements and redirects them to logging"""
-
-    def __init__(self):
-        self._original_print = builtins.print
-
-    def custom_print(self, *args, **kwargs):
-        """Custom print function that logs instead of printing to terminal"""
-        # If file is specified, use original print (for example, when rich uses print)
-        if "file" in kwargs:
-            self._original_print(*args, **kwargs)
-            return
-
-        # Convert args to string and log
-        message = " ".join(str(arg) for arg in args)
-        verbose_logger.debug(message)
-
-    def start(self):
-        """Start intercepting print statements"""
-        builtins.print = self.custom_print
-
-    def stop(self):
-        """Restore original print function"""
-        builtins.print = self._original_print
-
-
-# Global print interceptor
-print_interceptor = PrintInterceptor()
 
 
 def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
@@ -201,13 +157,6 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
             print(error_msg, file=sys.stderr)
             raise RuntimeError(f"Failed to initialize Azure Monitor logging: {e}")
 
-    # Start intercepting print statements
-    print_interceptor.start()
-
-    # Redirect stdout and stderr to verbose logger
-    sys.stdout = OutputRedirector(verbose_logger)
-    sys.stderr = OutputRedirector(verbose_logger)
-
     # Initial setup logging
     main_logger.info(f"Logging initialized - {datetime.now().isoformat()}")
     main_logger.info(f"Log directory: {log_dir}")
@@ -215,18 +164,8 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
 
 @contextmanager
 def terminal_print():
-    """Context manager to temporarily restore terminal printing"""
-    print_interceptor.stop()
-    original_stdout = sys.stdout
-    original_stderr = sys.stderr
-    sys.stdout = sys.__stdout__
-    sys.stderr = sys.__stderr__
-    try:
-        yield
-    finally:
-        sys.stdout = original_stdout
-        sys.stderr = original_stderr
-        print_interceptor.start()
+    """Context manager for terminal printing (now a no-op since interceptor removed)"""
+    yield
 
 
 def print_step(message: str, level: int = logging.INFO) -> None:
@@ -258,16 +197,6 @@ def print_error(message: str, verbose_log_path: Optional[str] = None):
             )
 
 
-def log_error(message: str):
-    """Log error message to file only"""
-    main_logger.error(f"ERROR: {message}")
-
-
-def print_warning(message: str) -> None:
-    """Log a warning message"""
-    with terminal_print():
-        console.print(f"[bold yellow]![/] {message}")
-    main_logger.warning(f"WARNING: {message}")
 
 
 def print_header(title: str) -> None:

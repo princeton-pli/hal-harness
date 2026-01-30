@@ -2,6 +2,7 @@ import os
 import json
 import weave
 import time
+import logging
 from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
@@ -11,8 +12,9 @@ from .utils.logging_utils import (
     print_error,
     create_progress,
     console,
-    print_warning,
 )
+
+logger = logging.getLogger("agent_eval")
 from rich.table import Table
 from rich.box import ROUNDED
 from .utils.logging_utils import terminal_print
@@ -87,7 +89,7 @@ class AgentRunner:
 
         # Print warning if GPU tasks are present but not running on VM
         if has_gpu_task and not use_vm:
-            print_warning(
+            logger.warning(
                 "Warning: This benchmark contains tasks that require GPU, but is not being run on a VM. "
                 "GPU tasks may not work correctly without VM execution. Use the --vm flag to run on a VM."
             )
@@ -146,7 +148,7 @@ class AgentRunner:
         submissions_file = os.path.join(run_dir, f"{self.run_id}_RAW_SUBMISSIONS.jsonl")
 
         if not os.path.exists(submissions_file):
-            print("No previous submissions found, running all tasks")
+            logger.info("No previous submissions found, running all tasks")
             return dataset
 
         try:
@@ -166,7 +168,7 @@ class AgentRunner:
                             completed_tasks.add(task_id)
                         previous_output.update(submission)
                     except json.JSONDecodeError as e:
-                        print_warning(
+                        logger.warning(
                             f"Skipping malformed line in submissions file: {e}"
                         )
                         continue
@@ -213,7 +215,7 @@ class AgentRunner:
                     delete_calls(call_ids, weave_client)
 
         if not dataset:
-            print_warning("No remaining tasks to run")
+            logger.warning("No remaining tasks to run")
             # Load and return previous results
             results_path = os.path.join(
                 self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_UPLOAD.json"
@@ -273,7 +275,7 @@ class AgentRunner:
                                 submission = json.loads(line.strip())
                                 previous_output.update(submission)
                             except json.JSONDecodeError as e:
-                                print_warning(
+                                logger.warning(
                                     f"Skipping malformed line in submissions file: {e}"
                                 )
                                 continue
@@ -284,7 +286,7 @@ class AgentRunner:
         remaining = self.get_remaining_tasks(dataset)
         if len(remaining) > 0:
             # Create a more informative error message
-            print_warning(f"Warning - {len(remaining)} tasks are incomplete")
+            logger.warning(f"Warning - {len(remaining)} tasks are incomplete")
 
             # Create and display table of remaining tasks
             table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)

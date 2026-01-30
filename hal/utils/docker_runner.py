@@ -55,7 +55,7 @@ class DockerRunner:
             )
         except docker.errors.DockerException as e:
             error_message = "Docker is not available on this system. Please install Docker to use the Docker runner."
-            verbose_logger.debug(error_message)
+            verbose_logger.error(error_message)
             raise RuntimeError(error_message) from e
 
     def _ensure_docker_image(self) -> None:

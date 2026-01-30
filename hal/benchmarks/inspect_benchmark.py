@@ -7,9 +7,11 @@ from inspect_ai._eval.loader import load_tasks
 from inspect_ai.solver import solver
 from inspect_ai.log import EvalLog
 from inspect_ai.solver import Solver
-from hal.utils.logging_utils import log_warning, print_warning, log_error
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 
 class InspectBenchmark(BaseBenchmark):
@@ -119,7 +121,7 @@ class InspectBenchmark(BaseBenchmark):
                     if score_value == "C":
                         level_correct[level] += 1
                     elif score_value not in ["C", "I"]:
-                        print("WARNING")
+                        logger.warning(f"Unexpected score value: {score_value}")
 
                 # Calculate accuracy for each level
                 for level in ["1", "2", "3"]:
@@ -138,10 +140,10 @@ class InspectBenchmark(BaseBenchmark):
                     "combined_scorer/inspect_evals/avg_score"
                 ]
         except Exception as e:
-            print_warning(
+            logger.warning(
                 "Computing additional metrics failed. Output will only contain standard metrics from Inspect harness..."
             )
-            log_error(f"Computing additional metrics failed: {e}")
+            logger.error(f"Computing additional metrics failed: {e}")
             pass
 
         return eval_results
@@ -159,12 +161,12 @@ class InspectBenchmark(BaseBenchmark):
                     elif sample.scores["gaia_scorer"].value == "I":
                         fail_tasks.append(sample.id)
                     else:
-                        print_warning(
+                        logger.warning(
                             f"Unexpected Gaia scorer value: {sample.scores['gaia_scorer'].value}. Appending to failed tasks ids for heatmap on HAL..."
                         )
                         fail_tasks.append(sample.id)
                 except KeyError:
-                    print_warning(
+                    logger.warning(
                         f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL..."
                     )
                     fail_tasks.append(sample.id)
@@ -177,12 +179,12 @@ class InspectBenchmark(BaseBenchmark):
                     elif sample.scores["includes"].value == "I":
                         fail_tasks.append(sample.id)
                     else:
-                        print_warning(
+                        logger.warning(
                             f"Unexpected Cybench scorer value: {sample.scores['includes'].value}. Appending to failed tasks ids for heatmap on HAL..."
                         )
                         fail_tasks.append(sample.id)
                 except KeyError:
-                    print_warning(
+                    logger.warning(
                         f"Task {sample.id} does not have expected scorer output. Probably the agent raised an error this task. Check the logs. Appending to failed tasks ids for heatmap on HAL..."
                     )
                     fail_tasks.append(sample.id)
@@ -195,7 +197,7 @@ class InspectBenchmark(BaseBenchmark):
                     fail_tasks.append(sample.id)
             return succ_tasks, fail_tasks
         else:
-            log_warning(
+            logger.warning(
                 f"Getting successful and failed tasks ids not supported for {eval_log.eval.task}"
             )
             return None, None

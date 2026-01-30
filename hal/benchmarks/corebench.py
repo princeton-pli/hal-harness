@@ -7,9 +7,12 @@ from typing import Dict, Any
 import numpy as np
 from scipy.stats import t
 import math
+import logging
 
 from hal.utils.logging_utils import create_progress
 from .base_benchmark import BaseBenchmark
+
+logger = logging.getLogger("agent_eval")
 
 
 class CoreBench(BaseBenchmark):
@@ -155,7 +158,7 @@ class CoreBench(BaseBenchmark):
                     )
 
                 sleep_time = backoff_factor * (2 ** (attempt - 1))
-                print(f"Download failed, retrying in {sleep_time}s...")
+                logger.warning(f"Download failed, retrying in {sleep_time}s...")
                 time.sleep(sleep_time)
 
         # Extract and cleanup with granular progress bar
@@ -357,7 +360,7 @@ class CoreBench(BaseBenchmark):
             except Exception:
                 pass
         except Exception as e:
-            print(f"Error evaluating result: {e}")
+            logger.error(f"Error evaluating result: {e}")
 
         return {
             "correct_written_answers": correct_written_answers,
