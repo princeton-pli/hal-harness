@@ -154,7 +154,9 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
                 # Get Azure Monitor configuration from environment
                 dce_endpoint = os.getenv("AZURE_MONITOR_DATA_COLLECTION_ENDPOINT")
                 dcr_id = os.getenv("AZURE_MONITOR_DATA_COLLECTION_RULE_ID")
-                stream_name = os.getenv("AZURE_MONITOR_STREAM_NAME", "Custom-BenchmarkRuns_CL")
+                stream_name = os.getenv(
+                    "AZURE_MONITOR_STREAM_NAME", "Custom-BenchmarkRuns_CL"
+                )
 
                 if not dce_endpoint or not dcr_id:
                     raise ValueError(
@@ -227,14 +229,14 @@ def terminal_print():
         print_interceptor.start()
 
 
-def log_step(message: str, level: int = logging.INFO) -> None:
+def print_step(message: str, level: int = logging.INFO) -> None:
     """Log a step with both console formatting and file logging"""
     with terminal_print():
         console.print(f"[bold cyan]→[/] {message}")
     main_logger.log(level, f"STEP: {message}")
 
 
-def log_success(message: str) -> None:
+def print_success(message: str) -> None:
     """Log a success message"""
     with terminal_print():
         console.print(f"[bold green]✓[/] {message}")
@@ -261,7 +263,7 @@ def log_error(message: str):
     main_logger.error(f"ERROR: {message}")
 
 
-def log_warning(message: str) -> None:
+def print_warning(message: str) -> None:
     """Log a warning message"""
     with terminal_print():
         console.print(f"[bold yellow]![/] {message}")
@@ -325,7 +327,7 @@ def _print_results_table(results: dict[str, Any]) -> None:
     console.print(table)
 
 
-def log_results_table(results: dict[str, Any]) -> None:
+def print_results_table(results: dict[str, Any]) -> None:
     """Log results to both console and file"""
 
     # Print formatted table to console
@@ -366,7 +368,7 @@ def log_results_table(results: dict[str, Any]) -> None:
     main_logger.info(f"Results: {json.dumps(log_data['results'], indent=2)}")
 
 
-def log_run_summary(run_id: str, log_dir: str) -> None:
+def print_run_summary(run_id: str, log_dir: str) -> None:
     """Log run summary information"""
     summary = Table(title="Run Summary", show_header=False, box=None)
     summary.add_column("Key", style="cyan")
@@ -471,14 +473,6 @@ def print_run_config(
         main_logger.info("  Inspect Eval Arguments:")
         for key, value in inspect_eval_args.items():
             main_logger.info(f"    {key}: {value}")
-
-
-# Rename the old print_* functions to use log_* instead
-print_step = log_step
-print_success = log_success
-print_warning = log_warning
-print_results_table = log_results_table
-print_run_summary = log_run_summary
 
 
 def get_context_logger(
