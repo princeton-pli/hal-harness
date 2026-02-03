@@ -95,18 +95,14 @@ class VirtualMachineRunner:
                     gpu_required = task_benchmark.get("gpu", False)
 
                 # Create VM based on GPU requirement
-                if gpu_required:
-                    logger.info(
-                        f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} *with* a GPU"
-                    )
-                    await asyncio.to_thread(
-                        self.vm_manager.create_gpu_vm, vm_name=vm_name
-                    )
-                else:
-                    logger.info(
-                        f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
-                    )
-                    await asyncio.to_thread(self.vm_manager.create_vm, vm_name=vm_name)
+                logger.info(
+                    f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} with GPU={gpu_required}"
+                )
+                await asyncio.to_thread(
+                    self.vm_manager.create_virtual_machine_by_name,
+                    vm_name=vm_name,
+                    has_gpu=gpu_required,
+                )
 
                 # Create temp directory with all necessary files
                 temp_dir = tempfile.mkdtemp()

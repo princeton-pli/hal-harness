@@ -29,7 +29,7 @@ def _get_logger(vm_name: str) -> logging.LoggerAdapter:
 
 class VirtualMachineManager:
     """
-    Manages Azure Virtual Machine operations for agent execution.
+    Manages virtual machine operations for agent execution.
 
     This class provides stateless methods for creating, managing, and deleting Azure VMs.
     Each method operates on a specific VM identified by vm_name parameter.
@@ -169,10 +169,13 @@ class VirtualMachineManager:
                 except Exception as e:
                     logger.error(f"Error closing SSH client: {e}")
 
-    def create_vm(self, vm_name):
+    def create_virtual_machine_by_name(self, vm_name, has_gpu=False):
         """Create a standard Azure VM without GPU."""
         logger = _get_logger(vm_name)
-        logger.info("Creating Azure virtual machine with *no* GPU")
+        if has_gpu:
+            logger.info(f"Creating virtual machine {vm_name} with a GPU")
+        else:
+            logger.info(f"Creating virtual machine {vm_name} with *no* GPU")
 
         # Create VM using new AzureVirtualMachine class
         vm = AzureVirtualMachine(
@@ -182,39 +185,16 @@ class VirtualMachineManager:
             subscription_id=self.subscription_id,
             nsg_id=self.nsg_id,
             ssh_public_key=self.ssh_public_key,
-            gpu=False,
+            gpu=has_gpu,
         )
 
         # Store for tracking
         self._vms[vm_name] = vm
 
-        logger.info(
-            f"Successfully created Azure virtual machine {vm_name} with *no* GPU; startup script run complete"
-        )
-        return vm
-
-    def create_gpu_vm(self, vm_name):
-        """Create an Azure VM with NVIDIA GPU support."""
-        logger = _get_logger(vm_name)
-        logger.info("Creating Azure virtual machine with GPU")
-
-        # Create VM using new AzureVirtualMachine class
-        vm = AzureVirtualMachine(
-            name=vm_name,
-            resource_group=self.resource_group_name,
-            location=self.location,
-            subscription_id=self.subscription_id,
-            nsg_id=self.nsg_id,
-            ssh_public_key=self.ssh_public_key,
-            gpu=True,
-        )
-
-        # Store for tracking
-        self._vms[vm_name] = vm
-
-        logger.info(
-            f"Successfully created GPU VM {vm_name}; startup script run complete"
-        )
+        if has_gpu:
+            logger.info(f"Created virtual machine {vm_name} with GPU")
+        else:
+            logger.info(f"Created virtual machine {vm_name} with *no* GPU")
         return vm
 
     def delete_virtual_machine_by_name(self, vm_name):
@@ -348,7 +328,7 @@ class VirtualMachineManager:
         """
         logger = _get_logger(vm_name)
 
-        def setup_vm_environment(
+        def copy_env_and_run_setup_script(
             vm_name: str,
             log_dir: str,
             benchmark,
@@ -415,7 +395,7 @@ class VirtualMachineManager:
 
         try:
             # Setup conda environment if it exists
-            setup_vm_environment(
+            copy_env_and_run_setup_script(
                 vm_name,
                 log_dir,
                 benchmark,

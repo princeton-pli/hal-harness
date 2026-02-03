@@ -47,6 +47,8 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     logging.getLogger("azure.identity").setLevel(logging.WARNING)
     # Suppress httpx logging
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    # Suppress SSH logging
+    logging.getLogger("paramiko.transport").setLevel(logging.WARNING)
 
     # Create formatters
     detailed_formatter = logging.Formatter(
