@@ -332,7 +332,7 @@ class DockerRunner:
 
             # run setup script if it exists
             if self.benchmark and self.benchmark.setup_script:
-                print(f"Running setup script: {self.benchmark.setup_script}")
+                logger.info(f"Running setup script: {self.benchmark.setup_script}")
                 setup_script_src = Path(self.benchmark.setup_script)
                 if setup_script_src.exists():
                     # copy setup script to container
@@ -392,7 +392,7 @@ class DockerRunner:
             # get env vars from .env file
             env_vars = dotenv_values(".env")
             env_vars_str = " ".join([f"{k}={v}" for k, v in env_vars.items()])
-            print(f"Running script with env: {env_vars_str}")
+            logger.info(f"Running script with env: {env_vars_str}")
 
             proc = await asyncio.create_subprocess_exec(
                 "docker",

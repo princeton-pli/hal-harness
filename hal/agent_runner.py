@@ -7,7 +7,6 @@ from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
-from .utils.logging_utils import create_progress
 
 logger = logging.getLogger("agent_eval")
 from .inspect.inspect import is_inspect_benchmark
@@ -237,21 +236,17 @@ class AgentRunner:
 
         else:
             # Run agent on all tasks
-            with create_progress() as progress:
-                task = progress.add_task(
-                    "Running agents... (check logs in results directory for more details)",
-                    total=len(dataset),
-                )
-                agent_output = await self.runner.run_agent(
-                    dataset=dataset,
-                    agent_function=self.agent_function,
-                    agent_dir=self.agent_dir,
-                    agent_args=self.agent_args,
-                    run_id=self.run_id,
-                    benchmark=self.benchmark,
-                    task=task,
-                    progress=progress,
-                )
+            logger.info(f"Running agents on {len(dataset)} tasks...")
+            agent_output = await self.runner.run_agent(
+                dataset=dataset,
+                agent_function=self.agent_function,
+                agent_dir=self.agent_dir,
+                agent_args=self.agent_args,
+                run_id=self.run_id,
+                benchmark=self.benchmark,
+                task=None,
+                progress=None,
+            )
 
             # If continuing run, merge with previous results
             if self.continue_run:
@@ -277,18 +272,13 @@ class AgentRunner:
         # Create a temporary dataset with agent_output to check remaining tasks
         remaining = self.get_remaining_tasks(dataset)
         if len(remaining) > 0:
-            # Create a more informative error message
+            # Log incomplete tasks
             logger.warning(f"Warning - {len(remaining)} tasks are incomplete")
-
-            # Create and display table of remaining tasks
-            table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
-            table.add_column("Task ID", style="cyan")
-
-            for task_id, task_data in remaining.items():
-                table.add_row(task_id)
-
+            logger.info("Incomplete tasks:")
+            for task_id in remaining.keys():
+                logger.info(f"  - {task_id}")
             logger.info(
-                f"Warning - {len(remaining)} tasks incomplete. Use --continue-run flag to retry the remaining tasks. Exiting..."
+                "Use --continue-run flag to retry the remaining tasks. Exiting..."
             )
             # sys.exit(1)
 

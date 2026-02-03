@@ -89,7 +89,7 @@ class LocalRunner:
                 try:
                     shutil.rmtree(temp_dir, ignore_errors=True)
                 except Exception as e:
-                    print(f"Warning: Failed to cleanup {temp_dir}: {e}")
+                    logger.warning(f"Failed to cleanup {temp_dir}: {e}")
 
     async def _process_task(
         self,
@@ -105,7 +105,7 @@ class LocalRunner:
     ) -> Optional[Dict[str, Any]]:
         """Process a single task with semaphore control"""
         async with self._semaphore:
-            print(
+            logger.info(
                 f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})"
             )
             result = await self._run_single_task(
@@ -128,7 +128,7 @@ class LocalRunner:
             if progress and task is not None:
                 progress.update(task, advance=1)
 
-            print(f"Completed task {task_id}")
+            logger.info(f"Completed task {task_id}")
             return result
 
     async def _run_single_task(
