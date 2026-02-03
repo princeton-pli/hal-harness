@@ -1,0 +1,33 @@
+#cloud-config
+runcmd:
+  - |
+    #!/bin/bash
+    set -e
+
+    # Azure VM startup script
+    # This runs on first boot via cloud-init
+
+    echo "Starting VM initialization..."
+    echo "Hello World from Azure VM startup!" > /home/agent/hello.txt
+    chown agent:agent /home/agent/hello.txt
+
+    # 1. Update the package index list
+    sudo apt-get update
+
+    # 2. Upgrade existing packages to their latest versions
+    sudo apt-get upgrade -y
+
+    # 3. Install Docker
+    sudo apt install docker.io -y
+
+    # 4. Add agent user to docker group
+    sudo usermod -aG docker agent
+
+    # 5. Enable and start Docker service
+    sudo systemctl enable docker
+    sudo systemctl start docker
+
+    # 6. Update sentinel file so that dependents know we're ready to go
+    touch /home/agent/startup_complete
+
+    echo "VM initialization complete!"

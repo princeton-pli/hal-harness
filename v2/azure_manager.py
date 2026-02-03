@@ -53,7 +53,8 @@ class AzureManager:
 
         async def create_vm_async(index: int) -> AzureVirtualMachine:
             """Create a single VM in a thread."""
-            vm_name = f"vm-{self.run_id}-{index}"[:32].replace("_", "-")
+            # Ensure unique names by truncating run_id but keeping index
+            vm_name = f"vm-{self.run_id}-{index}".replace("_", "-")
 
             # Run VM creation in thread pool (blocking Azure SDK calls)
             return await asyncio.to_thread(
@@ -76,9 +77,7 @@ class AzureManager:
         logger.info(f"Cleaning up {len(self.virtual_machines)} VMs")
 
         async def cleanup_async():
-            tasks = [
-                asyncio.to_thread(vm.delete) for vm in self.virtual_machines
-            ]
+            tasks = [asyncio.to_thread(vm.delete) for vm in self.virtual_machines]
             await asyncio.gather(*tasks)
 
         asyncio.run(cleanup_async())

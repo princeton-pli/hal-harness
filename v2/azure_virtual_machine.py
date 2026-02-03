@@ -1,8 +1,10 @@
 """Azure Virtual Machine representation."""
 
+import base64
 import logging
 import os
 import subprocess
+import time
 
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
@@ -96,6 +98,15 @@ class AzureVirtualMachine:
             },
         ).result()
 
+        # Load cloud-init config
+        cloud_init_path = os.path.join(
+            os.path.dirname(__file__), "virtual_machine_cloud_init.yaml"
+        )
+        with open(cloud_init_path, "r") as f:
+            cloud_init_config = f.read()
+
+        custom_data = base64.b64encode(cloud_init_config.encode()).decode()
+
         # Create VM
         vm_params = {
             "location": self.location,
@@ -112,6 +123,7 @@ class AzureVirtualMachine:
             "os_profile": {
                 "computer_name": self.name,
                 "admin_username": "agent",
+                "custom_data": custom_data,
                 "linux_configuration": {
                     "disable_password_authentication": True,
                     "ssh": {
@@ -154,7 +166,49 @@ class AzureVirtualMachine:
                 },
             ).result()
 
-        logger.info(f"VM {self.name} created at {self.public_ip}")
+        logger.info(f"VM {self.name} created at {self.public_ip}; waiting for SSH")
+
+        # Wait for SSH to be ready
+        self._wait_for_setup_to_complete()
+        logger.info(f"Got SSH for VM {self.name}")
+
+    def _wait_for_setup_to_complete(self, timeout: int = 600) -> None:
+        """Wait for startup script to complete by checking for sentinel file.
+
+        Args:
+            timeout: Maximum time to wait in seconds (default 600)
+        """
+        logger.info(f"Waiting for startup script to complete on {self.name}")
+        start_time = time.time()
+        ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
+
+        while time.time() - start_time < timeout:
+            try:
+                # Check if sentinel file exists
+                cmd = [
+                    "ssh",
+                    "-i",
+                    ssh_key_path,
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    "-o",
+                    "ConnectTimeout=5",
+                    f"agent@{self.public_ip}",
+                    "test -f /home/agent/startup_complete",
+                ]
+                result = subprocess.run(cmd, capture_output=True)
+
+                if result.returncode == 0:
+                    logger.info(f"Startup script completed on {self.name}")
+                    return
+            except Exception:
+                pass
+
+            time.sleep(10)
+
+        raise TimeoutError(
+            f"Startup script did not complete on {self.name} ({self.public_ip}) within {timeout} seconds"
+        )
 
     def run_docker(
         self,

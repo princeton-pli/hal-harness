@@ -19,7 +19,7 @@ def main():
     use_gpu = False
 
     # Generate run ID
-    run_id = str(uuid.uuid4())
+    run_id = str(uuid.uuid4())[:20]
     logger.info(
         f"Starting run {run_id}. virtual_machine_count={virtual_machine_count}, use_gpu={use_gpu}"
     )
