@@ -8,7 +8,6 @@ from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
 
-from .inspect.inspect import is_inspect_benchmark
 from .utils.weave_utils import get_call_ids, delete_calls
 
 
@@ -285,12 +284,7 @@ class AgentRunner:
         # stop weave logging before harness is run to avoid lm as judge to produce additional cost
         weave.finish()
 
-        if is_inspect_benchmark(self.benchmark.benchmark_name):
-            eval_results = await self.benchmark.evaluate_output(
-                agent_output, self.run_id
-            )
-        else:
-            eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
+        eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
 
         logger.info("Processing results...")
         results = self.benchmark.process_results(

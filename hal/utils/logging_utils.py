@@ -140,8 +140,9 @@ def create_progress() -> Progress:
     )
 
 
-def _print_results_table(results: dict[str, Any]) -> None:
-    """Helper function to print results table to console"""
+def log_results(results: dict[str, Any]) -> None:
+    """Log results to both console and file"""
+
     logger.info("=== Evaluation Results ===")
 
     # Handle both direct results dict and nested results structure
@@ -175,47 +176,7 @@ def _print_results_table(results: dict[str, Any]) -> None:
                 logger.info(f"  average_total_time: {total_time / len(value)}")
 
 
-def print_results_table(results: dict[str, Any]) -> None:
-    """Log results to both console and file"""
-
-    # Print formatted table to console
-    _print_results_table(results)
-
-    # Log results to file
-    log_data = {"timestamp": datetime.now().isoformat(), "results": {}}
-
-    # Handle both direct results dict and nested results structure
-    metrics_dict = (
-        results.get("results", results) if isinstance(results, dict) else results
-    )
-
-    if isinstance(metrics_dict, dict):
-        for key, value in metrics_dict.items():
-            if (
-                isinstance(value, (int, float))
-                or (
-                    isinstance(value, str)
-                    and key not in ["status", "message", "traceback"]
-                )
-                and value
-            ):
-                log_data["results"][key] = value
-            elif key == "successful_tasks" and value:
-                log_data["results"]["successful_tasks"] = len(value)
-            elif key == "failed_tasks" and value:
-                log_data["results"]["failed_tasks"] = len(value)
-            elif key == "latencies" and value:
-                # compute average total_time across all tasks
-                total_time = 0
-                for _, latency in value.items():
-                    total_time += latency["total_time"]
-                log_data["results"]["average_total_time"] = total_time / len(value)
-
-    # Also log to file
-    logger.info(f"Results: {json.dumps(log_data['results'], indent=2)}")
-
-
-def print_run_summary(run_id: str, log_dir: str) -> None:
+def log_run_summary(run_id: str, log_dir: str) -> None:
     """Log run summary information"""
     logger.info("=== Run Summary ===")
     logger.info(f"  Run ID: {run_id}")

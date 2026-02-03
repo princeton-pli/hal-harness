@@ -24,7 +24,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     Args:
         input: Dictionary mapping task IDs to task data
         **kwargs: Additional arguments passed via -A flags
-    
+
     Returns:
         Dictionary mapping task IDs to submissions
     """
@@ -37,6 +37,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
    - If you run evaluations locally, you must install the dependencies yourself. Then specify the conda environment name with `--conda_env_name` or run evaluations from the conda environment.
 
 2. **Arguments**: Your agent can receive additional arguments via `-A` flags:
+
    ```bash
    hal-eval -A model_name=gpt-4 -A temperature=0.7 ...
    ```
@@ -50,6 +51,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 ### USACO
 
 **Input Format**:
+
 ```python
    input = {
        "task_id": {
@@ -77,22 +79,23 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             "description_no_samples": "[Description without samples content truncated]",
             "num_samples": 9999,
             "solution_python3": "[Python solution content truncated]",
-            "solution_english": "[English solution explanation truncated]"  
+            "solution_english": "[English solution explanation truncated]"
        }
    }
-   ```
+```
 
 **Output Format**: Return input dictionary with additional `response` key for each task ID that contains the python code solution.
 
 **Example Agent**:
+
 ```python
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
     assert len(input) == 1, 'input must contain only one task'
-    
+
     task_id, task = list(input.items())[0]
-    
+
     client = OpenAI()
 
     results = {}
@@ -106,16 +109,17 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         n=1,
         temperature=1,
     )
-    
+
     results[task_id] = response.choices[0].message.content
     input[task_id]['response'] = results[task_id]
-        
+
     return input
 ```
 
 ### SWE-bench
 
 **Input Format**:
+
 ```python
 {
     "instance_id": {
@@ -138,6 +142,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 **Output Format**: Return a dictionary mapping instance IDs to git patch strings.
 
 **Example Agent**:
+
 ```python
 def run(input: dict, **kwargs):
     patches = {}
@@ -166,25 +171,27 @@ def run(input: dict, **kwargs):
 **Output Format**: Return a dictionary mapping task IDs to "complete" after modifying the environment.
 
 **Requirements**:
+
 - Must be run with `--vm` flag
 - **Important:** set `remote_environment_url` to `http://0.0.0.0:8000` and `experiment_name` to `output`. An example is below and in `agents/appworld_example_agent/main.py`.
 
 **Example Agent**:
+
 ```python
 from appworld import AppWorld, load_task_ids
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     assert 'model_name' in kwargs, 'model_name is required'
-    
+
     task_id = list(input.keys())[0]
-    
+
     with AppWorld(task_id=task_id, experiment_name="output", remote_environment_url="http://0.0.0.0:8000") as world:
         world.task.instruction # To see task instruction.
 
         # indicate task completion:
         world.execute("apis.supervisor.complete_task()")
-        
+
     return {task_id: "Completed"}
 ```
 
@@ -192,101 +199,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
 Assistantbench Browser Agent uses Browser-Use as the open source scaffold. To run this agent you will need to run `make` in the directory to install playwright and chromium in addition to `requirements.txt`.
 
-### Inspect AI Benchmarks
-
-Inspect AI benchmarks support two types of agents:
-
-1. **Custom Agents**: Implement custom agents as described in this document that can be run locally or on VMs.
-2. **Inspect Solver Agents**: Use the `@solver` decorator from the Inspect AI framework. See the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/agents.html) for details on how to implement solver agents.
-
-#### GAIA
-
-**Input Format**:
-```python
-{
-    "sample_id": {
-        "id": "[truncated]",
-        "input": "[truncated]",
-        "choices": null,
-        "target": "[truncated]",
-        "metadata": {
-            "level": "999",
-            "Annotator Metadata": {
-                "Steps": "[truncated]",
-                "Number of steps": "999",
-                "How long did this take?": "[truncated]",
-                "Tools": "[truncated]",
-                "Number of tools": "999"
-            }
-        },
-        "files": {},
-        "setup": "[truncated]"
-    }
-}
-```
-
-**Output Format**: Return a dictionary mapping sample IDs to concise answers following the prompt's instructions (typically numbers, short phrases, or comma-separated lists).
-
-#### CyBench
-
-**Input Format**:
-```python
-{
-    "sample_id": {
-        "id": "[truncated]",
-        "input": "[truncated]",
-        "choices": null,
-        "target": "[truncated]",
-        "metadata": {
-            "variant": "[truncated]",
-            "challenge_metadata": {
-                "first_solve_time": 999,
-                "category": "[truncated]",
-                "competition": "[truncated]"
-            },
-            "variant_metadata": {}
-        },
-        "files": {},
-        "setup": null
-    }
-}
-```
-
-**Output Format**: Return a dictionary mapping sample IDs to solutions.
-
-#### AgentHarm (Benign)
-
-**Note**: Currently only supports Inspect solver agents. See [Inspect AI documentation](https://github.com/UKGovernmentBEIS/inspect_ai) for implementation details. Example inspect solver agent is in `agents/inspect/agentharm`.
-
-### Example Custom Agent for Inspect Benchmarks (GAIA and Cybench)
-
-```python
-def run(input: dict, **kwargs):
-    assert 'model_name' in kwargs, 'model_name is required'
-    
-    responses = {}
-    for sample_id, sample in input.items():
-        # Generate response using specified model
-        response = generate_response(
-            sample["input"],
-            model=kwargs['model_name']
-        )
-        responses[sample_id] = response
-    return responses
-```
-
-### Example Inspect Solver Agent
-
-Can be found in `agents/inspect/gaia.py` and `agents/inspect/cybench.py`.
-
-**Special Requirements**:
-- For custom agents, use `-A` flags to pass keyword arguments
-- For Inspect solvers, use `-I` flags to pass arguments to the inspect eval() function as detailed in the [Inspect AI documentation](https://inspect.ai-safety-institute.org.uk/models.html#generation-config)
-- For SWE-Agent-v0.7 / Enigma-Agent, please add `keys.cfg` in the SWE-Agent / Enigma-Agent directory. For SWE-Agent-v1.0, please add `.env` in the SWE-Agent-v1.0 directory.
-
 ### ScienceAgentBench
 
 **Input Format**:
+
 ```python
 {
     "task_id": {
@@ -305,6 +221,7 @@ Can be found in `agents/inspect/gaia.py` and `agents/inspect/cybench.py`.
 **Output Format**: Return a dictionary mapping task IDs to solution trajectories that contain the agent's reasoning steps.
 
 **Example Agent**:
+
 ```python
 def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
     assert 'model_name' in kwargs, 'model_name is required'
@@ -326,6 +243,7 @@ def run(input_dict: dict[str, dict], **kwargs) -> dict[str, str]:
 ```
 
 **Special Requirements**:
+
 - Include `use_self_debug` and `use_knowledge` flags to control agent behavior
 - Output programs are stored in "pred_programs/" directory
 - Docker is required for evaluation
