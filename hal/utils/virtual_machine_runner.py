@@ -39,7 +39,9 @@ class VirtualMachineRunner:
 
             if result:
                 # Log the agent output through logger
-                logger.info(f"Agent output for task {task_id} on VM {vm_name}:\n{result}")
+                logger.info(
+                    f"Agent output for task {task_id} on VM {vm_name}:\n{result}"
+                )
 
                 if self.log_dir:
                     trace_dir = os.path.join(self.log_dir, "agent_logs")
@@ -71,8 +73,8 @@ class VirtualMachineRunner:
         run_id: str,
         benchmark: Optional[BaseBenchmark] = None,
         progress: Optional[Progress] = None,
-        task: Optional[TaskID] = None,
-        timeout: int = 7200,
+        task: Optional[TaskID] = None,  # FIXME: rm
+        timeout: int = 7200,  # FIXME: rm
     ) -> Dict[str, Any]:
         """Run agent on all tasks using Azure VMs"""
         self.benchmark = benchmark
@@ -98,14 +100,14 @@ class VirtualMachineRunner:
                 # Create VM based on GPU requirement
                 if gpu_required:
                     logger.info(
-                        f"Creating Azure virtual machine {vm_name} for task {task_id} *with* a GPU"
+                        f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} *with* a GPU"
                     )
                     await asyncio.to_thread(
                         self.vm_manager.create_gpu_vm, vm_name=vm_name
                     )
                 else:
                     logger.info(
-                        f"Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
+                        f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
                     )
                     await asyncio.to_thread(self.vm_manager.create_vm, vm_name=vm_name)
 
@@ -141,7 +143,7 @@ class VirtualMachineRunner:
                                     shutil.copy2(src_path, dest_full_path)
                             except Exception as e:
                                 logger.warning(
-                                    f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}"
+                                    f"Task {task_id}: Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}"
                                 )
 
                     # Copy setup script if it exists
@@ -155,7 +157,7 @@ class VirtualMachineRunner:
                             os.chmod(setup_script_dest, 0o755)
 
                     # Copy all files to VM
-                    logger.info(f"Copying files to VM {vm_name}")
+                    logger.info(f"Task {task_id}: Copying files to VM {vm_name}")
                     await asyncio.to_thread(
                         self.vm_manager.copy_files_to_vm,
                         vm_name,
@@ -189,7 +191,9 @@ class VirtualMachineRunner:
 
                 while time.time() - start_time < timeout:
                     try:
-                        logger.info(f"Checking task completion on VM {vm_name}")
+                        logger.info(
+                            f"Task {task_id}: Checking task completion on VM {vm_name}"
+                        )
                         # Fetch and store trace logs
                         await self.fetch_agent_logs(
                             vm_name=vm_name,
@@ -202,19 +206,25 @@ class VirtualMachineRunner:
                             vm_name,
                         )
                         if result is not None:
-                            logger.info(f"Task {task_id} completed on VM {vm_name}")
+                            logger.info(
+                                f"Task {task_id}: Task {task_id} completed on VM {vm_name}"
+                            )
                             break
                     except Exception as e:
-                        logger.error(f"Error checking task completion on {vm_name}: {e}")
+                        logger.error(
+                            f"Task {task_id}: Error checking task completion on {vm_name}: {e}"
+                        )
                     await asyncio.sleep(30)  # Check every 30 seconds
 
                 if result is None:
-                    logger.warning(f"Task {task_id} timed out after {timeout} seconds")
+                    logger.warning(f"Task {task_id}: timed out after {timeout} seconds")
                     return {task_id: f"TIMEOUT after {timeout} seconds"}
 
                 # Copy results back
                 if self.log_dir:
-                    logger.info(f"Copying results from VM {vm_name} to local directory")
+                    logger.info(
+                        f"Task {task_id}: Copying results from VM {vm_name} to local directory"
+                    )
                     dest_dir = os.path.join(self.log_dir, f"{task_id}")
                     os.makedirs(dest_dir, exist_ok=True)
                     await asyncio.to_thread(
@@ -237,7 +247,7 @@ class VirtualMachineRunner:
                     if progress and task is not None:
                         progress.update(task, advance=1)
                 except Exception as e:
-                    logger.error(f"Error deleting VM {vm_name}: {e}")
+                    logger.error(f"Task {task_id}: Error deleting VM {vm_name}: {e}")
 
         # Run tasks in parallel with semaphore to limit concurrency
         semaphore = asyncio.Semaphore(self.max_concurrent)

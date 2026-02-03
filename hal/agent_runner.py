@@ -244,8 +244,6 @@ class AgentRunner:
                 agent_args=self.agent_args,
                 run_id=self.run_id,
                 benchmark=self.benchmark,
-                task=None,
-                progress=None,
             )
 
             # If continuing run, merge with previous results
