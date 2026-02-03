@@ -4,6 +4,9 @@ runcmd:
     #!/bin/bash
     set -e
 
+    # Redirect all output to log file
+    exec > /home/agent/cloud_init.log 2>&1
+
     # Azure VM startup script for HAL agent execution
     # This runs on first boot via cloud-init
 
@@ -47,7 +50,7 @@ runcmd:
     source /home/agent/miniconda3/etc/profile.d/conda.sh
     conda create -y -n agent_env python=3.12
     conda activate agent_env
-    pip install weave==0.51.41 'gql<4'
+    pip install 'weave==0.51.41' 'gql<4' 'wandb==0.23.0'
     "
 
     # 8. Create sentinel file to signal completion
