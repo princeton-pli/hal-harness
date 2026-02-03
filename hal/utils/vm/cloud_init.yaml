@@ -1,0 +1,57 @@
+#cloud-config
+runcmd:
+  - |
+    #!/bin/bash
+    set -e
+
+    # Azure VM startup script for HAL agent execution
+    # This runs on first boot via cloud-init
+
+    echo "Starting VM initialization..."
+    touch /home/agent/startup_started
+    chown agent:agent /home/agent/startup_started
+
+    # 1. Update package lists
+    sudo apt-get update
+
+    # 2. Upgrade existing packages
+    sudo apt-get upgrade -y
+
+    # 3. Install Python 3 and pip
+    sudo apt-get install -y python3 python3-pip python3-venv
+
+    # 4. Install system dependencies
+    sudo apt-get install -y build-essential git curl wget
+
+    # 5. Install Miniconda
+    cd /tmp
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    bash miniconda.sh -b -p /home/agent/miniconda3
+    rm miniconda.sh
+
+    # Set up conda initialization
+    echo 'export PATH="/home/agent/miniconda3/bin:$PATH"' >> /home/agent/.bashrc
+    echo 'source /home/agent/miniconda3/etc/profile.d/conda.sh' >> /home/agent/init_conda.sh
+    chown agent:agent /home/agent/init_conda.sh
+    chown -R agent:agent /home/agent/miniconda3
+
+    # 6. Accept conda Terms of Service
+    sudo -u agent bash -c "
+    source /home/agent/miniconda3/etc/profile.d/conda.sh
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+    "
+
+    # 7. Create conda environment as agent user
+    sudo -u agent bash -c "
+    source /home/agent/miniconda3/etc/profile.d/conda.sh
+    conda create -y -n agent_env python=3.12
+    conda activate agent_env
+    pip install weave==0.51.41 'gql<4'
+    "
+
+    # 8. Create sentinel file to signal completion
+    touch /home/agent/startup_complete
+    chown agent:agent /home/agent/startup_complete
+
+    echo "VM initialization complete!"
