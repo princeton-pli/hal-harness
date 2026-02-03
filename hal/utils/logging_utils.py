@@ -10,7 +10,6 @@ from typing import Optional, Any, Dict
 import logging
 import sys
 import os
-import json
 from datetime import datetime
 
 # Create logger

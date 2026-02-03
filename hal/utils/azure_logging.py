@@ -44,7 +44,7 @@ def is_running_in_azure_vm() -> bool:
         response = requests.get(
             metadata_url,
             headers={"Metadata": "true"},
-            timeout=2  # Fast timeout - if not in Azure, fail quickly
+            timeout=2,  # Fast timeout - if not in Azure, fail quickly
         )
         return response.status_code == 200
     except Exception:
@@ -333,10 +333,11 @@ class AzureMonitorHandler(logging.Handler):
             # During shutdown, log error but don't raise to avoid hanging
             # This prevents Ctrl+C from hanging when Azure logging has permission issues
             import sys
+
             print(
                 f"\nWARNING: Failed to flush Azure Monitor logs during shutdown: {e}\n"
                 "Some logs may not have been uploaded to Azure.",
-                file=sys.stderr
+                file=sys.stderr,
             )
         finally:
             super().close()

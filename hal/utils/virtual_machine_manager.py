@@ -520,7 +520,6 @@ class VirtualMachineManager:
     @_retry_function()
     def copy_files_from_vm(self, vm_name, destination_directory):
         """Copy files from the VM to local directory."""
-        logger = _get_logger(vm_name)
         with self._get_sftp_client(
             vm_name,
             self.network_client,
@@ -556,7 +555,6 @@ class VirtualMachineManager:
     @_retry_function(max_attempts=2, initial_wait=5)
     def check_task_completion(self, vm_name):
         """Check if task is complete by checking for output.json file."""
-        logger = _get_logger(vm_name)
         task_completed_filename = "output.json"
         with self._get_sftp_client(
             vm_name,
