@@ -68,6 +68,7 @@ az deployment group create \
     --name "$VM_NAME-deployment" \
     --template-file "$TEMPLATE" \
     --parameters vmName="$VM_NAME" \
+    --parameters location="$AZURE_LOCATION" \
     --parameters networkSecurityGroupId="$NSG_ID" \
     --parameters sshPublicKey="$SSH_PUBLIC_KEY"
 

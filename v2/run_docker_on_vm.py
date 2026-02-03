@@ -1,28 +1,53 @@
-"""
-1. run bicep code to make the desired VM
-2. a docker file that is run on that VM and logs to Azure Monitor
-"""
+#!/usr/bin/env python3
 
-virtual_machine_count = 3
+"""Run Docker containers on Azure VMs."""
 
-run_id = random_hash
+import logging
+import uuid
 
-azure_manager = AzureManager(run_id=run_id)
+from azure_manager import AzureManager
 
-# tags resources with run_id
-network = azure_manager.create_network()
 
-# uses network that's already part of the instance now
-# tags resources with run_id
-# returns a list[AzureVirtualMachine] class
-virtual_machines = azure_manager.create_virtual_machines(
-    count=virtual_machine_count, use_gpu=False
-)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-for virtual_machine in virtual_machines:
-    virtual_machine.run_docker(
-        # TODO: add arguments here; for now skip
+
+def main():
+    """Main entry point for running Docker on Azure VMs."""
+    # Configuration
+    virtual_machine_count = 3
+    use_gpu = False
+
+    # Generate run ID
+    run_id = str(uuid.uuid4())
+    logger.info(
+        f"Starting run {run_id}. virtual_machine_count={virtual_machine_count}, use_gpu={use_gpu}"
     )
 
-logger.info(f"Triggered Docker runs for {virtual_machine_count} VMs")
-logger.info(f"Track detailled logs on {azure_manager.azure_monitor.url}")
+    # Initialize Azure manager
+    azure_manager = AzureManager(
+        run_id=run_id, virtual_machine_count=virtual_machine_count, use_gpu=use_gpu
+    )
+
+    try:
+        # Run Docker on each VM
+        for vm in azure_manager.virtual_machines:
+            vm.run_docker(
+                env_vars={
+                    "HAL_RUN_ID": run_id,
+                    "HAL_TASK_ID": f"task-{vm.name}",
+                    "HAL_AGENT_MODULE": "main",
+                    "HAL_AGENT_FUNCTION": "run",
+                }
+            )
+
+        logger.info(f"Triggered Docker runs for {virtual_machine_count} VMs")
+
+    finally:
+        # Cleanup VMs
+        logger.info("Cleaning up resources")
+        azure_manager.cleanup()
+
+
+if __name__ == "__main__":
+    main()
