@@ -3,6 +3,9 @@ from browsergym.assistantbench.evaluation.evaluator import question_scorer
 from .base_benchmark import BaseBenchmark
 from typing import Dict, Any
 from datasets import load_dataset
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 
 class AssistantBenchBenchmark(BaseBenchmark):
@@ -40,7 +43,7 @@ class AssistantBenchBenchmark(BaseBenchmark):
             try:
                 score, has_answer = question_scorer(agent_answer, gold_answer)
             except Exception as e:
-                print(f"Error scoring task {task_id}: {e}")
+                logger.error(f"Error scoring task {task_id}: {e}")
                 score = 0
                 has_answer = 0
             scores.append(score)

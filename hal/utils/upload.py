@@ -4,13 +4,10 @@ from huggingface_hub import HfApi
 from ..benchmark_manager import BenchmarkManager
 from dotenv import load_dotenv
 from .encryption import ZipEncryption
-from .logging_utils import (
-    print_header,
-    print_step,
-    print_success,
-    print_error,
-    create_progress,
-)
+from .logging_utils import create_progress
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 load_dotenv()
 
@@ -55,14 +52,14 @@ def find_upload_files(directory, require_upload_suffix=False):
 def upload_results(benchmark, file, directory):
     """Upload encrypted zip files to Hugging Face Hub. Use one of: -B (benchmark), -F (file), or -D (directory)."""
     try:
-        print_header("HAL Upload Results")
+        logger.info("=== HAL Upload Results ===")
 
         # Check that only one option is provided
         options_count = sum(
             1 for opt in [benchmark, file, directory] if opt is not None
         )
         if options_count != 1:
-            print_error(
+            logger.error(
                 "Please provide exactly one of: -B (benchmark), -F (file), or -D (directory)"
             )
             return
@@ -72,7 +69,7 @@ def upload_results(benchmark, file, directory):
         if benchmark:
             results_dir = os.path.join("results", benchmark)
             if not os.path.exists(results_dir):
-                print_error(f"Directory {results_dir} does not exist.")
+                logger.error(f"Directory {results_dir} does not exist.")
                 return
             file_paths = list(
                 find_upload_files(results_dir, require_upload_suffix=True)
@@ -80,7 +77,7 @@ def upload_results(benchmark, file, directory):
 
         elif file:
             if not file.endswith(".json"):
-                print_error("File must be a JSON file")
+                logger.error("File must be a JSON file")
                 return
             file_paths = [file]
 
@@ -88,10 +85,10 @@ def upload_results(benchmark, file, directory):
             file_paths = list(find_upload_files(directory, require_upload_suffix=True))
 
         if not file_paths:
-            print_error("No upload files found")
+            logger.error("No upload files found")
             return
 
-        print_step(f"Found {len(file_paths)} files to process")
+        logger.info(f"Found {len(file_paths)} files to process")
 
         # Create progress bar
         with create_progress() as progress:
@@ -123,12 +120,12 @@ def upload_results(benchmark, file, directory):
                         commit_message=f"Add encrypted results for {zip_name}.",
                     )
 
-                    print_success(
+                    logger.info(
                         f"\nSuccessfully uploaded encrypted results for {zip_name}"
                     )
 
                 except Exception as e:
-                    print_error(f"Error processing file {file_path}: {str(e)}")
+                    logger.error(f"Error processing file {file_path}: {str(e)}")
 
                 finally:
                     # Clean up temporary zip file
@@ -137,10 +134,10 @@ def upload_results(benchmark, file, directory):
 
                 progress.update(task, advance=1)
 
-        print_success("Upload process completed")
+        logger.info("Upload process completed")
 
     except Exception as e:
-        print_error(f"An error occurred during upload: {str(e)}")
+        logger.error(f"An error occurred during upload: {str(e)}")
         raise
 
 

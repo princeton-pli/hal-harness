@@ -2,21 +2,16 @@ import os
 import json
 import weave
 import time
+import logging
 from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
-from .utils.logging_utils import (
-    print_step,
-    print_error,
-    create_progress,
-    console,
-    print_warning,
-)
-from rich.table import Table
-from rich.box import ROUNDED
-from .utils.logging_utils import terminal_print
+
 from .utils.weave_utils import get_call_ids, delete_calls
+
+
+logger = logging.getLogger("agent_eval")
 
 
 class AgentRunner:
@@ -86,7 +81,7 @@ class AgentRunner:
 
         # Print warning if GPU tasks are present but not running on VM
         if has_gpu_task and not use_vm:
-            print_warning(
+            logger.warning(
                 "Warning: This benchmark contains tasks that require GPU, but is not being run on a VM. "
                 "GPU tasks may not work correctly without VM execution. Use the --vm flag to run on a VM."
             )
@@ -145,7 +140,7 @@ class AgentRunner:
         submissions_file = os.path.join(run_dir, f"{self.run_id}_RAW_SUBMISSIONS.jsonl")
 
         if not os.path.exists(submissions_file):
-            print("No previous submissions found, running all tasks")
+            logger.info("No previous submissions found, running all tasks")
             return dataset
 
         try:
@@ -165,7 +160,7 @@ class AgentRunner:
                             completed_tasks.add(task_id)
                         previous_output.update(submission)
                     except json.JSONDecodeError as e:
-                        print_warning(
+                        logger.warning(
                             f"Skipping malformed line in submissions file: {e}"
                         )
                         continue
@@ -180,14 +175,14 @@ class AgentRunner:
             return remaining_tasks
 
         except Exception as e:
-            print_error(f"Error loading previous submissions: {e}")
+            logger.error(f"Error loading previous submissions: {e}")
             return dataset
 
     async def run(self, agent_name: str, upload: bool = False) -> Dict[str, Any]:
         """Run the full agent evaluation pipeline"""
 
         # Initialize logging for main run
-        print_step("Initializing logging with W&B Weave...")
+        logger.info("Initializing logging with W&B Weave...")
         weave_client = weave.init(self.run_id)
 
         # Get dataset and filter for remaining tasks if continuing
@@ -199,31 +194,31 @@ class AgentRunner:
 
         # Limit the number of tasks if max_tasks is specified
         if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
-            print_step(f"Limiting to the first {self.max_tasks} tasks as requested")
+            logger.info(f"Limiting to the first {self.max_tasks} tasks as requested")
             task_ids = list(dataset.keys())[: self.max_tasks]
             dataset = {task_id: dataset[task_id] for task_id in task_ids}
 
         # delete previous calls from previous run if continuing for remaining tasks
         if self.continue_run and not self.ignore_errors:
-            print_step("Cleaning up calls from previous run...")
+            logger.info("Cleaning up calls from previous run...")
             for task_id in dataset:
                 call_ids = get_call_ids(task_id, weave_client)
                 if len(call_ids) > 0:
                     delete_calls(call_ids, weave_client)
 
         if not dataset:
-            print_warning("No remaining tasks to run")
+            logger.warning("No remaining tasks to run")
             # Load and return previous results
             results_path = os.path.join(
                 self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_UPLOAD.json"
             )
             if os.path.exists(results_path):
-                print_step("Loading previous results...")
+                logger.info("Loading previous results...")
                 with open(results_path) as f:
                     previous_results = json.load(f)
                 return previous_results["results"]
             else:
-                print_step(
+                logger.info(
                     "No previous results found. Running evaluation harness on previous raw submissions..."
                 )
                 # If continuing run, merge with previous results
@@ -242,21 +237,15 @@ class AgentRunner:
 
         else:
             # Run agent on all tasks
-            with create_progress() as progress:
-                task = progress.add_task(
-                    "Running agents... (check logs in results directory for more details)",
-                    total=len(dataset),
-                )
-                agent_output = await self.runner.run_agent(
-                    dataset=dataset,
-                    agent_function=self.agent_function,
-                    agent_dir=self.agent_dir,
-                    agent_args=self.agent_args,
-                    run_id=self.run_id,
-                    benchmark=self.benchmark,
-                    task=task,
-                    progress=progress,
-                )
+            logger.info(f"Running agents on {len(dataset)} tasks...")
+            agent_output = await self.runner.run_agent(
+                dataset=dataset,
+                agent_function=self.agent_function,
+                agent_dir=self.agent_dir,
+                agent_args=self.agent_args,
+                run_id=self.run_id,
+                benchmark=self.benchmark,
+            )
 
             # If continuing run, merge with previous results
             if self.continue_run:
@@ -272,30 +261,22 @@ class AgentRunner:
                                 submission = json.loads(line.strip())
                                 previous_output.update(submission)
                             except json.JSONDecodeError as e:
-                                print_warning(
+                                logger.warning(
                                     f"Skipping malformed line in submissions file: {e}"
                                 )
                                 continue
                     agent_output.update(previous_output)
 
-        print_step("Evaluating results...")
+        logger.info("Evaluating results...")
         # Create a temporary dataset with agent_output to check remaining tasks
         remaining = self.get_remaining_tasks(dataset)
         if len(remaining) > 0:
-            # Create a more informative error message
-            print_warning(f"Warning - {len(remaining)} tasks are incomplete")
-
-            # Create and display table of remaining tasks
-            table = Table(title="Incomplete Tasks", show_header=True, box=ROUNDED)
-            table.add_column("Task ID", style="cyan")
-
-            for task_id, task_data in remaining.items():
-                table.add_row(task_id)
-
-            with terminal_print():
-                console.print(table)
-
-            print_step(
+            # Log incomplete tasks
+            logger.warning(f"Warning - {len(remaining)} tasks are incomplete")
+            logger.info("Incomplete tasks:")
+            for task_id in remaining.keys():
+                logger.info(f"  - {task_id}")
+            logger.info(
                 "Use --continue-run flag to retry the remaining tasks. Exiting..."
             )
             # sys.exit(1)
@@ -305,7 +286,7 @@ class AgentRunner:
 
         eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
 
-        print_step("Processing results...")
+        logger.info("Processing results...")
         results = self.benchmark.process_results(
             agent_name=agent_name,
             run_id=self.run_id,

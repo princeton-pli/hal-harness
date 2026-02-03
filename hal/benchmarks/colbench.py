@@ -3,14 +3,15 @@ import json
 from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
 from sweet_rl.utils import code_evaluate
-
-
+import logging
 from PIL import Image
 from sweet_rl.utils.webpage_utils import get_driver, render_full_html
 from tqdm import tqdm
 from transformers import CLIPModel, CLIPProcessor
 import concurrent
 import torch
+
+logger = logging.getLogger("agent_eval")
 
 CODE_USER_PROMPT = """
 Your task is to simulate a human user that interacts with an LLM agent in a dialogue.
@@ -131,11 +132,11 @@ class ColBenchBenchmark(BaseBenchmark):
         answer_images = [a["answer"] for a in annotation_results]
         ground_truth_images = [a["task"]["ground_truth"] for a in annotation_results]
         drivers = []
-        print("Getting drivers")
+        logger.info("Getting drivers")
         with concurrent.futures.ThreadPoolExecutor() as executor:
             jobs = [executor.submit(get_driver) for i in range(evaluation_batch_size)]
             drivers = [job.result() for job in jobs]
-        print("Rendering images")
+        logger.info("Rendering images")
         rendered_images = []
         for i in tqdm(range(0, len(annotation_results), evaluation_batch_size)):
             actual_drivers = drivers[

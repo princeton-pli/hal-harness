@@ -1,8 +1,11 @@
 import weave
 from typing import Dict, Any, Tuple, List, Optional
-from .logging_utils import print_step, print_warning, console, create_progress
+from .logging_utils import create_progress
 from datetime import datetime
 from weave.trace_server.trace_server_interface import CallsFilter, CallsQueryReq
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 MODEL_PRICES_DICT = {
     "text-embedding-3-small": {"prompt_tokens": 0.02 / 1e6, "completion_tokens": 0},
@@ -494,7 +497,7 @@ def get_total_cost(client):
     token_usage = {}
 
     # Fetch all the calls in the project
-    print_step("Getting token usage data (this can take a while)...")
+    logger.info("Getting token usage data (this can take a while)...")
     calls = list(
         client.server.calls_query_stream(
             CallsQueryReq(
@@ -524,7 +527,7 @@ def get_total_cost(client):
                     for model, model_usage in entry.items()
                 ]
             else:
-                print_warning(
+                logger.warning(
                     f"Skipping unexpected usage payload of type {type(usage).__name__}"
                 )
                 progress.update(task, advance=1)
@@ -622,7 +625,7 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
     """Get processed Weave calls with progress tracking"""
-    print_step("Getting Weave traces (this can take a while)...")
+    logger.info("Getting Weave traces (this can take a while)...")
 
     # dict to store latency for each task
     latency_dict = {}
@@ -671,5 +674,5 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
             - datetime.fromisoformat(latency_dict[task_id]["first_call_timestamp"])
         ).total_seconds()
 
-    console.print(f"[green]Total Weave traces: {len(processed_calls)}[/]")
+    logger.info(f"Total Weave traces: {len(processed_calls)}")
     return processed_calls, latency_dict

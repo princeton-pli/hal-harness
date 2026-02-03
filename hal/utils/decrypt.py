@@ -3,20 +3,13 @@ import json
 from zipfile import ZipFile
 from pathlib import Path
 from typing import Optional
-from ..utils.logging_utils import (
-    print_step,
-    print_success,
-    print_error,
-    print_header,
-    create_progress,
-    console,
-)
-from rich.table import Table
-from rich.box import ROUNDED
+from ..utils.logging_utils import create_progress
+import logging
 from dotenv import load_dotenv
 import base64
 from .json_encryption import JsonEncryption
 
+logger = logging.getLogger("agent_eval")
 load_dotenv()
 
 
@@ -90,21 +83,14 @@ def decrypt_file(encrypted_file_path: Path, progress=None, task=None) -> None:
         if progress:
             progress.update(task, advance=1)
 
-        # Create summary table
-        table = Table(
-            title=f"Decryption Summary for {encrypted_file_path.name}", box=ROUNDED
-        )
-        table.add_column("Field", style="cyan")
-        table.add_column("Value", style="green")
-
-        table.add_row("Input File", str(encrypted_file_path))
-        table.add_row("Output File", str(output_path))
-        table.add_row("Status", "✓ Success")
-
-        console.print(table)
+        # Log summary
+        logger.info(f"Decryption Summary for {encrypted_file_path.name}")
+        logger.info(f"  Input File: {encrypted_file_path}")
+        logger.info(f"  Output File: {output_path}")
+        logger.info("  Status: Success")
 
     except Exception as e:
-        print_error(f"Error decrypting {encrypted_file_path}: {str(e)}")
+        logger.error(f"Error decrypting {encrypted_file_path}: {str(e)}")
         if progress:
             progress.update(task, description=f"Failed: {encrypted_file_path.name}")
         raise
@@ -121,10 +107,10 @@ def decrypt_directory(directory_path: Path) -> None:
     encrypted_files = list(directory_path.glob("*.zip"))
 
     if not encrypted_files:
-        print_error(f"No encrypted files found in {directory_path}")
+        logger.error(f"No encrypted files found in {directory_path}")
         return
 
-    print_step(f"Found {len(encrypted_files)} encrypted files")
+    logger.info(f"Found {len(encrypted_files)} encrypted files")
 
     # Create progress bar
     with create_progress() as progress:
@@ -136,7 +122,7 @@ def decrypt_directory(directory_path: Path) -> None:
             try:
                 decrypt_file(file_path, progress, main_task)
             except Exception as e:
-                print_error(f"Failed to decrypt {file_path}: {e}")
+                logger.error(f"Failed to decrypt {file_path}: {e}")
                 continue
 
         # Ensure progress bar completes
@@ -160,30 +146,30 @@ def decrypt_directory(directory_path: Path) -> None:
 )
 def decrypt_cli(file_path: Optional[str], directory_path: Optional[str]) -> None:
     """Decrypt files that were encrypted during upload to HAL."""
-    print_header("HAL Decrypt")
+    logger.info("HAL Decrypt")
 
     if not file_path and not directory_path:
-        print_error("Please provide either a file (-F) or directory (-D) to decrypt")
+        logger.error("Please provide either a file (-F) or directory (-D) to decrypt")
         return
 
     if file_path and directory_path:
-        print_error("Please provide either a file (-F) or directory (-D), not both")
+        logger.error("Please provide either a file (-F) or directory (-D), not both")
         return
 
     try:
         if file_path:
-            print_step(f"Decrypting single file: {file_path}")
+            logger.info(f"Decrypting single file: {file_path}")
             with create_progress() as progress:
                 task = progress.add_task("Decrypting...", total=1)
                 decrypt_file(Path(file_path), progress, task)
         else:
-            print_step(f"Decrypting all files in directory: {directory_path}")
+            logger.info(f"Decrypting all files in directory: {directory_path}")
             decrypt_directory(Path(directory_path))
 
-        print_success("Decryption completed successfully")
+        logger.info("Decryption completed successfully")
 
     except Exception as e:
-        print_error(f"Decryption failed: {str(e)}")
+        logger.error(f"Decryption failed: {str(e)}")
         return
 
 

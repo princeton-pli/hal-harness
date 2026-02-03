@@ -13,8 +13,7 @@ from ..benchmarks.base_benchmark import BaseBenchmark
 from rich.progress import Progress, TaskID
 from dotenv import dotenv_values
 
-# Get logger for verbose output
-verbose_logger = logging.getLogger("agent_eval.verbose")
+logger = logging.getLogger("agent_eval")
 
 # Define the docker image name
 DOCKER_IMAGE_NAME = "hal-agent-runner:latest"
@@ -50,12 +49,12 @@ class DockerRunner:
         """Check if Docker is available on the system"""
         try:
             version = self.docker_client.version()
-            verbose_logger.debug(
+            logger.debug(
                 f"Docker is available: {version.get('Version', 'unknown version')}"
             )
         except docker.errors.DockerException as e:
             error_message = "Docker is not available on this system. Please install Docker to use the Docker runner."
-            verbose_logger.debug(error_message)
+            logger.error(error_message)
             raise RuntimeError(error_message) from e
 
     def _ensure_docker_image(self) -> None:
@@ -64,9 +63,9 @@ class DockerRunner:
             # Check if the image already exists
             try:
                 self.docker_client.images.get(DOCKER_IMAGE_NAME)
-                verbose_logger.debug(f"Docker image {DOCKER_IMAGE_NAME} already exists")
+                logger.debug(f"Docker image {DOCKER_IMAGE_NAME} already exists")
             except docker.errors.ImageNotFound:
-                verbose_logger.debug(
+                logger.debug(
                     f"Docker image {DOCKER_IMAGE_NAME} not found, building it..."
                 )
 
@@ -80,7 +79,7 @@ class DockerRunner:
                     )
 
                 # Build the Docker image
-                verbose_logger.debug(f"Building Docker image from {dockerfile_path}")
+                logger.debug(f"Building Docker image from {dockerfile_path}")
 
                 _, build_logs = self.docker_client.images.build(
                     path=dockerfile_dir,
@@ -90,17 +89,17 @@ class DockerRunner:
 
                 for log in build_logs:
                     if "stream" in log:
-                        verbose_logger.debug(log["stream"].strip())
+                        logger.debug(log["stream"].strip())
 
-                verbose_logger.debug("Docker image built successfully")
+                logger.debug("Docker image built successfully")
 
         except docker.errors.DockerException as e:
             error_message = f"Failed to build Docker image: {str(e)}"
-            verbose_logger.debug(error_message)
+            logger.debug(error_message)
             raise RuntimeError(error_message) from e
         except Exception as e:
             error_message = f"Error ensuring Docker image: {str(e)}"
-            verbose_logger.debug(error_message)
+            logger.debug(error_message)
             raise RuntimeError(error_message) from e
 
     async def run_agent(
@@ -160,7 +159,7 @@ class DockerRunner:
                     # container.stop()
                     # container.remove()
                 except (docker.errors.NotFound, docker.errors.APIError) as e:
-                    verbose_logger.debug(
+                    logger.debug(
                         f"Warning: Failed to cleanup container {container_id}: {e}"
                     )
 
@@ -178,7 +177,7 @@ class DockerRunner:
     ) -> Optional[Dict[str, Any]]:
         """Process a single task with semaphore control"""
         async with self._semaphore:
-            verbose_logger.debug(
+            logger.debug(
                 f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})"
             )
             result = await self._run_single_task(
@@ -201,7 +200,7 @@ class DockerRunner:
             if progress and task is not None:
                 progress.update(task, advance=1)
 
-            verbose_logger.debug(f"Completed task {task_id}")
+            logger.debug(f"Completed task {task_id}")
             return result
 
     async def _run_single_task(
@@ -244,7 +243,7 @@ class DockerRunner:
                         else:
                             shutil.copy2(src_path, dest_full_path)
                     except Exception as e:
-                        verbose_logger.debug(
+                        logger.debug(
                             f"Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}"
                         )
 
@@ -278,12 +277,14 @@ class DockerRunner:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
+
+            # FIXME: consider logging this to a different log group
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # create env
             create_env_cmd = (
@@ -304,9 +305,9 @@ class DockerRunner:
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # install requirements
             proc = await asyncio.create_subprocess_exec(
@@ -322,16 +323,16 @@ class DockerRunner:
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # Get current environment variables
             env_vars = os.environ.copy()
 
             # run setup script if it exists
             if self.benchmark and self.benchmark.setup_script:
-                print(f"Running setup script: {self.benchmark.setup_script}")
+                logger.info(f"Running setup script: {self.benchmark.setup_script}")
                 setup_script_src = Path(self.benchmark.setup_script)
                 if setup_script_src.exists():
                     # copy setup script to container
@@ -346,13 +347,9 @@ class DockerRunner:
                     stdout, stderr = await proc.communicate()
                     if self.verbose:
                         if stdout:
-                            verbose_logger.debug(
-                                f"Container {container_id}: {stdout.decode()}"
-                            )
+                            logger.info(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
-                        verbose_logger.debug(
-                            f"Container {container_id}: {stderr.decode()}"
-                        )
+                        logger.info(f"Container {container_id}: {stderr.decode()}")
 
                     # run setup script and wait for it to complete
                     proc = await asyncio.create_subprocess_exec(
@@ -367,13 +364,9 @@ class DockerRunner:
                     stdout, stderr = await proc.communicate()
                     if self.verbose:
                         if stdout:
-                            verbose_logger.debug(
-                                f"Container {container_id}: {stdout.decode()}"
-                            )
+                            logger.info(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
-                        verbose_logger.debug(
-                            f"Container {container_id}: {stderr.decode()}"
-                        )
+                        logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # install weave
             proc = await asyncio.create_subprocess_exec(
@@ -389,9 +382,9 @@ class DockerRunner:
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # Run the script and capture output with timeout handling
             start_time = time.time()
@@ -399,7 +392,7 @@ class DockerRunner:
             # get env vars from .env file
             env_vars = dotenv_values(".env")
             env_vars_str = " ".join([f"{k}={v}" for k, v in env_vars.items()])
-            print(f"Running script with env: {env_vars_str}")
+            logger.info(f"Running script with env: {env_vars_str}")
 
             proc = await asyncio.create_subprocess_exec(
                 "docker",
@@ -413,9 +406,9 @@ class DockerRunner:
             )
             stdout, stderr = await proc.communicate()
             if stdout:
-                verbose_logger.debug(f"Container {container_id}: {stdout.decode()}")
+                logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                verbose_logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # Poll for output.json with timeout
             result = None
@@ -436,13 +429,9 @@ class DockerRunner:
                     )
                     stdout, stderr = await proc.communicate()
                     if stdout:
-                        verbose_logger.debug(
-                            f"Container {container_id}: {stdout.decode()}"
-                        )
+                        logger.info(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
-                        verbose_logger.debug(
-                            f"Container {container_id}: {stderr.decode()}"
-                        )
+                        logger.info(f"Container {container_id}: {stderr.decode()}")
 
                     # Load and return results
                     with open(temp_dir / "output.json") as f:
@@ -452,16 +441,14 @@ class DockerRunner:
                 await asyncio.sleep(30)  # Check every 30 seconds
 
             if result is None:
-                verbose_logger.debug(
-                    f"Task {task_id} timed out after {timeout} seconds"
-                )
+                logger.debug(f"Task {task_id} timed out after {timeout} seconds")
                 return {task_id: f"TIMEOUT after {timeout} seconds"}
 
             return result
 
         except Exception as e:
             error_msg = f"Error processing task {task_id}: {e}"
-            verbose_logger.debug(error_msg)
+            logger.debug(error_msg)
             return {task_id: f"ERROR: {str(e)}"}
 
         finally:
@@ -487,7 +474,7 @@ class DockerRunner:
 
             except Exception as e:
                 error_msg = f"Warning: Failed to cleanup for task {task_id}: {e}"
-                verbose_logger.debug(error_msg)
+                logger.debug(error_msg)
 
     def _create_runner_script(
         self, agent_function: str, task_id: str, run_id: str

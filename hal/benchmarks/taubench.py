@@ -1,5 +1,8 @@
 from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
+import logging
+
+logger = logging.getLogger("agent_eval")
 
 
 class TauBenchBenchmark(BaseBenchmark):
@@ -70,7 +73,7 @@ class TauBenchBenchmark(BaseBenchmark):
             try:
                 reward += task_output["reward"]
             except TypeError:
-                print(f"Task {task_id} does not have a reward. Skipping...")
+                logger.warning(f"Task {task_id} does not have a reward. Skipping...")
 
         number_of_tasks = len(self.benchmark)
 

@@ -5,8 +5,11 @@ from pathlib import Path
 from typing import Dict, Any
 from datasets import load_dataset
 import docker
+import logging
 
 from .base_benchmark import BaseBenchmark
+
+logger = logging.getLogger("agent_eval")
 
 
 class SciCodeBenchmark(BaseBenchmark):
@@ -63,7 +66,7 @@ class SciCodeBenchmark(BaseBenchmark):
                 try:
                     _ = subtasks.items()
                 except Exception as e:
-                    print(f"Error processing {problem_id}: {e}")
+                    logger.error(f"Error processing {problem_id}: {e}")
                     continue
                 for subtask, code_content in subtasks.items():
                     parts = subtask.split(".")
@@ -104,15 +107,15 @@ class SciCodeBenchmark(BaseBenchmark):
 
         try:
             # Install required dependencies inside the container.
-            print("Installing dependencies inside the container...")
+            logger.info("Installing dependencies inside the container...")
             install_result = container.exec_run(
                 "pip install -e .", stream=True, demux=True
             )
             for stdout, stderr in install_result.output:
                 if stdout:
-                    print(stdout.decode(), end="")
+                    logger.info(stdout.decode().rstrip())
                 if stderr:
-                    print(stderr.decode(), end="")
+                    logger.info(stderr.decode().rstrip())
 
             # Helper function to execute a Python script inside the container.
             def run_script(script_path: Path) -> int:
@@ -125,15 +128,15 @@ class SciCodeBenchmark(BaseBenchmark):
                 try:
                     result = container.exec_run(cmd, demux=True)
                     if result.exit_code == 124:
-                        print(
+                        logger.warning(
                             f"Timeout running script [{script_path.name}] after 60 seconds"
                         )
                         return 2
                     elif result.exit_code == 0:
-                        print(f"Successfully executed script: {script_path.name}")
+                        logger.info(f"Successfully executed script: {script_path.name}")
                         return 0
                     else:
-                        print(
+                        logger.error(
                             f"Error running script [{script_path.name}]: exit code {result.exit_code}"
                         )
                         stdout, stderr = result.output
@@ -142,14 +145,14 @@ class SciCodeBenchmark(BaseBenchmark):
                             if stderr and isinstance(stderr, bytes)
                             else stderr
                         )
-                        print(
+                        logger.error(
                             f"Error running script [{script_path.name}]: exit code {result.exit_code}"
                         )
                         if error_message:
-                            print("Error message:", error_message)
+                            logger.error(f"Error message: {error_message}")
                         return 1
                 except Exception as e:
-                    print(f"Exception running script [{script_path.name}]: {e}")
+                    logger.error(f"Exception running script [{script_path.name}]: {e}")
                     return 1
 
             # Initialize a dictionary to track outcomes.
