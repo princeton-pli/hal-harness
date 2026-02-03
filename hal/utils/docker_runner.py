@@ -277,12 +277,14 @@ class DockerRunner:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
+
+            # FIXME: consider logging this to a different log group
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # create env
             create_env_cmd = (
@@ -303,9 +305,9 @@ class DockerRunner:
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # install requirements
             proc = await asyncio.create_subprocess_exec(
@@ -321,9 +323,9 @@ class DockerRunner:
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # Get current environment variables
             env_vars = os.environ.copy()
@@ -345,9 +347,9 @@ class DockerRunner:
                     stdout, stderr = await proc.communicate()
                     if self.verbose:
                         if stdout:
-                            logger.debug(f"Container {container_id}: {stdout.decode()}")
+                            logger.info(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
-                        logger.debug(f"Container {container_id}: {stderr.decode()}")
+                        logger.info(f"Container {container_id}: {stderr.decode()}")
 
                     # run setup script and wait for it to complete
                     proc = await asyncio.create_subprocess_exec(
@@ -362,9 +364,9 @@ class DockerRunner:
                     stdout, stderr = await proc.communicate()
                     if self.verbose:
                         if stdout:
-                            logger.debug(f"Container {container_id}: {stdout.decode()}")
+                            logger.info(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
-                        logger.debug(f"Container {container_id}: {stderr.decode()}")
+                        logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # install weave
             proc = await asyncio.create_subprocess_exec(
@@ -380,9 +382,9 @@ class DockerRunner:
             stdout, stderr = await proc.communicate()
             if self.verbose:
                 if stdout:
-                    logger.debug(f"Container {container_id}: {stdout.decode()}")
+                    logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # Run the script and capture output with timeout handling
             start_time = time.time()
@@ -404,9 +406,9 @@ class DockerRunner:
             )
             stdout, stderr = await proc.communicate()
             if stdout:
-                logger.debug(f"Container {container_id}: {stdout.decode()}")
+                logger.info(f"Container {container_id}: {stdout.decode()}")
             if stderr:
-                logger.debug(f"Container {container_id}: {stderr.decode()}")
+                logger.info(f"Container {container_id}: {stderr.decode()}")
 
             # Poll for output.json with timeout
             result = None
@@ -427,9 +429,9 @@ class DockerRunner:
                     )
                     stdout, stderr = await proc.communicate()
                     if stdout:
-                        logger.debug(f"Container {container_id}: {stdout.decode()}")
+                        logger.info(f"Container {container_id}: {stdout.decode()}")
                     if stderr:
-                        logger.debug(f"Container {container_id}: {stderr.decode()}")
+                        logger.info(f"Container {container_id}: {stderr.decode()}")
 
                     # Load and return results
                     with open(temp_dir / "output.json") as f:

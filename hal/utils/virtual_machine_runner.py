@@ -37,23 +37,27 @@ class VirtualMachineRunner:
         try:
             result = await asyncio.to_thread(self.vm_manager.get_agent_trace, vm_name)
 
-            if result and self.log_dir:
-                trace_dir = os.path.join(self.log_dir, "agent_logs")
-                os.makedirs(trace_dir, exist_ok=True)
+            if result:
+                # Log the agent output through logger
+                logger.info(f"Agent output for task {task_id} on VM {vm_name}:\n{result}")
 
-                # Write/update the trace file
-                trace_path = os.path.join(trace_dir, f"{task_id}_log.log")
-                with open(trace_path, "w") as f:
-                    f.write(result)
+                if self.log_dir:
+                    trace_dir = os.path.join(self.log_dir, "agent_logs")
+                    os.makedirs(trace_dir, exist_ok=True)
 
-                # Also write to a combined trace file
-                combined_path = os.path.join(trace_dir, "combined_logs.log")
-                with open(combined_path, "a") as f:
-                    f.write(
-                        f"\n=== {task_id} @ {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n"
-                    )
-                    f.write(result)
-                    f.write("\n")
+                    # Write/update the trace file
+                    trace_path = os.path.join(trace_dir, f"{task_id}_log.log")
+                    with open(trace_path, "w") as f:
+                        f.write(result)
+
+                    # Also write to a combined trace file
+                    combined_path = os.path.join(trace_dir, "combined_logs.log")
+                    with open(combined_path, "a") as f:
+                        f.write(
+                            f"\n=== {task_id} @ {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n"
+                        )
+                        f.write(result)
+                        f.write("\n")
 
         except Exception as e:
             logger.error(f"Error fetching logs for {task_id}: {e}")

@@ -6,17 +6,12 @@ from rich.progress import (
     BarColumn,
     TaskProgressColumn,
 )
-from rich.table import Table
 from typing import Optional, Any, Dict
 import logging
 import sys
 import os
 import json
 from datetime import datetime
-from rich.box import ROUNDED
-
-# Initialize rich console for terminal output
-console = Console()
 
 # Create logger
 logger = logging.getLogger("agent_eval")
@@ -147,9 +142,7 @@ def create_progress() -> Progress:
 
 def _print_results_table(results: dict[str, Any]) -> None:
     """Helper function to print results table to console"""
-    table = Table(title="Evaluation Results")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Value", style="green")
+    logger.info("=== Evaluation Results ===")
 
     # Handle both direct results dict and nested results structure
     metrics_dict = (
@@ -163,25 +156,23 @@ def _print_results_table(results: dict[str, Any]) -> None:
                 formatted_value = (
                     f"{value:.6f}" if isinstance(value, float) else str(value)
                 )
-                table.add_row(key, formatted_value)
+                logger.info(f"  {key}: {formatted_value}")
             elif (
                 isinstance(value, str)
                 and key not in ["status", "message", "traceback"]
                 and value
             ):
-                table.add_row(key, value)
+                logger.info(f"  {key}: {value}")
             elif key == "successful_tasks" and value:
-                table.add_row("successful_tasks", str(len(value)))
+                logger.info(f"  successful_tasks: {len(value)}")
             elif key == "failed_tasks" and value:
-                table.add_row("failed_tasks", str(len(value)))
+                logger.info(f"  failed_tasks: {len(value)}")
             elif key == "latencies" and value:
                 # compute average total_time across all tasks
                 total_time = 0
                 for _, latency in value.items():
                     total_time += latency["total_time"]
-                table.add_row("average_total_time", str(total_time / len(value)))
-
-    console.print(table)
+                logger.info(f"  average_total_time: {total_time / len(value)}")
 
 
 def print_results_table(results: dict[str, Any]) -> None:
@@ -226,17 +217,7 @@ def print_results_table(results: dict[str, Any]) -> None:
 
 def print_run_summary(run_id: str, log_dir: str) -> None:
     """Log run summary information"""
-    summary = Table(title="Run Summary", show_header=False, box=None)
-    summary.add_column("Key", style="cyan")
-    summary.add_column("Value", style="white")
-
-    summary.add_row("Run ID", run_id)
-    summary.add_row("Log Directory", log_dir)
-
-    console.print(summary)
-
-    # Log to file
-    logger.info("Run Summary:")
+    logger.info("=== Run Summary ===")
     logger.info(f"  Run ID: {run_id}")
     logger.info(f"  Log Directory: {log_dir}")
 
@@ -260,69 +241,33 @@ def print_run_config(
     ignore_errors: bool = False,
 ) -> None:
     """Print a formatted table with the run configuration"""
-    table = Table(title="Run Configuration", show_header=False, box=ROUNDED)
-    table.add_column("Parameter", style="cyan")
-    table.add_column("Value", style="white")
-
-    # Add core parameters
-    table.add_row("Run ID", run_id)
-    table.add_row("Benchmark", benchmark)
-    table.add_row("Agent Name", agent_name)
-    table.add_row("Agent Function", agent_function)
-    table.add_row("Agent Directory", agent_dir)
-    table.add_row("Log Directory", log_dir)
-    table.add_row("Max Concurrent", str(max_concurrent))
-    table.add_row("Upload Results", "✓" if upload else "✗")
-    table.add_row("VM Execution", "✓" if vm else "✗")
-    table.add_row("Docker Execution", "✓" if docker else "✗")
-    table.add_row("Continue Previous Run", "✓" if continue_run else "✗")
-    table.add_row("Ignore Errors", "✓" if ignore_errors else "✗")
-
-    if conda_env_name:
-        table.add_row("Conda Environment", conda_env_name)
-
-    # Add agent arguments if present
-    if agent_args:
-        table.add_section()
-        table.add_row("Agent Arguments", "")
-        for key, value in agent_args.items():
-            table.add_row(f"  {key}", str(value))
-
-    # Add benchmark arguments if present
-    if benchmark_args:
-        table.add_section()
-        table.add_row("Benchmark Arguments", "")
-        for key, value in benchmark_args.items():
-            table.add_row(f"  {key}", str(value))
-
-    # Add inspect eval arguments if present
-    if inspect_eval_args:
-        table.add_section()
-        table.add_row("Inspect Eval Arguments", "")
-        for key, value in inspect_eval_args.items():
-            table.add_row(f"  {key}", str(value))
-
-    console.print(table)
-
-    # Also log the configuration to file
-    logger.info("Run Configuration:")
+    logger.info("=== Run Configuration ===")
     logger.info(f"  Run ID: {run_id}")
     logger.info(f"  Benchmark: {benchmark}")
     logger.info(f"  Agent Name: {agent_name}")
     logger.info(f"  Agent Function: {agent_function}")
-    logger.info(f"  Upload Results: {upload}")
+    logger.info(f"  Agent Directory: {agent_dir}")
     logger.info(f"  Log Directory: {log_dir}")
-    logger.info(f"  VM Execution: {vm}")
-    logger.info(f"  Docker Execution: {docker}")
-    logger.info(f"  Continue Previous Run: {continue_run}")
+    logger.info(f"  Max Concurrent: {max_concurrent}")
+    logger.info(f"  Upload Results: {'Yes' if upload else 'No'}")
+    logger.info(f"  VM Execution: {'Yes' if vm else 'No'}")
+    logger.info(f"  Docker Execution: {'Yes' if docker else 'No'}")
+    logger.info(f"  Continue Previous Run: {'Yes' if continue_run else 'No'}")
+    logger.info(f"  Ignore Errors: {'Yes' if ignore_errors else 'No'}")
+
+    if conda_env_name:
+        logger.info(f"  Conda Environment: {conda_env_name}")
+
     if agent_args:
         logger.info("  Agent Arguments:")
         for key, value in agent_args.items():
             logger.info(f"    {key}: {value}")
+
     if benchmark_args:
         logger.info("  Benchmark Arguments:")
         for key, value in benchmark_args.items():
             logger.info(f"    {key}: {value}")
+
     if inspect_eval_args:
         logger.info("  Inspect Eval Arguments:")
         for key, value in inspect_eval_args.items():

@@ -258,15 +258,12 @@ class LocalRunner:
 
             stdout, stderr = await process.communicate()
 
+            # FIXME: consider logging this to a different log group
             # Log agent output
             if stdout:
-                logger.debug(
-                    f"Agent stdout for task {task_id}:\n{stdout.decode()}"
-                )
+                logger.info(f"Agent stdout for task {task_id}:\n{stdout.decode()}")
             if stderr:
-                logger.debug(
-                    f"Agent stderr for task {task_id}:\n{stderr.decode()}"
-                )
+                logger.info(f"Agent stderr for task {task_id}:\n{stderr.decode()}")
 
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
