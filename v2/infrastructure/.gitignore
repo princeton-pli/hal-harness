@@ -1,0 +1,10 @@
+# Bicep build outputs
+*.json
+
+# Parameters files with secrets (if you create them)
+*.parameters.json
+*-parameters.json
+
+# Azure deployment files
+.azure/
+deploymentStacks/
