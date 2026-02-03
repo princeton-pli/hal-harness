@@ -207,7 +207,6 @@ class VirtualMachineManager:
     def compress_and_copy_files_to_vm(self, vm_name, source_directory):
         """Copy files from a local directory to the VM."""
         logger = _get_logger(vm_name)
-        username = "agent"
         try:
             # Compress the source directory
             source_directory = os.path.abspath(source_directory)
@@ -222,7 +221,7 @@ class VirtualMachineManager:
             tar_size = os.path.getsize(tar_file_path)
 
             # Copy the compressed file to the VM
-            remote_tar_file_path = f"/home/{username}/{os.path.basename(tar_file_path)}"
+            remote_tar_file_path = f"/home/agent/{os.path.basename(tar_file_path)}"
             with self._get_sftp_client(
                 vm_name,
                 self.network_client,
@@ -234,7 +233,7 @@ class VirtualMachineManager:
                 # Extract the compressed file on the VM
                 logger.info("Extracting files on the VM")
                 _, stdout, stderr = ssh_client.exec_command(
-                    f"tar -xzf {remote_tar_file_path} --strip-components=1 -C /home/{username}"
+                    f"tar -xzf {remote_tar_file_path} --strip-components=1 -C /home/agent"
                 )
 
                 # Block until the tar command completes and check for errors
@@ -293,24 +292,19 @@ class VirtualMachineManager:
             # sftp_client.remove(remote_tar_file_path)
             os.remove(f"{destination_directory}.tar.gz")
 
-    def check_task_completion(self, vm_name):
-        """Check if task is complete by checking for output.json file."""
-        task_completed_filename = "output.json"
-        with self._get_sftp_client(
-            vm_name,
-            self.network_client,
-            self.resource_group_name,
-        ) as (sftp_client, _):
-            # Check for task completion via existence of output.json
-            task_completed_filepath = f"/home/agent/{task_completed_filename}"
+    def check_task_completion(self, vm_name: str) -> bool:
+        """
+        Check if task is complete by checking for output.json file.
 
-            try:
-                with sftp_client.open(task_completed_filepath) as file:
-                    result = json.loads(file.read().decode("utf-8"))
-            except FileNotFoundError:
-                result = None  # output.json does not exist
-
-            return result
+        :param self: the virtual machine manager
+        :param vm_name: the virtual machine whose task we want to check
+        :type vm_name: str
+        :return: whether or not the task is complete
+        :rtype: bool
+        """
+        task_completed_filepath = "/home/agent/output.json"
+        vm = self._vms[vm_name]
+        return vm.check_for_file_presence_by_path(task_completed_filepath)
 
     def run_agent_on_vm(
         self,
@@ -417,6 +411,8 @@ class VirtualMachineManager:
                 # * All variables should be sent as ENV vars or via files or similar, *not*
                 # * via string interpoloation
 
+                # FIXME: Claude -- let's (1) take the variables out here and append them to the .env file and then (2) move this file out into 'run_agent.py' in the vm dir with a comprehensive docstring and pulling the env vars, failing loudly if they're not present, and using doenv to get the env vars out
+
                 # Create Python script for agent execution
                 script_content = f'''#!/usr/bin/env python3
 import os
@@ -424,6 +420,7 @@ import json
 import importlib.util
 import weave
 import traceback
+# FIXME: use proper logging here, e.g., Azure logging
 
 try:
     weave.init("{run_id}")

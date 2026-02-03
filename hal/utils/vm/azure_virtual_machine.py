@@ -49,6 +49,31 @@ class AzureVirtualMachine:
         # Create the VM
         self._create()
 
+    def check_for_file_presence_by_path(self, file_path: str) -> bool:
+        """
+        Checks if a file is present on the virtual machine.
+
+        :param self: the virtual machine
+        :param file_path: the file path to check
+        :type file_path: str
+        :return: whether or not the file is present
+        :rtype: bool
+        """
+        cmd = [
+            "ssh",
+            "-i",
+            file_path,
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "ConnectTimeout=5",
+            f"agent@{self.public_ip}",
+            "test -f /home/agent/startup_complete",
+        ]
+        result = subprocess.run(cmd, capture_output=True)
+
+        return result.returncode == 0
+
     def _create(self) -> None:
         """Create VM using Azure SDK."""
         logger.info(
@@ -189,28 +214,11 @@ class AzureVirtualMachine:
 
         logger.info(f"Waiting for startup script to complete on {self.name} (~3 min)")
         while time.time() - start_time < timeout:
-            try:
-                # Check if sentinel file exists
-                cmd = [
-                    "ssh",
-                    "-i",
-                    ssh_key_path,
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "ConnectTimeout=5",
-                    f"agent@{self.public_ip}",
-                    "test -f /home/agent/startup_complete",
-                ]
-                result = subprocess.run(cmd, capture_output=True)
-
-                if result.returncode == 0:
-                    logger.info(
-                        f"Startup script completed on {self.name} at {self.public_ip}"
-                    )
-                    return
-            except Exception:
-                pass
+            if self.check_for_file_presence_by_path(ssh_key_path):
+                logger.info(
+                    f"Startup script completed on {self.name} at {self.public_ip}"
+                )
+                return
 
             time.sleep(10)
 
