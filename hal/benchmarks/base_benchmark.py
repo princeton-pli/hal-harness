@@ -8,7 +8,7 @@ from ..utils.weave_utils import get_total_cost, get_weave_calls
 from ..utils.utils import make_json_serializable, get_git_info
 import logging
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class BaseBenchmark(ABC):

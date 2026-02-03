@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import base64
 from .json_encryption import JsonEncryption
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 

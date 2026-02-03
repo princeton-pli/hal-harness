@@ -11,7 +11,7 @@ from transformers import CLIPModel, CLIPProcessor
 import concurrent
 import torch
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 CODE_USER_PROMPT = """
 Your task is to simulate a human user that interacts with an LLM agent in a dialogue.

@@ -206,14 +206,7 @@ class VirtualMachineManager:
             subscription_id=self.subscription_id,
             nsg_id=self.nsg_id,
             ssh_public_key=self.ssh_public_key,
-            # FIXME: toggle to True
-            # FIXME: toggle to True
-            # FIXME: toggle to True
-            gpu=False,
-            # FIXME: toggle to True
-            # FIXME: toggle to True
-            # FIXME: toggle to True
-            # gpu=True,
+            gpu=True,
         )
 
         # Store for tracking
@@ -291,39 +284,35 @@ class VirtualMachineManager:
             except Exception as e:
                 logger.error(f"Failed to delete virtual network {vnet_name}: {str(e)}")
 
-    def copy_files_to_vm(self, vm_name, source_directory):
+    def compress_and_copy_files_to_vm(self, vm_name, source_directory):
         """Copy files from a local directory to the VM."""
         logger = _get_logger(vm_name)
         username = "agent"
         try:
+            # Compress the source directory
+            source_directory = os.path.abspath(source_directory)
+            tar_file_path = f"{source_directory}.tar.gz"
+
+            logger.info(
+                f"Creating tar archive from {source_directory} in {tar_file_path}"
+            )
+            with tarfile.open(tar_file_path, "w:gz") as tar:
+                tar.add(source_directory, arcname=os.path.basename(source_directory))
+
+            tar_size = os.path.getsize(tar_file_path)
+
+            # Copy the compressed file to the VM
+            remote_tar_file_path = f"/home/{username}/{os.path.basename(tar_file_path)}"
             with self._get_sftp_client(
                 vm_name,
                 self.network_client,
                 self.resource_group_name,
             ) as (sftp_client, ssh_client):
-                # Compress the source directory
-                source_directory = os.path.abspath(source_directory)
-                tar_file_path = f"{source_directory}.tar.gz"
-
-                logger.debug(
-                    f"Creating tar archive from {source_directory} in {tar_file_path}"
-                )
-                with tarfile.open(tar_file_path, "w:gz") as tar:
-                    tar.add(
-                        source_directory, arcname=os.path.basename(source_directory)
-                    )
-
-                tar_size = os.path.getsize(tar_file_path)
                 logger.info(f"Uploading {tar_size} bytes")
-
-                # Copy the compressed file to the VM
-                remote_tar_file_path = (
-                    f"/home/{username}/{os.path.basename(tar_file_path)}"
-                )
                 sftp_client.put(tar_file_path, remote_tar_file_path)
 
                 # Extract the compressed file on the VM
-                logger.info("Extracting files")
+                logger.info("Extracting files on the VM")
                 _, stdout, stderr = ssh_client.exec_command(
                     f"tar -xzf {remote_tar_file_path} --strip-components=1 -C /home/{username}"
                 )

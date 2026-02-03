@@ -7,7 +7,7 @@ import types
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Callable
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 # Conservative list of retryable errors. We will have to expand this list over time.
 RETRYABLE_ERRORS = [

@@ -13,7 +13,7 @@ from azure.identity import DefaultAzureCredential
 from .utils import run_command
 
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class AzureVirtualMachine:

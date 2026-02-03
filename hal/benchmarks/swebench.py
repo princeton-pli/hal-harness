@@ -6,7 +6,7 @@ from datasets import load_dataset
 import subprocess
 import logging
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class SWEBenchBenchmark(BaseBenchmark):

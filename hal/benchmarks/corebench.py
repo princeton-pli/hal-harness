@@ -12,7 +12,7 @@ import logging
 from hal.utils.logging_utils import create_progress
 from .base_benchmark import BaseBenchmark
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class CoreBench(BaseBenchmark):

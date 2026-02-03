@@ -10,7 +10,7 @@ from hal.benchmarks.base_benchmark import BaseBenchmark
 from hal.utils.retry_handler import add_retry_to_runner
 from rich.progress import Progress, TaskID
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class LocalRunner:

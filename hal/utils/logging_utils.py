@@ -13,7 +13,7 @@ import os
 from datetime import datetime
 
 # Create logger
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
@@ -31,18 +31,24 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     # Create log file path
     log_file = os.path.join(log_dir, f"{os.path.basename(run_id)}.log")
 
-    # Configure logger
-    logger.setLevel(logging.INFO)
+    # Configure root logger (so all child loggers inherit)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
 
     # Remove any existing handlers
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Suppress verbose Azure SDK logging
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
+        logging.WARNING
+    )
 
     # Create formatters
     detailed_formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    simple_formatter = logging.Formatter("%(message)s")
+    console_formatter = logging.Formatter("%(name)s: %(message)s")
 
     # File handler (info and above)
     file_handler = logging.FileHandler(log_file)
@@ -52,11 +58,11 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     # Console handler (info and above)
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(simple_formatter)
+    console_handler.setFormatter(console_formatter)
 
-    # Add handlers
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+    # Add handlers to root logger
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(console_handler)
 
     # Add Azure Monitor handler for VM runs
     # IMPORTANT: Only enable Azure logging if actually running INSIDE an Azure VM
@@ -95,7 +101,7 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
                     stream_name=stream_name,
                 )
                 azure_handler.setLevel(logging.INFO)  # Send INFO+ to Azure
-                logger.addHandler(azure_handler)
+                root_logger.addHandler(azure_handler)
 
                 logger.info("Azure Monitor logging enabled (running in Azure VM)")
 

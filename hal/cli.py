@@ -21,7 +21,7 @@ from .utils.logging_utils import (
 import traceback
 from datetime import datetime
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 

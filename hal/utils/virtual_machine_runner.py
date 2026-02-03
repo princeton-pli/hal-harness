@@ -12,7 +12,7 @@ from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
 
 # Set up loggers
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class VirtualMachineRunner:
@@ -154,16 +154,24 @@ class VirtualMachineRunner:
                             os.chmod(setup_script_dest, 0o755)
 
                     # Copy all files to VM
-                    logger.info(f"Task {task_id}: Copying files to VM {vm_name}")
+                    logger.info(
+                        f"Task {task_id}: Copying temporary directory files to VM {vm_name}"
+                    )
                     await asyncio.to_thread(
-                        self.vm_manager.copy_files_to_vm,
+                        self.vm_manager.compress_and_copy_files_to_vm,
                         vm_name,
                         temp_dir,
                     )
+                    logger.info(
+                        f"Task {task_id}: Copying agent directory files to VM {vm_name}"
+                    )
                     await asyncio.to_thread(
-                        self.vm_manager.copy_files_to_vm,
+                        self.vm_manager.compress_and_copy_files_to_vm,
                         vm_name,
                         agent_dir,
+                    )
+                    logger.info(
+                        f"Task {task_id}: Finished copying all files to VM {vm_name}"
                     )
 
                 finally:

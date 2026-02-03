@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from .MLAgentBench.MLAgentBench.environment import Environment
 import logging
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class MLAgentBenchBenchmark(BaseBenchmark):
