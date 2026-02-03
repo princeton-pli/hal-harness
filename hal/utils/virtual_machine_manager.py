@@ -19,7 +19,7 @@ class VMLoggerAdapter(logging.LoggerAdapter):
 
     def process(self, msg, kwargs):
         vm_name = self.extra.get("vm_name", "unknown")
-        return f"VM {vm_name}: {msg}", kwargs
+        return f"VM Manager {vm_name}: {msg}", kwargs
 
 
 def _get_logger(vm_name: str) -> logging.LoggerAdapter:

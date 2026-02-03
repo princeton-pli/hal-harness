@@ -13,7 +13,7 @@ from azure.identity import DefaultAzureCredential
 from .utils import run_command
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("agent_eval")
 
 
 class AzureVirtualMachine:
@@ -51,7 +51,9 @@ class AzureVirtualMachine:
 
     def _create(self) -> None:
         """Create VM using Azure SDK."""
-        logger.info(f"Creating VM {self.name} ({'GPU' if self.gpu else 'standard'})")
+        logger.info(
+            f"Creating VM {self.name} {'with' if self.gpu else 'WITHOUT'} a GPU"
+        )
 
         # Create VNet
         vnet_name = f"{self.name}-vnet"
@@ -148,13 +150,15 @@ class AzureVirtualMachine:
             self.resource_group, self.name, vm_params
         ).result()
 
-        logger.info(
-            f"VM {self.name} created at {self.public_ip}; waiting for startup script"
-        )
+        logger.info(f"VM {self.name} created at {self.public_ip}")
 
         # Wait for startup script to complete BEFORE installing GPU driver
+        startup_start = time.time()
         self._wait_for_setup_to_complete()
-        logger.info(f"Startup script completed for VM {self.name}")
+        startup_duration = int(time.time() - startup_start)
+        logger.info(
+            f"Startup script completed for VM {self.name} in {startup_duration} seconds"
+        )
 
         # Install GPU driver after startup is complete (to avoid conflicts)
         if self.gpu:
@@ -180,11 +184,11 @@ class AzureVirtualMachine:
         Args:
             timeout: Maximum time to wait in seconds (default 600)
         """
-        logger.info(f"Waiting for startup script to complete on {self.name}")
         start_time = time.time()
         ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
 
         while time.time() - start_time < timeout:
+            logger.info(f"Waiting for startup script to complete on {self.name}")
             try:
                 # Check if sentinel file exists
                 cmd = [
