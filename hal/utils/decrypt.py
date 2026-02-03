@@ -5,12 +5,11 @@ from pathlib import Path
 from typing import Optional
 from ..utils.logging_utils import create_progress
 import logging
-
-logger = logging.getLogger("agent_eval")
 from dotenv import load_dotenv
 import base64
 from .json_encryption import JsonEncryption
 
+logger = logging.getLogger("agent_eval")
 load_dotenv()
 
 
@@ -84,18 +83,11 @@ def decrypt_file(encrypted_file_path: Path, progress=None, task=None) -> None:
         if progress:
             progress.update(task, advance=1)
 
-        # Create summary table
-        table = Table(
-            title=f"Decryption Summary for {encrypted_file_path.name}", box=ROUNDED
-        )
-        table.add_column("Field", style="cyan")
-        table.add_column("Value", style="green")
-
-        table.add_row("Input File", str(encrypted_file_path))
-        table.add_row("Output File", str(output_path))
-        table.add_row("Status", "✓ Success")
-
-        console.print(table)
+        # Log summary
+        logger.info(f"Decryption Summary for {encrypted_file_path.name}")
+        logger.info(f"  Input File: {encrypted_file_path}")
+        logger.info(f"  Output File: {output_path}")
+        logger.info("  Status: Success")
 
     except Exception as e:
         logger.error(f"Error decrypting {encrypted_file_path}: {str(e)}")

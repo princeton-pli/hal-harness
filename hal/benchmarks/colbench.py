@@ -4,16 +4,14 @@ from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
 from sweet_rl.utils import code_evaluate
 import logging
-
-logger = logging.getLogger("agent_eval")
-
-
 from PIL import Image
 from sweet_rl.utils.webpage_utils import get_driver, render_full_html
 from tqdm import tqdm
 from transformers import CLIPModel, CLIPProcessor
 import concurrent
 import torch
+
+logger = logging.getLogger("agent_eval")
 
 CODE_USER_PROMPT = """
 Your task is to simulate a human user that interacts with an LLM agent in a dialogue.

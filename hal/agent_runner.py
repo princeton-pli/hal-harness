@@ -8,9 +8,11 @@ from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
 
-logger = logging.getLogger("agent_eval")
 from .inspect.inspect import is_inspect_benchmark
 from .utils.weave_utils import get_call_ids, delete_calls
+
+
+logger = logging.getLogger("agent_eval")
 
 
 class AgentRunner:

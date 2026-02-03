@@ -3,7 +3,6 @@ from .base_benchmark import BaseBenchmark
 import json
 from typing_extensions import Dict
 import os
-import sys
 from types import SimpleNamespace
 from .MLAgentBench.MLAgentBench.environment import Environment
 import logging

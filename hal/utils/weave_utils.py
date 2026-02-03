@@ -718,5 +718,5 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
             - datetime.fromisoformat(latency_dict[task_id]["first_call_timestamp"])
         ).total_seconds()
 
-    console.print(f"[green]Total Weave traces: {len(processed_calls)}[/]")
+    logger.info(f"Total Weave traces: {len(processed_calls)}")
     return processed_calls, latency_dict

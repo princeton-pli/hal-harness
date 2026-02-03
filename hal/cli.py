@@ -20,10 +20,10 @@ from .utils.logging_utils import (
     print_run_config,
 )
 
-logger = logging.getLogger("agent_eval")
 import traceback
 from datetime import datetime
 
+logger = logging.getLogger("agent_eval")
 load_dotenv()
 
 

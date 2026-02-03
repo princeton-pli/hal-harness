@@ -10,7 +10,6 @@ from typing import Dict, Any, Optional
 from .virtual_machine_manager import VirtualMachineManager
 from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
-from rich.progress import Progress, TaskID
 
 # Set up loggers
 logger = logging.getLogger("agent_eval")
@@ -72,8 +71,6 @@ class VirtualMachineRunner:
         agent_args: Dict[str, Any],
         run_id: str,
         benchmark: Optional[BaseBenchmark] = None,
-        progress: Optional[Progress] = None,
-        task: Optional[TaskID] = None,  # FIXME: rm
         timeout: int = 7200,  # FIXME: rm
     ) -> Dict[str, Any]:
         """Run agent on all tasks using Azure VMs"""
@@ -244,8 +241,6 @@ class VirtualMachineRunner:
                 # Cleanup VM
                 try:
                     await asyncio.to_thread(self.vm_manager.delete_vm, vm_name)
-                    if progress and task is not None:
-                        progress.update(task, advance=1)
                 except Exception as e:
                     logger.error(f"Task {task_id}: Error deleting VM {vm_name}: {e}")
 
