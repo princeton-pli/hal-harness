@@ -166,7 +166,9 @@ class AzureVirtualMachine:
                 },
             ).result()
 
-        logger.info(f"VM {self.name} created at {self.public_ip}; waiting for SSH")
+        logger.info(
+            f"VM {self.name} created at {self.public_ip}; waiting for startup script"
+        )
 
         # Wait for SSH to be ready
         self._wait_for_setup_to_complete()
@@ -199,7 +201,9 @@ class AzureVirtualMachine:
                 result = subprocess.run(cmd, capture_output=True)
 
                 if result.returncode == 0:
-                    logger.info(f"Startup script completed on {self.name}")
+                    logger.info(
+                        f"Startup script completed on {self.name} at {self.public_ip}"
+                    )
                     return
             except Exception:
                 pass
@@ -222,12 +226,20 @@ class AzureVirtualMachine:
         if not ssh_key_path:
             raise ValueError("SSH_PRIVATE_KEY_PATH not set")
 
-        # Build docker run command
+        # Build docker run command with trace file
         env_flags = ""
         if env_vars:
             env_flags = " ".join([f"-e {k}={v}" for k, v in env_vars.items()])
 
-        docker_cmd = f"docker run --rm {env_flags} {image}"
+        # Create trace file before and after docker run
+        # Use nohup to ensure it runs in background and bash -c to handle the compound command
+        docker_cmd = (
+            f'nohup bash -c "'
+            f"echo 'Docker starting at $(date)' > /home/agent/docker_trace.txt && "
+            f"docker run --rm {env_flags} {image} && "
+            f"echo 'Docker completed at $(date)' >> /home/agent/docker_trace.txt"
+            f'" > /home/agent/docker_output.log 2>&1 &'
+        )
 
         # SSH and run Docker
         ssh_cmd = [
@@ -240,9 +252,15 @@ class AzureVirtualMachine:
             docker_cmd,
         ]
 
-        # Run in background (non-blocking)
-        subprocess.Popen(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logger.info(f"Docker started on VM {self.name}")
+        # Run and wait for SSH command to complete (which spawns background process on VM)
+        result = subprocess.run(ssh_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            logger.error(f"Failed to start Docker on {self.name}: {result.stderr}")
+        else:
+            logger.info(
+                f"Docker started on VM {self.name} "
+                f"(trace: /home/agent/docker_trace.txt, logs: /home/agent/docker_output.log)"
+            )
 
     def delete(self) -> None:
         """Delete this VM and all resources."""

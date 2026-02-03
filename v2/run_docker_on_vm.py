@@ -3,12 +3,13 @@
 """Run Docker containers on Azure VMs."""
 
 import logging
+import os
 import uuid
 
 from azure_manager import AzureManager
+from logging_utils import setup_logging
 
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -20,6 +21,11 @@ def main():
 
     # Generate run ID
     run_id = str(uuid.uuid4())[:20]
+
+    # Setup logging (with Azure Monitor if running in VM)
+    log_dir = os.path.join(os.getcwd(), "logs")
+    setup_logging(log_dir=log_dir, run_id=run_id, use_azure=True)
+
     logger.info(
         f"Starting run {run_id}. virtual_machine_count={virtual_machine_count}, use_gpu={use_gpu}"
     )
