@@ -232,37 +232,3 @@ def print_run_config(
         logger.info("  Inspect Eval Arguments:")
         for key, value in inspect_eval_args.items():
             logger.info(f"    {key}: {value}")
-
-
-def get_context_logger(
-    logger_name: str, context: Dict[str, Any]
-) -> logging.LoggerAdapter:
-    """Create a context-aware logger with automatic property injection.
-
-    This function creates a BenchmarkLoggerAdapter that automatically injects
-    context properties (RunID, Benchmark, AgentName, etc.) into all log messages.
-
-    Args:
-        logger_name: Name of the base logger (e.g., "agent_eval")
-        context: Context dictionary with properties (RunID, Benchmark, etc.)
-
-    Returns:
-        BenchmarkLoggerAdapter with context injected
-
-    Raises:
-        ValueError: If required fields are missing from context
-        ImportError: If azure_logging module is not available
-
-    Example:
-        context = {
-            "RunID": "abc-123",
-            "Benchmark": "swebench_verified",
-            "AgentName": "My Agent (gpt-4o)",
-            "ExecutionMode": "vm"
-        }
-        logger = get_context_logger("agent_eval", context)
-        logger.info("Starting task", extra={"TaskID": "task-1"})
-    """
-    from .azure_logging import get_context_logger as azure_get_context_logger
-
-    return azure_get_context_logger(logger_name, context)

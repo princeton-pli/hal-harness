@@ -343,6 +343,7 @@ class AzureMonitorHandler(logging.Handler):
             super().close()
 
 
+# FIXME: use me for eval runs (currently not used)
 def get_context_logger(
     logger_name: str,
     context: Dict[str, Any],
