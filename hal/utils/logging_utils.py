@@ -6,7 +6,7 @@ from rich.progress import (
     BarColumn,
     TaskProgressColumn,
 )
-from typing import Optional, Any, Dict
+from typing import Optional, Any
 import logging
 import sys
 import os
