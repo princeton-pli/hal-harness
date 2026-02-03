@@ -217,72 +217,12 @@ class VirtualMachineManager:
         )
         return vm
 
-    # FIXME: remove this; just the IP directly
-    def _get_vm_public_ip(self, vm_name):
-        """Get public IP for a VM (for backwards compatibility)."""
-        if vm_name in self._vms:
-            return self._vms[vm_name].public_ip
-        # Fallback to network client lookup
-        try:
-            public_ip = self.network_client.public_ip_addresses.get(
-                self.resource_group_name, f"{vm_name}-public-ip"
-            )
-            return public_ip.ip_address
-        except Exception:
-            return None
-
-    def delete_vm(self, vm_name):
+    def delete_virtual_machine_by_name(self, vm_name):
         """Delete an Azure VM and all associated resources."""
         # Use the AzureVirtualMachine delete method if we have it
         if vm_name in self._vms:
             self._vms[vm_name].delete()
             del self._vms[vm_name]
-        else:
-            # Fallback for VMs created before the refactor
-            logger = _get_logger(vm_name)
-            logger.info("Deleting VM (legacy path)")
-            # Get the VM
-            vm = self.compute_client.virtual_machines.get(
-                self.resource_group_name, vm_name
-            )
-
-            # Delete the VM
-            self.compute_client.virtual_machines.begin_delete(
-                self.resource_group_name, vm_name
-            ).result()
-
-            # Delete the associated disks
-            for disk in vm.storage_profile.data_disks:
-                self.compute_client.disks.begin_delete(
-                    self.resource_group_name, disk.name
-                ).result()
-
-            # Delete the OS disk
-            os_disk_name = vm.storage_profile.os_disk.name
-            self.compute_client.disks.begin_delete(
-                self.resource_group_name, os_disk_name
-            ).result()
-
-            # Delete the network interface
-            nic_name = f"{vm_name}-nic"
-            self.network_client.network_interfaces.begin_delete(
-                self.resource_group_name, nic_name
-            ).result()
-
-            # Delete the public IP address
-            public_ip_name = f"{vm_name}-public-ip"
-            self.network_client.public_ip_addresses.begin_delete(
-                self.resource_group_name, public_ip_name
-            ).result()
-
-            # Delete the virtual network (if not used by other resources)
-            vnet_name = f"{vm_name}-vnet"
-            try:
-                self.network_client.virtual_networks.begin_delete(
-                    self.resource_group_name, vnet_name
-                ).result()
-            except Exception as e:
-                logger.error(f"Failed to delete virtual network {vnet_name}: {str(e)}")
 
     def compress_and_copy_files_to_vm(self, vm_name, source_directory):
         """Copy files from a local directory to the VM."""

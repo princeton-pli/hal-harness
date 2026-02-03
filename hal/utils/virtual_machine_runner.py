@@ -248,7 +248,9 @@ class VirtualMachineRunner:
             finally:
                 # Cleanup VM
                 try:
-                    await asyncio.to_thread(self.vm_manager.delete_vm, vm_name)
+                    await asyncio.to_thread(
+                        self.vm_manager.delete_virtual_machine_by_name, vm_name
+                    )
                 except Exception as e:
                     logger.error(f"Task {task_id}: Error deleting VM {vm_name}: {e}")
 

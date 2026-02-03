@@ -7,9 +7,7 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
-def run_command(
-    cmd: list[str], check: bool = True
-) -> subprocess.CompletedProcess:
+def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
     """Run a subprocess command with logging.
 
     Args:
@@ -32,7 +30,9 @@ def run_command(
         logger.debug(f"Command stderr: {result.stderr}")
 
     if check and result.returncode != 0:
-        logger.error(f"Command failed with exit code {result.returncode}: {' '.join(cmd)}")
+        logger.error(
+            f"Command failed with exit code {result.returncode}: {' '.join(cmd)}"
+        )
         raise subprocess.CalledProcessError(
             result.returncode, cmd, result.stdout, result.stderr
         )

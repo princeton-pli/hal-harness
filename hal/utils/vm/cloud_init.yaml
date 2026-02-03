@@ -51,6 +51,7 @@ runcmd:
     "
 
     # 8. Create sentinel file to signal completion
+    rm /home/agent/startup_started
     touch /home/agent/startup_complete
     chown agent:agent /home/agent/startup_complete
 

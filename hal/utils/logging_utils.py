@@ -43,6 +43,10 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
         logging.WARNING
     )
+    # Suppress Azure identity logging
+    logging.getLogger("azure.identity").setLevel(logging.WARNING)
+    # Suppress httpx logging
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     # Create formatters
     detailed_formatter = logging.Formatter(

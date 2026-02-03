@@ -187,8 +187,8 @@ class AzureVirtualMachine:
         start_time = time.time()
         ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
 
+        logger.info(f"Waiting for startup script to complete on {self.name} (~3 min)")
         while time.time() - start_time < timeout:
-            logger.info(f"Waiting for startup script to complete on {self.name}")
             try:
                 # Check if sentinel file exists
                 cmd = [
