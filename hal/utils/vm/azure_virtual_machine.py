@@ -215,7 +215,7 @@ class AzureVirtualMachine:
         logger.info(f"Waiting for startup script to complete on {self.name} (~3 min)")
         while time.time() - start_time < timeout:
             if self.check_for_file_presence_by_path(ssh_key_path):
-                logger.info(
+                logger.debug(
                     f"Startup script completed on {self.name} at {self.public_ip}"
                 )
                 return
