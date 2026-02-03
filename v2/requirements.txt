@@ -1,0 +1,7 @@
+# Azure SDK
+azure-mgmt-compute>=30.0.0
+azure-mgmt-network>=25.0.0
+azure-identity>=1.15.0
+
+# Environment
+python-dotenv>=1.0.0

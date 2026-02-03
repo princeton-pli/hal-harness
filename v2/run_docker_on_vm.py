@@ -46,6 +46,9 @@ def main():
     finally:
         # Cleanup VMs
         logger.info("Cleaning up resources")
+        import pdb
+
+        pdb.set_trace()
         azure_manager.cleanup()
 
 

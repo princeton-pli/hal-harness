@@ -1,5 +1,6 @@
 """Azure resource manager for VM and Docker orchestration."""
 
+import asyncio
 import logging
 import os
 from pathlib import Path
@@ -7,7 +8,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from azure_virtual_machine import AzureVirtualMachine
-from utils import run_command
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class AzureManager:
     """Manages Azure resources for a run."""
 
-    def __init__(self, run_id: str):
+    def __init__(self, run_id: str, virtual_machine_count: int, use_gpu: bool = False):
         # Load environment variables from .env
         load_dotenv()
 
@@ -31,11 +31,12 @@ class AzureManager:
             raise ValueError("Missing required Azure environment variables")
 
         self.template_dir = Path(__file__).parent / "infrastructure"
-        self.virtual_machines: list[AzureVirtualMachine] = []
+        self.nsg_id = f"/subscriptions/{self.subscription_id}/resourceGroups/{self.resource_group}/providers/Microsoft.Network/networkSecurityGroups/{self.nsg_name}"
 
-        # Configure the network and VMs
-        self._create_network()
-        self._create_virtual_machines()
+        # Create VMs in parallel
+        self.virtual_machines = asyncio.run(
+            self._create_virtual_machines_async(virtual_machine_count, use_gpu)
+        )
 
     def _read_ssh_key(self) -> str:
         """Read SSH public key from path in env."""
@@ -44,48 +45,40 @@ class AzureManager:
             raise ValueError("SSH_PUBLIC_KEY_PATH not set")
         return open(ssh_key_path).read().strip()
 
-    def _create_network(self) -> dict:
-        """Deploy NSG infrastructure."""
-        logger.info(f"Creating network infrastructure for run {self.run_id}")
-
-        cmd = [
-            "az",
-            "deployment",
-            "group",
-            "create",
-            "--resource-group",
-            self.resource_group,
-            "--name",
-            f"nsg-{self.run_id}",
-            "--template-file",
-            str(self.template_dir / "main.bicep"),
-            "--parameters",
-            f"networkSecurityGroupName={self.nsg_name}",
-            f"tags={{run_id:{self.run_id}}}",
-        ]
-
-        run_command(cmd)
-        return {"status": "created"}
-
-    def _create_virtual_machines(
-        self, count: int, use_gpu: bool = False
+    async def _create_virtual_machines_async(
+        self, count: int, use_gpu: bool
     ) -> list[AzureVirtualMachine]:
-        """Create multiple VMs."""
-        logger.info(f"Creating {count} VMs (GPU: {use_gpu})")
+        """Create multiple VMs in parallel."""
+        logger.info(f"Creating {count} VMs in parallel (GPU: {use_gpu})")
 
-        # FIXME: do this in parallel
-        vms = []
-        for i in range(count):
-            vm_name = f"vm-{self.run_id}-{i}"[:32].replace("_", "-")
-            # FIXME: use Azure here to initiate VMs and return AzureVirtualMachine
-            vm = self._create_vm(vm_name, use_gpu)
-            vms.append(vm)
+        async def create_vm_async(index: int) -> AzureVirtualMachine:
+            """Create a single VM in a thread."""
+            vm_name = f"vm-{self.run_id}-{index}"[:32].replace("_", "-")
 
-        self.vms.extend(vms)
-        return vms
+            # Run VM creation in thread pool (blocking Azure SDK calls)
+            return await asyncio.to_thread(
+                AzureVirtualMachine,
+                name=vm_name,
+                resource_group=self.resource_group,
+                location=self.location,
+                subscription_id=self.subscription_id,
+                nsg_id=self.nsg_id,
+                ssh_public_key=self.ssh_public_key,
+                gpu=use_gpu,
+            )
+
+        # Create all VMs concurrently
+        vms = await asyncio.gather(*[create_vm_async(i) for i in range(count)])
+        return list(vms)
 
     def cleanup(self) -> None:
-        """Delete all VMs created in this run."""
-        logger.info(f"Cleaning up {len(self.vms)} VMs")
-        for vm in self.vms:
-            vm.delete()
+        """Delete all VMs created in this run (in parallel)."""
+        logger.info(f"Cleaning up {len(self.virtual_machines)} VMs")
+
+        async def cleanup_async():
+            tasks = [
+                asyncio.to_thread(vm.delete) for vm in self.virtual_machines
+            ]
+            await asyncio.gather(*tasks)
+
+        asyncio.run(cleanup_async())
