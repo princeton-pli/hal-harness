@@ -355,7 +355,7 @@ class VirtualMachineManager:
                     # Run setup script with sudo (passing username as argument)
                     logger.info("Setting up environment")
                     _, stdout, stderr = ssh_client.exec_command(
-                        f"sudo bash {remote_setup_path} agent"
+                        f"sudo bash {remote_setup_path}"
                     )
 
                     # Create log file

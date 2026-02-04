@@ -1,11 +1,13 @@
 #!/bin/bash
 set -e  # Exit on error
 
-# Configuration
-USERNAME="$1"  # Pass username as first argument
-HOME_DIR="/home/$USERNAME"
+# Redirect all output to log file
+exec > /home/agent/setup_vm.log 2>&1
 
-echo "Starting setup for user: $USERNAME"
+# Configuration
+HOME_DIR="/home/agent"
+
+echo "Starting setup for user: agent"
 
 # Install system dependencies
 # echo "Installing system dependencies..."
@@ -13,17 +15,21 @@ echo "Starting setup for user: $USERNAME"
 # apt-get install -y curl wget build-essential
 # echo "System dependencies installed"
 
-# Install Miniconda
-echo "Installing Miniconda..."
-MINICONDA_PATH="/home/$USERNAME/miniconda3"
-curl -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash /tmp/miniconda.sh -b -p $MINICONDA_PATH
-rm /tmp/miniconda.sh
-echo "Miniconda installed"
+# Install Miniconda (note: this should already be installed by cloud-init)
+MINICONDA_PATH="/home/agent/miniconda3"
+if [ ! -d "$MINICONDA_PATH" ]; then
+    echo "Installing Miniconda..."
+    curl -o /tmp/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash /tmp/miniconda.sh -b -p $MINICONDA_PATH
+    rm /tmp/miniconda.sh
+    echo "Miniconda installed"
 
-# Set ownership
-echo "Setting Miniconda ownership..."
-chown -R $USERNAME:$USERNAME $MINICONDA_PATH
+    # Set ownership
+    echo "Setting Miniconda ownership..."
+    chown -R agent:agent $MINICONDA_PATH
+else
+    echo "Miniconda already installed at $MINICONDA_PATH, skipping installation"
+fi
 
 # Create conda initialization script
 echo "Creating conda initialization script..."
@@ -41,11 +47,11 @@ EOF
 
 # Make initialization script executable and set ownership
 chmod +x "$HOME_DIR/init_conda.sh"
-chown $USERNAME:$USERNAME "$HOME_DIR/init_conda.sh"
+chown agent:agent "$HOME_DIR/init_conda.sh"
 
 # Create and activate environment as the agent user with explicit output
 echo "Creating conda environment..."
-su - $USERNAME -c "bash -c '\
+su - agent -c "bash -c '\
     echo \"Initializing conda...\" && \
     source $HOME_DIR/init_conda.sh && \
     echo \"Accepting conda ToS...\" && \

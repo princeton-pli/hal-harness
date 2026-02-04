@@ -1,6 +1,7 @@
 #cloud-config
 runcmd:
   - |
+    ## FIXME: combine with setup_vm.sh
     #!/bin/bash
     set -e
 
