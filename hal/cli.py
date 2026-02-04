@@ -248,10 +248,7 @@ def main(
 
         # Print clean error message to terminal
         logger.error(f"An error occurred: {str(e)}")
-        logger.error(
-            f"For detailed error information, check: {verbose_log_path}",
-            verbose_log_path,
-        )
+        logger.error(f"For detailed error information, check: {verbose_log_path}")
         sys.exit(1)
 
 

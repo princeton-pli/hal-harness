@@ -72,6 +72,8 @@ su - agent -c "bash -c '\
     fi && \
     echo \"Activating agent_env...\" && \
     conda activate agent_env && \
+    echo \"Installing Python standard library modules...\" && \
+    pip install --upgrade pip && \
     echo \"Checking for requirements.txt...\" && \
     if [ -f requirements.txt ]; then \
         echo \"Installing requirements...\" && \
@@ -79,7 +81,7 @@ su - agent -c "bash -c '\
         echo \"Installing weave and gql pin...\" && \
         pip install weave==0.51.41 \"gql<4\" && \
         echo \"Installing Azure logging dependencies...\" && \
-        pip install azure-monitor-ingestion>=1.0.3 azure-identity>=1.12.0 requests>=2.31.0 && \
+        pip install \"azure-monitor-ingestion>=1.0.3\" \"azure-identity>=1.12.0\" \"requests>=2.31.0\" && \
         echo \"Requirements installed\"; \
     else \
         echo \"No requirements.txt found\" && \

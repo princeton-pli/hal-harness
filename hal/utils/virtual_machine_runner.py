@@ -188,7 +188,7 @@ class VirtualMachineRunner:
 
                 # Wait for completion or timeout
                 start_time = time.time()
-                result = None
+                task_is_complete = None
 
                 while time.time() - start_time < timeout:
                     try:
@@ -202,11 +202,11 @@ class VirtualMachineRunner:
                             task_id=task_id,
                         )
 
-                        result = await asyncio.to_thread(
+                        task_is_complete = await asyncio.to_thread(
                             self.vm_manager.check_task_completion,
                             vm_name,
                         )
-                        if result is True:
+                        if task_is_complete is True:
                             logger.info(
                                 f"Task {task_id}: Task {task_id} completed on VM {vm_name}"
                             )
@@ -217,7 +217,7 @@ class VirtualMachineRunner:
                         )
                     await asyncio.sleep(30)  # Check every 30 seconds
 
-                if result is None:
+                if task_is_complete is None:
                     logger.warning(f"Task {task_id}: timed out after {timeout} seconds")
                     return {task_id: f"TIMEOUT after {timeout} seconds"}
 
@@ -233,6 +233,27 @@ class VirtualMachineRunner:
                         vm_name,
                         dest_dir,
                     )
+
+                    # Read the output.json file from the copied directory
+                    output_file = os.path.join(dest_dir, "output.json")
+                    if os.path.exists(output_file):
+                        with open(output_file, "r") as f:
+                            result = json.load(f)
+                    else:
+                        logger.warning(
+                            f"Task {task_id}: output.json not found in {dest_dir}"
+                        )
+                        result = {
+                            task_id: "ERROR: output.json not found after copying from VM"
+                        }
+                else:
+                    # If no log_dir, we can't copy results, so return an error
+                    logger.error(
+                        f"Task {task_id}: Cannot retrieve results - no log_dir specified"
+                    )
+                    result = {
+                        task_id: "ERROR: Cannot retrieve results - no log_dir specified"
+                    }
 
                 return result
 
