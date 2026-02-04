@@ -7,7 +7,6 @@ import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
 from hal.benchmarks.base_benchmark import BaseBenchmark
-from hal.utils.retry_handler import add_retry_to_runner
 from rich.progress import Progress, TaskID
 
 logger = logging.getLogger(__name__)
@@ -31,9 +30,7 @@ class LocalRunner:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
         self.benchmark = benchmark
-
-        # Add retry functionality (enabled by default with sensible defaults)
-        add_retry_to_runner(self, retry_config)
+        self.retry_config = retry_config  # FIXME: remove this
 
     async def run_agent(
         self,

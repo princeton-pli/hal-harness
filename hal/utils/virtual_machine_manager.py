@@ -306,7 +306,7 @@ class VirtualMachineManager:
         vm = self._vms[vm_name]
         return vm.check_for_file_presence_by_path(task_completed_filepath)
 
-    def run_agent_on_vm(
+    def run_agent_on_virtual_machine(
         self,
         vm_name,
         agent_function,
@@ -420,9 +420,13 @@ import json
 import importlib.util
 import weave
 import traceback
+from dotenv import load_dotenv
 # FIXME: use proper logging here, e.g., Azure logging
 
 try:
+    # Load environment variables from .env file
+    load_dotenv("/home/agent/.env")
+
     weave.init("{run_id}")
 
     # Load input data

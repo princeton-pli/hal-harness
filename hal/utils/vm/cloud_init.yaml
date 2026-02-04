@@ -50,7 +50,7 @@ runcmd:
     source /home/agent/miniconda3/etc/profile.d/conda.sh
     conda create -y -n agent_env python=3.12
     conda activate agent_env
-    pip install 'weave==0.51.41' 'gql<4' 'wandb==0.23.0'
+    pip install 'weave==0.51.41' 'gql<4' 'wandb==0.23.0' 'python-dotenv'
     "
 
     # 8. Create sentinel file to signal completion

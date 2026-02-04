@@ -175,7 +175,7 @@ class VirtualMachineRunner:
 
                 # Run agent on VM
                 await asyncio.to_thread(
-                    self.vm_manager.run_agent_on_vm,
+                    self.vm_manager.run_agent_on_virtual_machine,
                     vm_name,
                     agent_function,
                     task_id,
@@ -206,7 +206,7 @@ class VirtualMachineRunner:
                             self.vm_manager.check_task_completion,
                             vm_name,
                         )
-                        if result is not None:
+                        if result is True:
                             logger.info(
                                 f"Task {task_id}: Task {task_id} completed on VM {vm_name}"
                             )
