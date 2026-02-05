@@ -65,8 +65,6 @@ RUN chmod +x /workspace/entrypoint.py
 # Environment variables (these will be overridden at runtime)
 ENV HAL_RUN_ID=""
 ENV HAL_TASK_ID=""
-ENV HAL_AGENT_MODULE=""
-ENV HAL_AGENT_FUNCTION=""
 
 # We don't use a non-root user because we need to write files
 # that can be read by the host system after the container exits

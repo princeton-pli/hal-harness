@@ -42,8 +42,6 @@ def main():
                 env_vars={
                     "HAL_RUN_ID": run_id,
                     "HAL_TASK_ID": f"task-{vm.name}",
-                    "HAL_AGENT_MODULE": "main",
-                    "HAL_AGENT_FUNCTION": "run",
                 }
             )
 

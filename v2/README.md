@@ -1,3 +1,22 @@
+# Latest
+
+Build docker:
+
+```
+docker buildx build --platform linux/amd64 --load -t hal-core-agent-docker:latest .
+```
+
+Run docker:
+
+```
+  docker run --platform linux/amd64 --rm \
+    -e HAL_RUN_ID=corebench_easy_run_001 \
+    -e HAL_TASK_ID=task_123 \
+    -e OPENAI_API_KEY=sk-... \
+    -e WANDB_API_KEY=... \
+    hal-core-agent-docker:latest
+```
+
 # HAL Harness v2 - Azure VM + Docker Orchestration
 
 Clean, minimal implementation for running Docker containers on Azure VMs.
@@ -5,11 +24,13 @@ Clean, minimal implementation for running Docker containers on Azure VMs.
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 2. Configure `.env` file in project root with:
+
 ```
 AZURE_SUBSCRIPTION_ID=...
 AZURE_RESOURCE_GROUP_NAME=...
@@ -38,6 +59,7 @@ manager.cleanup()
 ```
 
 Or run the example:
+
 ```bash
 python -m v2.run_docker_on_vm
 ```
