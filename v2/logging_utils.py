@@ -32,6 +32,15 @@ def setup_logging(log_dir: str, run_id: str, use_azure: bool = False) -> None:
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
+    # Suppress verbose logging
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
+        logging.WARNING
+    )
+    logging.getLogger("azure.identity").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("paramiko.transport").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
     # Create formatters
     detailed_formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -91,9 +100,7 @@ def setup_logging(log_dir: str, run_id: str, use_azure: bool = False) -> None:
 
         except ImportError as e:
             error_msg = (
-                "\n"
-                + "=" * 70
-                + "\n"
+                "\n" + "=" * 70 + "\n"
                 "ERROR: Azure Monitor logging requires azure-monitor-ingestion package\n"
                 "Install with: pip install azure-monitor-ingestion\n"
                 "=" * 70
@@ -105,9 +112,7 @@ def setup_logging(log_dir: str, run_id: str, use_azure: bool = False) -> None:
             )
         except Exception as e:
             error_msg = (
-                "\n"
-                + "=" * 70
-                + "\n"
+                "\n" + "=" * 70 + "\n"
                 f"ERROR: Failed to initialize Azure Monitor logging: {e}\n"
                 "Check your Azure credentials and permissions.\n"
                 "=" * 70

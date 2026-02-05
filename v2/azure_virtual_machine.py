@@ -216,11 +216,11 @@ class AzureVirtualMachine:
 
     def run_docker(
         self,
+        image: str,
         env_vars: dict[str, str] | None = None,
     ) -> None:
-        image = "hal-agent-runner:latest"
         """Run Docker container on this VM via SSH."""
-        logger.info(f"Running Docker on VM {self.name}")
+        logger.info(f"Running Docker image {image} on VM {self.name}")
 
         ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
         if not ssh_key_path:
