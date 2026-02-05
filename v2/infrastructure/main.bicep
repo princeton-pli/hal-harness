@@ -7,6 +7,12 @@ param location string = resourceGroup().location
 @description('Network Security Group name')
 param networkSecurityGroupName string
 
+@description('Data Collection Endpoint ID')
+param dataCollectionEndpointId string
+
+@description('Log Analytics Workspace resource ID')
+param logAnalyticsWorkspaceId string
+
 @description('Tags to apply to all resources')
 param tags object = {
   application: 'hal-harness'
@@ -52,6 +58,19 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
   }
 }
 
+// Data Collection Rule for log monitoring
+module monitoring 'modules/monitoring.bicep' = {
+  name: 'monitoring-deployment'
+  params: {
+    location: location
+    dataCollectionEndpointId: dataCollectionEndpointId
+    logAnalyticsWorkspaceId: logAnalyticsWorkspaceId
+    tags: tags
+  }
+}
+
 output networkSecurityGroupId string = nsg.id
 output networkSecurityGroupName string = nsg.name
+output dataCollectionRuleId string = monitoring.outputs.dataCollectionRuleId
+output dataCollectionRuleName string = monitoring.outputs.dataCollectionRuleName
 output location string = location

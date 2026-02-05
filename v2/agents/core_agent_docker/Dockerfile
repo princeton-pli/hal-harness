@@ -55,11 +55,8 @@ COPY requirements.txt /workspace/requirements.txt
 # Install agent requirements (includes wandb, weave, and gql)
 RUN conda run -n agent_env pip install -r /workspace/requirements.txt
 
-# Copy in the core_agent code
-COPY core_agent /workspace
-
-# Copy entrypoint script
-COPY entrypoint.py /workspace/entrypoint.py
+# Copy everything to workspace
+COPY . /workspace
 RUN chmod +x /workspace/entrypoint.py
 
 # Environment variables (these will be overridden at runtime)

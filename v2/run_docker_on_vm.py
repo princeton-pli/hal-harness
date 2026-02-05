@@ -21,6 +21,8 @@ def main():
         "--image",
         # Note: right now this pulls a docker image that's on the invoker/orchestrator machine; we may want these to be
         # in a image repository at some point
+        # FIXME: This image exists locally on the orchestrator but needs to be transferred to the VM
+        # Options: 1) docker save + scp + docker load, 2) push to registry + pull on VM, 3) rebuild on VM
         help="This is the name of the docker image that you want to run",
     )
     parser.add_argument(
@@ -34,6 +36,16 @@ def main():
         default=False,
         action="store_true",
         help="Use GPU VMs",
+    )
+    parser.add_argument(
+        "--dce-endpoint",
+        required=True,
+        help="Azure Monitor Data Collection Endpoint URL",
+    )
+    parser.add_argument(
+        "--dcr-id",
+        required=True,
+        help="Azure Monitor Data Collection Rule ID",
     )
     args = parser.parse_args()
 
@@ -55,22 +67,39 @@ def main():
 
     # Initialize Azure manager
     azure_manager = AzureManager(
-        run_id=run_id, virtual_machine_count=virtual_machine_count, use_gpu=use_gpu
+        run_id=run_id,
+        virtual_machine_count=virtual_machine_count,
+        use_gpu=use_gpu,
+        dcr_id=args.dcr_id,
     )
 
     try:
+        # FIXME: Before running docker, we need to transfer the image to each VM
+        # Current flow is broken: docker_image exists locally but VM doesn't have it
+        # Need to add: azure_manager.transfer_image(docker_image) or vm.transfer_image(docker_image)
+
+        # Prepare env vars for Docker containers
+        docker_env_vars = {
+            "HAL_RUN_ID": run_id,
+            "AZURE_MONITOR_DATA_COLLECTION_ENDPOINT": args.dce_endpoint,
+            "AZURE_MONITOR_DATA_COLLECTION_RULE_ID": args.dcr_id,
+            "AZURE_MONITOR_STREAM_NAME": "Custom-BenchmarkRuns_CL",
+        }
+
         # Run Docker on each VM
         for vm in azure_manager.virtual_machines:
-            vm.run_docker(
-                image=docker_image,
-                env_vars={
-                    "HAL_RUN_ID": run_id,
-                    "HAL_TASK_ID": f"task-{vm.name}",
-                },
-            )
+            # Add a task ID for this VM
+            task_id = str(uuid.uuid4())[:20]
+            vm_env_vars = docker_env_vars.copy()
+            vm_env_vars["HAL_TASK_ID"] = task_id
+
+            # Run docker with the env vars and the task ID
+            vm.run_docker(image=docker_image, env_vars=vm_env_vars)
 
         logger.info(f"Triggered Docker runs for {virtual_machine_count} VMs")
 
+    except Exception as e:
+        raise e
     finally:
         # Cleanup VMs
         logger.info("Cleaning up resources")

@@ -14,3 +14,5 @@ litellm @ git+https://github.com/BerriAI/litellm@05955042d57fcc32c73223221d69c83
 wandb>=0.17.2,<0.19.0
 weave==0.51.41
 gql<4
+azure-monitor-ingestion
+azure-identity

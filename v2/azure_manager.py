@@ -16,7 +16,13 @@ logger = logging.getLogger(__name__)
 class AzureManager:
     """Manages Azure resources for a run."""
 
-    def __init__(self, run_id: str, virtual_machine_count: int, use_gpu: bool = False):
+    def __init__(
+        self,
+        run_id: str,
+        virtual_machine_count: int,
+        use_gpu: bool = False,
+        dcr_id: str | None = None,
+    ):
         # Load environment variables from .env
         load_dotenv()
 
@@ -26,6 +32,7 @@ class AzureManager:
         self.subscription_id = os.getenv("AZURE_SUBSCRIPTION_ID")
         self.nsg_name = os.getenv("NETWORK_SECURITY_GROUP_NAME")
         self.ssh_public_key = self._read_ssh_key()
+        self.dcr_id = dcr_id
 
         if not all([self.resource_group, self.subscription_id, self.nsg_name]):
             raise ValueError("Missing required Azure environment variables")
@@ -66,6 +73,7 @@ class AzureManager:
                 nsg_id=self.nsg_id,
                 ssh_public_key=self.ssh_public_key,
                 gpu=use_gpu,
+                dcr_id=self.dcr_id,
             )
 
         # Create all VMs concurrently

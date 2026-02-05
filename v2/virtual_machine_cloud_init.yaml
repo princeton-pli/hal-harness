@@ -23,7 +23,11 @@ runcmd:
     sudo systemctl enable docker
     sudo systemctl start docker
 
-    # 6. Update sentinel file so that dependents know we're ready to go
+    # 6. Create log directory - this will be watched by Azure Monitor Agent
+    sudo mkdir -p /home/agent/hal_logs
+    sudo chown -R agent:agent /home/agent/hal_logs
+
+    # 7. Update sentinel file so that dependents know we're ready to go
     touch /home/agent/startup_complete
 
     echo "VM initialization complete!"

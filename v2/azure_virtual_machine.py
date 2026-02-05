@@ -8,6 +8,7 @@ import time
 
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
+from azure.mgmt.monitor import MonitorManagementClient
 from azure.identity import DefaultAzureCredential
 
 from utils import run_command
@@ -27,19 +28,23 @@ class AzureVirtualMachine:
         subscription_id: str,
         nsg_id: str,
         ssh_public_key: str,
+        dcr_id: str,
         vm_size: str = "Standard_E2as_v5",
         gpu: bool = False,
     ):
         self.name = name
         self.resource_group = resource_group
         self.location = location
+        self.subscription_id = subscription_id
         self.vm_size = vm_size if not gpu else "Standard_NC4as_T4_v3"
         self.gpu = gpu
+        self.dcr_id = dcr_id
 
         # Azure clients
         credential = DefaultAzureCredential()
         self.compute_client = ComputeManagementClient(credential, subscription_id)
         self.network_client = NetworkManagementClient(credential, subscription_id)
+        self.monitor_client = MonitorManagementClient(credential, subscription_id)
 
         # Store for later use
         self.nsg_id = nsg_id
@@ -166,6 +171,22 @@ class AzureVirtualMachine:
                 },
             ).result()
 
+        # Install Azure Monitor Agent
+        logger.info(f"Installing Azure Monitor Agent on {self.name}")
+        self.compute_client.virtual_machine_extensions.begin_create_or_update(
+            self.resource_group,
+            self.name,
+            "AzureMonitorLinuxAgent",
+            {
+                "location": self.location,
+                "publisher": "Microsoft.Azure.Monitor",
+                "type_properties_type": "AzureMonitorLinuxAgent",
+                "type_handler_version": "1.0",
+                "auto_upgrade_minor_version": True,
+                "settings": {},
+            },
+        ).result()
+
         logger.info(
             f"VM {self.name} created at {self.public_ip}; waiting for startup script"
         )
@@ -173,6 +194,9 @@ class AzureVirtualMachine:
         # Wait for SSH to be ready
         self._wait_for_setup_to_complete()
         logger.info(f"Got SSH for VM {self.name}")
+
+        # Associate Data Collection Rule if provided
+        self._associate_dcr()
 
     def _wait_for_setup_to_complete(self, timeout: int = 600) -> None:
         """Wait for startup script to complete by checking for sentinel file.
@@ -214,19 +238,70 @@ class AzureVirtualMachine:
             f"Startup script did not complete on {self.name} ({self.public_ip}) within {timeout} seconds"
         )
 
+    def _associate_dcr(self) -> None:
+        """Associate a Data Collection Rule with this VM for log collection."""
+        logger.info(f"Associating DCR with VM {self.name}")
+
+        vm_resource_id = (
+            f"/subscriptions/{self.subscription_id}"
+            f"/resourceGroups/{self.resource_group}"
+            f"/providers/Microsoft.Compute/virtualMachines/{self.name}"
+        )
+
+        association_name = f"{self.name}-dcr-association"
+
+        try:
+            self.monitor_client.data_collection_rule_associations.create(
+                resource_uri=vm_resource_id,
+                association_name=association_name,
+                body={"properties": {"dataCollectionRuleId": self.dcr_id}},
+            )
+            logger.info(f"DCR associated with VM {self.name}")
+        except Exception as e:
+            logger.error(f"Failed to associate DCR with VM {self.name}: {e}")
+            raise
+
+    def transfer_docker_image(self, image: str) -> None:
+        """Transfer a Docker image from local machine to this VM.
+
+        FIXME: NOT IMPLEMENTED YET!
+        Options for implementation:
+        1. docker save + scp + docker load (works but slow for large images)
+        2. Push to container registry (ACR/DockerHub) + pull on VM (faster, requires registry)
+        3. Rebuild on VM from Dockerfile (slow but reproducible)
+
+        Recommended: Use Azure Container Registry (ACR) for production
+        - Push: docker tag {image} {acr_name}.azurecr.io/{image} && docker push
+        - Pull on VM: docker pull {acr_name}.azurecr.io/{image}
+        """
+        raise NotImplementedError(
+            f"Image transfer not implemented. Cannot transfer {image} to {self.name}. "
+            "Need to implement one of: docker save/load, registry push/pull, or rebuild on VM."
+        )
+
     def run_docker(
         self,
         image: str,
         env_vars: dict[str, str] | None = None,
     ) -> None:
-        """Run Docker container on this VM via SSH."""
+        """Run Docker container on this VM via SSH.
+
+        FIXME: This assumes the image already exists on the VM, but it doesn't!
+        The image is built locally on the orchestrator machine and needs to be transferred first.
+        Need to add image transfer logic before this method can work.
+        """
         logger.info(f"Running Docker image {image} on VM {self.name}")
 
         ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
         if not ssh_key_path:
             raise ValueError("SSH_PRIVATE_KEY_PATH not set")
 
-        # Build docker run command with trace file
+        # Create log directory on VM (flat structure: run_id-task_id)
+        run_id = env_vars.get("HAL_RUN_ID", "unknown") if env_vars else "unknown"
+        task_id = env_vars.get("HAL_TASK_ID", "unknown") if env_vars else "unknown"
+        log_dir = f"/home/agent/hal_logs/{run_id}-{task_id}"
+
+        # Build docker run command with mounted volume
         env_flags = ""
         if env_vars:
             env_flags = " ".join([f"-e {k}={v}" for k, v in env_vars.items()])
@@ -235,8 +310,9 @@ class AzureVirtualMachine:
         # Use nohup to ensure it runs in background and bash -c to handle the compound command
         docker_cmd = (
             f'nohup bash -c "'
+            f"mkdir -p {log_dir} && "
             f"echo 'Docker starting at $(date)' > /home/agent/docker_trace.txt && "
-            f"docker run --rm {env_flags} {image} && "
+            f"docker run --rm -v {log_dir}:/workspace/logs {env_flags} {image} && "
             f"echo 'Docker completed at $(date)' >> /home/agent/docker_trace.txt"
             f'" > /home/agent/docker_output.log 2>&1 &'
         )
