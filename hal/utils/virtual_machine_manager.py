@@ -352,13 +352,14 @@ class VirtualMachineManager:
                     # Make setup script executable
                     ssh_client.exec_command(f"chmod +x {remote_setup_path}")
 
-                    # Run setup script with sudo (passing username as argument)
-                    logger.info("Setting up environment")
+                    # Run setup script with sudo
+                    logger.info("Running setup_vm.sh on remote")
                     _, stdout, stderr = ssh_client.exec_command(
                         f"sudo bash {remote_setup_path}"
                     )
 
-                    # Create log file
+                    # Create log directory if it doesn't exist and write log file
+                    os.makedirs(log_dir, exist_ok=True)
                     with open(f"{log_dir}/setup_vm_log_{task_id}.log", "w") as f:
                         f.write(stdout.read().decode())
                         f.write(stderr.read().decode())
@@ -471,7 +472,7 @@ except Exception as e:
                 ssh_client.exec_command(f"chmod +x {script_path}")
 
                 # Construct command to run script
-                cmd = f"source /home/agent/init_conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
+                cmd = f"source /home/agent/miniconda3/etc/profile.d/conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"
 
                 # Execute script
                 logger.info("Running agent")
