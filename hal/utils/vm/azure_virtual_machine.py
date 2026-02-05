@@ -27,13 +27,12 @@ class AzureVirtualMachine:
         subscription_id: str,
         nsg_id: str,
         ssh_public_key: str,
-        vm_size: str = "Standard_E2as_v5",
-        gpu: bool = False,
+        gpu: bool,
     ):
         self.name = name
         self.resource_group = resource_group
         self.location = location
-        self.vm_size = vm_size if not gpu else "Standard_NC4as_T4_v3"
+        self.vm_size = "Standard_NC4as_T4_v3" if gpu else "Standard_E2as_v5"
         self.gpu = gpu
 
         # Azure clients

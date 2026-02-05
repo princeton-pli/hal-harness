@@ -20,6 +20,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.12.0",
+]
 swebench = [
     "swebench @ git+https://github.com/SWE-bench/SWE-bench@006a760a95c9cc11e987884d7e311d74a16db88a",
 ]
