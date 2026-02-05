@@ -2,7 +2,7 @@ from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
 import logging
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class TauBenchBenchmark(BaseBenchmark):

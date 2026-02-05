@@ -9,7 +9,7 @@ import logging
 
 from .base_benchmark import BaseBenchmark
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class SciCodeBenchmark(BaseBenchmark):

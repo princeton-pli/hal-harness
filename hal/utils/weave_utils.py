@@ -5,7 +5,7 @@ from datetime import datetime
 from weave.trace_server.trace_server_interface import CallsFilter, CallsQueryReq
 import logging
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 MODEL_PRICES_DICT = {
     "text-embedding-3-small": {"prompt_tokens": 0.02 / 1e6, "completion_tokens": 0},

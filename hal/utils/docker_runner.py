@@ -13,7 +13,7 @@ from ..benchmarks.base_benchmark import BaseBenchmark
 from rich.progress import Progress, TaskID
 from dotenv import dotenv_values
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 # Define the docker image name
 DOCKER_IMAGE_NAME = "hal-agent-runner:latest"

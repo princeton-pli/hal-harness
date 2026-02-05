@@ -5,7 +5,7 @@ from typing import Dict, Any
 from datasets import load_dataset
 import logging
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class AssistantBenchBenchmark(BaseBenchmark):

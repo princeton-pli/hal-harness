@@ -11,7 +11,7 @@ from .utils.docker_runner import DockerRunner
 from .utils.weave_utils import get_call_ids, delete_calls
 
 
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class AgentRunner:

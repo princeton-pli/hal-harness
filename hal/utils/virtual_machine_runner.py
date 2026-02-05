@@ -12,7 +12,7 @@ from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
 
 # Set up loggers
-logger = logging.getLogger("agent_eval")
+logger = logging.getLogger(__name__)
 
 
 class VirtualMachineRunner:
@@ -95,18 +95,14 @@ class VirtualMachineRunner:
                     gpu_required = task_benchmark.get("gpu", False)
 
                 # Create VM based on GPU requirement
-                if gpu_required:
-                    logger.info(
-                        f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} *with* a GPU"
-                    )
-                    await asyncio.to_thread(
-                        self.vm_manager.create_gpu_vm, vm_name=vm_name
-                    )
-                else:
-                    logger.info(
-                        f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} with *no* GPU"
-                    )
-                    await asyncio.to_thread(self.vm_manager.create_vm, vm_name=vm_name)
+                logger.info(
+                    f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} with GPU={gpu_required}"
+                )
+                await asyncio.to_thread(
+                    self.vm_manager.create_virtual_machine_by_name,
+                    vm_name=vm_name,
+                    has_gpu=gpu_required,
+                )
 
                 # Create temp directory with all necessary files
                 temp_dir = tempfile.mkdtemp()
@@ -154,16 +150,24 @@ class VirtualMachineRunner:
                             os.chmod(setup_script_dest, 0o755)
 
                     # Copy all files to VM
-                    logger.info(f"Task {task_id}: Copying files to VM {vm_name}")
+                    logger.info(
+                        f"Task {task_id}: Copying temporary directory files to VM {vm_name}"
+                    )
                     await asyncio.to_thread(
-                        self.vm_manager.copy_files_to_vm,
+                        self.vm_manager.compress_and_copy_files_to_vm,
                         vm_name,
                         temp_dir,
                     )
+                    logger.info(
+                        f"Task {task_id}: Copying agent directory files to VM {vm_name}"
+                    )
                     await asyncio.to_thread(
-                        self.vm_manager.copy_files_to_vm,
+                        self.vm_manager.compress_and_copy_files_to_vm,
                         vm_name,
                         agent_dir,
+                    )
+                    logger.info(
+                        f"Task {task_id}: Finished copying all files to VM {vm_name}"
                     )
 
                 finally:
@@ -171,7 +175,7 @@ class VirtualMachineRunner:
 
                 # Run agent on VM
                 await asyncio.to_thread(
-                    self.vm_manager.run_agent_on_vm,
+                    self.vm_manager.run_agent_on_virtual_machine,
                     vm_name,
                     agent_function,
                     task_id,
@@ -184,7 +188,7 @@ class VirtualMachineRunner:
 
                 # Wait for completion or timeout
                 start_time = time.time()
-                result = None
+                task_is_complete = None
 
                 while time.time() - start_time < timeout:
                     try:
@@ -198,11 +202,11 @@ class VirtualMachineRunner:
                             task_id=task_id,
                         )
 
-                        result = await asyncio.to_thread(
+                        task_is_complete = await asyncio.to_thread(
                             self.vm_manager.check_task_completion,
                             vm_name,
                         )
-                        if result is not None:
+                        if task_is_complete is True:
                             logger.info(
                                 f"Task {task_id}: Task {task_id} completed on VM {vm_name}"
                             )
@@ -213,7 +217,7 @@ class VirtualMachineRunner:
                         )
                     await asyncio.sleep(30)  # Check every 30 seconds
 
-                if result is None:
+                if task_is_complete is None:
                     logger.warning(f"Task {task_id}: timed out after {timeout} seconds")
                     return {task_id: f"TIMEOUT after {timeout} seconds"}
 
@@ -230,6 +234,28 @@ class VirtualMachineRunner:
                         dest_dir,
                     )
 
+                    # Read the output.json file from the copied directory
+                    output_file = os.path.join(dest_dir, "output.json")
+                    if os.path.exists(output_file):
+                        with open(output_file, "r") as f:
+                            result = json.load(f)
+                    else:
+                        # FIXME: this seems to show up, need to debug
+                        logger.warning(
+                            f"Task {task_id}: output.json not found in {dest_dir}"
+                        )
+                        result = {
+                            task_id: "ERROR: output.json not found after copying from VM"
+                        }
+                else:
+                    # If no log_dir, we can't copy results, so return an error
+                    logger.error(
+                        f"Task {task_id}: Cannot retrieve results - no log_dir specified"
+                    )
+                    result = {
+                        task_id: "ERROR: Cannot retrieve results - no log_dir specified"
+                    }
+
                 return result
 
             except Exception as e:
@@ -240,7 +266,9 @@ class VirtualMachineRunner:
             finally:
                 # Cleanup VM
                 try:
-                    await asyncio.to_thread(self.vm_manager.delete_vm, vm_name)
+                    await asyncio.to_thread(
+                        self.vm_manager.delete_virtual_machine_by_name, vm_name
+                    )
                 except Exception as e:
                     logger.error(f"Task {task_id}: Error deleting VM {vm_name}: {e}")
 

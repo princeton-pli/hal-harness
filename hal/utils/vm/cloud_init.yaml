@@ -1,0 +1,49 @@
+#cloud-config
+runcmd:
+  - |
+    ## FIXME: combine with setup_vm.sh
+    #!/bin/bash
+    set -e
+
+    # Redirect all output to log file
+    exec > /home/agent/cloud_init.log 2>&1
+
+    # Azure VM startup script for HAL agent execution
+    # This runs on first boot via cloud-init
+
+    echo "Starting VM initialization..."
+    touch /home/agent/startup_started
+    chown agent:agent /home/agent/startup_started
+
+    # 1. Update package lists
+    sudo apt-get update
+
+    # 2. Upgrade existing packages
+    sudo apt-get upgrade -y
+
+    # 3. Install Python 3 and pip
+    sudo apt-get install -y python3 python3-pip python3-venv
+
+    # 4. Install system dependencies
+    sudo apt-get install -y build-essential git curl wget
+
+    # 5. Install miniconda
+    wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O /tmp/miniconda.sh
+    bash /tmp/miniconda.sh -b -p /home/agent/miniconda3
+    rm /tmp/miniconda.sh
+    chown -R agent:agent /home/agent/miniconda3
+
+    # 6. Create conda environment as agent user
+    sudo -u agent bash -c "
+    export CONDA_PLUGINS_AUTO_ACCEPT_TOS=true && \
+    source /home/agent/miniconda3/etc/profile.d/conda.sh && \
+    conda create -y -n agent_env python=3.12 && \
+    conda activate agent_env
+    "
+
+    # 8. Create sentinel file to signal completion
+    rm /home/agent/startup_started
+    touch /home/agent/startup_complete
+    chown agent:agent /home/agent/startup_complete
+
+    echo "VM initialization complete!"
