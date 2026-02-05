@@ -18,14 +18,12 @@ def main():
         # Read configuration from environment variables
         run_id = os.environ.get("HAL_RUN_ID")
         task_id = os.environ.get("HAL_TASK_ID")
-        agent_module = os.environ.get("HAL_AGENT_MODULE")
-        agent_function = os.environ.get("HAL_AGENT_FUNCTION")
 
         # Validate required environment variables
-        if not all([run_id, task_id, agent_module, agent_function]):
+        if not all([run_id, task_id]):
             raise ValueError(
                 "Missing required environment variables. Required: "
-                "HAL_RUN_ID, HAL_TASK_ID, HAL_AGENT_MODULE, HAL_AGENT_FUNCTION"
+                "HAL_RUN_ID, HAL_TASK_ID"
             )
 
         # Initialize weave

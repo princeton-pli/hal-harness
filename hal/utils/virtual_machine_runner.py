@@ -240,6 +240,7 @@ class VirtualMachineRunner:
                         with open(output_file, "r") as f:
                             result = json.load(f)
                     else:
+                        # FIXME: this seems to show up, need to debug
                         logger.warning(
                             f"Task {task_id}: output.json not found in {dest_dir}"
                         )
