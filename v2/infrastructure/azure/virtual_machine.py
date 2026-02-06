@@ -356,15 +356,11 @@ class AzureVirtualMachine:
             cleaned_vars = {k: v.replace('\n', '').replace('  ', '') for k, v in env_vars.items()}
             env_flags = " ".join([f'-e {k}="{v}"' for k, v in cleaned_vars.items()])
 
-        # Create trace file before and after docker run
-        # Use nohup to ensure it runs in background and bash -c to handle the compound command
+        # Run docker in background, redirect all output to log directory
         docker_cmd = (
-            f"nohup bash -c '"
             f"mkdir -p {log_dir} && "
-            f'echo "Docker starting at $(date)" > /home/agent/docker_trace.txt && '
-            f"docker run --rm -v {log_dir}:/workspace/logs {env_flags} {image_name} && "
-            f'echo "Docker completed at $(date)" >> /home/agent/docker_trace.txt'
-            f"' > /home/agent/docker_output.log 2>&1 &"
+            f"nohup docker run --rm -v {log_dir}:/workspace/logs {env_flags} {image_name} "
+            f"> {log_dir}/docker_output.log 2>&1 &"
         )
 
         # Run Docker via SSH (spawns background process on VM)
@@ -374,7 +370,7 @@ class AzureVirtualMachine:
         else:
             logger.info(
                 f"Docker started on VM {self.name} "
-                f"(trace: /home/agent/docker_trace.txt, logs: /home/agent/docker_output.log)"
+                f"(logs in: {log_dir}/)"
             )
 
     def delete(self) -> None:
