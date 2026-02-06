@@ -7,13 +7,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from azure_virtual_machine import AzureVirtualMachine
+from infrastructure.azure.virtual_machine import AzureVirtualMachine
 
 
 logger = logging.getLogger(__name__)
 
 
-class AzureManager:
+class AzureResourceManager:
     """Manages Azure resources for a run."""
 
     def __init__(

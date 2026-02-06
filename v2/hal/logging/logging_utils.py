@@ -64,7 +64,7 @@ def setup_logging(log_dir: str, run_id: str, use_azure: bool = False) -> None:
     # Add Azure Monitor handler if requested
     if use_azure:
         try:
-            from azure_logging import AzureMonitorHandler, is_running_in_azure_vm
+            from infrastructure.azure.logging import AzureMonitorHandler, is_running_in_azure_vm
 
             # Check if we're actually in an Azure VM
             if not is_running_in_azure_vm():

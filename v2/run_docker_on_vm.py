@@ -7,8 +7,8 @@ import logging
 import os
 import uuid
 
-from azure_manager import AzureManager
-from logging_utils import setup_logging
+from v2.infrastructure.azure.resource_manager import AzureResourceManager
+from hal.logging.logging_utils import setup_logging
 
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ def main():
     )
 
     # Initialize Azure manager
-    azure_manager = AzureManager(
+    azure_manager = AzureResourceManager(
         run_id=run_id,
         virtual_machine_count=virtual_machine_count,
         use_gpu=use_gpu,
@@ -76,7 +76,7 @@ def main():
     try:
         # FIXME: Before running docker, we need to transfer the image to each VM
         # Current flow is broken: docker_image exists locally but VM doesn't have it
-        # Need to add: azure_manager.transfer_image(docker_image) or vm.transfer_image(docker_image)
+        # Need to add:a vm.transfer_image(docker_image)
 
         # Prepare env vars for Docker containers
         docker_env_vars = {

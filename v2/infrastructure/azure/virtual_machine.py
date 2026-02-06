@@ -11,7 +11,7 @@ from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.monitor import MonitorManagementClient
 from azure.identity import DefaultAzureCredential
 
-from utils import run_command
+from hal.utils import run_command
 
 
 logger = logging.getLogger(__name__)

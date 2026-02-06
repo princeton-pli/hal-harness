@@ -4,6 +4,13 @@ runcmd:
     #!/bin/bash
     set -e
 
+    # 0. Set up the logging directory
+    mkdir /home/agent/logging
+
+    # Save logs into the logging directory
+    # FIXME: set up an ingestion rule to bring output into Azure Monitor
+    exec > /home/agent/logging/cloud_init.log 2>&1
+
     # Azure VM startup script
     # This runs on first boot via cloud-init
 
