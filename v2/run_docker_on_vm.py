@@ -82,6 +82,7 @@ def main():
 
         # Run Docker on each VM
         for vm in azure_manager.virtual_machines:
+            vm.run_command('echo "hi"')
             # Add a task ID for this VM
             task_id = str(uuid.uuid4())[:20]
             vm_env_vars = docker_env_vars.copy()

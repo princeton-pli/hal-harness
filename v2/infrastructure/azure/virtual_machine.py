@@ -7,6 +7,9 @@ import subprocess
 import time
 import tempfile
 
+from fabric import Connection
+from invoke.runners import Result
+
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
 from azure.mgmt.monitor import MonitorManagementClient
@@ -134,7 +137,7 @@ class AzureVirtualMachine:
             image_reference = {
                 "publisher": "Canonical",
                 "offer": "ubuntu-24_04-lts",
-                "sku": "server-gen2",
+                "sku": "server",
                 "version": "latest",
             }
             logger.info(f"Using standard Ubuntu 24.04 LTS image for {self.name}")
@@ -210,20 +213,13 @@ class AzureVirtualMachine:
         while time.time() - start_time < timeout:
             try:
                 # Check if sentinel file exists
-                cmd = [
-                    "ssh",
-                    "-i",
-                    self.ssh_private_key_path,
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "ConnectTimeout=5",
-                    f"agent@{self.public_ip}",
+                result = self.run_command(
                     "test -f /home/agent/startup_complete",
-                ]
-                result = subprocess.run(cmd, capture_output=True)
+                    hide=True,
+                    warn=True
+                )
 
-                if result.returncode == 0:
+                if result.exited == 0:
                     logger.info(
                         f"Startup script completed on {self.name} at {self.public_ip}"
                     )
@@ -288,7 +284,11 @@ class AzureVirtualMachine:
             )
 
             remote_tar_path = f"/tmp/{os.path.basename(tar_path)}"
-            logger.info(f"Transferring image to VM {self.name} at {self.public_ip}...")
+
+            image_size_gb = os.path.getsize(tar_path) / (1024**3)
+            logger.info(f"Image size: {image_size_gb:.2f} GB")
+
+            logger.info(f"Transferring image to VM {self.name}...")
 
             subprocess.run(
                 [
@@ -306,18 +306,9 @@ class AzureVirtualMachine:
 
             # Load image on VM
             logger.info(f"Loading image on VM {self.name}...")
-            subprocess.run(
-                [
-                    "ssh",
-                    "-i",
-                    self.ssh_private_key_path,
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    f"agent@{self.public_ip}",
-                    f"docker load -i {remote_tar_path} && rm {remote_tar_path}",
-                ],
-                check=True,
-                capture_output=True,
+            self.run_command(
+                f"docker load -i {remote_tar_path} && rm {remote_tar_path}",
+                hide=True
             )
 
             logger.info(f"Image {image} successfully transferred to VM {self.name}")
@@ -329,17 +320,12 @@ class AzureVirtualMachine:
 
     def _check_if_docker_image_exists(self, image_name: str) -> bool:
         # Check if the docker image exists on the VM
-        check_cmd = [
-            "ssh",
-            "-i",
-            self.ssh_private_key_path,
-            "-o",
-            "StrictHostKeyChecking=no",
-            f"agent@{self.public_ip}",
+        result = self.run_command(
             f"docker image inspect {image_name} > /dev/null 2>&1",
-        ]
-        result = subprocess.run(check_cmd, capture_output=True)
-        if result.returncode != 0:
+            hide=True,
+            warn=True
+        )
+        if result.exited != 0:
             raise RuntimeError(
                 f"Docker image '{image_name}' not found on VM {self.name}. "
                 f"Call send_docker_image_by_name() first to transfer the image."
@@ -364,12 +350,13 @@ class AzureVirtualMachine:
         # Create log directory on VM (flat structure: run_id-task_id)
         run_id = env_vars.get("HAL_RUN_ID", "unknown") if env_vars else "unknown"
         task_id = env_vars.get("HAL_TASK_ID", "unknown") if env_vars else "unknown"
-        log_dir = f"/home/agent/hal_logs/{run_id}-{task_id}"
+        log_dir = f"/home/agent/logging/agent_run/{run_id}-{task_id}"
 
         # Build docker run command with mounted volume
+        # Quote env var values to handle special characters (URLs, IDs, etc.)
         env_flags = ""
         if env_vars:
-            env_flags = " ".join([f"-e {k}={v}" for k, v in env_vars.items()])
+            env_flags = " ".join([f'-e {k}="{v}"' for k, v in env_vars.items()])
 
         # Create trace file before and after docker run
         # Use nohup to ensure it runs in background and bash -c to handle the compound command
@@ -382,20 +369,9 @@ class AzureVirtualMachine:
             f'" > /home/agent/docker_output.log 2>&1 &'
         )
 
-        # SSH and run Docker
-        ssh_cmd = [
-            "ssh",
-            "-i",
-            self.ssh_private_key_path,
-            "-o",
-            "StrictHostKeyChecking=no",
-            f"agent@{self.public_ip}",
-            docker_cmd,
-        ]
-
-        # Run and wait for SSH command to complete (which spawns background process on VM)
-        result = subprocess.run(ssh_cmd, capture_output=True, text=True)
-        if result.returncode != 0:
+        # Run Docker via SSH (spawns background process on VM)
+        result = self.run_command(docker_cmd, hide=True, warn=True)
+        if result.exited != 0:
             logger.error(f"Failed to start Docker on {self.name}: {result.stderr}")
         else:
             logger.info(
@@ -461,3 +437,23 @@ class AzureVirtualMachine:
                 ]
 
             run_command(cmd, check=False)
+
+    def run_command(self, command: str, **kwargs) -> Result:
+        """Run a command on the remote VM via SSH.
+
+        Args:
+            command: Shell command to run on the remote VM
+            **kwargs: Additional arguments to pass to Connection.run()
+
+        Returns:
+            Result object from fabric
+        """
+        logger.info(f"Running command on {self.name}: {command}")
+        connection = Connection(
+            host=self.public_ip,
+            user="agent",
+            connect_kwargs={"key_filename": self.ssh_private_key_path}
+        )
+        result = connection.run(command, **kwargs)
+        logger.info(f"Command completed with exit code {result.exited}")
+        return result
