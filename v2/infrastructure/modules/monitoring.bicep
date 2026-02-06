@@ -105,7 +105,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2022-06-01' = {
             'Custom-ContainerLogs_CL'
           ]
           filePatterns: [
-            '/home/agent/logging/agent_run/*/*.log'
+            '/home/agent/logging/docker_run/*/*.log'
           ]
           format: 'text'
           settings: {

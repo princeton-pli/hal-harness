@@ -4,8 +4,9 @@ runcmd:
     #!/bin/bash
     set -e
 
-    # 0. Set up the logging directory
-    mkdir /home/agent/logging
+    # 0. Set up the logging directory with proper ownership
+    mkdir -p /home/agent/logging/docker_run
+    chown -R agent:agent /home/agent/logging
 
     # Save logs into the logging directory
     # FIXME: set up an ingestion rule to bring output into Azure Monitor

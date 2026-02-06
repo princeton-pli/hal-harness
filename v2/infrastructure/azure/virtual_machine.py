@@ -93,6 +93,7 @@ class AzureVirtualMachine:
             },
         ).result()
         self.public_ip = public_ip.ip_address
+        logging.info(f"Public IP {self.public_ip} created for VM {self.name}")
 
         # Create NIC
         nic_name = f"{self.name}-nic"
@@ -214,9 +215,7 @@ class AzureVirtualMachine:
             try:
                 # Check if sentinel file exists
                 result = self.run_command(
-                    "test -f /home/agent/startup_complete",
-                    hide=True,
-                    warn=True
+                    "test -f /home/agent/startup_complete", hide=True, warn=True
                 )
 
                 if result.exited == 0:
@@ -307,8 +306,7 @@ class AzureVirtualMachine:
             # Load image on VM
             logger.info(f"Loading image on VM {self.name}...")
             self.run_command(
-                f"docker load -i {remote_tar_path} && rm {remote_tar_path}",
-                hide=True
+                f"docker load -i {remote_tar_path} && rm {remote_tar_path}", hide=True
             )
 
             logger.info(f"Image {image} successfully transferred to VM {self.name}")
@@ -321,9 +319,7 @@ class AzureVirtualMachine:
     def _check_if_docker_image_exists(self, image_name: str) -> bool:
         # Check if the docker image exists on the VM
         result = self.run_command(
-            f"docker image inspect {image_name} > /dev/null 2>&1",
-            hide=True,
-            warn=True
+            f"docker image inspect {image_name} > /dev/null 2>&1", hide=True, warn=True
         )
         if result.exited != 0:
             raise RuntimeError(
@@ -350,27 +346,29 @@ class AzureVirtualMachine:
         # Create log directory on VM (flat structure: run_id-task_id)
         run_id = env_vars.get("HAL_RUN_ID", "unknown") if env_vars else "unknown"
         task_id = env_vars.get("HAL_TASK_ID", "unknown") if env_vars else "unknown"
-        log_dir = f"/home/agent/logging/agent_run/{run_id}-{task_id}"
+        log_dir = f"/home/agent/logging/docker_run/{run_id}-{task_id}"
 
         # Build docker run command with mounted volume
         # Quote env var values to handle special characters (URLs, IDs, etc.)
+        # Strip newlines and extra whitespace from values to avoid breaking the command
         env_flags = ""
         if env_vars:
-            env_flags = " ".join([f'-e {k}="{v}"' for k, v in env_vars.items()])
+            cleaned_vars = {k: v.replace('\n', '').replace('  ', '') for k, v in env_vars.items()}
+            env_flags = " ".join([f'-e {k}="{v}"' for k, v in cleaned_vars.items()])
 
         # Create trace file before and after docker run
         # Use nohup to ensure it runs in background and bash -c to handle the compound command
         docker_cmd = (
-            f'nohup bash -c "'
+            f"nohup bash -c '"
             f"mkdir -p {log_dir} && "
-            f"echo 'Docker starting at $(date)' > /home/agent/docker_trace.txt && "
+            f'echo "Docker starting at $(date)" > /home/agent/docker_trace.txt && '
             f"docker run --rm -v {log_dir}:/workspace/logs {env_flags} {image_name} && "
-            f"echo 'Docker completed at $(date)' >> /home/agent/docker_trace.txt"
-            f'" > /home/agent/docker_output.log 2>&1 &'
+            f'echo "Docker completed at $(date)" >> /home/agent/docker_trace.txt'
+            f"' > /home/agent/docker_output.log 2>&1 &"
         )
 
         # Run Docker via SSH (spawns background process on VM)
-        result = self.run_command(docker_cmd, hide=True, warn=True)
+        result = self.run_command(docker_cmd, warn=True)
         if result.exited != 0:
             logger.error(f"Failed to start Docker on {self.name}: {result.stderr}")
         else:
@@ -452,7 +450,7 @@ class AzureVirtualMachine:
         connection = Connection(
             host=self.public_ip,
             user="agent",
-            connect_kwargs={"key_filename": self.ssh_private_key_path}
+            connect_kwargs={"key_filename": self.ssh_private_key_path},
         )
         result = connection.run(command, **kwargs)
         logger.info(f"Command completed with exit code {result.exited}")

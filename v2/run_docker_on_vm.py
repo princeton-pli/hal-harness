@@ -51,7 +51,7 @@ def main():
     docker_image = args.image
 
     # Generate run ID
-    run_id = str(uuid.uuid4())[:20]
+    run_id = str(uuid.uuid4())[:18]
 
     # Setup logging (with Azure Monitor if running in VM)
     log_dir = os.path.join(os.getcwd(), "logs")
@@ -82,9 +82,8 @@ def main():
 
         # Run Docker on each VM
         for vm in azure_manager.virtual_machines:
-            vm.run_command('echo "hi"')
             # Add a task ID for this VM
-            task_id = str(uuid.uuid4())[:20]
+            task_id = str(uuid.uuid4())[:18]
             vm_env_vars = docker_env_vars.copy()
             vm_env_vars["HAL_TASK_ID"] = task_id
 
