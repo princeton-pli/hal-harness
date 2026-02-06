@@ -5,6 +5,7 @@ import logging
 import os
 import subprocess
 import time
+import tempfile
 
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
@@ -48,8 +49,13 @@ class AzureVirtualMachine:
 
         # Store for later use
         self.nsg_id = nsg_id
-        self.ssh_public_key = ssh_public_key
         self.public_ip = None
+        self.ssh_public_key = ssh_public_key
+
+        # Get private key path from env
+        self.ssh_private_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
+        if not self.ssh_private_key_path:
+            raise ValueError("SSH_PRIVATE_KEY_PATH not set")
 
         # Create the VM
         self._create()
@@ -113,15 +119,30 @@ class AzureVirtualMachine:
         custom_data = base64.b64encode(cloud_init_config.encode()).decode()
 
         # Create VM
+        # Use Ubuntu-HPC image for GPU VMs (has NVIDIA drivers pre-installed)
+        if self.gpu:
+            image_reference = {
+                "publisher": "microsoft-dsvm",
+                "offer": "ubuntu-hpc",
+                "sku": "2404",
+                "version": "latest",
+            }
+            logger.info(
+                f"Using Ubuntu-HPC 24.04 image with pre-installed GPU drivers for {self.name}"
+            )
+        else:
+            image_reference = {
+                "publisher": "Canonical",
+                "offer": "ubuntu-24_04-lts",
+                "sku": "server-gen2",
+                "version": "latest",
+            }
+            logger.info(f"Using standard Ubuntu 24.04 LTS image for {self.name}")
+
         vm_params = {
             "location": self.location,
             "storage_profile": {
-                "image_reference": {
-                    "publisher": "Canonical",
-                    "offer": "0001-com-ubuntu-server-focal",
-                    "sku": "20_04-lts-gen2",
-                    "version": "latest",
-                },
+                "image_reference": image_reference,
                 "os_disk": {"createOption": "FromImage", "diskSizeGB": 80},
             },
             "hardware_profile": {"vm_size": self.vm_size},
@@ -144,59 +165,38 @@ class AzureVirtualMachine:
             "network_profile": {"network_interfaces": [{"id": nic.id}]},
         }
 
-        if self.gpu:
-            vm_params["security_profile"] = {
-                "uefi_settings": {"secure_boot_enabled": False},
-                "security_type": "TrustedLaunch",
-            }
-
         self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group, self.name, vm_params
         ).result()
 
-        # Install GPU driver if needed
-        if self.gpu:
-            logger.info(f"Installing NVIDIA GPU driver on {self.name} (~12 min)")
-            self.compute_client.virtual_machine_extensions.begin_create_or_update(
-                self.resource_group,
-                self.name,
-                "NvidiaGpuDriverLinux",
-                {
-                    "location": self.location,
-                    "publisher": "Microsoft.HpcCompute",
-                    "type_properties_type": "NvidiaGpuDriverLinux",
-                    "type_handler_version": "1.9",
-                    "auto_upgrade_minor_version": True,
-                    "settings": {},
-                },
-            ).result()
-
+        # FIXME: restore Azure Monitor Agent and DCR associationonce we have the permissions
         # Install Azure Monitor Agent
-        logger.info(f"Installing Azure Monitor Agent on {self.name}")
-        self.compute_client.virtual_machine_extensions.begin_create_or_update(
-            self.resource_group,
-            self.name,
-            "AzureMonitorLinuxAgent",
-            {
-                "location": self.location,
-                "publisher": "Microsoft.Azure.Monitor",
-                "type_properties_type": "AzureMonitorLinuxAgent",
-                "type_handler_version": "1.0",
-                "auto_upgrade_minor_version": True,
-                "settings": {},
-            },
-        ).result()
+        # logger.info(f"Installing Azure Monitor Agent on {self.name}")
+        # self.compute_client.virtual_machine_extensions.begin_create_or_update(
+        #     self.resource_group,
+        #     self.name,
+        #     "AzureMonitorLinuxAgent",
+        #     {
+        #         "location": self.location,
+        #         "publisher": "Microsoft.Azure.Monitor",
+        #         "type_properties_type": "AzureMonitorLinuxAgent",
+        #         "type_handler_version": "1.0",
+        #         "auto_upgrade_minor_version": True,
+        #         "settings": {},
+        #     },
+        # ).result()
 
-        logger.info(
-            f"VM {self.name} created at {self.public_ip}; waiting for startup script"
-        )
+        # logger.info(
+        #     f"VM {self.name} created at {self.public_ip}; waiting for startup script"
+        # )
 
-        # Wait for SSH to be ready
-        self._wait_for_setup_to_complete()
-        logger.info(f"Got SSH for VM {self.name}")
+        # # Wait for SSH to be ready
+        # self._wait_for_setup_to_complete()
+        # logger.info(f"Got SSH for VM {self.name}")
 
-        # Associate Data Collection Rule if provided
-        self._associate_dcr()
+        # # Associate Data Collection Rule if provided
+        # # FIXME: get the permissions to run _associate_dcr !!!
+        # self._associate_dcr()
 
     def _wait_for_setup_to_complete(self, timeout: int = 600) -> None:
         """Wait for startup script to complete by checking for sentinel file.
@@ -206,7 +206,6 @@ class AzureVirtualMachine:
         """
         logger.info(f"Waiting for startup script to complete on {self.name}")
         start_time = time.time()
-        ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
 
         while time.time() - start_time < timeout:
             try:
@@ -214,7 +213,7 @@ class AzureVirtualMachine:
                 cmd = [
                     "ssh",
                     "-i",
-                    ssh_key_path,
+                    self.ssh_private_key_path,
                     "-o",
                     "StrictHostKeyChecking=no",
                     "-o",
@@ -261,40 +260,106 @@ class AzureVirtualMachine:
             logger.error(f"Failed to associate DCR with VM {self.name}: {e}")
             raise
 
-    def transfer_docker_image(self, image: str) -> None:
+    def send_docker_image_by_name(self, image: str) -> None:
         """Transfer a Docker image from local machine to this VM.
 
-        FIXME: NOT IMPLEMENTED YET!
-        Options for implementation:
-        1. docker save + scp + docker load (works but slow for large images)
-        2. Push to container registry (ACR/DockerHub) + pull on VM (faster, requires registry)
-        3. Rebuild on VM from Dockerfile (slow but reproducible)
+        Uses docker save + scp + docker load approach for simplicity.
+        For production, consider using Azure Container Registry instead.
 
-        Recommended: Use Azure Container Registry (ACR) for production
-        - Push: docker tag {image} {acr_name}.azurecr.io/{image} && docker push
-        - Pull on VM: docker pull {acr_name}.azurecr.io/{image}
+        Args:
+            image: Docker image name (e.g., "my-agent:latest")
+
+        Raises:
+            RuntimeError: If image doesn't exist locally or transfer fails
         """
-        raise NotImplementedError(
-            f"Image transfer not implemented. Cannot transfer {image} to {self.name}. "
-            "Need to implement one of: docker save/load, registry push/pull, or rebuild on VM."
-        )
+
+        # FIXME: get timestamp for local Docker image to confirm when it was built
+
+        # Save image to temporary tar file
+        with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as tmp_file:
+            tar_path = tmp_file.name
+
+        try:
+            logger.info(f"Saving image {image} to {tar_path}...")
+            subprocess.run(
+                ["docker", "save", "-o", tar_path, image],
+                check=True,
+                capture_output=True,
+            )
+
+            remote_tar_path = f"/tmp/{os.path.basename(tar_path)}"
+            logger.info(f"Transferring image to VM {self.name} at {self.public_ip}...")
+
+            subprocess.run(
+                [
+                    "scp",
+                    "-i",
+                    self.ssh_private_key_path,
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    tar_path,
+                    f"agent@{self.public_ip}:{remote_tar_path}",
+                ],
+                check=True,
+                capture_output=True,
+            )
+
+            # Load image on VM
+            logger.info(f"Loading image on VM {self.name}...")
+            subprocess.run(
+                [
+                    "ssh",
+                    "-i",
+                    self.ssh_private_key_path,
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    f"agent@{self.public_ip}",
+                    f"docker load -i {remote_tar_path} && rm {remote_tar_path}",
+                ],
+                check=True,
+                capture_output=True,
+            )
+
+            logger.info(f"Image {image} successfully transferred to VM {self.name}")
+
+        finally:
+            # Clean up local tar tempfile
+            if os.path.exists(tar_path):
+                os.remove(tar_path)
+
+    def _check_if_docker_image_exists(self, image_name: str) -> bool:
+        # Check if the docker image exists on the VM
+        check_cmd = [
+            "ssh",
+            "-i",
+            self.ssh_private_key_path,
+            "-o",
+            "StrictHostKeyChecking=no",
+            f"agent@{self.public_ip}",
+            f"docker image inspect {image_name} > /dev/null 2>&1",
+        ]
+        result = subprocess.run(check_cmd, capture_output=True)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Docker image '{image_name}' not found on VM {self.name}. "
+                f"Call send_docker_image_by_name() first to transfer the image."
+            )
 
     def run_docker(
         self,
-        image: str,
+        image_name: str,
         env_vars: dict[str, str] | None = None,
     ) -> None:
         """Run Docker container on this VM via SSH.
 
-        FIXME: This assumes the image already exists on the VM, but it doesn't!
-        The image is built locally on the orchestrator machine and needs to be transferred first.
-        Need to add image transfer logic before this method can work.
-        """
-        logger.info(f"Running Docker image {image} on VM {self.name}")
+        Note: Image must already exist on the VM. Call send_docker_image_by_name()
+        first to transfer the image from the local machine.
 
-        ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
-        if not ssh_key_path:
-            raise ValueError("SSH_PRIVATE_KEY_PATH not set")
+        Args:
+            image: Docker image name to run
+            env_vars: Optional environment variables to pass to the container
+        """
+        logger.info(f"Running Docker image {image_name} on VM {self.name}")
 
         # Create log directory on VM (flat structure: run_id-task_id)
         run_id = env_vars.get("HAL_RUN_ID", "unknown") if env_vars else "unknown"
@@ -312,7 +377,7 @@ class AzureVirtualMachine:
             f'nohup bash -c "'
             f"mkdir -p {log_dir} && "
             f"echo 'Docker starting at $(date)' > /home/agent/docker_trace.txt && "
-            f"docker run --rm -v {log_dir}:/workspace/logs {env_flags} {image} && "
+            f"docker run --rm -v {log_dir}:/workspace/logs {env_flags} {image_name} && "
             f"echo 'Docker completed at $(date)' >> /home/agent/docker_trace.txt"
             f'" > /home/agent/docker_output.log 2>&1 &'
         )
@@ -321,7 +386,7 @@ class AzureVirtualMachine:
         ssh_cmd = [
             "ssh",
             "-i",
-            ssh_key_path,
+            self.ssh_private_key_path,
             "-o",
             "StrictHostKeyChecking=no",
             f"agent@{self.public_ip}",

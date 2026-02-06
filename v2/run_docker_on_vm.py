@@ -7,7 +7,7 @@ import logging
 import os
 import uuid
 
-from v2.infrastructure.azure.resource_manager import AzureResourceManager
+from infrastructure.azure.resource_manager import AzureResourceManager
 from hal.logging.logging_utils import setup_logging
 
 
@@ -19,11 +19,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run Docker containers on Azure VMs")
     parser.add_argument(
         "--image",
-        # Note: right now this pulls a docker image that's on the invoker/orchestrator machine; we may want these to be
-        # in a image repository at some point
-        # FIXME: This image exists locally on the orchestrator but needs to be transferred to the VM
-        # Options: 1) docker save + scp + docker load, 2) push to registry + pull on VM, 3) rebuild on VM
-        help="This is the name of the docker image that you want to run",
+        help="Docker image name to run (will be transferred from local machine to VMs)",
     )
     parser.add_argument(
         "--vm_count",
@@ -65,6 +61,8 @@ def main():
         f"Starting run {run_id}. virtual_machine_count={virtual_machine_count}, use_gpu={use_gpu}, image={docker_image}"
     )
 
+    # FIXME: check for the docker image presence here (fail fast)
+
     # Initialize Azure manager
     azure_manager = AzureResourceManager(
         run_id=run_id,
@@ -74,10 +72,6 @@ def main():
     )
 
     try:
-        # FIXME: Before running docker, we need to transfer the image to each VM
-        # Current flow is broken: docker_image exists locally but VM doesn't have it
-        # Need to add:a vm.transfer_image(docker_image)
-
         # Prepare env vars for Docker containers
         docker_env_vars = {
             "HAL_RUN_ID": run_id,
@@ -93,8 +87,10 @@ def main():
             vm_env_vars = docker_env_vars.copy()
             vm_env_vars["HAL_TASK_ID"] = task_id
 
+            vm.send_docker_image_by_name(docker_image)
+
             # Run docker with the env vars and the task ID
-            vm.run_docker(image=docker_image, env_vars=vm_env_vars)
+            vm.run_docker(image_name=docker_image, env_vars=vm_env_vars)
 
         logger.info(f"Triggered Docker runs for {virtual_machine_count} VMs")
 
