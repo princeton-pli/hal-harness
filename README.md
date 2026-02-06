@@ -123,6 +123,22 @@ This repository provides a standardized evaluation harness for reproducible agen
 7. **Optional: Docker Setup**
    If you plan to use Docker containers for isolated evaluation, make sure Docker is installed on your system. The harness will automatically build the required Docker image.
 
+## Tests
+
+### Prerequisites
+
+Install the development dependencies:
+
+```bash
+pip install -e ".[dev,azure]"
+```
+
+### Running Tests
+
+```bash
+pytest tests/ -v
+```
+
 ## Which Benchmarks Are Supported?
 
 ### [SWE-bench Verified (Mini)](https://github.com/princeton-nlp/SWE-bench)

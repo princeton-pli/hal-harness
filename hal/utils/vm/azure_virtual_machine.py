@@ -27,13 +27,12 @@ class AzureVirtualMachine:
         subscription_id: str,
         nsg_id: str,
         ssh_public_key: str,
-        vm_size: str = "Standard_E2as_v5",
-        gpu: bool = False,
+        gpu: bool,
     ):
         self.name = name
         self.resource_group = resource_group
         self.location = location
-        self.vm_size = vm_size if not gpu else "Standard_NC4as_T4_v3"
+        self.vm_size = "Standard_NC4as_T4_v3" if gpu else "Standard_E2as_v5"
         self.gpu = gpu
 
         # Azure clients
@@ -59,16 +58,18 @@ class AzureVirtualMachine:
         :return: whether or not the file is present
         :rtype: bool
         """
+        ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
+
         cmd = [
             "ssh",
             "-i",
-            file_path,
+            ssh_key_path,
             "-o",
             "StrictHostKeyChecking=no",
             "-o",
             "ConnectTimeout=5",
             f"agent@{self.public_ip}",
-            "test -f /home/agent/startup_complete",
+            f"test -f {file_path}",
         ]
         result = subprocess.run(cmd, capture_output=True)
 
@@ -134,15 +135,30 @@ class AzureVirtualMachine:
         custom_data = base64.b64encode(cloud_init_config.encode()).decode()
 
         # Create VM
+        # Use Ubuntu-HPC image for GPU VMs (has NVIDIA drivers pre-installed)
+        if self.gpu:
+            image_reference = {
+                "publisher": "microsoft-dsvm",
+                "offer": "ubuntu-hpc",
+                "sku": "2204",
+                "version": "latest",
+            }
+            logger.info(
+                f"Using Ubuntu-HPC 22.04 image with pre-installed GPU drivers for {self.name}"
+            )
+        else:
+            image_reference = {
+                "publisher": "Canonical",
+                "offer": "0001-com-ubuntu-server-jammy",
+                "sku": "22_04-lts-gen2",
+                "version": "latest",
+            }
+            logger.info(f"Using standard Ubuntu 22.04 image for {self.name}")
+
         vm_params = {
             "location": self.location,
             "storage_profile": {
-                "image_reference": {
-                    "publisher": "Canonical",
-                    "offer": "0001-com-ubuntu-server-focal",
-                    "sku": "20_04-lts-gen2",
-                    "version": "latest",
-                },
+                "image_reference": image_reference,
                 "os_disk": {"createOption": "FromImage", "diskSizeGB": 80},
             },
             "hardware_profile": {"vm_size": self.vm_size},
@@ -165,43 +181,19 @@ class AzureVirtualMachine:
             "network_profile": {"network_interfaces": [{"id": nic.id}]},
         }
 
-        if self.gpu:
-            vm_params["security_profile"] = {
-                "uefi_settings": {"secure_boot_enabled": False},
-                "security_type": "TrustedLaunch",
-            }
-
         self.compute_client.virtual_machines.begin_create_or_update(
             self.resource_group, self.name, vm_params
         ).result()
 
         logger.info(f"VM {self.name} created at {self.public_ip}")
 
-        # Wait for startup script to complete BEFORE installing GPU driver
+        # Wait for startup script to complete
         startup_start = time.time()
         self._wait_for_setup_to_complete()
         startup_duration = int(time.time() - startup_start)
         logger.info(
             f"Startup script completed for VM {self.name} in {startup_duration} seconds"
         )
-
-        # Install GPU driver after startup is complete (to avoid conflicts)
-        if self.gpu:
-            logger.info(f"Installing NVIDIA GPU driver on {self.name} (~12 min)")
-            self.compute_client.virtual_machine_extensions.begin_create_or_update(
-                self.resource_group,
-                self.name,
-                "NvidiaGpuDriverLinux",
-                {
-                    "location": self.location,
-                    "publisher": "Microsoft.HpcCompute",
-                    "type_properties_type": "NvidiaGpuDriverLinux",
-                    "type_handler_version": "1.9",
-                    "auto_upgrade_minor_version": True,
-                    "settings": {},
-                },
-            ).result()
-            logger.info(f"GPU driver installed on VM {self.name}")
 
     def _wait_for_setup_to_complete(self, timeout: int = 600) -> None:
         """Wait for startup script to complete by checking for sentinel file.
@@ -210,11 +202,11 @@ class AzureVirtualMachine:
             timeout: Maximum time to wait in seconds (default 600)
         """
         start_time = time.time()
-        ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
+        sentinel_file = "/home/agent/startup_complete"
 
-        logger.info(f"Waiting for startup script to complete on {self.name} (~3 min)")
+        logger.info(f"Waiting for startup script to complete on {self.name} (~5 min)")
         while time.time() - start_time < timeout:
-            if self.check_for_file_presence_by_path(ssh_key_path):
+            if self.check_for_file_presence_by_path(sentinel_file):
                 logger.debug(
                     f"Startup script completed on {self.name} at {self.public_ip}"
                 )

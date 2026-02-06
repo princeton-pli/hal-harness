@@ -580,6 +580,27 @@ class CoreBenchHard(CoreBench):
             ):
                 continue
 
+            # Skip large training data files (testing tasks don't need training data)
+            filename_lower = os.path.basename(normalized_path).lower()
+
+            # Skip files with 'train' in the name (trainX.csv, mtrainX.csv, etc.)
+            if "train" in filename_lower and filename_lower.endswith(
+                (".csv", ".txt", ".json", ".parquet", ".h5", ".hdf5")
+            ):
+                continue
+
+            # Skip cache directories (often contain 3GB+ of training artifacts)
+            if "/cache/" in normalized_path or "/Cache/" in normalized_path:
+                continue
+
+            # Skip checkpoint files
+            if filename_lower.startswith("checkpoint") or ".ckpt" in filename_lower:
+                continue
+
+            # Skip __pycache__ directories
+            if "/__pycache__/" in normalized_path:
+                continue
+
             # Include all other files
             filtered_dict[target_path] = source_path
 

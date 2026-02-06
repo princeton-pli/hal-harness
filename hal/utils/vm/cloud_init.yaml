@@ -27,31 +27,18 @@ runcmd:
     # 4. Install system dependencies
     sudo apt-get install -y build-essential git curl wget
 
-    # 5. Install Miniconda
-    cd /tmp
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-    bash miniconda.sh -b -p /home/agent/miniconda3
-    rm miniconda.sh
-
-    # Set up conda initialization
-    echo 'export PATH="/home/agent/miniconda3/bin:$PATH"' >> /home/agent/.bashrc
-    echo 'source /home/agent/miniconda3/etc/profile.d/conda.sh' >> /home/agent/init_conda.sh
-    chown agent:agent /home/agent/init_conda.sh
+    # 5. Install miniconda
+    wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O /tmp/miniconda.sh
+    bash /tmp/miniconda.sh -b -p /home/agent/miniconda3
+    rm /tmp/miniconda.sh
     chown -R agent:agent /home/agent/miniconda3
 
-    # 6. Accept conda Terms of Service
+    # 6. Create conda environment as agent user
     sudo -u agent bash -c "
-    source /home/agent/miniconda3/etc/profile.d/conda.sh
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-    "
-
-    # 7. Create conda environment as agent user
-    sudo -u agent bash -c "
-    source /home/agent/miniconda3/etc/profile.d/conda.sh
-    conda create -y -n agent_env python=3.12
+    export CONDA_PLUGINS_AUTO_ACCEPT_TOS=true && \
+    source /home/agent/miniconda3/etc/profile.d/conda.sh && \
+    conda create -y -n agent_env python=3.12 && \
     conda activate agent_env
-    pip install 'weave==0.51.41' 'gql<4' 'wandb==0.23.0' 'python-dotenv'
     "
 
     # 8. Create sentinel file to signal completion
