@@ -78,7 +78,7 @@ Requirements:
 3. Each task MUST include a test command that validates completion
 4. Test commands should use simple tools: python -c, grep, pytest, etc.
 5. Keep tasks small and testable (each should take ~1-5 minutes)
-6. Maximum 10 tasks total
+6. Make as many tasks as needed
 
 Return a JSON array of tasks with this exact structure:
 [
@@ -243,7 +243,6 @@ def run_aider_task(
 
 def run_task_pipeline(
     tasks: List[Dict[str, str]],
-    workspace_dir: str,
     results_dir: str,
     logger: logging.Logger,
     api_key: str,
@@ -253,7 +252,6 @@ def run_task_pipeline(
 
     Args:
         tasks: List of task dicts with 'description' and optional 'test_command'
-        workspace_dir: Working directory for code
         results_dir: Directory to save results
         logger: Logger instance
         api_key: Anthropic API key
@@ -355,7 +353,6 @@ def main():
         # Run the task pipeline
         summary = run_task_pipeline(
             tasks=tasks,
-            workspace_dir=workspace_dir,
             results_dir=results_dir,
             logger=logger,
             api_key=anthropic_api_key,
