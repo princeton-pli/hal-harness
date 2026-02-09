@@ -147,8 +147,11 @@ def run_aider_task(
     # Aider command with auto-test loop
     cmd = [
         "aider",
-        "--yes",  # Auto-confirm all prompts
+        "--yes-always",
         "--no-auto-commits",  # We'll commit manually
+        "--architect",
+        "--auto-lint",
+        "--verbose",
         "--message",
         task,
         "--model",
