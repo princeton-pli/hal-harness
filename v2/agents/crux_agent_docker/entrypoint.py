@@ -11,6 +11,7 @@ import json
 import subprocess
 import traceback
 from typing import List, Dict, Optional
+from anthropic import Anthropic
 
 
 def setup_logging(log_dir: str) -> logging.Logger:
@@ -44,6 +45,83 @@ def initialize_git_in_workspace(workspace_dir: str, logger: logging.Logger) -> N
         logger.info("Git repository initialized")
 
 
+def generate_tasks_from_description(
+    project_description: str,
+    api_key: str,
+    logger: logging.Logger,
+) -> List[Dict[str, str]]:
+    """
+    Use Claude to generate a list of coding tasks from a project description.
+
+    Args:
+        project_description: High-level description of what to build
+        api_key: Anthropic API key
+        logger: Logger instance
+
+    Returns:
+        List of task dictionaries with description, test_command, and max_retries
+    """
+    logger.info("Planning tasks from project description...")
+
+    client = Anthropic(api_key=api_key)
+
+    planning_prompt = f"""You are a technical project planner for autonomous coding agents.
+
+Given this project description:
+{project_description}
+
+Generate a step-by-step task breakdown that can be executed by an autonomous coding agent using Aider.
+
+Requirements:
+1. Each task should be a single, focused coding objective
+2. Tasks should build on each other logically
+3. Each task MUST include a test command that validates completion
+4. Test commands should use simple tools: python -c, grep, pytest, etc.
+5. Keep tasks small and testable (each should take ~1-5 minutes)
+6. Maximum 10 tasks total
+
+Return a JSON array of tasks with this exact structure:
+[
+  {{
+    "description": "Clear, specific task description for the coding agent",
+    "test_command": "Shell command that returns exit code 0 if task is complete",
+    "max_retries": 3
+  }}
+]
+
+IMPORTANT: Return ONLY the JSON array, no explanation or markdown formatting."""
+
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4096,
+        messages=[{"role": "user", "content": planning_prompt}],
+    )
+
+    response_text = response.content[0].text.strip()
+
+    # Remove markdown code blocks if present
+    if response_text.startswith("```"):
+        response_text = response_text.split("```")[1]
+        if response_text.startswith("json"):
+            response_text = response_text[4:]
+        response_text = response_text.strip()
+
+    try:
+        tasks = json.loads(response_text)
+        logger.info(f"Generated {len(tasks)} tasks from project description")
+
+        # Log the task plan
+        logger.info("Task Plan:")
+        for i, task in enumerate(tasks, 1):
+            logger.info(f"  {i}. {task['description']}")
+
+        return tasks
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse task JSON: {e}")
+        logger.error(f"Response was: {response_text}")
+        raise ValueError("Failed to generate valid task list from project description")
+
+
 def run_aider_task(
     task: str,
     test_command: Optional[str],
@@ -74,7 +152,7 @@ def run_aider_task(
         "--message",
         task,
         "--model",
-        "claude-3-7-sonnet-20250219",  # Use latest Claude
+        "claude-sonnet-4-20250514",
     ]
 
     # Add test command if provided (enables self-healing loop)
@@ -116,15 +194,14 @@ def run_aider_task(
 
                 # Check if there are changes to commit
                 status_result = subprocess.run(
-                    ["git", "diff", "--cached", "--quiet"],
-                    capture_output=True
+                    ["git", "diff", "--cached", "--quiet"], capture_output=True
                 )
 
                 if status_result.returncode != 0:  # There are changes
                     subprocess.run(
                         ["git", "commit", "-m", f"Completed: {task}"],
                         check=True,
-                        capture_output=True
+                        capture_output=True,
                     )
                     logger.info("Changes committed")
                 else:
@@ -242,6 +319,7 @@ def main():
         run_id = os.environ.get("HAL_RUN_ID")
         task_id = os.environ.get("HAL_TASK_ID")
         anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+        project_description = os.environ.get("PROJECT_DESCRIPTION")
 
         # Validate required variables
         if not all([run_id, task_id, anthropic_api_key]):
@@ -252,34 +330,24 @@ def main():
 
         logger.info(f"Agent starting - RunID={run_id}, TaskID={task_id}")
 
+        logger.info(f"Project description: {project_description}")
+
         # Setup workspace
         initialize_git_in_workspace(workspace_dir, logger)
 
-        # Define tasks (this could be loaded from a file or API)
-        # FIXME: make the tasks auto-generated from a planning agent
-        tasks = [
-            {
-                "description": "Create a Python file called hello.py that prints 'Hello from autonomous agent!'",
-                "test_command": "python hello.py | grep -q 'Hello from autonomous agent'",
-                "max_retries": 3,
-            },
-            {
-                "description": "Create a Python file called calculator.py with an add(a, b) function that returns the sum of two numbers",
-                "test_command": "python -c 'from calculator import add; assert add(2, 3) == 5; assert add(-1, 1) == 0; print(\"Tests passed\")'",
-                "max_retries": 3,
-            },
-        ]
+        # Generate tasks from project description
+        # Use planning agent to generate tasks from description
+        tasks = generate_tasks_from_description(
+            project_description=project_description,
+            api_key=anthropic_api_key,
+            logger=logger,
+        )
 
-        # FIXME: Save tasks to a file; don't read them in
-
-        # Load tasks from file if it exists
-        tasks_file = "/workspace/tasks.json"
-        if os.path.exists(tasks_file):
-            logger.info(f"Loading tasks from {tasks_file}")
-            with open(tasks_file, "r") as f:
-                tasks = json.load(f)
-        else:
-            logger.info("Using default demo tasks")
+        # Save generated tasks for reference
+        tasks_file = os.path.join(results_dir, "generated_tasks.json")
+        with open(tasks_file, "w") as f:
+            json.dump(tasks, f, indent=2)
+        logger.info(f"Saved generated tasks to {tasks_file}")
 
         # Run the task pipeline
         summary = run_task_pipeline(
