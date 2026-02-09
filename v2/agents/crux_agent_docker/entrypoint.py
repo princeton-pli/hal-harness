@@ -72,13 +72,26 @@ Given this project description:
 
 Generate a step-by-step task breakdown that can be executed by an autonomous coding agent using Aider.
 
-Requirements:
-1. Each task should be a single, focused coding objective
-2. Tasks should build on each other logically
-3. Each task MUST include a test command that validates completion
-4. Test commands should use simple tools: python -c, grep, pytest, etc.
-5. Keep tasks small and testable (each should take ~1-5 minutes)
-6. Make as many tasks as needed
+CRITICAL REQUIREMENTS:
+1. ALWAYS start with project setup tasks:
+   - Create requirements.txt, package.json, or equivalent dependency file
+   - Create build/setup scripts (setup.sh, build.sh, etc.)
+   - Add a task to run the build script to validate dependencies
+2. Each task should be a single, focused coding objective
+3. Tasks should build on each other logically
+4. Each task MUST include a test command that validates completion
+5. Test commands should use simple tools: python -c, grep, pytest, bash scripts, etc.
+6. Keep tasks small and testable (each should take ~1-5 minutes)
+7. Make as many tasks as needed
+8. Include validation tasks after major milestones (e.g., "Run build.sh and fix any errors")
+9. If the project needs external dependencies, create tasks to install them first
+
+TASK ORDERING PATTERN:
+- Setup tasks (requirements, build scripts) FIRST
+- Validation tasks (run build/test scripts) SECOND
+- Core implementation tasks
+- Integration/validation tasks
+- Final end-to-end validation
 
 Return a JSON array of tasks with this exact structure:
 [
