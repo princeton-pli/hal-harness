@@ -11,8 +11,6 @@ import sys
 import logging
 
 
-
-
 def main():
     """Main entrypoint that reads from env vars and runs the agent"""
     # Create logs directory
@@ -23,11 +21,8 @@ def main():
     log_file = os.path.join(log_dir, "container.log")
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
     )
     logger = logging.getLogger(__name__)
 

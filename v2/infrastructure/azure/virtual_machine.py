@@ -269,13 +269,15 @@ class AzureVirtualMachine:
         """
 
         # FIXME: get timestamp for local Docker image to confirm when it was built
+        # FIXME: log the sha for the docker image on local and on the remote (throw an error if they don't match)
+        # ^^^ this is the command: docker images --digests --format '{{.Digest}}' hal-core-agent-docker:latest
 
         # Save image to temporary tar file
         with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as tmp_file:
             tar_path = tmp_file.name
-
+        # FIXME: only make the tempfile once if there are multiple possible versions
         try:
-            logger.info(f"Saving image {image} to {tar_path}...")
+            logger.info(f"Saving image {image} to tar file at {tar_path}...")
             subprocess.run(
                 ["docker", "save", "-o", tar_path, image],
                 check=True,
@@ -353,7 +355,9 @@ class AzureVirtualMachine:
         # Strip newlines and extra whitespace from values to avoid breaking the command
         env_flags = ""
         if env_vars:
-            cleaned_vars = {k: v.replace('\n', '').replace('  ', '') for k, v in env_vars.items()}
+            cleaned_vars = {
+                k: v.replace("\n", "").replace("  ", "") for k, v in env_vars.items()
+            }
             env_flags = " ".join([f'-e {k}="{v}"' for k, v in cleaned_vars.items()])
 
         # Run docker in background, redirect all output to log directory
@@ -368,10 +372,7 @@ class AzureVirtualMachine:
         if result.exited != 0:
             logger.error(f"Failed to start Docker on {self.name}: {result.stderr}")
         else:
-            logger.info(
-                f"Docker started on VM {self.name} "
-                f"(logs in: {log_dir}/)"
-            )
+            logger.info(f"Docker started on VM {self.name} (logs in: {log_dir}/)")
 
     def delete(self) -> None:
         """Delete this VM and all resources."""

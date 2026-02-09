@@ -43,6 +43,11 @@ def main():
         required=True,
         help="Azure Monitor Data Collection Rule ID",
     )
+    parser.add_argument(
+        "--wandb-api-key",
+        required=True,
+        help="Weights & Biases API key for Weave initialization",
+    )
     args = parser.parse_args()
 
     # Configuration
@@ -78,6 +83,7 @@ def main():
             "AZURE_MONITOR_DATA_COLLECTION_ENDPOINT": args.dce_endpoint,
             "AZURE_MONITOR_DATA_COLLECTION_RULE_ID": args.dcr_id,
             "AZURE_MONITOR_STREAM_NAME": "Custom-BenchmarkRuns_CL",
+            "WANDB_API_KEY": args.wandb_api_key,
         }
 
         # Run Docker on each VM
