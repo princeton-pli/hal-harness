@@ -1,5 +1,7 @@
 import re
 import json
+import hashlib
+import os
 from typing import Any, Dict
 import subprocess
 
@@ -64,6 +66,21 @@ def get_git_info() -> Dict[str, str]:
         git_info["error"] = "Failed to get git information"
 
     return git_info
+
+
+def compute_agent_dir_hash(agent_dir: str) -> str:
+    """SHA256 hash of all files in agent_dir, sorted by relative path for determinism."""
+    sha256 = hashlib.sha256()
+    for root, dirs, files in os.walk(agent_dir):
+        dirs.sort()
+        for filename in sorted(files):
+            filepath = os.path.join(root, filename)
+            rel_path = os.path.relpath(filepath, agent_dir)
+            sha256.update(rel_path.encode("utf-8"))
+            with open(filepath, "rb") as f:
+                while chunk := f.read(8192):
+                    sha256.update(chunk)
+    return sha256.hexdigest()
 
 
 def safe_filename(input_string):
