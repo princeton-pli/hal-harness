@@ -70,6 +70,18 @@ class BaseBenchmark(ABC):
         os.makedirs(run_dir, exist_ok=True)
         return run_dir
 
+    def get_task_prompts(self) -> Dict[str, str]:
+        """Extract task prompts from the benchmark dataset."""
+        prompt_keys = ["prompt", "problem_statement", "problem_description", "task"]
+        prompts = {}
+        for task_id, task_data in self.benchmark.items():
+            if isinstance(task_data, dict):
+                for key in prompt_keys:
+                    if key in task_data:
+                        prompts[task_id] = str(task_data[key])
+                        break
+        return prompts
+
     def process_results(
         self,
         agent_name: str,
@@ -139,6 +151,7 @@ class BaseBenchmark(ABC):
             },
             "raw_eval_results": eval_results,
             "raw_logging_results": raw_logging,
+            "task_prompts": self.get_task_prompts(),
             "total_usage": total_usage,
             "total_cost": total_cost,
             "git_info": get_git_info(),
