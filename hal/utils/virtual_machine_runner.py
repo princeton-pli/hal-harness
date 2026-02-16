@@ -78,6 +78,8 @@ class VirtualMachineRunner:
         results = {}
         vm_names = []
 
+        timings = {}
+
         async def process_task(task_id: str, input_data: Any) -> Optional[Dict]:
             # Create unique VM name
             vm_name = (
@@ -87,6 +89,7 @@ class VirtualMachineRunner:
             )
             vm_names.append(vm_name)
 
+            task_start_time = time.time()
             try:
                 # Check if the task requires GPU
                 gpu_required = False
@@ -264,6 +267,8 @@ class VirtualMachineRunner:
                 return {task_id: f"ERROR: {str(e)}"}
 
             finally:
+                wall_clock_time = time.time() - task_start_time
+                timings[task_id] = wall_clock_time
                 # Cleanup VM
                 try:
                     await asyncio.to_thread(
@@ -294,10 +299,13 @@ class VirtualMachineRunner:
             if result:
                 merged_results.update(result)
 
-        # Save raw submissions if log_dir provided
+        # Save raw submissions and timings if log_dir provided
         if self.log_dir:
             raw_submissions_path = os.path.join(
                 self.log_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl"
+            )
+            timings_path = os.path.join(
+                self.log_dir, f"{run_id}_WALL_CLOCK_TIMES.jsonl"
             )
             os.makedirs(self.log_dir, exist_ok=True)
 
@@ -305,6 +313,12 @@ class VirtualMachineRunner:
             with open(raw_submissions_path, "a") as f:
                 for task_id, result in merged_results.items():
                     json.dump({task_id: result}, f)
+                    f.write("\n")
+
+            # append to timings file
+            with open(timings_path, "a") as f:
+                for task_id, wall_clock_time in timings.items():
+                    json.dump({"task_id": task_id, "wall_clock_time": wall_clock_time}, f)
                     f.write("\n")
 
         return merged_results
