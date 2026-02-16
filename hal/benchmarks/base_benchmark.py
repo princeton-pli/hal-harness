@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
-from ..utils.utils import make_json_serializable, get_git_info
+from ..utils.utils import make_json_serializable, get_git_info, compute_agent_dir_hash
 import logging
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,8 @@ class BaseBenchmark(ABC):
         weave_client,
         agent_output: Dict[str, Any] = None,
         upload: bool = False,
+        agent_dir: Optional[str] = None,
+        agent_version: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Process evaluation results and optionally upload"""
 
@@ -102,16 +104,34 @@ class BaseBenchmark(ABC):
         total_cost, total_usage = get_total_cost(weave_client)
         raw_logging, latency_dict = get_weave_calls(weave_client)
 
+        # Build config with optional agent scaffold info
+        config = {
+            "agent_name": agent_name,
+            "benchmark_name": self.benchmark_name,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "run_id": run_id,
+            "agent_args": agent_args,
+            "run_command": run_command,
+        }
+        if agent_version:
+            config["agent_version"] = agent_version
+
+        # Compute agent hash
+        agent_hash = compute_agent_dir_hash(agent_dir) if agent_dir else None
+
+        # Read wall-clock times if available
+        wall_clock_times = {}
+        timings_file = os.path.join(run_dir, f"{run_id}_WALL_CLOCK_TIMES.jsonl")
+        if os.path.exists(timings_file):
+            with open(timings_file) as f:
+                for line in f:
+                    if line.strip():
+                        entry = json.loads(line.strip())
+                        wall_clock_times[entry["task_id"]] = entry["wall_clock_time"]
+
         # Prepare results summary
         results_summary = {
-            "config": {
-                "agent_name": agent_name,
-                "benchmark_name": self.benchmark_name,
-                "date": datetime.now().strftime("%Y-%m-%d"),
-                "run_id": run_id,
-                "agent_args": agent_args,
-                "run_command": run_command,
-            },
+            "config": config,
             "results": {
                 **self.get_metrics(eval_results),
                 "total_cost": total_cost,
@@ -122,6 +142,8 @@ class BaseBenchmark(ABC):
             "total_usage": total_usage,
             "total_cost": total_cost,
             "git_info": get_git_info(),
+            "agent_hash": agent_hash,
+            "wall_clock_times": wall_clock_times,
         }
 
         # Include task metrics if available from agent output
