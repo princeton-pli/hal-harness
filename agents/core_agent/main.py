@@ -80,6 +80,20 @@ AUTHORIZED_IMPORTS = [
 ]
 
 
+def collect_task_metrics(agent: CodeAgent) -> dict:
+    """Collect basic step metrics from a smolagents CodeAgent."""
+    action_steps = [s for s in agent.memory.steps if isinstance(s, ActionStep)]
+    tool_call_count = 0
+    for step in action_steps:
+        step_tool_calls = getattr(step, "tool_calls", None)
+        if step_tool_calls:
+            tool_call_count += len(step_tool_calls)
+    return {
+        "step_count": len(action_steps),
+        "tool_call_count": tool_call_count,
+    }
+
+
 def save_agent_steps(agent, kwargs, response, sample):
     for step in agent.memory.steps:
         if isinstance(step, ActionStep):
@@ -853,6 +867,7 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
 
     response = agent.run(prompt)
     save_agent_steps(agent, kwargs, response, task)
-    results[task_id] = response
+    metrics = collect_task_metrics(agent)
+    results[task_id] = {"answer": response, "metrics": metrics}
 
     return results

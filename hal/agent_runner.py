@@ -33,6 +33,7 @@ class AgentRunner:
         run_command: str = None,
         ignore_errors: bool = False,
         max_tasks: Optional[int] = None,
+        agent_version: Optional[str] = None,
     ):
         # Validate agent_function format
         if not isinstance(agent_function, str) or "." not in agent_function:
@@ -131,6 +132,7 @@ class AgentRunner:
         self.continue_run = continue_run
         self.ignore_errors = ignore_errors
         self.max_tasks = max_tasks
+        self.agent_version = agent_version
 
     def get_remaining_tasks(self, dataset: Dict[str, Any]) -> Dict[str, Any]:
         """Get tasks that haven't been completed in previous runs"""
@@ -295,5 +297,8 @@ class AgentRunner:
             eval_results=eval_results,
             weave_client=weave_client,
             upload=upload,
+            agent_dir=self.agent_dir,
+            agent_version=self.agent_version,
+            agent_output=agent_output,
         )
         return results

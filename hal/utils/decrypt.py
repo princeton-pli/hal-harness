@@ -13,6 +13,22 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
+def decrypt_raw(encrypted_data: str, salt: str) -> bytes:
+    """Decrypt raw bytes data.
+
+    Args:
+        encrypted_data (str): Base64 encoded encrypted data
+        salt (str): Base64 encoded salt used for encryption
+
+    Returns:
+        bytes: Decrypted raw bytes
+    """
+    salt_bytes = base64.b64decode(salt.encode("utf-8"))
+    cipher = JsonEncryption("hal1234", salt=salt_bytes)
+    encrypted_bytes = base64.b64decode(encrypted_data.encode("utf-8"))
+    return cipher.cipher.decrypt(encrypted_bytes)
+
+
 def decrypt_json(encrypted_data: str, salt: str) -> dict:
     """Decrypt JSON data.
 
@@ -60,25 +76,32 @@ def decrypt_file(encrypted_file_path: Path, progress=None, task=None) -> None:
             )
 
         with ZipFile(encrypted_file_path, "r") as zip_file:
-            # Get the encrypted JSON file from the zip
-            json_filename = zip_file.namelist()[0]
-            with zip_file.open(json_filename) as f:
-                encrypted_data = json.load(f)
+            for file_name in zip_file.namelist():
+                with zip_file.open(file_name) as f:
+                    encrypted_data = json.load(f)
 
-        # Decrypt the JSON data
-        if progress:
-            progress.update(task, description="Decrypting JSON content")
+                # Determine output filename by stripping .encrypted
+                output_name = file_name.replace(".encrypted", "")
+                output_path = encrypted_file_path.parent / output_name
 
-        decrypted_json = decrypt_json(
-            encrypted_data["encrypted_data"], encrypted_data["salt"]
-        )
+                if progress:
+                    progress.update(task, description=f"Decrypting {output_name}")
 
-        # Write to output file
-        output_path = encrypted_file_path.with_suffix(".json")
-        if progress:
-            progress.update(task, description=f"Writing {output_path.name}")
-        with open(output_path, "w") as f:
-            json.dump(decrypted_json, f, indent=2)
+                # Try JSON decryption first; fall back to raw bytes
+                try:
+                    decrypted_json = decrypt_json(
+                        encrypted_data["encrypted_data"], encrypted_data["salt"]
+                    )
+                    with open(output_path, "w") as out_f:
+                        json.dump(decrypted_json, out_f, indent=2)
+                except (json.JSONDecodeError, ValueError):
+                    decrypted_bytes = decrypt_raw(
+                        encrypted_data["encrypted_data"], encrypted_data["salt"]
+                    )
+                    with open(output_path, "wb") as out_f:
+                        out_f.write(decrypted_bytes)
+
+                logger.info(f"  Decrypted: {output_name}")
 
         if progress:
             progress.update(task, advance=1)
@@ -86,7 +109,6 @@ def decrypt_file(encrypted_file_path: Path, progress=None, task=None) -> None:
         # Log summary
         logger.info(f"Decryption Summary for {encrypted_file_path.name}")
         logger.info(f"  Input File: {encrypted_file_path}")
-        logger.info(f"  Output File: {output_path}")
         logger.info("  Status: Success")
 
     except Exception as e:

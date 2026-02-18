@@ -3,6 +3,7 @@ import json
 import shutil
 import uuid
 import asyncio
+import time
 import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
@@ -53,6 +54,7 @@ class LocalRunner:
                 benchmark.get_run_dir(run_id) if benchmark else f"results/{run_id}"
             )
             submissions_file = os.path.join(run_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
+            timings_file = os.path.join(run_dir, f"{run_id}_WALL_CLOCK_TIMES.jsonl")
 
             tasks = []
             for task_id, input_data in dataset.items():
@@ -64,6 +66,7 @@ class LocalRunner:
                     agent_args=agent_args,
                     run_id=run_id,
                     submissions_file=submissions_file,
+                    timings_file=timings_file,
                     progress=progress,
                     task=task,
                 )
@@ -97,6 +100,7 @@ class LocalRunner:
         agent_args: Dict[str, Any],
         run_id: str,
         submissions_file: str,
+        timings_file: str,
         progress: Optional[Progress] = None,
         task: Optional[TaskID] = None,
     ) -> Optional[Dict[str, Any]]:
@@ -105,6 +109,7 @@ class LocalRunner:
             logger.info(
                 f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})"
             )
+            start_time = time.time()
             result = await self._run_single_task(
                 task_id=task_id,
                 input_data=input_data,
@@ -113,12 +118,17 @@ class LocalRunner:
                 agent_args=agent_args,
                 run_id=run_id,
             )
+            wall_clock_time = time.time() - start_time
 
-            # Write result to submissions file
+            # Write result to submissions file and timing
             if result:
+                task_id_key = list(result.keys())[0]
                 async with self._file_lock:
                     with open(submissions_file, "a") as f:
                         json.dump(result, f)
+                        f.write("\n")
+                    with open(timings_file, "a") as f:
+                        json.dump({"task_id": task_id_key, "wall_clock_time": wall_clock_time}, f)
                         f.write("\n")
 
             # Update progress after task completion
