@@ -151,7 +151,11 @@ class BaseBenchmark(ABC):
             },
             "raw_eval_results": eval_results,
             "raw_logging_results": raw_logging,
-            "task_prompts": self.get_task_prompts(),
+            "task_prompts": {
+                task_id: prompt
+                for task_id, prompt in self.get_task_prompts().items()
+                if task_id in eval_results
+            },
             "total_usage": total_usage,
             "total_cost": total_cost,
             "git_info": get_git_info(),
