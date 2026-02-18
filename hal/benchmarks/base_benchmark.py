@@ -112,6 +112,12 @@ class BaseBenchmark(ABC):
                 if isinstance(task_data, dict) and "metrics" in task_data:
                     task_metrics[task_id] = task_data["metrics"]
 
+        # Extract step counts from task metrics
+        task_step_counts = {}
+        for task_id, metrics in task_metrics.items():
+            if "step_count" in metrics:
+                task_step_counts[task_id] = metrics["step_count"]
+
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
         raw_logging, latency_dict = get_weave_calls(weave_client)
@@ -161,6 +167,7 @@ class BaseBenchmark(ABC):
             "git_info": get_git_info(),
             "agent_hash": agent_hash,
             "wall_clock_times": wall_clock_times,
+            "task_step_counts": task_step_counts,
         }
 
         # Include task metrics if available from agent output

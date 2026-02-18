@@ -299,5 +299,6 @@ class AgentRunner:
             upload=upload,
             agent_dir=self.agent_dir,
             agent_version=self.agent_version,
+            agent_output=agent_output,
         )
         return results
