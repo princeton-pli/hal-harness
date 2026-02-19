@@ -92,14 +92,14 @@ class TauBenchBenchmark(BaseBenchmark):
     def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
         """Evaluate agent outputs using AppWorld evaluation"""
         return agent_output
-    
+
     def get_metrics(self, eval_results: Dict[str, Any]) -> Dict[str, Any]:
         """
         Calculate metrics from evaluation results.
-        
+
         Args:
             eval_results: Dictionary containing evaluation results
-            
+
         Returns:
             Dictionary with calculated metrics and task lists
         """
@@ -109,28 +109,27 @@ class TauBenchBenchmark(BaseBenchmark):
                 reward += task_output['reward']
             except TypeError:
                 print(f"Task {task_id} does not have a reward. Skipping...")
-            
-            
-        number_of_tasks = len(self.benchmark)
-            
-            
+
+
+        number_of_tasks = len(eval_results)
+
+
         successful_tasks = []
         for task_id, task_output in eval_results.items():
             if not isinstance(task_output, str):
                 if task_output['reward'] > 0:
                     successful_tasks.append(task_id)
-        
+
         failed_tasks = []
         for task_id, task_output in eval_results.items():
             if isinstance(task_output, str):
                 failed_tasks.append(task_id)
             elif task_output['reward'] == 0:
                 failed_tasks.append(task_id)
-        
-        results = {'accuracy': reward/number_of_tasks, 
-                   'successful_tasks': successful_tasks, 
+
+        results = {'accuracy': reward/number_of_tasks,
+                   'successful_tasks': successful_tasks,
                    'failed_tasks': failed_tasks
                    }
         return results
-
 

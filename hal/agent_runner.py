@@ -36,7 +36,9 @@ class AgentRunner:
                  num_variations: int = 3,
                  variation_strength: str = "mild",
                  variation_index: Optional[int] = None,
-                 task_timeout: int = 600):
+                 task_timeout: int = 600,
+                 results_dir: str = "results",
+                 task_ids: Optional[str] = None):
 
         # Validate agent_function format
         if not isinstance(agent_function, str) or '.' not in agent_function:
@@ -59,6 +61,11 @@ class AgentRunner:
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
+
+        # Override results directory if non-default
+        if results_dir != "results":
+            self.benchmark.base_results_dir = results_dir
+            self.benchmark.benchmark_results_dir = os.path.join(results_dir, self.benchmark.benchmark_name)
         
         # Check if any task requires GPU
         has_gpu_task = False
@@ -123,6 +130,7 @@ class AgentRunner:
         self.num_variations = num_variations
         self.variation_strength = variation_strength
         self.variation_index = variation_index
+        self.task_ids = task_ids
 
         # Initialize fault injector if enabled
         self.fault_injector = None
@@ -191,6 +199,21 @@ class AgentRunner:
             dataset = self.get_remaining_tasks(dataset)
         elif self.continue_run and self.ignore_errors:
             dataset = {}
+
+        # Filter to specific task IDs if provided
+        if self.task_ids:
+            requested_ids = set(tid.strip() for tid in self.task_ids.split(','))
+            available_ids = set(dataset.keys())
+            valid_ids = requested_ids & available_ids
+            missing_ids = requested_ids - available_ids
+            if missing_ids:
+                print_warning(f"Task IDs not found in benchmark: {sorted(missing_ids)}")
+            if valid_ids:
+                print_step(f"Filtering to {len(valid_ids)} specific task IDs")
+                dataset = {task_id: dataset[task_id] for task_id in dataset if task_id in valid_ids}
+            else:
+                print_error("No valid task IDs found. Exiting.")
+                return {}
 
         # Limit the number of tasks if max_tasks is specified
         if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):

@@ -14,13 +14,13 @@ from ..utils.utils import make_json_serializable, get_git_info
 class BaseBenchmark(ABC):
     """Base class for all benchmarks"""
     
-    def __init__(self, agent_dir: str, config: Dict[str, Any], requires_sandbox: bool = False, setup_script: Optional[str] = None):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], requires_sandbox: bool = False, setup_script: Optional[str] = None, base_results_dir: str = "results"):
         self.agent_dir = agent_dir
         self.config = config
         self.benchmark_name: str
         self.requirements_file: str
         self.setup_script = setup_script # Path to setup script relative to benchmark dir
-        self.base_results_dir = "results"
+        self.base_results_dir = base_results_dir
         self.benchmark_results_dir = os.path.join(self.base_results_dir, self.benchmark_name)
         self.agent_args: Dict[str, Any] = {}  # Store agent args
         self.requires_sandbox = requires_sandbox # Whether benchmark requires VM execution

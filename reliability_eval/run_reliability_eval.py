@@ -269,7 +269,7 @@ AGENT_CONFIGS = [
     #     "name": "taubench_toolcalling_claude_opus_4_5",
     #     "agent_dir": "agents/taubench_tool_calling",
     #     "agent_function": "tool_calling.run",
-    #     "model_name": "claude-opus-4-5",  # Use dashes, not dots
+    #     "model_name": "claude-opus-4-5",
     #     "provider": "anthropic",
     #     "benchmarks": ["taubench_airline"],
     # },
@@ -311,177 +311,280 @@ AGENT_CONFIGS = [
     # },
 
     # =========================================================================
+    # Agentic Scaffold Agents (Claude Code, OpenAI Codex)
+    # These use full agentic CLI tools rather than raw model APIs.
+    # For taubench: tools are exposed via a local HTTP bridge.
+    # For GAIA: the CLI agent uses its built-in tools (web search, bash, etc.)
+    # Requirements: respective CLI tools must be installed.
+    # =========================================================================
+
+    # -------------------------------------------------------------------------
+    # Claude Code (Anthropic CLI agent)
+    # Install: npm install -g @anthropic-ai/claude-code
+    # -------------------------------------------------------------------------
+    # {
+    #     "name": "taubench_claude_code_sonnet_4_5",
+    #     "agent_dir": "agents/claude_code_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "claude-sonnet-4-5",
+    #     "provider": "anthropic",
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "taubench_claude_code_opus_4_5",
+    #     "agent_dir": "agents/claude_code_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "claude-opus-4-5",
+    #     "provider": "anthropic",
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "gaia_claude_code_sonnet_4_5",
+    #     "agent_dir": "agents/claude_code_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "claude-sonnet-4-5",
+    #     "provider": "anthropic",
+    #     "benchmarks": ["gaia"],
+    # },
+
+    # -------------------------------------------------------------------------
+    # OpenAI Codex (OpenAI CLI agent)
+    # Install: npm install -g @openai/codex
+    # -------------------------------------------------------------------------
+    # {
+    #     "name": "taubench_codex_o4_mini",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "o4-mini",
+    #     "provider": "openai",
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "taubench_codex_gpt_4_1",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-4.1",
+    #     "provider": "openai",
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "gaia_codex_o4_mini",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "o4-mini",
+    #     "provider": "openai",
+    #     "benchmarks": ["gaia"],
+    # },
+    {
+        "name": "taubench_codex_gpt_5_2",
+        "agent_dir": "agents/openai_codex_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-5.2-2025-12-11",
+        "provider": "openai",
+        "task_timeout": 1800,  # 30 min — xhigh reasoning + multi-turn CLI needs more time
+        "benchmarks": ["taubench_airline"],
+    },
+    {
+        "name": "taubench_codex_gpt_5_2_medium",
+        "agent_dir": "agents/openai_codex_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-5.2-2025-12-11",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "task_timeout": 1800,  # 30 min — xhigh reasoning + multi-turn CLI needs more time
+        "benchmarks": ["taubench_airline"],
+    },
+    {
+        "name": "taubench_codex_gpt_5_2_codex_medium",
+        "agent_dir": "agents/openai_codex_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-5.2-codex",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+        "task_timeout": 1800,
+        "benchmarks": ["taubench_airline"],
+    },
+
+    # =========================================================================
     # GAIA Benchmark Agents (using hal_generalist_agent)
     # =========================================================================
 
     # -------------------------------------------------------------------------
     # OpenAI Models (GAIA)
     # -------------------------------------------------------------------------
-    {
-        "name": "gaia_generalist_gpt_4o_mini",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-4o-mini-2024-07-18",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_gpt_4_turbo",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-4-turbo-2024-04-09",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_gpt_o1",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "o1-2024-12-17",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_gpt_5_2",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-5.2-2025-12-11",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_gpt_5_2_medium",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-5.2-2025-12-11",
-        "reasoning_effort": "medium",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "temperature": 0.0
-        }
-    },
+    # {
+    #     "name": "gaia_generalist_gpt_4o_mini",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-4o-mini-2024-07-18",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gpt_4_turbo",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-4-turbo-2024-04-09",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gpt_o1",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "o1-2024-12-17",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gpt_5_2",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.2-2025-12-11",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gpt_5_2_medium",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.2-2025-12-11",
+    #     "reasoning_effort": "medium",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
 
     # -------------------------------------------------------------------------
     # Anthropic Models (GAIA) - via OpenRouter
     # -------------------------------------------------------------------------
-    {
-        "name": "gaia_generalist_claude_haiku_3_5",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "openrouter/anthropic/claude-3-5-haiku",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_claude_sonnet_3_7",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "openrouter/anthropic/claude-3.7-sonnet",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_claude_sonnet_4_5",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "openrouter/anthropic/claude-sonnet-4.5",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_claude_opus_4_5",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "openrouter/anthropic/claude-opus-4.5",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "openai",  # OpenRouter uses OpenAI-compatible API
-            "temperature": 0.0
-        }
-    },
+    # {
+    #     "name": "gaia_generalist_claude_haiku_3_5",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "openrouter/anthropic/claude-3-5-haiku",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_claude_sonnet_3_7",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "openrouter/anthropic/claude-3.7-sonnet",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_claude_sonnet_4_5",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "openrouter/anthropic/claude-sonnet-4.5",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_claude_opus_4_5",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "openrouter/anthropic/claude-opus-4.5",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "openai",  # OpenRouter uses OpenAI-compatible API
+    #         "temperature": 0.0
+    #     }
+    # },
 
     # -------------------------------------------------------------------------
     # Google Gemini Models (GAIA)
     # -------------------------------------------------------------------------
-    {
-        "name": "gaia_generalist_gemini_2_flash",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gemini/gemini-2.0-flash",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "google",
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_gemini_2_5_flash",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gemini/gemini-2.5-flash",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "google",
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_gemini_2_5_pro",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gemini/gemini-2.5-pro",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "google",
-            "temperature": 0.0
-        }
-    },
-    {
-        "name": "gaia_generalist_gemini_3_pro",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gemini/gemini-3-pro-preview",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "provider": "google",
-            "temperature": 0.0
-        }
-    },
+    # {
+    #     "name": "gaia_generalist_gemini_2_flash",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gemini/gemini-2.0-flash",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "google",
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gemini_2_5_flash",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gemini/gemini-2.5-flash",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "google",
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gemini_2_5_pro",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gemini/gemini-2.5-pro",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "google",
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gemini_3_pro",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gemini/gemini-3-pro-preview",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "provider": "google",
+    #         "temperature": 0.0
+    #     }
+    # },
 ]
 
+# Task subset for taubench_airline (tasks without data leakage / contamination)
+TAUBENCH_AIRLINE_CLEAN_TASKS = {
+    '0', '1', '2', '5', '7', '12', '13', '18', '20', '24',
+    '28', '29', '30', '35', '36', '37', '38', '39', '40', '41',
+    '42', '43', '44', '45', '48', '49',
+}
+
 BENCHMARK_CONFIGS = {
-    # "taubench_airline": {
-    #     "benchmark_name": "taubench_airline",
-    #     "requires_docker": False,
-    #     "requires_vm": False,
-    #     "max_concurrent": 5,  # Can run in parallel
-    #     "compliance_constraints": [
-    #         "pii_handling_customer_service",  # Customer service context - legitimate PII exchange allowed
-    #         "destructive_ops_customer_service",  # Cancellations/mods with user confirmation are OK
-    #         "data_minimization_customer_service",  # Accessing customer data to help them is OK
-    #         "policy_circumvention_customer_service",  # Detect agents manipulated to bypass policies
-    #         "financial_accuracy_customer_service",  # Detect wrong refund/charge amounts
-    #         "authentication_bypass_customer_service",  # Detect improper identity verification
-    #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
-    #     ],
-    # },
+    "taubench_airline": {
+        "benchmark_name": "taubench_airline",
+        "requires_docker": False,
+        "requires_vm": False,
+        "max_concurrent": 5,  # Can run in parallel
+        "task_ids": TAUBENCH_AIRLINE_CLEAN_TASKS,
+        "compliance_constraints": [
+            "pii_handling_customer_service",  # Customer service context - legitimate PII exchange allowed
+            "destructive_ops_customer_service",  # Cancellations/mods with user confirmation are OK
+            "data_minimization_customer_service",  # Accessing customer data to help them is OK
+            "policy_circumvention_customer_service",  # Detect agents manipulated to bypass policies
+            "financial_accuracy_customer_service",  # Detect wrong refund/charge amounts
+            "authentication_bypass_customer_service",  # Detect improper identity verification
+            "commitment_overreach_customer_service",  # Detect promises beyond agent authority
+        ],
+    },
     # "taubench_retail": {
     #     "benchmark_name": "taubench_retail",
     #     "requires_docker": False,
@@ -497,18 +600,18 @@ BENCHMARK_CONFIGS = {
     #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
     #     ],
     # },
-    "gaia": {
-        "benchmark_name": "gaia",
-        "requires_docker": False,
-        "requires_vm": False,
-        "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
-        "compliance_constraints": [
-            "pii_handling_gaia",  # Q&A context - providing requested info is expected
-            "no_destructive_ops",
-            "safe_code_execution",  # Check for harmful code patterns
-            "no_unauthorized_access",  # Check for unauthorized resource access
-        ],
-    },
+    # "gaia": {
+    #     "benchmark_name": "gaia",
+    #     "requires_docker": False,
+    #     "requires_vm": False,
+    #     "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
+    #     "compliance_constraints": [
+    #         "pii_handling_gaia",  # Q&A context - providing requested info is expected
+    #         "no_destructive_ops",
+    #         "safe_code_execution",  # Check for harmful code patterns
+    #         "no_unauthorized_access",  # Check for unauthorized resource access
+    #     ],
+    # },
 }
 
 # Phase-specific settings
@@ -610,7 +713,7 @@ class EvaluationLog:
         return [r for r in self.results if not r['success'] and r.get('run_id')]
 
 
-def retry_failed_runs(log_path: Path, max_concurrent: int = 1) -> int:
+def retry_failed_runs(log_path: Path, max_concurrent: int = 1, results_dir: str = "results") -> int:
     """
     Retry failed runs from the log file using --continue_run.
     Returns number of successful retries.
@@ -663,6 +766,7 @@ def retry_failed_runs(log_path: Path, max_concurrent: int = 1) -> int:
             max_concurrent=max_concurrent,
             run_id=run['run_id'],
             continue_run=True,
+            results_dir=results_dir,
         )
 
         print(f"🚀 Command: {' '.join(cmd[:12])}...")
@@ -765,6 +869,7 @@ def build_base_command(
     max_concurrent: Optional[int] = None,
     run_id: Optional[str] = None,
     continue_run: bool = False,
+    results_dir: Optional[str] = None,
 ) -> List[str]:
     """Build the base hal-eval command."""
     benchmark_name = benchmark_config["benchmark_name"]
@@ -791,6 +896,12 @@ def build_base_command(
     if agent_config.get("reasoning_effort"):
         cmd.extend(["-A", f"reasoning_effort={agent_config['reasoning_effort']}"])
 
+    # Use custom task timeout if specified (default: 600s = 10 min)
+    # Agentic scaffolds with high reasoning effort need longer timeouts
+    task_timeout = agent_config.get("task_timeout")
+    if task_timeout:
+        cmd.extend(["--task_timeout", str(task_timeout)])
+
     if run_id:
         cmd.extend(["--run_id", run_id])
 
@@ -805,6 +916,14 @@ def build_base_command(
 
     if benchmark_config.get("requires_vm", False):
         cmd.append("--vm")
+
+    if results_dir and results_dir != "results":
+        cmd.extend(["--results_dir", results_dir])
+
+    # Pass specific task IDs if configured for this benchmark
+    task_ids = benchmark_config.get("task_ids")
+    if task_ids:
+        cmd.extend(["--task_ids", ",".join(sorted(task_ids, key=int))])
 
     return cmd
 
@@ -913,6 +1032,7 @@ def run_baseline_phase(
     log: EvaluationLog,
     log_path: Path,
     max_concurrent: Optional[int] = None,
+    results_dir: str = "results",
 ) -> int:
     """
     Run baseline phase: K repetitions with confidence + compliance monitoring.
@@ -952,6 +1072,7 @@ def run_baseline_phase(
                 conda_env=conda_env,
                 max_concurrent=max_concurrent,
                 run_id=run_id,
+                results_dir=results_dir,
             )
             cmd = add_baseline_args(cmd, benchmark_config)
 
@@ -998,6 +1119,7 @@ def run_fault_phase(
     log: EvaluationLog,
     log_path: Path,
     max_concurrent: Optional[int] = None,
+    results_dir: str = "results",
 ) -> int:
     """
     Run fault injection phase.
@@ -1036,6 +1158,7 @@ def run_fault_phase(
                 conda_env=conda_env,
                 max_concurrent=max_concurrent,
                 run_id=run_id,
+                results_dir=results_dir,
             )
             cmd = add_fault_args(cmd, fault_rate)
 
@@ -1081,6 +1204,7 @@ def run_prompt_phase(
     log: EvaluationLog,
     log_path: Path,
     max_concurrent: Optional[int] = None,
+    results_dir: str = "results",
 ) -> int:
     """
     Run prompt sensitivity phase with separate runs for each variation.
@@ -1136,6 +1260,7 @@ def run_prompt_phase(
                 conda_env=conda_env,
                 max_concurrent=max_concurrent,
                 run_id=run_id,
+                results_dir=results_dir,
             )
             # Pass variation_index to run only this specific variation
             cmd = add_prompt_sensitivity_args(cmd, num_variations, variation_strength, variation_index=var_idx)
@@ -1183,6 +1308,7 @@ def run_structural_phase(
     log_path: Path,
     run_baseline: bool = True,
     max_concurrent: Optional[int] = None,
+    results_dir: str = "results",
 ) -> int:
     """
     Run structural perturbation phase.
@@ -1220,6 +1346,7 @@ def run_structural_phase(
                 conda_env=conda_env,
                 max_concurrent=max_concurrent,
                 run_id=run_id_baseline,
+                results_dir=results_dir,
             )
 
             success, duration, error = run_command(cmd)
@@ -1262,6 +1389,7 @@ def run_structural_phase(
             conda_env=conda_env,
             max_concurrent=max_concurrent,
             run_id=run_id_perturbed,
+            results_dir=results_dir,
         )
         cmd = add_structural_args(cmd, perturbation_strength, perturbation_type)
 
@@ -1859,7 +1987,7 @@ Phases:
     )
     parser.add_argument(
         "--results_dir", type=str, default="results",
-        help="Results directory for safety analysis (default: results)"
+        help="Base directory for storing and reading results (default: results)"
     )
     parser.add_argument(
         "--retry_failed", action="store_true",
@@ -1878,7 +2006,7 @@ Phases:
         print("\n" + "="*80)
         print("🔄 RETRY FAILED RUNS MODE")
         print("="*80)
-        retry_failed_runs(log_path, max_concurrent=args.max_concurrent)
+        retry_failed_runs(log_path, max_concurrent=args.max_concurrent, results_dir=args.results_dir)
         return
 
     # Handle continue_run_id mode
@@ -1927,6 +2055,7 @@ Phases:
             max_concurrent=args.max_concurrent,
             run_id=args.continue_run_id,
             continue_run=True,
+            results_dir=args.results_dir,
         )
 
         # Add baseline args (confidence scoring, etc.)
@@ -2020,7 +2149,8 @@ Phases:
     if "baseline" in phases_to_run:
         summary["baseline"] = run_baseline_phase(
             combinations, k_runs, args.max_tasks, args.conda_env, log, log_path,
-            max_concurrent=args.max_concurrent
+            max_concurrent=args.max_concurrent,
+            results_dir=args.results_dir,
         )
 
     if "fault" in phases_to_run:
@@ -2031,7 +2161,8 @@ Phases:
             args.max_tasks,
             args.conda_env,
             log, log_path,
-            max_concurrent=args.max_concurrent
+            max_concurrent=args.max_concurrent,
+            results_dir=args.results_dir,
         )
 
     if "prompt" in phases_to_run:
@@ -2042,7 +2173,8 @@ Phases:
             args.max_tasks,
             args.conda_env,
             log, log_path,
-            max_concurrent=args.max_concurrent
+            max_concurrent=args.max_concurrent,
+            results_dir=args.results_dir,
         )
 
     if "structural" in phases_to_run:
@@ -2054,7 +2186,8 @@ Phases:
             args.conda_env,
             log, log_path,
             run_baseline=False,  # Skip baseline if already have baseline runs
-            max_concurrent=args.max_concurrent
+            max_concurrent=args.max_concurrent,
+            results_dir=args.results_dir,
         )
 
     if "safety" in phases_to_run:

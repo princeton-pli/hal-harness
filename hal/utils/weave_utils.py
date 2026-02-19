@@ -169,6 +169,8 @@ MODEL_PRICES_DICT = {
                 "openai/gpt-5.2-2025-12-11": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
                 "gpt-5.2": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
                 "openai/gpt-5.2": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
+                "gpt-5.2-codex": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
+                "openai/gpt-5.2-codex": {"prompt_tokens": 1.75/1e6, "completion_tokens": 14/1e6},
 }
 
 CACHED_PRICE_OVERRIDES = {
@@ -200,6 +202,8 @@ CACHED_PRICE_OVERRIDES = {
     "openai/gpt-5.2-2025-12-11": 0.18/1e6,
     "gpt-5.2": 0.18/1e6,
     "openai/gpt-5.2": 0.18/1e6,
+    "gpt-5.2-codex": 0.18/1e6,
+    "openai/gpt-5.2-codex": 0.18/1e6,
     "o3-2025-04-16": 0.5/1e6,
     "openai/o3-2025-04-16": 0.5/1e6,
     # Gemini 3 & 2.5 cached pricing (90% discount)
