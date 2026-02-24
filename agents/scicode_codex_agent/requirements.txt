@@ -1,0 +1,5 @@
+openai
+numpy
+scipy
+sympy
+matplotlib

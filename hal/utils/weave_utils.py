@@ -36,6 +36,7 @@ MODEL_PRICES_DICT = {
                 "o3-mini-2025-01-31": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
                 "o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
                 "openai/o4-mini-2025-04-16": {"prompt_tokens": 1.1/1e6, "completion_tokens": 4.4/1e6},
+                "o3": {"prompt_tokens": 2/1e6, "completion_tokens": 8/1e6},
                 "o3-2025-04-16": {"prompt_tokens": 2/1e6, "completion_tokens": 8/1e6},
                 "o1-preview-2024-09-12": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
                 "o1-2024-12-17": {"prompt_tokens": 15/1e6, "completion_tokens": 60/1e6},
@@ -126,6 +127,10 @@ MODEL_PRICES_DICT = {
                 "openai/gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gpt-5": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
                 "gpt-5-2025-08-07": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gpt-5.3-codex": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gpt-5.2-codex": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gpt-5.1-codex": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
+                "gpt-5-codex": {"prompt_tokens": 1.25/1e6, "completion_tokens": 10/1e6},
 }
 
 CACHED_PRICE_OVERRIDES = {
@@ -146,6 +151,7 @@ CACHED_PRICE_OVERRIDES = {
     "gpt-4.1-2025-04-14": 0.50/1e6,
     "openai/gpt-4.1-2025-04-14": 0.50/1e6,
     "gpt-5-2025-08-07": 0.125/1e6,
+    "o3": 0.5/1e6,
     "o3-2025-04-16": 0.5/1e6,
     "openai/o3-2025-04-16": 0.5/1e6,
 }
