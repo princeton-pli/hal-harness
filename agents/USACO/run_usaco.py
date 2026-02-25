@@ -5,12 +5,9 @@ To utilize open models, create your own callable model function in models.py, an
 
 import argparse
 from functools import partial
-from rank_bm25 import BM25Okapi
 from models import gpts, claude 
-from utils import load_json, save_json, generate_episodic_retrieval_queries, generate_semantic_retrieval_queries, generate_episodic_semantic_retrieval_queries
-from USACOBench.prompts import solve_prompt_fn, retrieval_prompt_fn, reflexion_prompt_fn, RetrievalType
-from USACOBench.data_utils import load_corpus, load_problem_dict, load_problems
-from evaluate import evaluate_model
+from USACOBench.prompts import RetrievalType
+from USACOBench.data_utils import load_problem_dict
 from USACOBench.evaluation import print_metrics
 from dotenv import load_dotenv
 from utils import run_solve, run_retrieval, run_reflexion, calculate_final_rs

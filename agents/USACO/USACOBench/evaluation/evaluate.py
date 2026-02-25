@@ -7,7 +7,6 @@ import pickle
 from USACOBench.agents import Agent
 from .judges.codeforces_judge import CodeforcesJudge
 from .judges.usaco_batch_judge import USACOBatchJudge
-from .judges.usaco_judge import USACOJudge
 
 Problem = Dict[Any, Any]
 Solution = Dict[str, Union[str, None]]
