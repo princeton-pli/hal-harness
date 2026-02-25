@@ -231,7 +231,7 @@ def run_evaluation(agent_config, benchmark_config, k_runs, max_tasks, conda_env,
     print(f"📊 Agent: {agent_config['name']}")
     print(f"📋 Benchmark: {benchmark_config['name']}")
     print(f"🔢 Model: {agent_config['model_name']}")
-    print(f"🎯 Confidence Scoring: ENABLED")
+    print("🎯 Confidence Scoring: ENABLED")
     print("="*80)
 
     # Build the hal-eval command
@@ -266,7 +266,7 @@ def run_evaluation(agent_config, benchmark_config, k_runs, max_tasks, conda_env,
     for arg in benchmark_config.get("extra_args", []):
         cmd.append(arg)
 
-    print(f"\n🚀 Running command:")
+    print("\n🚀 Running command:")
     print(f"   {' '.join(cmd)}\n")
 
     # Run with retry logic
@@ -345,7 +345,7 @@ def run_k_repetitions(k_runs, max_tasks, conda_env):
     print(f"   K={k_runs} repetitions")
     print(f"   {len(combinations)} valid agent-benchmark combinations")
     print(f"   {max_tasks} tasks per benchmark")
-    print(f"   🎯 Confidence scoring: ENABLED\n")
+    print("   🎯 Confidence scoring: ENABLED\n")
 
     for agent_config, benchmark_config in combinations:
         for k in range(k_runs):
@@ -427,7 +427,7 @@ def main():
     print(f"   K repetitions: {args.k}")
     print(f"   Max tasks: {args.max_tasks}")
     print(f"   Environment: {args.conda_env if args.conda_env else 'current (uv/conda/system)'}")
-    print(f"   Confidence scoring: ENABLED")
+    print("   Confidence scoring: ENABLED")
 
     check_environment()
 

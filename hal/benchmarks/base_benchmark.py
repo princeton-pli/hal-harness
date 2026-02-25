@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 class BaseBenchmark(ABC):
     """Base class for all benchmarks"""
 
-
     def __init__(
         self,
         agent_dir: str,
@@ -26,7 +25,9 @@ class BaseBenchmark(ABC):
         self.agent_dir = agent_dir
         self.config = config
         self.benchmark_name: str
-        self.setup_script = setup_script  # Path to setup script relative to benchmark dir
+        self.setup_script = (
+            setup_script  # Path to setup script relative to benchmark dir
+        )
         self.base_results_dir = base_results_dir
         self.benchmark_results_dir = os.path.join(
             self.base_results_dir, self.benchmark_name
@@ -106,21 +107,28 @@ class BaseBenchmark(ABC):
         # Calculate prompt sensitivity metrics if enabled
         sensitivity_metrics = None
         if prompt_sensitivity:
-            sensitivity_metrics = self._calculate_sensitivity_metrics(eval_results, agent_output)
+            sensitivity_metrics = self._calculate_sensitivity_metrics(
+                eval_results, agent_output
+            )
 
             # Create flattened eval_results for get_metrics (use mean score across variations)
             flattened_eval_results = {}
             for task_id, variations in eval_results.items():
                 if isinstance(variations, list) and len(variations) > 0:
                     # Calculate mean score across all variations
-                    scores = [v.get('score', 0) for v in variations if isinstance(v, dict)]
+                    scores = [
+                        v.get("score", 0) for v in variations if isinstance(v, dict)
+                    ]
                     if scores:
                         mean_score = sum(scores) / len(scores)
                         # Create a dict in the format expected by the benchmark
                         # For TauBench, use 'reward'; for others, might be 'score'
-                        flattened_eval_results[task_id] = {'reward': mean_score, 'score': mean_score}
+                        flattened_eval_results[task_id] = {
+                            "reward": mean_score,
+                            "score": mean_score,
+                        }
                     else:
-                        flattened_eval_results[task_id] = {'reward': 0, 'score': 0}
+                        flattened_eval_results[task_id] = {"reward": 0, "score": 0}
                 else:
                     # Shouldn't happen, but handle gracefully
                     flattened_eval_results[task_id] = variations
@@ -155,7 +163,6 @@ class BaseBenchmark(ABC):
         if sensitivity_metrics:
             results_summary["prompt_sensitivity_metrics"] = sensitivity_metrics
 
-
         # Include task metrics if available from agent output
         if task_metrics:
             results_summary["task_metrics"] = task_metrics
@@ -182,7 +189,9 @@ class BaseBenchmark(ABC):
         """Extract metrics from evaluation results"""
         pass
 
-    def _calculate_sensitivity_metrics(self, eval_results: Dict[str, Any], agent_output: Dict[str, Any]) -> Dict[str, Any]:
+    def _calculate_sensitivity_metrics(
+        self, eval_results: Dict[str, Any], agent_output: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Calculate prompt sensitivity metrics from evaluation results.
 
@@ -211,13 +220,15 @@ class BaseBenchmark(ABC):
                 for result in variation_results:
                     if isinstance(result, dict):
                         # Support both 'score' and 'reward' keys (different benchmarks use different names)
-                        score_value = result.get('score', result.get('reward', None))
+                        score_value = result.get("score", result.get("reward", None))
                         if score_value is not None:
                             try:
                                 scores.append(float(score_value))
-                            except (ValueError, TypeError) as e:
+                            except (ValueError, TypeError):
                                 # Skip invalid scores
-                                print(f"Warning: Could not convert score to float for task {task_id}: {score_value}")
+                                print(
+                                    f"Warning: Could not convert score to float for task {task_id}: {score_value}"
+                                )
                                 continue
                     elif isinstance(result, (int, float)):
                         scores.append(float(result))
@@ -226,13 +237,15 @@ class BaseBenchmark(ABC):
                 for var_id, result in variation_results.items():
                     if isinstance(result, dict):
                         # Support both 'score' and 'reward' keys (different benchmarks use different names)
-                        score_value = result.get('score', result.get('reward', None))
+                        score_value = result.get("score", result.get("reward", None))
                         if score_value is not None:
                             try:
                                 scores.append(float(score_value))
-                            except (ValueError, TypeError) as e:
+                            except (ValueError, TypeError):
                                 # Skip invalid scores
-                                print(f"Warning: Could not convert score to float for task {task_id}: {score_value}")
+                                print(
+                                    f"Warning: Could not convert score to float for task {task_id}: {score_value}"
+                                )
                                 continue
                     elif isinstance(result, (int, float)):
                         scores.append(float(result))
@@ -246,25 +259,25 @@ class BaseBenchmark(ABC):
         # Calculate overall metrics
         if task_variances:
             overall_metrics = {
-                'mean_variance': float(np.mean(list(task_variances.values()))),
-                'std_variance': float(np.std(list(task_variances.values()))),
-                'mean_min_max_gap': float(np.mean(list(task_min_max_gaps.values()))),
-                'max_min_max_gap': float(np.max(list(task_min_max_gaps.values()))),
-                'task_variances': task_variances,
-                'task_means': task_means,
-                'task_min_max_gaps': task_min_max_gaps,
-                'num_tasks': len(task_variances)
+                "mean_variance": float(np.mean(list(task_variances.values()))),
+                "std_variance": float(np.std(list(task_variances.values()))),
+                "mean_min_max_gap": float(np.mean(list(task_min_max_gaps.values()))),
+                "max_min_max_gap": float(np.max(list(task_min_max_gaps.values()))),
+                "task_variances": task_variances,
+                "task_means": task_means,
+                "task_min_max_gaps": task_min_max_gaps,
+                "num_tasks": len(task_variances),
             }
         else:
             overall_metrics = {
-                'mean_variance': 0.0,
-                'std_variance': 0.0,
-                'mean_min_max_gap': 0.0,
-                'max_min_max_gap': 0.0,
-                'task_variances': {},
-                'task_means': {},
-                'task_min_max_gaps': {},
-                'num_tasks': 0
+                "mean_variance": 0.0,
+                "std_variance": 0.0,
+                "mean_min_max_gap": 0.0,
+                "max_min_max_gap": 0.0,
+                "task_variances": {},
+                "task_means": {},
+                "task_min_max_gaps": {},
+                "num_tasks": 0,
             }
 
         return overall_metrics

@@ -19,11 +19,11 @@ import functools
 from typing import Callable, Any, Optional, Dict, List
 from enum import Enum
 from datetime import datetime
-from collections import defaultdict
 
 
 class FaultType(Enum):
     """Types of faults that can be injected."""
+
     TIMEOUT = "timeout"
     ERROR_RESPONSE = "error_response"
     PARTIAL_FAILURE = "partial_failure"
@@ -36,24 +36,30 @@ class FaultType(Enum):
 class FaultEvent:
     """Represents a fault injection event."""
 
-    def __init__(self, fault_type: FaultType, recovered: bool, recovery_time: float, context: Dict[str, Any]):
+    def __init__(
+        self,
+        fault_type: FaultType,
+        recovered: bool,
+        recovery_time: float,
+        context: Dict[str, Any],
+    ):
         self.fault_type = fault_type
         self.recovered = recovered
         self.recovery_time = recovery_time
         self.context = context
         self.timestamp = datetime.now()
-        self.recovery_attempts = context.get('recovery_attempts', 0)
+        self.recovery_attempts = context.get("recovery_attempts", 0)
 
     def to_dict(self) -> Dict:
         """Convert fault event to dictionary for logging."""
         return {
-            'fault_injected': True,
-            'fault_type': self.fault_type.value,
-            'recovered': self.recovered,
-            'recovery_time': self.recovery_time,
-            'recovery_attempts': self.recovery_attempts,
-            'context': self.context,
-            'timestamp': self.timestamp.isoformat()
+            "fault_injected": True,
+            "fault_type": self.fault_type.value,
+            "recovered": self.recovered,
+            "recovery_time": self.recovery_time,
+            "recovery_attempts": self.recovery_attempts,
+            "context": self.context,
+            "timestamp": self.timestamp.isoformat(),
         }
 
 
@@ -77,10 +83,10 @@ class FaultInjector:
 
         # State tracking
         self.state = {
-            'faults_injected': 0,
-            'recoveries_successful': 0,
-            'recoveries_failed': 0,
-            'total_recovery_time': 0.0
+            "faults_injected": 0,
+            "recoveries_successful": 0,
+            "recoveries_failed": 0,
+            "total_recovery_time": 0.0,
         }
 
         # Fault type distribution (can be customized)
@@ -91,7 +97,7 @@ class FaultInjector:
             FaultType.NETWORK_ERROR: 0.15,
             FaultType.PARTIAL_FAILURE: 0.05,
             FaultType.INVALID_RESPONSE: 0.03,
-            FaultType.EMPTY_RESPONSE: 0.02
+            FaultType.EMPTY_RESPONSE: 0.02,
         }
 
     def wrap_call(self, func: Callable, *args, **kwargs) -> Any:
@@ -129,7 +135,7 @@ class FaultInjector:
         """
         # Select fault type
         fault_type = self._select_fault_type()
-        self.state['faults_injected'] += 1
+        self.state["faults_injected"] += 1
 
         # Start recovery timer
         recovery_start = time.time()
@@ -139,7 +145,7 @@ class FaultInjector:
             fault_result = self._generate_fault(fault_type)
 
             # Attempt recovery (simulate agent retrying)
-            max_retries = self.config.get('max_recovery_attempts', 3)
+            max_retries = self.config.get("max_recovery_attempts", 3)
             recovery_attempts = 0
             recovered = False
 
@@ -153,7 +159,7 @@ class FaultInjector:
                     # Recovery successful - execute original function
                     result = func(*args, **kwargs)
                     recovered = True
-                    self.state['recoveries_successful'] += 1
+                    self.state["recoveries_successful"] += 1
                     break
                 else:
                     # Recovery failed - wait before retry
@@ -162,11 +168,11 @@ class FaultInjector:
             if not recovered:
                 # Recovery failed completely
                 result = fault_result
-                self.state['recoveries_failed'] += 1
+                self.state["recoveries_failed"] += 1
 
             # Record recovery time
             recovery_time = time.time() - recovery_start
-            self.state['total_recovery_time'] += recovery_time
+            self.state["total_recovery_time"] += recovery_time
 
             # Log fault event
             fault_event = FaultEvent(
@@ -174,16 +180,16 @@ class FaultInjector:
                 recovered=recovered,
                 recovery_time=recovery_time,
                 context={
-                    'recovery_attempts': recovery_attempts,
-                    'function_name': func.__name__,
-                    'fault_result': str(fault_result)
-                }
+                    "recovery_attempts": recovery_attempts,
+                    "function_name": func.__name__,
+                    "fault_result": str(fault_result),
+                },
             )
             self.fault_events.append(fault_event)
 
             return result
 
-        except Exception as e:
+        except Exception:
             # If fault injection itself fails, just execute the original function
             return func(*args, **kwargs)
 
@@ -239,9 +245,11 @@ class FaultInjector:
             def my_api_call():
                 ...
         """
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             return self.wrap_call(func, *args, **kwargs)
+
         return wrapper
 
     def get_fault_events(self) -> List[FaultEvent]:
@@ -250,11 +258,11 @@ class FaultInjector:
 
     def get_recovery_rate(self) -> float:
         """Calculate recovery rate (V_heal metric)."""
-        total_faults = self.state['faults_injected']
+        total_faults = self.state["faults_injected"]
         if total_faults == 0:
             return 1.0  # No faults = perfect recovery
 
-        recoveries = self.state['recoveries_successful']
+        recoveries = self.state["recoveries_successful"]
         return recoveries / total_faults
 
     def get_mean_recovery_time(self) -> float:
@@ -272,22 +280,22 @@ class FaultInjector:
     def get_stats(self) -> Dict[str, Any]:
         """Get fault injection statistics."""
         return {
-            'total_faults_injected': self.state['faults_injected'],
-            'recoveries_successful': self.state['recoveries_successful'],
-            'recoveries_failed': self.state['recoveries_failed'],
-            'recovery_rate': self.get_recovery_rate(),
-            'mean_recovery_time': self.get_mean_recovery_time(),
-            'total_recovery_time': self.state['total_recovery_time']
+            "total_faults_injected": self.state["faults_injected"],
+            "recoveries_successful": self.state["recoveries_successful"],
+            "recoveries_failed": self.state["recoveries_failed"],
+            "recovery_rate": self.get_recovery_rate(),
+            "mean_recovery_time": self.get_mean_recovery_time(),
+            "total_recovery_time": self.state["total_recovery_time"],
         }
 
     def reset(self):
         """Reset injector state and clear events."""
         self.fault_events.clear()
         self.state = {
-            'faults_injected': 0,
-            'recoveries_successful': 0,
-            'recoveries_failed': 0,
-            'total_recovery_time': 0.0
+            "faults_injected": 0,
+            "recoveries_successful": 0,
+            "recoveries_failed": 0,
+            "total_recovery_time": 0.0,
         }
 
     def disable(self):
@@ -313,13 +321,15 @@ if __name__ == "__main__":
     for i in range(10):
         try:
             result = injector.wrap_call(api_call, f"query_{i}")
-            print(f"Call {i+1}: {'SUCCESS' if isinstance(result, dict) and result.get('status') == 'success' else 'PARTIAL'}")
+            print(
+                f"Call {i + 1}: {'SUCCESS' if isinstance(result, dict) and result.get('status') == 'success' else 'PARTIAL'}"
+            )
         except Exception as e:
-            print(f"Call {i+1}: FAILED - {type(e).__name__}")
+            print(f"Call {i + 1}: FAILED - {type(e).__name__}")
 
     # Show statistics
     stats = injector.get_stats()
-    print(f"\nStatistics:")
+    print("\nStatistics:")
     print(f"  Total faults injected: {stats['total_faults_injected']}")
     print(f"  Successful recoveries: {stats['recoveries_successful']}")
     print(f"  Failed recoveries: {stats['recoveries_failed']}")

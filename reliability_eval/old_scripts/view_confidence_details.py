@@ -93,36 +93,36 @@ def print_confidence_details(details_list, max_items=None, verbose=False):
 
         if item['details']:
             details = item['details']
-            print(f"\n📝 Prompt (truncated):")
+            print("\n📝 Prompt (truncated):")
             prompt_lines = details.get('prompt', '').split('\n')[:5]
             for line in prompt_lines:
                 print(f"   {line}")
             if len(details.get('prompt', '').split('\n')) > 5:
                 print(f"   ... ({len(details.get('prompt', '').split('\n')) - 5} more lines)")
 
-            print(f"\n🤖 Model Response:")
+            print("\n🤖 Model Response:")
             print(f"   '{details.get('model_response', 'N/A')}'")
 
-            print(f"\n📊 Metadata:")
+            print("\n📊 Metadata:")
             print(f"   Model: {details.get('model', 'N/A')}")
             print(f"   Actions: {details.get('num_actions', 'N/A')}")
             print(f"   Errors: {details.get('num_errors', 'N/A')}")
             print(f"   Parsed Score: {details.get('parsed_score', 'N/A'):.3f}")
 
             if details.get('fallback'):
-                print(f"   ⚠️  FALLBACK: Used heuristic (API error)")
+                print("   ⚠️  FALLBACK: Used heuristic (API error)")
 
             if verbose:
-                print(f"\n📄 Full Prompt:")
+                print("\n📄 Full Prompt:")
                 print(details.get('prompt', 'N/A'))
         else:
-            print(f"\n⚠️  No detailed information stored (set store_confidence_details=True)")
+            print("\n⚠️  No detailed information stored (set store_confidence_details=True)")
 
         print()
 
     if max_items and len(details_list) > max_items:
         print(f"\n... ({len(details_list) - max_items} more items not shown)")
-        print(f"Use --max_items to show more or --verbose for full prompts")
+        print("Use --max_items to show more or --verbose for full prompts")
 
 
 def analyze_confidence_responses(details_list):
@@ -219,7 +219,7 @@ def main():
 
     results_dir = Path(args.results_dir)
 
-    print(f"🔍 Extracting confidence details...")
+    print("🔍 Extracting confidence details...")
     print(f"   Results dir: {results_dir}")
     print(f"   Benchmark: {args.benchmark}")
     if args.run_id:
@@ -250,10 +250,10 @@ def main():
 
     print(f"\n{'='*100}")
     print("✨ View complete!")
-    print(f"\nTo view in Weave dashboard:")
-    print(f"  1. Go to https://wandb.ai/[your-entity]/[your-project]/weave")
-    print(f"  2. Search for 'confidence_assessment' in the logs")
-    print(f"  3. Filter by model or task_id")
+    print("\nTo view in Weave dashboard:")
+    print("  1. Go to https://wandb.ai/[your-entity]/[your-project]/weave")
+    print("  2. Search for 'confidence_assessment' in the logs")
+    print("  3. Filter by model or task_id")
     print(f"{'='*100}\n")
 
 

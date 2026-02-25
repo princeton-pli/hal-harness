@@ -27,7 +27,7 @@ Usage:
 """
 
 from openai import OpenAI
-from typing import Dict, Any
+from typing import Dict
 import time
 
 
@@ -48,56 +48,67 @@ def run(input: Dict[str, Dict], **kwargs) -> Dict[str, str]:
     Returns:
         Dictionary mapping task IDs to outputs
     """
-    assert 'model_name' in kwargs, 'model_name is required'
+    assert "model_name" in kwargs, "model_name is required"
 
     # Initialize fault injector if enabled
     fault_injector = None
-    if kwargs.get('enable_fault_injection') == 'true':
+    if kwargs.get("enable_fault_injection") == "true":
         try:
             from hal.utils.fault_injection import FaultInjector
-            fault_rate = float(kwargs.get('fault_rate', '0.2'))
-            max_recovery_attempts = int(kwargs.get('max_recovery_attempts', '3'))
+
+            fault_rate = float(kwargs.get("fault_rate", "0.2"))
+            max_recovery_attempts = int(kwargs.get("max_recovery_attempts", "3"))
 
             fault_injector = FaultInjector(
                 fault_rate=fault_rate,
-                config={'max_recovery_attempts': max_recovery_attempts}
+                config={"max_recovery_attempts": max_recovery_attempts},
             )
-            print(f"✓ Fault injection enabled (rate: {fault_rate*100:.1f}%, max recoveries: {max_recovery_attempts})")
+            print(
+                f"✓ Fault injection enabled (rate: {fault_rate * 100:.1f}%, max recoveries: {max_recovery_attempts})"
+            )
         except ImportError:
             print("⚠️ Fault injection module not found, running without fault injection")
 
     # Initialize compliance monitor if enabled
     compliance_monitor = None
-    if kwargs.get('enable_compliance_monitoring') == 'true':
+    if kwargs.get("enable_compliance_monitoring") == "true":
         try:
             from hal.utils.compliance_checkers import ComplianceMonitor
-            constraints_str = kwargs.get('compliance_constraints', '')
-            constraints = [c.strip() for c in constraints_str.split(',') if c.strip()]
+
+            constraints_str = kwargs.get("compliance_constraints", "")
+            constraints = [c.strip() for c in constraints_str.split(",") if c.strip()]
 
             if constraints:
                 compliance_monitor = ComplianceMonitor(constraints=constraints)
-                print(f"✓ Compliance monitoring enabled with {len(constraints)} constraints: {', '.join(constraints)}")
+                print(
+                    f"✓ Compliance monitoring enabled with {len(constraints)} constraints: {', '.join(constraints)}"
+                )
         except ImportError:
-            print("⚠️ Compliance monitoring module not found, running without compliance checks")
+            print(
+                "⚠️ Compliance monitoring module not found, running without compliance checks"
+            )
 
     # Initialize OpenAI client
     client = OpenAI()
-    model_name = kwargs['model_name']
+    model_name = kwargs["model_name"]
 
     results = {}
 
     for task_id, task in input.items():
         try:
             # Get task instruction
-            instruction = task.get('instruction', '')
+            instruction = task.get("instruction", "")
             if not instruction:
                 results[task_id] = "ERROR: No instruction provided"
                 continue
 
             # Create messages
             messages = [
-                {"role": "system", "content": "You are a helpful assistant that completes tasks accurately and efficiently."},
-                {"role": "user", "content": instruction}
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that completes tasks accurately and efficiently.",
+                },
+                {"role": "user", "content": instruction},
             ]
 
             # Make API call with or without fault injection
@@ -108,7 +119,7 @@ def run(input: Dict[str, Dict], **kwargs) -> Dict[str, str]:
                     model=model_name,
                     messages=messages,
                     max_tokens=1000,
-                    temperature=0.0
+                    temperature=0.0,
                 )
             else:
                 # Normal API call
@@ -116,7 +127,7 @@ def run(input: Dict[str, Dict], **kwargs) -> Dict[str, str]:
                     model=model_name,
                     messages=messages,
                     max_tokens=1000,
-                    temperature=0.0
+                    temperature=0.0,
                 )
 
             output = response.choices[0].message.content
@@ -125,8 +136,7 @@ def run(input: Dict[str, Dict], **kwargs) -> Dict[str, str]:
             if compliance_monitor:
                 # Check for PII exposure
                 is_compliant, violation = compliance_monitor.check_constraint(
-                    'no_pii_exposure',
-                    text=output
+                    "no_pii_exposure", text=output
                 )
                 if not is_compliant:
                     print(f"⚠️ Task {task_id}: PII violation - {violation.description}")
@@ -134,21 +144,23 @@ def run(input: Dict[str, Dict], **kwargs) -> Dict[str, str]:
 
                 # Check rate limits
                 is_compliant, violation = compliance_monitor.check_constraint(
-                    'rate_limit_respect',
-                    api_name='openai.chat.completions.create'
+                    "rate_limit_respect", api_name="openai.chat.completions.create"
                 )
                 if not is_compliant:
-                    print(f"⚠️ Task {task_id}: Rate limit violation - {violation.description}")
+                    print(
+                        f"⚠️ Task {task_id}: Rate limit violation - {violation.description}"
+                    )
                     # Optionally slow down requests
                     time.sleep(1.0)
 
                 # Check for destructive operations in output
                 is_compliant, violation = compliance_monitor.check_constraint(
-                    'no_destructive_ops',
-                    text=output
+                    "no_destructive_ops", text=output
                 )
                 if not is_compliant:
-                    print(f"⚠️ Task {task_id}: Destructive operation detected - {violation.description}")
+                    print(
+                        f"⚠️ Task {task_id}: Destructive operation detected - {violation.description}"
+                    )
 
             results[task_id] = output
 
@@ -161,16 +173,18 @@ def run(input: Dict[str, Dict], **kwargs) -> Dict[str, str]:
         if events:
             total_faults = len(events)
             recovered = sum(1 for e in events if e.recovered)
-            print(f"\n📊 Fault Injection Summary:")
+            print("\n📊 Fault Injection Summary:")
             print(f"   Total faults injected: {total_faults}")
-            print(f"   Successfully recovered: {recovered}/{total_faults} ({recovered/total_faults*100:.1f}%)")
+            print(
+                f"   Successfully recovered: {recovered}/{total_faults} ({recovered / total_faults * 100:.1f}%)"
+            )
             print(f"   Failed: {total_faults - recovered}")
 
     # Log compliance statistics if compliance monitoring was used
     if compliance_monitor:
         violations = compliance_monitor.get_violations()
         if violations:
-            print(f"\n🔒 Compliance Summary:")
+            print("\n🔒 Compliance Summary:")
             print(f"   Total violations: {len(violations)}")
             by_severity = {}
             for v in violations:

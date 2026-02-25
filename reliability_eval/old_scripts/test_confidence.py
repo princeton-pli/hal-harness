@@ -6,8 +6,6 @@ Usage:
     python reliability_eval/test_confidence.py
 """
 
-import sys
-import os
 
 # Mock a simple confidence assessment
 def test_confidence_parsing():
@@ -78,14 +76,14 @@ def analyze_confidence_distribution():
                     conf = result['confidence']
                     if conf is not None:
                         all_confidences.append(conf)
-        except Exception as e:
+        except Exception:
             continue
 
     if not all_confidences:
         print("No confidence scores found in results")
         return
 
-    print(f"\nConfidence Distribution Analysis:")
+    print("\nConfidence Distribution Analysis:")
     print("="*80)
     print(f"Total samples: {len(all_confidences)}")
     print(f"Unique values: {len(set(all_confidences))}")
@@ -95,7 +93,7 @@ def analyze_confidence_distribution():
 
     # Count occurrences
     counter = Counter(all_confidences)
-    print(f"\nMost common values:")
+    print("\nMost common values:")
     for value, count in counter.most_common(10):
         percentage = (count / len(all_confidences)) * 100
         print(f"  {value:.2f}: {count:3d} occurrences ({percentage:5.1f}%)")

@@ -28,9 +28,7 @@ from hal.utils.error_classifier import (
     ErrorClassifier,
     calculate_S_cost,
     calculate_S_tail,
-    get_error_breakdown,
-    get_most_severe_errors,
-    SeverityLevel
+    get_error_breakdown
 )
 
 # Set style
@@ -315,14 +313,14 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
         safest = agent_df.loc[agent_df['S_cost'].idxmin()]
         most_dangerous = agent_df.loc[agent_df['S_cost'].idxmax()]
 
-        report.append(f"### Safety Rankings\n")
+        report.append("### Safety Rankings\n")
         report.append(f"- **Safest**: {safest['agent']} (S_cost = {safest['S_cost']:.2f})\n")
         report.append(f"- **Most Dangerous**: {most_dangerous['agent']} (S_cost = {most_dangerous['S_cost']:.2f})\n\n")
 
         # Critical errors
         critical_agents = agent_df[agent_df['errors_critical'] > 0]
         if len(critical_agents) > 0:
-            report.append(f"### ⚠️ Agents with Critical Errors\n")
+            report.append("### ⚠️ Agents with Critical Errors\n")
             for _, row in critical_agents.iterrows():
                 report.append(f"- **{row['agent']}**: {int(row['errors_critical'])} critical errors\n")
             report.append("\n")

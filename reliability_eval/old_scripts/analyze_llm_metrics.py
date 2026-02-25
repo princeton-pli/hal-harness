@@ -25,11 +25,10 @@ Usage:
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -39,10 +38,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from hal.utils.llm_log_analyzer import (
     LLMLogAnalyzer,
-    ComplianceAnalysisResult,
-    RecoveryAnalysisResult,
-    TrajectorySimilarityResult,
-    ErrorSeverityAnalysisResult,
 )
 
 

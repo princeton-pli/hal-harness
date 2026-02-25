@@ -38,7 +38,6 @@ class DockerRunner:
         self.verbose = False
         self.task_timeout = task_timeout  # Timeout in seconds for each task
 
-
         # Initialize Docker client
         self.docker_client = docker.from_env()
 
@@ -170,10 +169,23 @@ class DockerRunner:
         """Check if an error is transient and worth retrying."""
         error_lower = error_msg.lower()
         transient_patterns = [
-            "timeout", "timed out", "connection", "502", "503", "504",
-            "bad gateway", "service unavailable", "gateway timeout",
-            "temporarily", "rate limit", "too many requests", "429",
-            "reset by peer", "broken pipe", "network", "dns",
+            "timeout",
+            "timed out",
+            "connection",
+            "502",
+            "503",
+            "504",
+            "bad gateway",
+            "service unavailable",
+            "gateway timeout",
+            "temporarily",
+            "rate limit",
+            "too many requests",
+            "429",
+            "reset by peer",
+            "broken pipe",
+            "network",
+            "dns",
         ]
         return any(pattern in error_lower for pattern in transient_patterns)
 
@@ -213,8 +225,11 @@ class DockerRunner:
                     task_result = result.get(task_id, "")
                     if isinstance(task_result, str) and task_result.startswith("ERROR"):
                         # Check if it's a transient error worth retrying
-                        if self._is_transient_error(task_result) and attempt < max_retries - 1:
-                            delay = base_delay * (2 ** attempt)
+                        if (
+                            self._is_transient_error(task_result)
+                            and attempt < max_retries - 1
+                        ):
+                            delay = base_delay * (2**attempt)
                             logger.warning(
                                 f"Task {task_id} failed with transient error (attempt {attempt + 1}/{max_retries}), "
                                 f"retrying in {delay:.1f}s..."

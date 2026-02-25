@@ -1525,7 +1525,7 @@ def run_safety_phase(
 
             raw_eval = data.get('raw_eval_results', {})
             if not raw_eval:
-                print(f"      ⚠️  No raw_eval_results found")
+                print("      ⚠️  No raw_eval_results found")
                 continue
 
             # Collect tasks that need analysis
@@ -1551,7 +1551,7 @@ def run_safety_phase(
                 })
 
             if not tasks_to_analyze:
-                print(f"      ℹ️  No tasks to analyze")
+                print("      ℹ️  No tasks to analyze")
                 continue
 
             print(f"      🔬 Analyzing {len(tasks_to_analyze)} tasks (max_concurrent={max_concurrent})...")
@@ -1681,7 +1681,7 @@ def run_safety_phase(
         log.add_result(result)
         log.save(log_path)
 
-    print(f"\n✨ Safety phase complete:")
+    print("\n✨ Safety phase complete:")
     print(f"   📊 Tasks analyzed: {total_tasks_analyzed}")
     print(f"   📁 Files updated: {total_files_updated}")
 
@@ -1766,7 +1766,7 @@ def run_abstention_phase(
 
             raw_eval = data.get('raw_eval_results', {})
             if not raw_eval:
-                print(f"      ⚠️  No raw_eval_results found")
+                print("      ⚠️  No raw_eval_results found")
                 continue
 
             tasks_in_file = 0
@@ -1829,7 +1829,7 @@ def run_abstention_phase(
                             abstention_summary['not_abstained_and_succeeded'] += 1
                         else:
                             abstention_summary['not_abstained_and_failed'] += 1
-                        print(f"✅ no abstention")
+                        print("✅ no abstention")
 
                 except Exception as e:
                     print(f"❌ Error: {e}")
@@ -1864,13 +1864,13 @@ def run_abstention_phase(
         log.save(log_path)
 
     # Print summary
-    print(f"\n✨ Abstention phase complete:")
+    print("\n✨ Abstention phase complete:")
     print(f"   📊 Tasks analyzed: {total_tasks_analyzed}")
     print(f"   📁 Files updated: {total_files_updated}")
-    print(f"\n   📈 Abstention Summary:")
+    print("\n   📈 Abstention Summary:")
     print(f"      Total abstained: {abstention_summary['total_abstained']}")
     print(f"      By type: {abstention_summary['by_type']}")
-    print(f"\n   🎯 Correlation with success:")
+    print("\n   🎯 Correlation with success:")
     print(f"      Abstained + Failed:     {abstention_summary['abstained_and_failed']}")
     print(f"      Abstained + Succeeded:  {abstention_summary['abstained_and_succeeded']}")
     print(f"      No abstention + Failed: {abstention_summary['not_abstained_and_failed']}")
@@ -1885,7 +1885,7 @@ def run_abstention_phase(
         # Recall: P(abstain | fail)
         total_failed = abstention_summary['abstained_and_failed'] + abstention_summary['not_abstained_and_failed']
         recall = abstention_summary['abstained_and_failed'] / total_failed if total_failed > 0 else 0
-        print(f"\n   📊 Abstention Calibration:")
+        print("\n   📊 Abstention Calibration:")
         print(f"      Precision (P(fail|abstain)): {precision:.2%}")
         print(f"      Recall (P(abstain|fail)):    {recall:.2%}")
 

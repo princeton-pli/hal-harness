@@ -93,10 +93,23 @@ class LocalRunner:
         """Check if an error is transient and worth retrying."""
         error_lower = error_msg.lower()
         transient_patterns = [
-            "timeout", "timed out", "connection", "502", "503", "504",
-            "bad gateway", "service unavailable", "gateway timeout",
-            "temporarily", "rate limit", "too many requests", "429",
-            "reset by peer", "broken pipe", "network", "dns",
+            "timeout",
+            "timed out",
+            "connection",
+            "502",
+            "503",
+            "504",
+            "bad gateway",
+            "service unavailable",
+            "gateway timeout",
+            "temporarily",
+            "rate limit",
+            "too many requests",
+            "429",
+            "reset by peer",
+            "broken pipe",
+            "network",
+            "dns",
         ]
         return any(pattern in error_lower for pattern in transient_patterns)
 
@@ -136,8 +149,11 @@ class LocalRunner:
                     task_result = result.get(task_id, "")
                     if isinstance(task_result, str) and task_result.startswith("ERROR"):
                         # Check if it's a transient error worth retrying
-                        if self._is_transient_error(task_result) and attempt < max_retries - 1:
-                            delay = base_delay * (2 ** attempt)
+                        if (
+                            self._is_transient_error(task_result)
+                            and attempt < max_retries - 1
+                        ):
+                            delay = base_delay * (2**attempt)
                             logger.warning(
                                 f"Task {task_id} failed with transient error (attempt {attempt + 1}/{max_retries}), "
                                 f"retrying in {delay:.1f}s..."
@@ -247,9 +263,10 @@ class LocalRunner:
                 # new command to run the agent
                 run_agent_cmd = ["conda", "run", "-n", self.conda_env] + run_agent_cmd
 
-
             # Run agent with timeout
-            logger.debug(f"Running agent for task {task_id} (timeout: {self.task_timeout}s)")
+            logger.debug(
+                f"Running agent for task {task_id} (timeout: {self.task_timeout}s)"
+            )
             process = await asyncio.create_subprocess_exec(
                 *run_agent_cmd,
                 cwd=str(temp_dir),
@@ -264,14 +281,19 @@ class LocalRunner:
                 )
             except asyncio.TimeoutError:
                 # Kill the process if it times out
-                logger.debug(f"Task {task_id} timed out after {self.task_timeout}s, killing process")
+                logger.debug(
+                    f"Task {task_id} timed out after {self.task_timeout}s, killing process"
+                )
                 try:
                     process.kill()
                     await process.wait()
                 except Exception as kill_error:
-                    logger.debug(f"Error killing timed out process for task {task_id}: {kill_error}")
-                return {task_id: f"ERROR: Task timed out after {self.task_timeout} seconds"}
-
+                    logger.debug(
+                        f"Error killing timed out process for task {task_id}: {kill_error}"
+                    )
+                return {
+                    task_id: f"ERROR: Task timed out after {self.task_timeout} seconds"
+                }
 
             # Log agent output
             if stdout:

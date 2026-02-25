@@ -12,13 +12,14 @@ Variation Strength Levels:
 """
 
 import os
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from enum import Enum
 from openai import OpenAI
 
 
 class VariationStrength(Enum):
     """Strength levels for prompt variations."""
+
     MILD = "mild"
     MEDIUM = "medium"
     STRONG = "strong"
@@ -29,7 +30,6 @@ class VariationStrength(Enum):
 # These are injected into the user simulator's system prompt to control HOW it communicates
 USER_STYLE_DIRECTIVES = {
     VariationStrength.MILD: "",  # No directive - use default formal style
-
     VariationStrength.MEDIUM: (
         "\n\nCommunication Style Guidelines:\n"
         "- Speak in a moderately casual tone\n"
@@ -37,7 +37,6 @@ USER_STYLE_DIRECTIVES = {
         "- You may use contractions (don't, can't, I'll) and simple language\n"
         "- Be polite but not stiff"
     ),
-
     VariationStrength.STRONG: (
         "\n\nCommunication Style Guidelines:\n"
         "- Speak very casually and conversationally, like chatting with a helpful friend\n"
@@ -47,7 +46,6 @@ USER_STYLE_DIRECTIVES = {
         "- Be friendly and relaxed in tone\n"
         "- Still convey all necessary information clearly"
     ),
-
     VariationStrength.NATURALISTIC: (
         "\n\nCommunication Style Guidelines:\n"
         "- Type like a real person texting or chatting online\n"
@@ -81,7 +79,6 @@ Techniques to use:
 - Minor sentence restructuring
 
 Output ONLY the variations, one per line, without numbering or additional text.""",
-
     VariationStrength.MEDIUM: """You are an expert at paraphrasing text while preserving exact semantic meaning.
 
 Your task is to generate variations that significantly restructure the prompt while keeping ALL information intact.
@@ -96,7 +93,6 @@ Techniques to use:
 CRITICAL: All original information MUST be preserved. Do not add or remove any constraints.
 
 Output ONLY the variations, one per line, without numbering or additional text.""",
-
     VariationStrength.STRONG: """You are an expert at generating realistic rewrites of instructions while preserving exact semantic meaning.
 
 Your task is to generate variations that sound like different people wrote them, with very different styles and structures.
@@ -122,7 +118,6 @@ Techniques to use:
 CRITICAL: ALL original information and constraints MUST be preserved and inferable. The agent should be able to extract the exact same requirements.
 
 Output ONLY the variations, one per line, without numbering or additional text.""",
-
     VariationStrength.NATURALISTIC: """You are an expert at generating realistic user input variations that mimic how real people actually type and communicate.
 
 Your task is to generate variations that reflect authentic user behavior while preserving ALL semantic meaning.
@@ -154,7 +149,7 @@ CRITICAL:
 - Variations should be challenging but NOT ambiguous about the actual requirements
 - A competent agent should still be able to understand and fulfill the request
 
-Output ONLY the variations, one per line, without numbering or additional text."""
+Output ONLY the variations, one per line, without numbering or additional text.""",
 }
 
 
@@ -165,7 +160,6 @@ VARIATION_USER_PROMPTS = {
 {prompt}
 
 Remember: The variations must preserve the exact meaning, just use different wording.""",
-
     VariationStrength.MEDIUM: """Generate {num_variations} RESTRUCTURED variations of this prompt.
 Each variation should organize the information in a DIFFERENT ORDER and use DIFFERENT sentence structures.
 
@@ -173,7 +167,6 @@ Original prompt:
 {prompt}
 
 Remember: ALL information must be preserved, but the structure should be notably different.""",
-
     VariationStrength.STRONG: """Generate {num_variations} SIGNIFICANTLY DIFFERENT variations of this prompt.
 Each variation should sound like it was written by a different person with a different communication style.
 
@@ -181,7 +174,6 @@ Original prompt:
 {prompt}
 
 Make each variation feel genuinely different - one could be very conversational, another very concise, another more formal but restructured. ALL original information and constraints must be preserved.""",
-
     VariationStrength.NATURALISTIC: """Generate {num_variations} REALISTIC variations of this prompt that mimic how actual users type.
 Include natural imperfections, abbreviations, and informal patterns while keeping ALL information intact.
 
@@ -193,7 +185,7 @@ Examples of naturalistic style:
 - "So I need to get from New York to Seattle... May 20th works. Just one way. Economy's fine, and I'd prefer not to leave super early - like after 11?"
 - "booking: NYC→SEA, 5/20, economy, one-way. prefer late morning departure (11am+)"
 
-Generate diverse naturalistic variations. ALL requirements must be preserved and clearly extractable."""
+Generate diverse naturalistic variations. ALL requirements must be preserved and clearly extractable.""",
 }
 
 
@@ -204,7 +196,7 @@ class PromptVariationGenerator:
         self,
         model_name: str = "gpt-4o-mini-2024-07-18",
         num_variations: int = 3,
-        strength: str = "mild"
+        strength: str = "mild",
     ):
         """
         Initialize the prompt variation generator.
@@ -257,8 +249,7 @@ class PromptVariationGenerator:
         import re
 
         user_prompt = self.user_prompt_template.format(
-            num_variations=self.num_variations,
-            prompt=prompt
+            num_variations=self.num_variations, prompt=prompt
         )
 
         try:
@@ -274,15 +265,15 @@ class PromptVariationGenerator:
                 model=self.model_name,
                 messages=[
                     {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": user_prompt},
                 ],
                 temperature=temperature,
-                max_tokens=3000  # Increased for longer variations
+                max_tokens=3000,  # Increased for longer variations
             )
 
             # Parse variations from response
             variations_text = response.choices[0].message.content.strip()
-            variations = [v.strip() for v in variations_text.split('\n') if v.strip()]
+            variations = [v.strip() for v in variations_text.split("\n") if v.strip()]
 
             # Filter out any that are just numbers or very short
             variations = [v for v in variations if len(v) > 10]
@@ -291,14 +282,14 @@ class PromptVariationGenerator:
             cleaned_variations = []
             for v in variations:
                 # Remove common prefixes like "1.", "1)", "- ", "• ", etc.
-                cleaned = re.sub(r'^[\d]+[\.\)]\s*', '', v)
-                cleaned = re.sub(r'^[-•]\s*', '', cleaned)
+                cleaned = re.sub(r"^[\d]+[\.\)]\s*", "", v)
+                cleaned = re.sub(r"^[-•]\s*", "", cleaned)
                 cleaned_variations.append(cleaned.strip())
 
             variations = [v for v in cleaned_variations if len(v) > 10]
 
             # Ensure we have the right number of variations
-            variations = variations[:self.num_variations]
+            variations = variations[: self.num_variations]
 
             # Include original prompt as first variation
             # Note: Style directive is NOT prepended here - it should be injected
@@ -313,10 +304,7 @@ class PromptVariationGenerator:
             return [prompt]
 
     def generate_single_variation_for_dataset(
-        self,
-        dataset: Dict[str, Any],
-        prompt_field: str,
-        variation_index: int
+        self, dataset: Dict[str, Any], prompt_field: str, variation_index: int
     ) -> Dict[str, Dict[str, Any]]:
         """
         Generate a single specific variation for all tasks in a dataset.
@@ -339,22 +327,28 @@ class PromptVariationGenerator:
             print(f"Using original prompts (variation 0) for {total_tasks} tasks...")
             for task_id, task_data in dataset.items():
                 varied_task = task_data.copy()
-                varied_task['prompt_variation_id'] = 0
-                varied_task['prompt_variation_strength'] = self.strength.value
+                varied_task["prompt_variation_id"] = 0
+                varied_task["prompt_variation_strength"] = self.strength.value
                 varied_dataset[task_id] = varied_task
             return varied_dataset
 
-        print(f"Generating {self.strength.value} variation {variation_index} for {total_tasks} tasks...")
+        print(
+            f"Generating {self.strength.value} variation {variation_index} for {total_tasks} tasks..."
+        )
 
         for idx, (task_id, task_data) in enumerate(dataset.items()):
-            print(f"  [{idx+1}/{total_tasks}] Generating variation {variation_index} for task {task_id}...", end=" ", flush=True)
+            print(
+                f"  [{idx + 1}/{total_tasks}] Generating variation {variation_index} for task {task_id}...",
+                end=" ",
+                flush=True,
+            )
 
             # Check if the prompt field exists
             if prompt_field not in task_data:
                 print(f"skipped (no '{prompt_field}' field)")
                 varied_task = task_data.copy()
-                varied_task['prompt_variation_id'] = variation_index
-                varied_task['prompt_variation_strength'] = self.strength.value
+                varied_task["prompt_variation_id"] = variation_index
+                varied_task["prompt_variation_strength"] = self.strength.value
                 varied_dataset[task_id] = varied_task
                 continue
 
@@ -369,24 +363,27 @@ class PromptVariationGenerator:
                 varied_prompt = variations[variation_index]
             else:
                 # Fallback to original if requested index doesn't exist
-                print(f"warning: variation {variation_index} not available, using original...", end=" ")
+                print(
+                    f"warning: variation {variation_index} not available, using original...",
+                    end=" ",
+                )
                 varied_prompt = original_prompt
 
             # Create task data for this variation
             varied_task = task_data.copy()
             varied_task[prompt_field] = varied_prompt
-            varied_task['prompt_variation_id'] = variation_index
-            varied_task['prompt_variation_strength'] = self.strength.value
+            varied_task["prompt_variation_id"] = variation_index
+            varied_task["prompt_variation_strength"] = self.strength.value
             varied_dataset[task_id] = varied_task
             print("done")
 
-        print(f"Completed generating variation {variation_index} for all {total_tasks} tasks")
+        print(
+            f"Completed generating variation {variation_index} for all {total_tasks} tasks"
+        )
         return varied_dataset
 
     def apply_variations_to_dataset(
-        self,
-        dataset: Dict[str, Any],
-        prompt_field: str = "Question"
+        self, dataset: Dict[str, Any], prompt_field: str = "Question"
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Apply prompt variations to an entire dataset.
@@ -405,7 +402,11 @@ class PromptVariationGenerator:
         print(f"Generating {self.strength.value} variations for {total_tasks} tasks...")
 
         for idx, (task_id, task_data) in enumerate(dataset.items()):
-            print(f"  [{idx+1}/{total_tasks}] Generating variations for task {task_id}...", end=" ", flush=True)
+            print(
+                f"  [{idx + 1}/{total_tasks}] Generating variations for task {task_id}...",
+                end=" ",
+                flush=True,
+            )
             # Check if the prompt field exists
             if prompt_field not in task_data:
                 print(f"skipped (no '{prompt_field}' field)")
@@ -423,8 +424,10 @@ class PromptVariationGenerator:
             for i, varied_prompt in enumerate(variations):
                 varied_task = task_data.copy()
                 varied_task[prompt_field] = varied_prompt
-                varied_task['prompt_variation_id'] = i  # Track which variation this is
-                varied_task['prompt_variation_strength'] = self.strength.value  # Track strength level
+                varied_task["prompt_variation_id"] = i  # Track which variation this is
+                varied_task["prompt_variation_strength"] = (
+                    self.strength.value
+                )  # Track strength level
                 varied_tasks.append(varied_task)
 
             varied_dataset[task_id] = varied_tasks
@@ -468,25 +471,25 @@ def get_prompt_field_for_benchmark(benchmark_name: str) -> str:
     """
     # Map benchmark names to their prompt fields
     prompt_field_map = {
-        'gaia': 'Question',
-        'usaco': 'problem_statement',
-        'swebench_verified': 'problem_statement',
-        'swebench_verified_mini': 'problem_statement',
-        'appworld_test_normal': 'instruction',
-        'appworld_test_challenge': 'instruction',
-        'assistantbench': 'task',
-        'scicode': 'problem_statement',
-        'scicode_easy': 'problem_statement',
-        'scicode_hard': 'problem_statement',
+        "gaia": "Question",
+        "usaco": "problem_statement",
+        "swebench_verified": "problem_statement",
+        "swebench_verified_mini": "problem_statement",
+        "appworld_test_normal": "instruction",
+        "appworld_test_challenge": "instruction",
+        "assistantbench": "task",
+        "scicode": "problem_statement",
+        "scicode_easy": "problem_statement",
+        "scicode_hard": "problem_statement",
     }
 
     # TauBench now supported via instruction field
-    if benchmark_name in ['taubench_retail', 'taubench_airline']:
-        return 'instruction'
+    if benchmark_name in ["taubench_retail", "taubench_airline"]:
+        return "instruction"
 
     # Handle inspect benchmarks
-    if benchmark_name.startswith('inspect_evals/'):
+    if benchmark_name.startswith("inspect_evals/"):
         # Most inspect benchmarks use 'input' or 'question'
-        return 'input'
+        return "input"
 
-    return prompt_field_map.get(benchmark_name, 'Question')  # Default to 'Question'
+    return prompt_field_map.get(benchmark_name, "Question")  # Default to 'Question'

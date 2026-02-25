@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
@@ -553,7 +553,7 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
     most_robust = agent_df.loc[agent_df['S_prompt'].idxmax()]
     least_robust = agent_df.loc[agent_df['S_prompt'].idxmin()]
 
-    report.append(f"### Prompt Robustness\n")
+    report.append("### Prompt Robustness\n")
     report.append(f"- **Most robust**: {most_robust['agent']} (S_prompt = {most_robust['S_prompt']:.3f})\n")
     report.append(f"- **Least robust**: {least_robust['agent']} (S_prompt = {least_robust['S_prompt']:.3f})\n\n")
 
@@ -562,7 +562,7 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
         task_avg_variance = task_df.groupby('task_id')['variance'].mean().sort_values(ascending=False)
         top_5_sensitive = task_avg_variance.head(5)
 
-        report.append(f"### Most Prompt-Sensitive Tasks\n")
+        report.append("### Most Prompt-Sensitive Tasks\n")
         for i, (task_id, variance) in enumerate(top_5_sensitive.items(), 1):
             report.append(f"{i}. Task {task_id}: variance = {variance:.4f}\n")
         report.append("\n")

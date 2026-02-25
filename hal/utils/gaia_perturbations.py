@@ -14,7 +14,6 @@ and information are presented while maintaining answer correctness.
 
 import re
 import random
-import copy
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
@@ -22,7 +21,8 @@ from enum import Enum
 
 class GaiaPerturbationStrength(Enum):
     """Strength levels for GAIA perturbations."""
-    MILD = "mild"      # Only formatting changes (case, whitespace)
+
+    MILD = "mild"  # Only formatting changes (case, whitespace)
     MEDIUM = "medium"  # Formatting + instruction rephrasing + data format changes
     SEVERE = "severe"  # All changes + noise injection + tool output perturbations
 
@@ -53,7 +53,7 @@ class GaiaPerturbationConfig:
     add_irrelevant_context: bool = False  # Add irrelevant sentences to context
 
     @staticmethod
-    def get_preset(strength: GaiaPerturbationStrength) -> 'GaiaPerturbationConfig':
+    def get_preset(strength: GaiaPerturbationStrength) -> "GaiaPerturbationConfig":
         """Get preset configuration for given strength."""
         if strength == GaiaPerturbationStrength.MILD:
             return GaiaPerturbationConfig(
@@ -141,9 +141,19 @@ INSTRUCTION_STYLES = {
 
 # Number to word mappings for small numbers
 NUMBER_WORDS = {
-    0: "zero", 1: "one", 2: "two", 3: "three", 4: "four",
-    5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine",
-    10: "ten", 11: "eleven", 12: "twelve",
+    0: "zero",
+    1: "one",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+    11: "eleven",
+    12: "twelve",
 }
 
 # Irrelevant context sentences for noise injection
@@ -218,11 +228,17 @@ class GaiaPerturbator:
             perturbed = self._add_irrelevant_context(perturbed)
 
         if perturbed != original:
-            self.applied_perturbations.append({
-                "type": "question_text",
-                "original": original[:100] + "..." if len(original) > 100 else original,
-                "perturbed": perturbed[:100] + "..." if len(perturbed) > 100 else perturbed,
-            })
+            self.applied_perturbations.append(
+                {
+                    "type": "question_text",
+                    "original": original[:100] + "..."
+                    if len(original) > 100
+                    else original,
+                    "perturbed": perturbed[:100] + "..."
+                    if len(perturbed) > 100
+                    else perturbed,
+                }
+            )
 
         return perturbed
 
@@ -237,11 +253,11 @@ class GaiaPerturbator:
                     result.append(char.lower())
             else:
                 result.append(char)
-        return ''.join(result)
+        return "".join(result)
 
     def _normalize_whitespace(self, text: str) -> str:
         """Normalize multiple spaces to single space."""
-        return ' '.join(text.split())
+        return " ".join(text.split())
 
     def _add_noise_words(self, text: str) -> str:
         """Add filler words to the question."""
@@ -255,8 +271,8 @@ class GaiaPerturbator:
         # Add suffix
         if self._rng.random() > 0.5:
             suffix = self._rng.choice(NOISE_SUFFIXES)
-            if not text.endswith('.') and not text.endswith('?'):
-                text = text + '.'
+            if not text.endswith(".") and not text.endswith("?"):
+                text = text + "."
             text = f"{text} {suffix}"
 
         return text
@@ -272,8 +288,9 @@ class GaiaPerturbator:
                 if 1900 <= num <= 2100:
                     return match.group(0)
                 return f"{num:,}"
+
             # Only apply to numbers with 5+ digits, or 4-digit non-years
-            text = re.sub(r'\b\d{4,}\b', add_commas, text)
+            text = re.sub(r"\b\d{4,}\b", add_commas, text)
 
         elif self.config.number_format == "words":
             # Convert small numbers to words (only standalone numbers, not part of dates)
@@ -281,12 +298,13 @@ class GaiaPerturbator:
                 num = int(match.group(0))
                 # Skip if preceded by hyphen (likely part of date like 01-15)
                 start = match.start()
-                if start > 0 and text[start-1] == '-':
+                if start > 0 and text[start - 1] == "-":
                     return match.group(0)
                 if num in NUMBER_WORDS:
                     return NUMBER_WORDS[num]
                 return match.group(0)
-            text = re.sub(r'\b\d{1,2}\b', num_to_word, text)
+
+            text = re.sub(r"\b\d{1,2}\b", num_to_word, text)
 
         return text
 
@@ -294,19 +312,31 @@ class GaiaPerturbator:
         """Transform date formats in text."""
         if self.config.date_format == "verbose":
             # Convert YYYY-MM-DD to Month Day, Year
-            month_names = ["January", "February", "March", "April", "May", "June",
-                          "July", "August", "September", "October", "November", "December"]
+            month_names = [
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+            ]
 
             def iso_to_verbose(match):
                 year, month, day = match.groups()
                 month_name = month_names[int(month) - 1]
                 return f"{month_name} {int(day)}, {year}"
 
-            text = re.sub(r'(\d{4})-(\d{2})-(\d{2})', iso_to_verbose, text)
+            text = re.sub(r"(\d{4})-(\d{2})-(\d{2})", iso_to_verbose, text)
 
         elif self.config.date_format == "compact":
             # Convert YYYY-MM-DD to YYYYMMDD
-            text = re.sub(r'(\d{4})-(\d{2})-(\d{2})', r'\1\2\3', text)
+            text = re.sub(r"(\d{4})-(\d{2})-(\d{2})", r"\1\2\3", text)
 
         return text
 
@@ -317,11 +347,11 @@ class GaiaPerturbator:
         # Insert in the middle or at the end
         if self._rng.random() > 0.5:
             # Find a sentence boundary
-            sentences = text.split('. ')
+            sentences = text.split(". ")
             if len(sentences) > 1:
                 insert_pos = self._rng.randint(1, len(sentences) - 1)
-                sentences.insert(insert_pos, sentence.rstrip('.'))
-                text = '. '.join(sentences)
+                sentences.insert(insert_pos, sentence.rstrip("."))
+                text = ". ".join(sentences)
             else:
                 text = f"{text} {sentence}"
         else:
@@ -353,11 +383,17 @@ class GaiaPerturbator:
             perturbed = self._reorder_bullets(perturbed)
 
         if perturbed != original:
-            self.applied_perturbations.append({
-                "type": "instructions",
-                "original": original[:100] + "..." if len(original) > 100 else original,
-                "perturbed": perturbed[:100] + "..." if len(perturbed) > 100 else perturbed,
-            })
+            self.applied_perturbations.append(
+                {
+                    "type": "instructions",
+                    "original": original[:100] + "..."
+                    if len(original) > 100
+                    else original,
+                    "perturbed": perturbed[:100] + "..."
+                    if len(perturbed) > 100
+                    else perturbed,
+                }
+            )
 
         return perturbed
 
@@ -375,8 +411,10 @@ class GaiaPerturbator:
     def _reorder_bullets(self, text: str) -> str:
         """Reorder bullet points in instructions."""
         # Find bullet point sections (lines starting with -)
-        lines = text.split('\n')
-        bullet_indices = [i for i, line in enumerate(lines) if line.strip().startswith('-')]
+        lines = text.split("\n")
+        bullet_indices = [
+            i for i, line in enumerate(lines) if line.strip().startswith("-")
+        ]
 
         if len(bullet_indices) > 1:
             # Extract bullet lines
@@ -386,7 +424,7 @@ class GaiaPerturbator:
             # Put them back
             for i, idx in enumerate(bullet_indices):
                 lines[idx] = bullets[i]
-            text = '\n'.join(lines)
+            text = "\n".join(lines)
 
         return text
 
@@ -423,11 +461,17 @@ class GaiaPerturbator:
                 perturbed = self._wrap_response(perturbed)
 
             if perturbed != output:
-                self.applied_perturbations.append({
-                    "type": f"tool_output_{tool_name}",
-                    "original": str(output)[:50] + "..." if len(str(output)) > 50 else str(output),
-                    "perturbed": str(perturbed)[:50] + "..." if len(str(perturbed)) > 50 else str(perturbed),
-                })
+                self.applied_perturbations.append(
+                    {
+                        "type": f"tool_output_{tool_name}",
+                        "original": str(output)[:50] + "..."
+                        if len(str(output)) > 50
+                        else str(output),
+                        "perturbed": str(perturbed)[:50] + "..."
+                        if len(str(perturbed)) > 50
+                        else str(perturbed),
+                    }
+                )
 
             return perturbed
 
@@ -436,10 +480,10 @@ class GaiaPerturbator:
     def _perturb_search_results(self, text: str) -> str:
         """Add noise to search result formatting."""
         # Add extra whitespace between results
-        text = re.sub(r'\n(\d+\.)', r'\n\n\1', text)
+        text = re.sub(r"\n(\d+\.)", r"\n\n\1", text)
 
         # Add "[Result]" prefix markers
-        text = re.sub(r'^(\d+\.)', r'[Result \1]', text, flags=re.MULTILINE)
+        text = re.sub(r"^(\d+\.)", r"[Result \1]", text, flags=re.MULTILINE)
 
         return text
 
@@ -539,6 +583,7 @@ def create_gaia_perturbator(strength: str = "medium") -> GaiaPerturbator:
 # Tool Wrapper for Applying Perturbations to Tool Outputs
 # ============================================================================
 
+
 class PerturbedToolWrapper:
     """Wrapper that applies perturbations to tool outputs."""
 
@@ -554,10 +599,10 @@ class PerturbedToolWrapper:
         self.perturbator = perturbator
 
         # Copy attributes from original tool
-        self.name = getattr(original_tool, 'name', 'unknown')
-        self.description = getattr(original_tool, 'description', '')
-        self.inputs = getattr(original_tool, 'inputs', {})
-        self.output_type = getattr(original_tool, 'output_type', 'string')
+        self.name = getattr(original_tool, "name", "unknown")
+        self.description = getattr(original_tool, "description", "")
+        self.inputs = getattr(original_tool, "inputs", {})
+        self.output_type = getattr(original_tool, "output_type", "string")
 
     def forward(self, *args, **kwargs) -> Any:
         """Execute tool and perturb output."""
@@ -566,14 +611,16 @@ class PerturbedToolWrapper:
 
     def __call__(self, *args, **kwargs) -> Any:
         """Execute tool and perturb output."""
-        if hasattr(self.original_tool, '__call__'):
+        if hasattr(self.original_tool, "__call__"):
             result = self.original_tool(*args, **kwargs)
         else:
             result = self.original_tool.forward(*args, **kwargs)
         return self.perturbator.perturb_tool_output(result, self.name)
 
 
-def wrap_tools_with_perturbation(tools: List[Any], perturbator: GaiaPerturbator) -> List[Any]:
+def wrap_tools_with_perturbation(
+    tools: List[Any], perturbator: GaiaPerturbator
+) -> List[Any]:
     """
     Wrap a list of tools with perturbation wrappers.
 

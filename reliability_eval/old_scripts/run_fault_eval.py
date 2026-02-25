@@ -119,7 +119,7 @@ def run_evaluation(agent_config, benchmark_config, fault_rate, max_tasks, conda_
         "--agent_name", agent_name,
         "-A", f"model_name={agent_config['model_name']}",
         "-A", f"benchmark_name={benchmark_config['benchmark_name']}",
-        "-A", f"enable_fault_injection=true",
+        "-A", "enable_fault_injection=true",
         "-A", f"fault_rate={fault_rate}",
         "-A", "track_recovery=true",
         "--max_concurrent", "1",
@@ -144,7 +144,7 @@ def run_evaluation(agent_config, benchmark_config, fault_rate, max_tasks, conda_
     for arg in benchmark_config.get("extra_args", []):
         cmd.append(arg)
 
-    print(f"\n🚀 Running command:")
+    print("\n🚀 Running command:")
     print(f"   {' '.join(cmd)}\n")
 
     # Run with retry logic

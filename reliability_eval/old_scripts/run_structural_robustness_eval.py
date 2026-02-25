@@ -19,7 +19,7 @@ import subprocess
 import sys
 import argparse
 from pathlib import Path
-from typing import List, Dict
+from typing import Dict
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -109,7 +109,7 @@ def run_baseline_evaluation(
     if result.returncode != 0:
         raise RuntimeError(f"Baseline evaluation failed with code {result.returncode}")
 
-    print(f"\n✓ Baseline evaluation completed\n")
+    print("\n✓ Baseline evaluation completed\n")
 
     # Return run ID (would need to parse from output in real implementation)
     return "baseline"
@@ -165,7 +165,7 @@ def run_perturbed_evaluation(
     if result.returncode != 0:
         raise RuntimeError(f"Perturbed evaluation failed with code {result.returncode}")
 
-    print(f"\n✓ Perturbed evaluation completed\n")
+    print("\n✓ Perturbed evaluation completed\n")
 
     # Return run ID (would need to parse from output in real implementation)
     return f"perturbed_{perturbation_strength}"
@@ -227,7 +227,7 @@ def main():
         agents_to_run = AGENT_CONFIGS
 
     print(f"\n{'='*80}")
-    print(f"Structural Robustness Evaluation (R_struct)")
+    print("Structural Robustness Evaluation (R_struct)")
     print(f"{'='*80}")
     print(f"Benchmark: {args.benchmark}")
     print(f"Perturbation Strength: {args.perturbation_strength}")
@@ -273,8 +273,8 @@ def main():
     print(f"{'='*80}\n")
     print("Next steps:")
     print("1. Run analysis script:")
-    print(f"   python reliability_eval/analyze_structural_robustness.py \\")
-    print(f"       --results_dir results/ \\")
+    print("   python reliability_eval/analyze_structural_robustness.py \\")
+    print("       --results_dir results/ \\")
     print(f"       --benchmark {args.benchmark}")
     print()
 

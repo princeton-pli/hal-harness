@@ -26,7 +26,6 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
-import re
 
 # Set style for better-looking plots
 sns.set_style("whitegrid")
@@ -1292,7 +1291,7 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
     best_cout = agent_df.loc[agent_df['mean_C_out'].idxmax()]
     worst_cout = agent_df.loc[agent_df['mean_C_out'].idxmin()]
 
-    report.append(f"### Outcome Consistency\n")
+    report.append("### Outcome Consistency\n")
     report.append(f"- **Most consistent**: {best_cout['agent']} (C_out = {best_cout['mean_C_out']:.3f})\n")
     report.append(f"- **Least consistent**: {worst_cout['agent']} (C_out = {worst_cout['mean_C_out']:.3f})\n\n")
 
@@ -1302,7 +1301,7 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
     best_api_calls = agent_df.loc[agent_df['mean_api_calls_cv'].idxmin()]
     best_actions = agent_df.loc[agent_df['mean_actions_cv'].idxmin()]
 
-    report.append(f"### Resource Consistency\n")
+    report.append("### Resource Consistency\n")
     report.append(f"- **Most time-consistent**: {best_time['agent']} (CV = {best_time['mean_time_cv']:.3f})\n")
     report.append(f"- **Most token-consistent**: {best_token['agent']} (CV = {best_token['mean_tokens_cv']:.3f})\n")
     report.append(f"- **Most API-calls-consistent**: {best_api_calls['agent']} (CV = {best_api_calls['mean_api_calls_cv']:.3f})\n")
@@ -1311,7 +1310,7 @@ def generate_report(task_df: pd.DataFrame, agent_df: pd.DataFrame, output_dir: P
     # Capability
     best_acc = agent_df.loc[agent_df['mean_success_rate'].idxmax()]
 
-    report.append(f"### Capability\n")
+    report.append("### Capability\n")
     report.append(f"- **Highest success rate**: {best_acc['agent']} ({best_acc['mean_success_rate']:.3f})\n\n")
 
     # Write report

@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
@@ -634,7 +634,7 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
     best_prc = agent_df.loc[agent_df['P_rc'].idxmax()]
     worst_prc = agent_df.loc[agent_df['P_rc'].idxmin()]
 
-    report.append(f"### Confidence Ranking (P_rc)\n")
+    report.append("### Confidence Ranking (P_rc)\n")
     report.append(f"- **Best**: {best_prc['agent']} (P_rc = {best_prc['P_rc']:.3f})\n")
     report.append(f"- **Worst**: {worst_prc['agent']} (P_rc = {worst_prc['P_rc']:.3f})\n\n")
 
@@ -642,7 +642,7 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
     best_pcal = agent_df.loc[agent_df['P_cal'].idxmax()]
     worst_pcal = agent_df.loc[agent_df['P_cal'].idxmin()]
 
-    report.append(f"### Calibration (P_cal)\n")
+    report.append("### Calibration (P_cal)\n")
     report.append(f"- **Best**: {best_pcal['agent']} (P_cal = {best_pcal['P_cal']:.3f})\n")
     report.append(f"- **Worst**: {worst_pcal['agent']} (P_cal = {worst_pcal['P_cal']:.3f})\n\n")
 

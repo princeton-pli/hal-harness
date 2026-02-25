@@ -6,15 +6,14 @@ to environmental changes (API formats, database schemas, file paths, data format
 """
 
 import re
-import json
 from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
-import copy
 
 
 class PerturbationType(Enum):
     """Types of structural perturbations."""
+
     API = "api"
     DATABASE = "database"
     FILE = "file"
@@ -24,6 +23,7 @@ class PerturbationType(Enum):
 
 class PerturbationStrength(Enum):
     """Strength of perturbations."""
+
     MILD = "mild"  # Only naming conventions
     MEDIUM = "medium"  # Naming + structure
     SEVERE = "severe"  # Complete restructuring
@@ -32,6 +32,7 @@ class PerturbationStrength(Enum):
 @dataclass
 class PerturbationConfig:
     """Configuration for structural perturbations."""
+
     # API perturbations
     api_endpoint_style: str = "original"  # original, versioned, shortened
     api_parameter_case: str = "snake_case"  # snake_case, camelCase, kebab-case
@@ -53,12 +54,14 @@ class PerturbationConfig:
     boolean_format: str = "bool"  # bool, string, numeric, yes_no
 
     @staticmethod
-    def from_dict(config: Dict[str, Any]) -> 'PerturbationConfig':
+    def from_dict(config: Dict[str, Any]) -> "PerturbationConfig":
         """Create config from dictionary."""
-        return PerturbationConfig(**{k: v for k, v in config.items() if hasattr(PerturbationConfig, k)})
+        return PerturbationConfig(
+            **{k: v for k, v in config.items() if hasattr(PerturbationConfig, k)}
+        )
 
     @staticmethod
-    def get_preset(strength: PerturbationStrength) -> 'PerturbationConfig':
+    def get_preset(strength: PerturbationStrength) -> "PerturbationConfig":
         """Get preset configuration for given strength."""
         if strength == PerturbationStrength.MILD:
             return PerturbationConfig(
@@ -100,7 +103,11 @@ class PerturbationConfig:
 class StructuralPerturbator:
     """Apply structural perturbations to benchmark environments."""
 
-    def __init__(self, perturbation_type: Union[PerturbationType, str], config: Optional[PerturbationConfig] = None):
+    def __init__(
+        self,
+        perturbation_type: Union[PerturbationType, str],
+        config: Optional[PerturbationConfig] = None,
+    ):
         """
         Initialize perturbator.
 
@@ -147,11 +154,9 @@ class StructuralPerturbator:
             endpoint = endpoint.replace("/api/", "/")
 
         if endpoint != original:
-            self.applied_perturbations.append({
-                "type": "api_endpoint",
-                "original": original,
-                "perturbed": endpoint
-            })
+            self.applied_perturbations.append(
+                {"type": "api_endpoint", "original": original, "perturbed": endpoint}
+            )
 
         return endpoint
 
@@ -180,11 +185,9 @@ class StructuralPerturbator:
             perturbed[new_key] = value
 
             if new_key != key:
-                self.applied_perturbations.append({
-                    "type": "api_param",
-                    "original": key,
-                    "perturbed": new_key
-                })
+                self.applied_perturbations.append(
+                    {"type": "api_param", "original": key, "perturbed": new_key}
+                )
 
         return perturbed
 
@@ -209,20 +212,19 @@ class StructuralPerturbator:
             if isinstance(value, dict):
                 value = self.perturb_api_response(value)
             elif isinstance(value, list):
-                value = [self.perturb_api_response(item) if isinstance(item, dict) else item for item in value]
+                value = [
+                    self.perturb_api_response(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
 
             perturbed[new_key] = value
 
         # Apply response wrapper if configured
         if self.config.api_response_wrapper:
-            perturbed = {
-                "status": "success",
-                "data": perturbed
-            }
-            self.applied_perturbations.append({
-                "type": "api_response_wrapper",
-                "wrapped": True
-            })
+            perturbed = {"status": "success", "data": perturbed}
+            self.applied_perturbations.append(
+                {"type": "api_response_wrapper", "wrapped": True}
+            )
 
         return perturbed
 
@@ -238,7 +240,10 @@ class StructuralPerturbator:
         Returns:
             Perturbed column name
         """
-        if self.perturbation_type not in [PerturbationType.DATABASE, PerturbationType.ALL]:
+        if self.perturbation_type not in [
+            PerturbationType.DATABASE,
+            PerturbationType.ALL,
+        ]:
             return column_name
 
         original = column_name
@@ -260,11 +265,9 @@ class StructuralPerturbator:
             column_name = self._convert_case(column_name, "camelCase")
 
         if column_name != original:
-            self.applied_perturbations.append({
-                "type": "db_column",
-                "original": original,
-                "perturbed": column_name
-            })
+            self.applied_perturbations.append(
+                {"type": "db_column", "original": original, "perturbed": column_name}
+            )
 
         return column_name
 
@@ -278,7 +281,10 @@ class StructuralPerturbator:
         Returns:
             Perturbed table name
         """
-        if self.perturbation_type not in [PerturbationType.DATABASE, PerturbationType.ALL]:
+        if self.perturbation_type not in [
+            PerturbationType.DATABASE,
+            PerturbationType.ALL,
+        ]:
             return table_name
 
         original = table_name
@@ -292,11 +298,9 @@ class StructuralPerturbator:
                 table_name = f"{table_name}_records"
 
         if table_name != original:
-            self.applied_perturbations.append({
-                "type": "db_table",
-                "original": original,
-                "perturbed": table_name
-            })
+            self.applied_perturbations.append(
+                {"type": "db_table", "original": original, "perturbed": table_name}
+            )
 
         return table_name
 
@@ -310,7 +314,10 @@ class StructuralPerturbator:
         Returns:
             Perturbed data structure
         """
-        if self.perturbation_type not in [PerturbationType.DATABASE, PerturbationType.ALL]:
+        if self.perturbation_type not in [
+            PerturbationType.DATABASE,
+            PerturbationType.ALL,
+        ]:
             return data
 
         if self.config.db_schema_style == "nested":
@@ -329,10 +336,9 @@ class StructuralPerturbator:
                     nested[key] = value
 
             if nested != data:
-                self.applied_perturbations.append({
-                    "type": "db_schema",
-                    "style": "nested"
-                })
+                self.applied_perturbations.append(
+                    {"type": "db_schema", "style": "nested"}
+                )
 
             return nested
 
@@ -360,7 +366,7 @@ class StructuralPerturbator:
         if self.config.file_path_depth > 0:
             # Add directories
             for i in range(self.config.file_path_depth):
-                parts.insert(-1, f"data{i+1}")
+                parts.insert(-1, f"data{i + 1}")
         elif self.config.file_path_depth < 0:
             # Remove directories (keep at least filename)
             remove_count = min(abs(self.config.file_path_depth), len(parts) - 1)
@@ -383,11 +389,9 @@ class StructuralPerturbator:
         path = "/".join(parts)
 
         if path != original:
-            self.applied_perturbations.append({
-                "type": "file_path",
-                "original": original,
-                "perturbed": path
-            })
+            self.applied_perturbations.append(
+                {"type": "file_path", "original": original, "perturbed": path}
+            )
 
         return path
 
@@ -403,11 +407,14 @@ class StructuralPerturbator:
         Returns:
             Perturbed date
         """
-        if self.perturbation_type not in [PerturbationType.DATA_FORMAT, PerturbationType.ALL]:
+        if self.perturbation_type not in [
+            PerturbationType.DATA_FORMAT,
+            PerturbationType.ALL,
+        ]:
             return date_str
 
         # Parse ISO date
-        match = re.match(r'(\d{4})-(\d{2})-(\d{2})', date_str)
+        match = re.match(r"(\d{4})-(\d{2})-(\d{2})", date_str)
         if not match:
             return date_str
 
@@ -433,7 +440,10 @@ class StructuralPerturbator:
         Returns:
             Perturbed number
         """
-        if self.perturbation_type not in [PerturbationType.DATA_FORMAT, PerturbationType.ALL]:
+        if self.perturbation_type not in [
+            PerturbationType.DATA_FORMAT,
+            PerturbationType.ALL,
+        ]:
             return number
 
         if self.config.number_format == "string":
@@ -456,7 +466,10 @@ class StructuralPerturbator:
         Returns:
             Perturbed boolean
         """
-        if self.perturbation_type not in [PerturbationType.DATA_FORMAT, PerturbationType.ALL]:
+        if self.perturbation_type not in [
+            PerturbationType.DATA_FORMAT,
+            PerturbationType.ALL,
+        ]:
             return value
 
         if self.config.boolean_format == "string":
@@ -488,7 +501,7 @@ class StructuralPerturbator:
             return self.perturb_number(data)
         elif isinstance(data, str):
             # Try to detect and perturb dates
-            if re.match(r'\d{4}-\d{2}-\d{2}', data):
+            if re.match(r"\d{4}-\d{2}-\d{2}", data):
                 return self.perturb_date(data)
             return data
         else:
@@ -500,23 +513,23 @@ class StructuralPerturbator:
         """Convert text between naming conventions."""
         if target_case == "snake_case":
             # Already snake_case or convert from camelCase
-            text = re.sub(r'(?<!^)(?=[A-Z])', '_', text).lower()
+            text = re.sub(r"(?<!^)(?=[A-Z])", "_", text).lower()
             return text
 
         elif target_case == "camelCase":
             # Convert snake_case to camelCase
-            components = text.split('_')
-            return components[0].lower() + ''.join(x.title() for x in components[1:])
+            components = text.split("_")
+            return components[0].lower() + "".join(x.title() for x in components[1:])
 
         elif target_case == "PascalCase":
             # Convert to PascalCase
-            components = text.split('_')
-            return ''.join(x.title() for x in components)
+            components = text.split("_")
+            return "".join(x.title() for x in components)
 
         elif target_case == "kebab-case":
             # Convert to kebab-case
-            text = re.sub(r'(?<!^)(?=[A-Z])', '-', text).lower()
-            text = text.replace('_', '-')
+            text = re.sub(r"(?<!^)(?=[A-Z])", "-", text).lower()
+            text = text.replace("_", "-")
             return text
 
         return text
@@ -525,7 +538,7 @@ class StructuralPerturbator:
         """Get summary of applied perturbations."""
         summary = {
             "total_perturbations": len(self.applied_perturbations),
-            "by_type": {}
+            "by_type": {},
         }
 
         for perturbation in self.applied_perturbations:
@@ -542,6 +555,7 @@ class StructuralPerturbator:
 
 
 # ========== Environment Wrapper ==========
+
 
 class PerturbedEnvironmentWrapper:
     """
@@ -578,7 +592,7 @@ class PerturbedEnvironmentWrapper:
         perturbed_params = self.perturbator.perturb_api_params(params)
 
         # Execute (assuming env has execute method)
-        if hasattr(self.env, 'execute'):
+        if hasattr(self.env, "execute"):
             response = self.env.execute(perturbed_endpoint, perturbed_params)
         else:
             # Fallback: just perturb without executing
@@ -602,7 +616,7 @@ class PerturbedEnvironmentWrapper:
         perturbed_path = self.perturbator.perturb_file_path(path)
 
         # Try to read from perturbed path (assuming env has read_file method)
-        if hasattr(self.env, 'read_file'):
+        if hasattr(self.env, "read_file"):
             return self.env.read_file(perturbed_path)
         else:
             return None
@@ -628,7 +642,7 @@ class PerturbedEnvironmentWrapper:
             data = self.perturbator.perturb_data(data)
 
         # Execute (assuming env has query method)
-        if hasattr(self.env, 'query'):
+        if hasattr(self.env, "query"):
             return self.env.query(perturbed_query, data)
         else:
             return None
@@ -636,10 +650,11 @@ class PerturbedEnvironmentWrapper:
 
 # ========== Factory Functions ==========
 
+
 def create_perturbator(
     perturbation_type: str = "all",
     strength: str = "medium",
-    custom_config: Optional[Dict] = None
+    custom_config: Optional[Dict] = None,
 ) -> StructuralPerturbator:
     """
     Factory function to create perturbator.

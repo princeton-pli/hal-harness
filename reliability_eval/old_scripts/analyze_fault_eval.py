@@ -491,7 +491,7 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
     best_rfault = agent_df.loc[agent_df['R_fault'].idxmax()]
     worst_rfault = agent_df.loc[agent_df['R_fault'].idxmin()]
 
-    report.append(f"### Fault Robustness\n")
+    report.append("### Fault Robustness\n")
     report.append(f"- **Most robust**: {best_rfault['agent']} (R_fault = {best_rfault['R_fault']:.3f})\n")
     report.append(f"- **Least robust**: {worst_rfault['agent']} (R_fault = {worst_rfault['R_fault']:.3f})\n\n")
 
@@ -501,7 +501,7 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
         best_vheal = valid_vheal.loc[valid_vheal['V_heal'].idxmax()]
         worst_vheal = valid_vheal.loc[valid_vheal['V_heal'].idxmin()]
 
-        report.append(f"### Self-Healing\n")
+        report.append("### Self-Healing\n")
         report.append(f"- **Best recovery**: {best_vheal['agent']} (V_heal = {best_vheal['V_heal']:.3f})\n")
         report.append(f"- **Worst recovery**: {worst_vheal['agent']} (V_heal = {worst_vheal['V_heal']:.3f})\n\n")
 
@@ -512,7 +512,7 @@ def generate_report(agent_df: pd.DataFrame, output_dir: Path):
             best_vttr = valid_vttr.loc[valid_vttr['V_ttr'].idxmax()]
             worst_vttr = valid_vttr.loc[valid_vttr['V_ttr'].idxmin()]
 
-            report.append(f"### Recovery Speed\n")
+            report.append("### Recovery Speed\n")
             report.append(f"- **Fastest recovery**: {best_vttr['agent']} (V_ttr = {best_vttr['V_ttr']:.3f})\n")
             if not np.isnan(best_vttr.get('mttr', np.nan)):
                 report.append(f"  - MTTR: {best_vttr['mttr']:.2f} seconds\n")

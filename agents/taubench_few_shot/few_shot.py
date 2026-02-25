@@ -78,7 +78,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     litellm.completion = completion_with_reasoning
     litellm.acompletion = acompletion_with_reasoning
 
-
     # Separate providers for user simulation vs agent
     # User simulation needs OpenAI-compatible API (for tau-bench internals)
     env_provider = "openai"  # Default for user simulation
@@ -89,7 +88,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         agent_provider = "openai"
         api_base = "https://openrouter.ai/api/v1"
         api_key = os.getenv("OPENROUTER_API_KEY")
-        model_name = kwargs["model_name"].replace("openrouter/", "")  # Remove openrouter/ prefix
+        model_name = kwargs["model_name"].replace(
+            "openrouter/", ""
+        )  # Remove openrouter/ prefix
     elif "together_ai" in kwargs["model_name"]:
         agent_provider = "openai"
         api_base = "https://api.together.xyz/v1"

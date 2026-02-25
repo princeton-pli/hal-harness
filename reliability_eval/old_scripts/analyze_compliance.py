@@ -466,14 +466,14 @@ def generate_report(agent_df: pd.DataFrame, violation_df: pd.DataFrame, output_d
     best_comp = agent_df.loc[agent_df['S_comp'].idxmax()]
     worst_comp = agent_df.loc[agent_df['S_comp'].idxmin()]
 
-    report.append(f"### Compliance\n")
+    report.append("### Compliance\n")
     report.append(f"- **Best**: {best_comp['agent']} (S_comp = {best_comp['S_comp']:.3f})\n")
     report.append(f"- **Worst**: {worst_comp['agent']} (S_comp = {worst_comp['S_comp']:.3f})\n\n")
 
     # Most violated constraint
     if not violation_df.empty:
         most_violated = violation_df.loc[violation_df['violations'].idxmax()]
-        report.append(f"### Most Violated Constraint\n")
+        report.append("### Most Violated Constraint\n")
         report.append(f"- **Constraint**: {most_violated['constraint']}\n")
         report.append(f"- **Agent**: {most_violated['agent']}\n")
         report.append(f"- **Violations**: {int(most_violated['violations'])}\n\n")

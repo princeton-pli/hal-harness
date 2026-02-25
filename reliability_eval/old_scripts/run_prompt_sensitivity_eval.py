@@ -210,7 +210,7 @@ def run_evaluation(agent_config, benchmark_config, num_variations, max_tasks, co
     for arg in benchmark_config.get("extra_args", []):
         cmd.append(arg)
 
-    print(f"\n🚀 Running command:")
+    print("\n🚀 Running command:")
     print(f"   {' '.join(cmd)}\n")
 
     # Run the evaluation with retry logic for network errors

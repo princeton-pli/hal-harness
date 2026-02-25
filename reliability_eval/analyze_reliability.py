@@ -38,7 +38,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict, Counter
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 from dataclasses import dataclass, field
 import warnings
@@ -282,7 +282,6 @@ def strip_agent_prefix(name: str) -> str:
 
 def sort_agents_by_provider_and_date(df: pd.DataFrame) -> pd.DataFrame:
     """Sort dataframe by provider first, then by release date within each provider."""
-    import matplotlib.colors as mcolors
 
     df = df.copy()
     df['release_date'] = df['agent'].map(lambda x: get_model_metadata(x).get('date', '2024-01-01'))
@@ -5577,7 +5576,7 @@ def plot_reliability_vs_date_and_accuracy(df: pd.DataFrame, output_dir: Path, be
     fig_overall, axes_overall = plt.subplots(1, 2, figsize=(5, 2.4))
 
     # Build y-axis label with benchmark name
-    ylabel_with_benchmark = rf'Overall Reliability $R$' + (f'\n({benchmark_name})' if benchmark_name else '')
+    ylabel_with_benchmark = r'Overall Reliability $R$' + (f'\n({benchmark_name})' if benchmark_name else '')
 
     # Left: Overall Reliability vs Release Date
     ax = axes_overall[0]
@@ -6582,7 +6581,6 @@ def plot_reliability_by_model_size(df: pd.DataFrame, output_dir: Path):
     - Row 1: Overall reliability, Accuracy, Consistency
     - Row 2: Predictability, Robustness, Safety
     """
-    from scipy import stats as scipy_stats
 
     df_plot = df.copy()
 
@@ -6713,7 +6711,6 @@ def plot_reliability_by_provider(df: pd.DataFrame, output_dir: Path):
     - Row 1: Overall reliability, Accuracy, Consistency
     - Row 2: Predictability, Robustness, Safety
     """
-    from scipy import stats as scipy_stats
 
     df_plot = df.copy()
 
@@ -8077,7 +8074,7 @@ def main():
             print(f"   Using curated task subset: {len(task_filter)} tasks")
         elif args.benchmark == 'taubench_airline_original':
             load_benchmark = 'taubench_airline'
-            print(f"   Loading all tasks (original 50-task set)")
+            print("   Loading all tasks (original 50-task set)")
         results = load_all_results(results_dir, load_benchmark)
 
         # Apply task filter if specified

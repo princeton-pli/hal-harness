@@ -19,10 +19,9 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, Tuple
 from collections import defaultdict
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -586,7 +585,7 @@ def main():
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*80}")
-    print(f"Structural Robustness (R_struct) Analysis")
+    print("Structural Robustness (R_struct) Analysis")
     print(f"{'='*80}")
     print(f"Results Directory: {args.results_dir}")
     print(f"Benchmark: {args.benchmark}")
@@ -650,10 +649,10 @@ def main():
     print("Analysis complete!")
     print(f"{'='*80}")
     print(f"Output directory: {args.output_dir}")
-    print(f"- Agent metrics: agent_r_struct.csv")
-    print(f"- Task metrics: task_sensitivity_*.csv")
-    print(f"- Visualizations: r_struct_comparison.png, task_sensitivity_*.png")
-    print(f"- Report: r_struct_report.md")
+    print("- Agent metrics: agent_r_struct.csv")
+    print("- Task metrics: task_sensitivity_*.csv")
+    print("- Visualizations: r_struct_comparison.png, task_sensitivity_*.png")
+    print("- Report: r_struct_report.md")
     print(f"{'='*80}\n")
 
 
