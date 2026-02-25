@@ -412,16 +412,16 @@ AGENT_CONFIGS = [
     # -------------------------------------------------------------------------
     # OpenAI Models (GAIA)
     # -------------------------------------------------------------------------
-    # {
-    #     "name": "gaia_generalist_gpt_4o_mini",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-4o-mini-2024-07-18",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
+    {
+        "name": "gaia_generalist_gpt_4o_mini",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-4o-mini-2024-07-18",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
     # {
     #     "name": "gaia_generalist_gpt_4_turbo",
     #     "agent_dir": "agents/hal_generalist_agent",
