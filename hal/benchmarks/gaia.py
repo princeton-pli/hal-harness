@@ -3,7 +3,11 @@ from typing import Dict, Any, List, Optional
 from .base_benchmark import BaseBenchmark
 from .GAIA.scoring_utils import question_scorer
 from huggingface_hub import hf_hub_download, get_token, snapshot_download
-from huggingface_hub.errors import GatedRepoError, RepositoryNotFoundError, EntryNotFoundError
+from huggingface_hub.errors import (
+    GatedRepoError,
+    RepositoryNotFoundError,
+    EntryNotFoundError,
+)
 from datasets import load_dataset
 
 
