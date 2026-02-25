@@ -102,13 +102,47 @@ load_dotenv()
     type=str,
     help="One or more args to pass to inspect eval (e.g. -I token_limit=1000 -I model_args='{'temperature': 0.5}'",
 )
-@click.option("--prompt_sensitivity", is_flag=True, help="Enable prompt sensitivity evaluation by generating and testing multiple prompt variations")
-@click.option("--num_variations", default=3, type=int, help="Number of prompt variations to generate for sensitivity testing (default: 3)")
-@click.option("--variation_strength", default="mild", type=click.Choice(["mild", "medium", "strong", "naturalistic"]), help="Strength of prompt variations: mild (synonyms/formality), medium (restructuring), strong (conversational rewrites), naturalistic (realistic user typing patterns)")
-@click.option("--variation_index", default=None, type=int, help="Run only a specific variation index (0=original, 1..N=variations). When set, runs single variation instead of all.")
-@click.option("--task_timeout", default=600, type=int, help="Timeout in seconds for each task (default: 600 = 10 minutes). Tasks exceeding this will be killed and marked as ERROR.")
-@click.option("--results_dir", default="results", type=str, help="Base directory for storing results (default: results)")
-@click.option("--task_ids", default=None, type=str, help="Comma-separated list of specific task IDs to run (e.g., '0,1,5,12'). Only these tasks will be executed.")
+@click.option(
+    "--prompt_sensitivity",
+    is_flag=True,
+    help="Enable prompt sensitivity evaluation by generating and testing multiple prompt variations",
+)
+@click.option(
+    "--num_variations",
+    default=3,
+    type=int,
+    help="Number of prompt variations to generate for sensitivity testing (default: 3)",
+)
+@click.option(
+    "--variation_strength",
+    default="mild",
+    type=click.Choice(["mild", "medium", "strong", "naturalistic"]),
+    help="Strength of prompt variations: mild (synonyms/formality), medium (restructuring), strong (conversational rewrites), naturalistic (realistic user typing patterns)",
+)
+@click.option(
+    "--variation_index",
+    default=None,
+    type=int,
+    help="Run only a specific variation index (0=original, 1..N=variations). When set, runs single variation instead of all.",
+)
+@click.option(
+    "--task_timeout",
+    default=600,
+    type=int,
+    help="Timeout in seconds for each task (default: 600 = 10 minutes). Tasks exceeding this will be killed and marked as ERROR.",
+)
+@click.option(
+    "--results_dir",
+    default="results",
+    type=str,
+    help="Base directory for storing results (default: results)",
+)
+@click.option(
+    "--task_ids",
+    default=None,
+    type=str,
+    help="Comma-separated list of specific task IDs to run (e.g., '0,1,5,12'). Only these tasks will be executed.",
+)
 def main(
     config,
     benchmark,
@@ -206,7 +240,7 @@ def main(
             ignore_errors=ignore_errors,
             prompt_sensitivity=prompt_sensitivity,
             num_variations=num_variations,
-            variation_strength=variation_strength
+            variation_strength=variation_strength,
         )
 
         # get exact command used to run the evaluation from click
@@ -229,8 +263,14 @@ def main(
                 run_command=run_command,
                 ignore_errors=ignore_errors,
                 max_tasks=max_tasks,
+                prompt_sensitivity=prompt_sensitivity,
+                num_variations=num_variations,
+                variation_strength=variation_strength,
+                variation_index=variation_index,
+                task_timeout=task_timeout,
+                results_dir=results_dir,
+                task_ids=task_ids,
             )
-
 
             # Run evaluation
             logger.info("Running evaluation with custom agent and HAL harness...")

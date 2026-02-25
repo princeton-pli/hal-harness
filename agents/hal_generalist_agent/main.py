@@ -1,8 +1,6 @@
-
 from typing import Optional, List, Dict, Any, Tuple
 from functools import partial
 import tiktoken
-import asyncio
 from mdconvert import MarkdownConverter
 
 import subprocess
@@ -65,15 +63,17 @@ except ImportError:
 # Import GAIA structural perturbation utilities for reliability evaluation
 try:
     from hal.utils.gaia_perturbations import (
-        GaiaPerturbator, GaiaPerturbationConfig, GaiaPerturbationStrength,
-        create_gaia_perturbator, wrap_tools_with_perturbation
+        GaiaPerturbator,
+        create_gaia_perturbator,
+        wrap_tools_with_perturbation,
     )
 except ImportError:
     # When running on VM or Docker, try local import
     try:
         from gaia_perturbations import (
-            GaiaPerturbator, GaiaPerturbationConfig, GaiaPerturbationStrength,
-            create_gaia_perturbator, wrap_tools_with_perturbation
+            GaiaPerturbator,
+            create_gaia_perturbator,
+            wrap_tools_with_perturbation,
         )
     except ImportError:
         GaiaPerturbator = None
@@ -745,59 +745,60 @@ def _extract_conversation_history(agent: CodeAgent) -> List[Dict[str, Any]]:
         for step in agent.memory.steps:
             if isinstance(step, TaskStep):
                 # TaskStep contains the user's task/query
-                task_content = getattr(step, 'task', None)
+                task_content = getattr(step, "task", None)
                 if task_content:
-                    history.append({
-                        "role": "user",
-                        "content": str(task_content)[:2000]
-                    })
+                    history.append(
+                        {"role": "user", "content": str(task_content)[:2000]}
+                    )
 
             elif isinstance(step, PlanningStep):
                 # PlanningStep contains agent's planning
-                plan_content = getattr(step, 'plan', None) or getattr(step, 'model_output', None)
+                plan_content = getattr(step, "plan", None) or getattr(
+                    step, "model_output", None
+                )
                 if plan_content:
-                    history.append({
-                        "role": "assistant",
-                        "content": f"Planning: {str(plan_content)[:1000]}"
-                    })
+                    history.append(
+                        {
+                            "role": "assistant",
+                            "content": f"Planning: {str(plan_content)[:1000]}",
+                        }
+                    )
 
             elif isinstance(step, ActionStep):
                 # Add the model's thought/action as assistant message
                 step_content = []
 
                 # Add model output (the reasoning/plan)
-                if hasattr(step, 'model_output') and step.model_output:
+                if hasattr(step, "model_output") and step.model_output:
                     step_content.append(f"Thought: {step.model_output}")
 
                 # Add tool calls
-                if hasattr(step, 'tool_calls') and step.tool_calls:
+                if hasattr(step, "tool_calls") and step.tool_calls:
                     for call in step.tool_calls:
-                        tool_name = getattr(call, 'name', str(call))
-                        args = _safe_serialize(getattr(call, 'arguments', None))
+                        tool_name = getattr(call, "name", str(call))
+                        args = _safe_serialize(getattr(call, "arguments", None))
                         step_content.append(f"Action: {tool_name}({args})")
 
                 # Add observations/results
-                if hasattr(step, 'observations') and step.observations:
+                if hasattr(step, "observations") and step.observations:
                     step_content.append(f"Observation: {str(step.observations)[:500]}")
 
                 # Add error if any
-                if hasattr(step, 'error') and step.error:
+                if hasattr(step, "error") and step.error:
                     step_content.append(f"Error: {str(step.error)}")
 
                 if step_content:
-                    history.append({
-                        "role": "assistant",
-                        "content": "\n".join(step_content)
-                    })
+                    history.append(
+                        {"role": "assistant", "content": "\n".join(step_content)}
+                    )
 
             else:
                 # Fallback for other step types
-                if hasattr(step, 'content'):
-                    role = getattr(step, 'role', 'user')
-                    history.append({
-                        "role": str(role).lower(),
-                        "content": str(step.content)[:2000]
-                    })
+                if hasattr(step, "content"):
+                    role = getattr(step, "role", "user")
+                    history.append(
+                        {"role": str(role).lower(), "content": str(step.content)[:2000]}
+                    )
 
     except Exception as e:
         print(f"Warning: Error extracting conversation history: {e}")
@@ -833,20 +834,14 @@ def _build_confidence_messages(
 
     # Prepend the initial user prompt/task if provided
     if initial_prompt:
-        messages.append({
-            "role": "user",
-            "content": initial_prompt
-        })
+        messages.append({"role": "user", "content": initial_prompt})
 
     # Deep copy and add conversation history
     if conversation_history:
         messages.extend(copy.deepcopy(conversation_history))
 
     # Append the confidence assessment prompt as a user message
-    messages.append({
-        "role": "user",
-        "content": confidence_prompt
-    })
+    messages.append({"role": "user", "content": confidence_prompt})
 
     return messages
 
@@ -880,14 +875,14 @@ def _compute_gaia_confidence_score(
     import litellm
 
     # Extract metrics for fallback heuristic
-    num_actions = metrics.get('tool_call_count', 0)
-    num_steps = metrics.get('step_count', 0)
+    num_actions = metrics.get("tool_call_count", 0)
+    num_steps = metrics.get("step_count", 0)
 
     # Count errors from steps
-    num_errors = sum(1 for step in metrics.get('steps', []) if step.get('error'))
+    num_errors = sum(1 for step in metrics.get("steps", []) if step.get("error"))
 
     # Confidence prompt - model already has full context from conversation history
-    confidence_prompt = f"""You just completed a question-answering task. Please assess your confidence in the correctness of your answer.
+    confidence_prompt = """You just completed a question-answering task. Please assess your confidence in the correctness of your answer.
 
 Consider the following when rating your confidence:
 1. Did you find clear, reliable information to answer the question?
@@ -925,24 +920,24 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
         # Build kwargs for litellm.completion
         # Extract api_base and api_key from model if they exist (for custom providers like Gemini)
         completion_kwargs = {
-            'model': model.model_id,
-            'messages': messages,
-            'temperature': 0.0,
-            'max_tokens': 65536,  # High limit for reasoning models
+            "model": model.model_id,
+            "messages": messages,
+            "temperature": 0.0,
+            "max_tokens": 65536,  # High limit for reasoning models
         }
 
         # Add api_base and api_key if the model has custom endpoints (Gemini, Together, etc.)
-        if hasattr(model, 'api_base') and model.api_base:
-            completion_kwargs['api_base'] = model.api_base
+        if hasattr(model, "api_base") and model.api_base:
+            completion_kwargs["api_base"] = model.api_base
             print(f"   Using custom api_base: {model.api_base}")
-        if hasattr(model, 'api_key') and model.api_key:
-            completion_kwargs['api_key'] = model.api_key
+        if hasattr(model, "api_key") and model.api_key:
+            completion_kwargs["api_key"] = model.api_key
 
         # Call the model for confidence assessment
         response = litellm.completion(**completion_kwargs)
 
         # Debug: Log response structure
-        print(f"📊 Confidence response received:")
+        print("📊 Confidence response received:")
         if response.choices:
             msg = response.choices[0].message
             print(f"   Message content: {repr(msg.content)[:100]}...")
@@ -952,9 +947,9 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
             msg = response.choices[0].message
             error_details = {
                 "content": msg.content,
-                "role": getattr(msg, 'role', None),
-                "tool_calls": getattr(msg, 'tool_calls', None),
-                "finish_reason": getattr(response.choices[0], 'finish_reason', None),
+                "role": getattr(msg, "role", None),
+                "tool_calls": getattr(msg, "tool_calls", None),
+                "finish_reason": getattr(response.choices[0], "finish_reason", None),
             }
             raise ValueError(f"Model returned None content. Details: {error_details}")
 
@@ -962,14 +957,19 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
 
         # Extract number from response
         import re
-        numbers = re.findall(r'\d+', confidence_text)
+
+        numbers = re.findall(r"\d+", confidence_text)
 
         if numbers:
             confidence_score = float(numbers[0]) / 100.0
             confidence_score = max(0.0, min(1.0, confidence_score))
-            print(f"✓ GAIA confidence assessment: {confidence_text} -> {confidence_score:.2f}")
+            print(
+                f"✓ GAIA confidence assessment: {confidence_text} -> {confidence_score:.2f}"
+            )
         else:
-            print(f"⚠️  Could not parse confidence from '{confidence_text}', using default 0.5")
+            print(
+                f"⚠️  Could not parse confidence from '{confidence_text}', using default 0.5"
+            )
             confidence_score = 0.5
 
         confidence_details = {
@@ -1001,7 +1001,7 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
             "num_actions": num_actions,
             "num_errors": num_errors,
             "num_steps": num_steps,
-            "model": model.model_id if hasattr(model, 'model_id') else "unknown",
+            "model": model.model_id if hasattr(model, "model_id") else "unknown",
             "fallback": True,
         }
 
@@ -1059,9 +1059,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         # Be lenient with unknown params on different backends
         litellm.drop_params = True
 
-<<<<<<< HEAD
         # Models that don't support 'stop' parameter
-        MODELS_WITHOUT_STOP_SUPPORT = ['gpt-5', 'gpt-5.2', 'gpt-5.1']
+        MODELS_WITHOUT_STOP_SUPPORT = ["gpt-5", "gpt-5.2", "gpt-5.1"]
 
         def model_requires_stop_filter(model_name: str) -> bool:
             """Check if model requires filtering out 'stop' parameter."""
@@ -1069,35 +1068,35 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             return any(m in model_lower for m in MODELS_WITHOUT_STOP_SUPPORT)
 
         # Wrap litellm completion to filter out 'stop' for models that don't support it
-        if model_requires_stop_filter(kwargs.get('model_name', '')):
-            original_completion_stop = getattr(litellm, 'completion', None)
-            original_acompletion_stop = getattr(litellm, 'acompletion', None)
+        if model_requires_stop_filter(kwargs.get("model_name", "")):
+            original_completion_stop = getattr(litellm, "completion", None)
+            original_acompletion_stop = getattr(litellm, "acompletion", None)
 
             if original_completion_stop is not None:
+
                 def completion_without_stop(*args, **completion_kwargs):
                     # Remove 'stop' parameter for models that don't support it
-                    completion_kwargs.pop('stop', None)
+                    completion_kwargs.pop("stop", None)
                     return original_completion_stop(*args, **completion_kwargs)
 
                 litellm.completion = completion_without_stop  # type: ignore
-                print(f"[INFO] Enabled 'stop' parameter filtering for model: {kwargs.get('model_name')}")
+                print(
+                    f"[INFO] Enabled 'stop' parameter filtering for model: {kwargs.get('model_name')}"
+                )
 
             if original_acompletion_stop is not None:
+
                 async def acompletion_without_stop(*args, **completion_kwargs):
                     # Remove 'stop' parameter for models that don't support it
-                    completion_kwargs.pop('stop', None)
+                    completion_kwargs.pop("stop", None)
                     return await original_acompletion_stop(*args, **completion_kwargs)  # type: ignore
 
                 litellm.acompletion = acompletion_without_stop  # type: ignore
 
-        if 'openrouter_provider_only' in kwargs and 'openrouter/' in kwargs.get('model_name', ''):
-            providers_value = kwargs['openrouter_provider_only']
-=======
         if "openrouter_provider_only" in kwargs and "openrouter/" in kwargs.get(
             "model_name", ""
         ):
             providers_value = kwargs["openrouter_provider_only"]
->>>>>>> 8ba7948f4dc0175ef4b4d21d47c6ac7420e113e8
             if isinstance(providers_value, str):
                 providers = [p.strip() for p in providers_value.split(",") if p.strip()]
             elif isinstance(providers_value, (list, tuple)):
@@ -1147,12 +1146,15 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # ========== FAULT INJECTION SETUP (OPTIONAL) ==========
     # Initialize FaultInjector to test agent robustness to API failures
     fault_injector = None
-    if FaultInjector is not None and (kwargs.get('enable_fault_injection') == 'true' or kwargs.get('enable_fault_injection') is True):
+    if FaultInjector is not None and (
+        kwargs.get("enable_fault_injection") == "true"
+        or kwargs.get("enable_fault_injection") is True
+    ):
         import time
         import random
         import asyncio
 
-        fault_rate = float(kwargs.get('fault_rate', 0.2))
+        fault_rate = float(kwargs.get("fault_rate", 0.2))
         fault_injector = FaultInjector(fault_rate=fault_rate)
         print(f"🔧 Fault injection enabled with rate={fault_rate}")
 
@@ -1164,9 +1166,13 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         def completion_with_fault_injection(*args, **completion_kwargs):
             if fault_injector and fault_injector.enabled:
                 try:
-                    response = fault_injector.wrap_call(original_completion_for_fault, *args, **completion_kwargs)
+                    response = fault_injector.wrap_call(
+                        original_completion_for_fault, *args, **completion_kwargs
+                    )
                 except Exception as fault_error:
-                    print(f"⚡ Fault injected: {type(fault_error).__name__}: {fault_error}")
+                    print(
+                        f"⚡ Fault injected: {type(fault_error).__name__}: {fault_error}"
+                    )
                     raise
             else:
                 response = original_completion_for_fault(*args, **completion_kwargs)
@@ -1178,42 +1184,53 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                 # For async, we inject faults manually to maintain async behavior
                 if random.random() < fault_injector.fault_rate:
                     fault_type = fault_injector._select_fault_type()
-                    fault_injector.state['faults_injected'] += 1
+                    fault_injector.state["faults_injected"] += 1
                     print(f"⚡ Async fault injected: {fault_type.value}")
 
                     # Attempt recovery with retries
-                    max_retries = fault_injector.config.get('max_recovery_attempts', 3)
+                    max_retries = fault_injector.config.get("max_recovery_attempts", 3)
                     recovered = False
                     recovery_start = time.time()
 
                     for attempt in range(max_retries):
                         recovery_prob = 0.3 + (attempt * 0.2)
                         if random.random() < recovery_prob:
-                            response = await original_acompletion_for_fault(*args, **completion_kwargs)
+                            response = await original_acompletion_for_fault(
+                                *args, **completion_kwargs
+                            )
                             recovered = True
-                            fault_injector.state['recoveries_successful'] += 1
+                            fault_injector.state["recoveries_successful"] += 1
                             break
                         await asyncio.sleep(0.1 * (attempt + 1))
 
                     if not recovered:
-                        fault_injector.state['recoveries_failed'] += 1
-                        raise RuntimeError(f"Simulated fault after {max_retries} recovery attempts: {fault_type.value}")
+                        fault_injector.state["recoveries_failed"] += 1
+                        raise RuntimeError(
+                            f"Simulated fault after {max_retries} recovery attempts: {fault_type.value}"
+                        )
 
                     recovery_time = time.time() - recovery_start
-                    fault_injector.state['total_recovery_time'] += recovery_time
+                    fault_injector.state["total_recovery_time"] += recovery_time
 
                     # Log fault event
                     fault_event = FaultEvent(
                         fault_type=fault_type,
                         recovered=recovered,
                         recovery_time=recovery_time,
-                        context={'recovery_attempts': attempt + 1, 'function_name': 'acompletion'}
+                        context={
+                            "recovery_attempts": attempt + 1,
+                            "function_name": "acompletion",
+                        },
                     )
                     fault_injector.fault_events.append(fault_event)
                 else:
-                    response = await original_acompletion_for_fault(*args, **completion_kwargs)
+                    response = await original_acompletion_for_fault(
+                        *args, **completion_kwargs
+                    )
             else:
-                response = await original_acompletion_for_fault(*args, **completion_kwargs)
+                response = await original_acompletion_for_fault(
+                    *args, **completion_kwargs
+                )
             return response
 
         # Replace litellm completion functions with fault injection wrappers
@@ -1222,10 +1239,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     model = LiteLLMModel(**model_params)
 
-<<<<<<< HEAD
     # Create a search tool that ignores filter_year to avoid overly restrictive searches
     # We create the underlying tool and wrap it with a simple function tool
-    _google_search_tool = GoogleSearchTool(provider='serpapi')
+    _google_search_tool = GoogleSearchTool(provider="serpapi")
 
     @tool
     def web_search(query: str) -> str:
@@ -1244,11 +1260,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     CORE_TOOLS = [
         # DuckDuckGoSearchTool(),  # Unreliable - rate limited
         web_search,  # Wrapped GoogleSearchTool that ignores year filter
-=======
-    CORE_TOOLS = [
-        # DuckDuckGoSearchTool(),
-        GoogleSearchTool(provider="serpapi"),
->>>>>>> 8ba7948f4dc0175ef4b4d21d47c6ac7420e113e8
         VisitWebpageTool(),
         PythonInterpreterTool(),
         execute_bash,
@@ -1628,25 +1639,28 @@ Task:
             save_agent_steps(agent, kwargs, response, task)
 
         return {task_id: "Completed"}
-<<<<<<< HEAD
-            
-            
-    elif kwargs['benchmark_name'] == 'gaia':
+
+    elif kwargs["benchmark_name"] == "gaia":
         # ========== STRUCTURAL PERTURBATION SETUP (OPTIONAL) ==========
         gaia_perturbator = None
-        if GaiaPerturbator is not None and (kwargs.get('enable_structural_perturbations') == 'true' or kwargs.get('enable_structural_perturbations') is True):
-            perturbation_strength = kwargs.get('perturbation_strength', 'medium')
+        if GaiaPerturbator is not None and (
+            kwargs.get("enable_structural_perturbations") == "true"
+            or kwargs.get("enable_structural_perturbations") is True
+        ):
+            perturbation_strength = kwargs.get("perturbation_strength", "medium")
             gaia_perturbator = create_gaia_perturbator(strength=perturbation_strength)
 
             # Set seed for reproducibility (use task_id hash for consistency)
             seed = hash(task_id) % (2**32)
             gaia_perturbator.set_seed(seed)
 
-            print(f"🔧 Structural perturbations enabled for GAIA with strength={perturbation_strength}")
+            print(
+                f"🔧 Structural perturbations enabled for GAIA with strength={perturbation_strength}"
+            )
             print(f"   Config: {gaia_perturbator.get_config_dict()}")
 
         # Get the original question
-        original_question = task['Question']
+        original_question = task["Question"]
 
         # Build the base instruction template
         instruction_template = """Please answer the question below. You should:
@@ -1666,28 +1680,18 @@ Here is the question and attached files are stored in your current directory:
             perturbed_question = gaia_perturbator.perturb_question(original_question)
 
             # Perturb the instructions
-            perturbed_instructions = gaia_perturbator.perturb_instructions(instruction_template)
+            perturbed_instructions = gaia_perturbator.perturb_instructions(
+                instruction_template
+            )
 
             prompt = f"{perturbed_instructions}{perturbed_question}"
 
-            print(f"📝 Question perturbed: '{original_question[:50]}...' -> '{perturbed_question[:50]}...'")
+            print(
+                f"📝 Question perturbed: '{original_question[:50]}...' -> '{perturbed_question[:50]}...'"
+            )
         else:
             prompt = f"{instruction_template}{original_question}"
 
-=======
-
-    elif kwargs["benchmark_name"] == "gaia":
-        prompt = f"""Please answer the question below. You should:                                                                                                                   
-                                                                                                                                                                 
-- Return only your answer, which should be a number, or a short phrase with as few words as possible, or a comma separated list of numbers and/or strings.      
-- If the answer is a number, return only the number without any units unless specified otherwise.                                                               
-- If the answer is a string, don't include articles, and don't use abbreviations (e.g. for states).                                                             
-- If the answer is a comma separated list, apply the above rules to each element in the list.                                                                                                                                                                                                                    
-                                                                                                                                                                 
-Here is the question and attached files are stored in your current directory:
-
-{task["Question"]}"""
->>>>>>> 8ba7948f4dc0175ef4b4d21d47c6ac7420e113e8
         # Execute agent
         response = agent.run(prompt)
 
@@ -1696,21 +1700,18 @@ Here is the question and attached files are stored in your current directory:
 
         save_agent_steps(agent, kwargs, response, task)
 
-<<<<<<< HEAD
         # === RELIABILITY METRICS ===
         result = {
-=======
-        return {
->>>>>>> 8ba7948f4dc0175ef4b4d21d47c6ac7420e113e8
             task_id: {
                 "answer": str(response).strip(),
                 "metrics": metrics,
             }
         }
-<<<<<<< HEAD
 
         # Build taken_actions for trajectory consistency (format compatible with analyze_reliability.py)
-        taken_actions = [{"name": tool_name} for tool_name in metrics.get('tool_call_sequence', [])]
+        taken_actions = [
+            {"name": tool_name} for tool_name in metrics.get("tool_call_sequence", [])
+        ]
         result[task_id]["taken_actions"] = taken_actions
 
         # Extract conversation history from smolagents for safety analysis
@@ -1719,31 +1720,38 @@ Here is the question and attached files are stored in your current directory:
 
         # Check if first message already contains the task (from TaskStep)
         has_initial_task = (
-            conversation_history and
-            conversation_history[0].get("role") == "user"
+            conversation_history and conversation_history[0].get("role") == "user"
         )
 
         # Store conversation history, prepending prompt only if not already present
-        if kwargs.get('store_conversation_history') == 'true' or kwargs.get('store_conversation_history') is True:
+        if (
+            kwargs.get("store_conversation_history") == "true"
+            or kwargs.get("store_conversation_history") is True
+        ):
             if has_initial_task:
                 result[task_id]["conversation_history"] = conversation_history
             else:
-                result[task_id]["conversation_history"] = [{"role": "user", "content": prompt}] + conversation_history
+                result[task_id]["conversation_history"] = [
+                    {"role": "user", "content": prompt}
+                ] + conversation_history
 
         # Compute confidence score if enabled
-        compute_confidence = kwargs.get('compute_confidence', False)
-        if compute_confidence == 'true' or compute_confidence is True:
+        compute_confidence = kwargs.get("compute_confidence", False)
+        if compute_confidence == "true" or compute_confidence is True:
             # Pass initial_prompt only if not already in conversation_history
             confidence, confidence_details = _compute_gaia_confidence_score(
                 model=model,
-                task_question=task['Question'],
+                task_question=task["Question"],
                 agent_answer=str(response).strip(),
                 conversation_history=conversation_history,
                 metrics=metrics,
                 initial_prompt=prompt if not has_initial_task else None,
             )
             result[task_id]["confidence"] = confidence
-            if kwargs.get('store_confidence_details') == 'true' or kwargs.get('store_confidence_details') is True:
+            if (
+                kwargs.get("store_confidence_details") == "true"
+                or kwargs.get("store_confidence_details") is True
+            ):
                 result[task_id]["confidence_details"] = confidence_details
 
         # Add fault injection metrics if enabled
@@ -1755,11 +1763,13 @@ Here is the question and attached files are stored in your current directory:
                 "fault_rate": fault_injector.fault_rate,
                 "stats": fault_stats,
                 "events": fault_events,
-                "V_heal": fault_stats['recovery_rate'],
-                "mean_recovery_time": fault_stats['mean_recovery_time']
+                "V_heal": fault_stats["recovery_rate"],
+                "mean_recovery_time": fault_stats["mean_recovery_time"],
             }
-            print(f"🔧 Fault stats: {fault_stats['total_faults_injected']} faults, "
-                  f"{fault_stats['recovery_rate']:.1%} recovery rate")
+            print(
+                f"🔧 Fault stats: {fault_stats['total_faults_injected']} faults, "
+                f"{fault_stats['recovery_rate']:.1%} recovery rate"
+            )
 
         # Add structural perturbation metrics if enabled
         if gaia_perturbator is not None:
@@ -1767,21 +1777,21 @@ Here is the question and attached files are stored in your current directory:
             result[task_id]["structural_perturbation"] = {
                 "enabled": True,
                 "perturbation_type": "gaia",
-                "perturbation_strength": kwargs.get('perturbation_strength', 'medium'),
-                "perturbation_count": perturbation_summary['total_perturbations'],
-                "perturbations_by_type": perturbation_summary['by_type'],
-                "applied_perturbations": gaia_perturbator.applied_perturbations[:50],  # Limit to first 50
+                "perturbation_strength": kwargs.get("perturbation_strength", "medium"),
+                "perturbation_count": perturbation_summary["total_perturbations"],
+                "perturbations_by_type": perturbation_summary["by_type"],
+                "applied_perturbations": gaia_perturbator.applied_perturbations[
+                    :50
+                ],  # Limit to first 50
                 "config": gaia_perturbator.get_config_dict(),
                 "original_question": original_question,
             }
-            print(f"🔧 Structural perturbation stats: {perturbation_summary['total_perturbations']} perturbations applied")
+            print(
+                f"🔧 Structural perturbation stats: {perturbation_summary['total_perturbations']} perturbations applied"
+            )
             print(f"   By type: {perturbation_summary['by_type']}")
 
         return result
-    
-    
-=======
->>>>>>> 8ba7948f4dc0175ef4b4d21d47c6ac7420e113e8
 
     elif kwargs["benchmark_name"] == "colbench_backend_programming":
         from openai import OpenAI

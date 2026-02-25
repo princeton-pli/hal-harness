@@ -14,14 +14,15 @@ while maintaining functional correctness.
 import re
 import json
 import copy
-from typing import Dict, Any, List, Optional, Tuple, Callable
-from dataclasses import dataclass, field
+from typing import Dict, Any, List, Optional, Tuple
+from dataclasses import dataclass
 from enum import Enum
 
 
 class TauBenchPerturbationStrength(Enum):
     """Strength levels for tau-bench perturbations."""
-    MILD = "mild"      # Only key naming convention changes
+
+    MILD = "mild"  # Only key naming convention changes
     MEDIUM = "medium"  # Naming + some structural changes + data format changes
     SEVERE = "severe"  # Complete restructuring + abbreviations + nested↔flat
 
@@ -34,15 +35,19 @@ class TauBenchPerturbationConfig:
     key_case: str = "snake_case"  # snake_case, camelCase, PascalCase
 
     # Structural transformations
-    flatten_nested: bool = False   # Flatten nested objects (e.g., name.first_name → first_name)
-    nest_flat: bool = False        # Nest flat objects (e.g., first_name → name.first_name)
-    wrap_responses: bool = False   # Wrap in {status: "success", data: ...}
+    flatten_nested: bool = (
+        False  # Flatten nested objects (e.g., name.first_name → first_name)
+    )
+    nest_flat: bool = False  # Nest flat objects (e.g., first_name → name.first_name)
+    wrap_responses: bool = False  # Wrap in {status: "success", data: ...}
 
     # Data format transformations
-    time_format: str = "24h"       # 24h (14:00:00), 12h (2:00 PM), compact (1400)
-    date_format: str = "iso"       # iso (2024-01-15), us (01/15/2024), compact (20240115)
+    time_format: str = "24h"  # 24h (14:00:00), 12h (2:00 PM), compact (1400)
+    date_format: str = "iso"  # iso (2024-01-15), us (01/15/2024), compact (20240115)
     status_format: str = "lowercase"  # lowercase, uppercase, abbreviated, numeric
-    cabin_format: str = "full"     # full (basic_economy), abbreviated (Y/J/F), title (Basic Economy)
+    cabin_format: str = (
+        "full"  # full (basic_economy), abbreviated (Y/J/F), title (Basic Economy)
+    )
 
     # Key abbreviations (for severe mode)
     use_abbreviations: bool = False
@@ -51,7 +56,9 @@ class TauBenchPerturbationConfig:
     param_name_style: str = "original"  # original, camelCase, abbreviated
 
     @staticmethod
-    def get_preset(strength: TauBenchPerturbationStrength) -> 'TauBenchPerturbationConfig':
+    def get_preset(
+        strength: TauBenchPerturbationStrength,
+    ) -> "TauBenchPerturbationConfig":
         """Get preset configuration for given strength."""
         if strength == TauBenchPerturbationStrength.MILD:
             return TauBenchPerturbationConfig(
@@ -98,7 +105,6 @@ AIRLINE_ABBREVIATIONS = {
     "scheduled_departure_time_est": "dep_time",
     "scheduled_arrival_time_est": "arr_time",
     "available_seats": "avail_seats",
-
     # Passenger/User related
     "first_name": "fname",
     "last_name": "lname",
@@ -111,7 +117,6 @@ AIRLINE_ABBREVIATIONS = {
     "country": "ctry",
     "state": "st",
     "zip": "zip",  # Keep as is
-
     # Reservation related
     "reservation_id": "res_id",
     "created_at": "created",
@@ -123,13 +128,11 @@ AIRLINE_ABBREVIATIONS = {
     "passengers": "pax",
     "saved_passengers": "saved_pax",
     "membership": "member",
-
     # Cabin classes
     "basic_economy": "Y",
     "economy": "M",
     "business": "J",
     "first": "F",
-
     # Status values
     "available": "AVL",
     "confirmed": "CNF",
@@ -193,7 +196,9 @@ class TauBenchPerturbator:
         else:
             return self._perturb_data(response)
 
-    def perturb_tool_definitions(self, tools_info: List[Dict]) -> Tuple[List[Dict], Dict[str, Dict[str, str]]]:
+    def perturb_tool_definitions(
+        self, tools_info: List[Dict]
+    ) -> Tuple[List[Dict], Dict[str, Dict[str, str]]]:
         """
         Perturb tool definitions (parameter names the agent must use).
 
@@ -212,36 +217,41 @@ class TauBenchPerturbator:
 
         for tool in tools_info:
             perturbed_tool = copy.deepcopy(tool)
-            tool_name = tool.get('function', {}).get('name', '')
+            tool_name = tool.get("function", {}).get("name", "")
 
-            if 'function' in perturbed_tool and 'parameters' in perturbed_tool['function']:
-                params = perturbed_tool['function']['parameters']
-                if 'properties' in params:
+            if (
+                "function" in perturbed_tool
+                and "parameters" in perturbed_tool["function"]
+            ):
+                params = perturbed_tool["function"]["parameters"]
+                if "properties" in params:
                     new_properties = {}
                     tool_param_map = {}
-                    required = params.get('required', [])
+                    required = params.get("required", [])
                     new_required = []
 
-                    for param_name, param_def in params['properties'].items():
+                    for param_name, param_def in params["properties"].items():
                         new_name = self._transform_param_name(param_name)
                         new_properties[new_name] = param_def
 
                         if new_name != param_name:
                             tool_param_map[new_name] = param_name
-                            self.applied_perturbations.append({
-                                "type": "tool_param_rename",
-                                "tool": tool_name,
-                                "original": param_name,
-                                "perturbed": new_name
-                            })
+                            self.applied_perturbations.append(
+                                {
+                                    "type": "tool_param_rename",
+                                    "tool": tool_name,
+                                    "original": param_name,
+                                    "perturbed": new_name,
+                                }
+                            )
 
                         # Update required list
                         if param_name in required:
                             new_required.append(new_name)
 
-                    params['properties'] = new_properties
+                    params["properties"] = new_properties
                     if required:
-                        params['required'] = new_required
+                        params["required"] = new_required
 
                     if tool_param_map:
                         param_mapping[tool_name] = tool_param_map
@@ -250,8 +260,12 @@ class TauBenchPerturbator:
 
         return perturbed_tools, param_mapping
 
-    def reverse_param_mapping(self, tool_name: str, kwargs: Dict[str, Any],
-                              param_mapping: Dict[str, Dict[str, str]]) -> Dict[str, Any]:
+    def reverse_param_mapping(
+        self,
+        tool_name: str,
+        kwargs: Dict[str, Any],
+        param_mapping: Dict[str, Dict[str, str]],
+    ) -> Dict[str, Any]:
         """
         Reverse parameter name mapping for a tool call.
 
@@ -325,9 +339,9 @@ class TauBenchPerturbator:
         # Handle nested structures first
         if isinstance(value, dict):
             # Special handling for known nested structures
-            if key in ['available_seats', 'prices']:
+            if key in ["available_seats", "prices"]:
                 return self._perturb_cabin_dict(value)
-            elif key in ['name', 'address']:
+            elif key in ["name", "address"]:
                 return self._perturb_data(value)
             else:
                 return self._perturb_data(value)
@@ -350,19 +364,19 @@ class TauBenchPerturbator:
     def _perturb_string_value(self, value: str, key: str = "") -> str:
         """Perturb string values based on context."""
         # Time format transformation
-        if key.endswith('_time') or key.endswith('_time_est') or 'time' in key.lower():
+        if key.endswith("_time") or key.endswith("_time_est") or "time" in key.lower():
             return self._transform_time(value)
 
         # Date format transformation
-        if key in ['dob', 'date', 'created_at'] or 'date' in key.lower():
+        if key in ["dob", "date", "created_at"] or "date" in key.lower():
             return self._transform_date(value)
 
         # Status transformation
-        if key == 'status':
+        if key == "status":
             return self._transform_status(value)
 
         # Cabin class in string context
-        if key == 'cabin' or value in ['basic_economy', 'economy', 'business', 'first']:
+        if key == "cabin" or value in ["basic_economy", "economy", "business", "first"]:
             return self._transform_cabin_class(value)
 
         return value
@@ -390,11 +404,9 @@ class TauBenchPerturbator:
 
         if key != original_key:
             self._key_transform_cache[original_key] = key
-            self.applied_perturbations.append({
-                "type": "key_rename",
-                "original": original_key,
-                "perturbed": key
-            })
+            self.applied_perturbations.append(
+                {"type": "key_rename", "original": original_key, "perturbed": key}
+            )
 
         return key
 
@@ -412,13 +424,13 @@ class TauBenchPerturbator:
 
     def _to_camel_case(self, text: str) -> str:
         """Convert snake_case to camelCase."""
-        components = text.split('_')
-        return components[0].lower() + ''.join(x.title() for x in components[1:])
+        components = text.split("_")
+        return components[0].lower() + "".join(x.title() for x in components[1:])
 
     def _to_pascal_case(self, text: str) -> str:
         """Convert snake_case to PascalCase."""
-        components = text.split('_')
-        return ''.join(x.title() for x in components)
+        components = text.split("_")
+        return "".join(x.title() for x in components)
 
     # ========================================================================
     # Data Format Transformations
@@ -430,11 +442,11 @@ class TauBenchPerturbator:
             return time_str  # Already 24h format typically
 
         # Parse HH:MM:SS format
-        match = re.match(r'(\d{2}):(\d{2}):(\d{2})', time_str)
+        match = re.match(r"(\d{2}):(\d{2}):(\d{2})", time_str)
         if not match:
             return time_str
 
-        hour, minute, second = int(match.group(1)), match.group(2), match.group(3)
+        hour, minute = int(match.group(1)), match.group(2)
 
         if self.config.time_format == "12h":
             period = "AM" if hour < 12 else "PM"
@@ -453,7 +465,7 @@ class TauBenchPerturbator:
             return date_str  # Keep ISO format
 
         # Parse YYYY-MM-DD format
-        match = re.match(r'(\d{4})-(\d{2})-(\d{2})', date_str)
+        match = re.match(r"(\d{4})-(\d{2})-(\d{2})", date_str)
         if not match:
             return date_str
 
@@ -476,7 +488,12 @@ class TauBenchPerturbator:
             abbrev = AIRLINE_ABBREVIATIONS.get(status.lower())
             return abbrev if abbrev else status.upper()[:3]
         elif self.config.status_format == "numeric":
-            status_map = {"available": "1", "confirmed": "2", "cancelled": "0", "pending": "3"}
+            status_map = {
+                "available": "1",
+                "confirmed": "2",
+                "cancelled": "0",
+                "pending": "3",
+            }
             return status_map.get(status.lower(), status)
 
         return status
@@ -486,13 +503,13 @@ class TauBenchPerturbator:
         if self.config.cabin_format == "full":
             return cabin
         elif self.config.cabin_format == "title":
-            return cabin.replace('_', ' ').title()
+            return cabin.replace("_", " ").title()
         elif self.config.cabin_format == "abbreviated":
             cabin_codes = {
                 "basic_economy": "Y",
                 "economy": "M",
                 "business": "J",
-                "first": "F"
+                "first": "F",
             }
             return cabin_codes.get(cabin.lower(), cabin)
 
@@ -510,19 +527,19 @@ class TauBenchPerturbator:
 
         for key, value in data.items():
             # Check for groupable keys (snake_case with underscore)
-            if '_' in key and not isinstance(value, dict):
-                parts = key.split('_', 1)
+            if "_" in key and not isinstance(value, dict):
+                parts = key.split("_", 1)
                 prefix, suffix = parts[0], parts[1]
 
                 # Only group known patterns
-                if prefix in ['first', 'last', 'scheduled']:
+                if prefix in ["first", "last", "scheduled"]:
                     # Remap to standard groups
-                    if prefix in ['first', 'last'] and suffix == 'name':
-                        group_name = 'name'
+                    if prefix in ["first", "last"] and suffix == "name":
+                        group_name = "name"
                         new_key = prefix
-                    elif prefix == 'scheduled':
-                        group_name = 'schedule'
-                        new_key = suffix.replace('_est', '')
+                    elif prefix == "scheduled":
+                        group_name = "schedule"
+                        new_key = suffix.replace("_est", "")
                     else:
                         ungrouped[key] = value
                         continue
@@ -540,10 +557,9 @@ class TauBenchPerturbator:
         result.update(groups)
 
         if groups:
-            self.applied_perturbations.append({
-                "type": "structure_nested",
-                "groups_created": list(groups.keys())
-            })
+            self.applied_perturbations.append(
+                {"type": "structure_nested", "groups_created": list(groups.keys())}
+            )
 
         return result
 
@@ -552,16 +568,15 @@ class TauBenchPerturbator:
         result = {}
 
         for key, value in data.items():
-            if isinstance(value, dict) and key in ['name', 'address', 'schedule']:
+            if isinstance(value, dict) and key in ["name", "address", "schedule"]:
                 # Flatten this nested structure
                 for sub_key, sub_value in value.items():
                     flat_key = f"{key}_{sub_key}"
                     result[flat_key] = sub_value
 
-                self.applied_perturbations.append({
-                    "type": "structure_flattened",
-                    "original_key": key
-                })
+                self.applied_perturbations.append(
+                    {"type": "structure_flattened", "original_key": key}
+                )
             else:
                 result[key] = value
 
@@ -570,17 +585,12 @@ class TauBenchPerturbator:
     def _wrap_response(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Wrap response in status/data structure."""
         # Don't double-wrap
-        if 'status' in data and 'data' in data:
+        if "status" in data and "data" in data:
             return data
 
-        self.applied_perturbations.append({
-            "type": "response_wrapped"
-        })
+        self.applied_perturbations.append({"type": "response_wrapped"})
 
-        return {
-            "status": "success",
-            "data": data
-        }
+        return {"status": "success", "data": data}
 
     # ========================================================================
     # Utility Methods
@@ -590,7 +600,7 @@ class TauBenchPerturbator:
         """Get summary of applied perturbations."""
         summary = {
             "total_perturbations": len(self.applied_perturbations),
-            "by_type": {}
+            "by_type": {},
         }
 
         for p in self.applied_perturbations:
@@ -610,6 +620,7 @@ class TauBenchPerturbator:
 # ============================================================================
 # Environment Wrapper for Tool Call Interception
 # ============================================================================
+
 
 class PerturbedTauBenchEnv:
     """
@@ -634,7 +645,9 @@ class PerturbedTauBenchEnv:
 
         # Perturb tool definitions and store mapping
         original_tools = env.tools_info
-        self._perturbed_tools, self._param_mapping = perturbator.perturb_tool_definitions(original_tools)
+        self._perturbed_tools, self._param_mapping = (
+            perturbator.perturb_tool_definitions(original_tools)
+        )
 
         # Track original wiki for comparison
         self._original_wiki = env.wiki
@@ -661,7 +674,7 @@ class PerturbedTauBenchEnv:
         underlying environment while testing the agent's robustness.
         """
         # Reverse parameter names if needed
-        if hasattr(action, 'kwargs') and action.name in self._param_mapping:
+        if hasattr(action, "kwargs") and action.name in self._param_mapping:
             original_kwargs = self.perturbator.reverse_param_mapping(
                 action.name, action.kwargs, self._param_mapping
             )
@@ -685,6 +698,7 @@ class PerturbedTauBenchEnv:
         # This depends on the action class structure in tau-bench
         # For now, try direct attribute modification
         import copy
+
         new_action = copy.copy(action)
         new_action.kwargs = new_kwargs
         return new_action
@@ -694,9 +708,9 @@ class PerturbedTauBenchEnv:
 # Factory Functions
 # ============================================================================
 
+
 def create_taubench_perturbator(
-    strength: str = "medium",
-    custom_config: Optional[Dict] = None
+    strength: str = "medium", custom_config: Optional[Dict] = None
 ) -> TauBenchPerturbator:
     """
     Factory function to create tau-bench perturbator.

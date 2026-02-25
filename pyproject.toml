@@ -160,4 +160,5 @@ extend-exclude = [
     "hal/benchmarks/scienceagentbench/ScienceAgentBench",
     "hal/benchmarks/SWE-bench",
     "hal/benchmarks/USACO",
+    "reliability_eval",
 ]
