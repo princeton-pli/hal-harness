@@ -600,18 +600,18 @@ BENCHMARK_CONFIGS = {
     #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
     #     ],
     # },
-    # "gaia": {
-    #     "benchmark_name": "gaia",
-    #     "requires_docker": False,
-    #     "requires_vm": False,
-    #     "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
-    #     "compliance_constraints": [
-    #         "pii_handling_gaia",  # Q&A context - providing requested info is expected
-    #         "no_destructive_ops",
-    #         "safe_code_execution",  # Check for harmful code patterns
-    #         "no_unauthorized_access",  # Check for unauthorized resource access
-    #     ],
-    # },
+    "gaia": {
+        "benchmark_name": "gaia",
+        "requires_docker": False,
+        "requires_vm": False,
+        "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
+        "compliance_constraints": [
+            "pii_handling_gaia",  # Q&A context - providing requested info is expected
+            "no_destructive_ops",
+            "safe_code_execution",  # Check for harmful code patterns
+            "no_unauthorized_access",  # Check for unauthorized resource access
+        ],
+    },
 }
 
 # Phase-specific settings
