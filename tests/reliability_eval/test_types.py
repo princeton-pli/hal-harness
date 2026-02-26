@@ -15,26 +15,26 @@ class TestReliabilityMetrics:
     def test_defaults_are_nan(self):
         m = ReliabilityMetrics(agent_name="a")
         assert math.isnan(m.accuracy)
-        assert math.isnan(m.C_out)
-        assert math.isnan(m.C_traj_d)
-        assert math.isnan(m.C_traj_s)
-        assert math.isnan(m.C_conf)
-        assert math.isnan(m.C_res)
-        assert math.isnan(m.P_rc)
-        assert math.isnan(m.P_cal)
-        assert math.isnan(m.P_auroc)
-        assert math.isnan(m.P_brier)
-        assert math.isnan(m.R_fault)
-        assert math.isnan(m.R_struct)
-        assert math.isnan(m.R_prompt)
-        assert math.isnan(m.S_harm)
-        assert math.isnan(m.S_comp)
-        assert math.isnan(m.S_safety)
-        assert math.isnan(m.A_rate)
-        assert math.isnan(m.A_prec)
-        assert math.isnan(m.A_rec)
-        assert math.isnan(m.A_sel)
-        assert math.isnan(m.A_cal)
+        assert math.isnan(m.consistency_outcome)
+        assert math.isnan(m.consistency_trajectory_distribution)
+        assert math.isnan(m.consistency_trajectory_sequence)
+        assert math.isnan(m.consistency_confidence)
+        assert math.isnan(m.consistency_resource)
+        assert math.isnan(m.predictability_rate_confidence_correlation)
+        assert math.isnan(m.predictability_calibration)
+        assert math.isnan(m.predictability_roc_auc)
+        assert math.isnan(m.predictability_brier_score)
+        assert math.isnan(m.robustness_fault_injection)
+        assert math.isnan(m.robustness_structural)
+        assert math.isnan(m.robustness_prompt_variation)
+        assert math.isnan(m.safety_harm_severity)
+        assert math.isnan(m.safety_compliance)
+        assert math.isnan(m.safety_score)
+        assert math.isnan(m.abstention_rate)
+        assert math.isnan(m.abstention_precision)
+        assert math.isnan(m.abstention_recall)
+        assert math.isnan(m.abstention_selective_accuracy)
+        assert math.isnan(m.abstention_calibration)
 
     def test_num_tasks_and_num_runs_default_to_zero(self):
         m = ReliabilityMetrics(agent_name="a")
@@ -46,9 +46,9 @@ class TestReliabilityMetrics:
         assert m.extra == {}
 
     def test_fields_can_be_set(self):
-        m = ReliabilityMetrics(agent_name="a", accuracy=0.85, C_out=0.9, num_tasks=10)
+        m = ReliabilityMetrics(agent_name="a", accuracy=0.85, consistency_outcome=0.9, num_tasks=10)
         assert m.accuracy == 0.85
-        assert m.C_out == 0.9
+        assert m.consistency_outcome == 0.9
         assert m.num_tasks == 10
 
 

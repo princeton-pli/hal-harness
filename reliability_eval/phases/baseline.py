@@ -25,10 +25,10 @@ def run_baseline_phase(
 ) -> int:
     """
     Run baseline phase: K repetitions with confidence + compliance monitoring.
-    Computes: C_out, P_rc/P_cal, S_comp
+    Computes: consistency_outcome, predictability_rate_confidence_correlation/predictability_calibration, safety_compliance
     """
     print("\n" + "=" * 80)
-    print("📊 PHASE 1: BASELINE (C_out + P_rc/P_cal + S_comp)")
+    print("📊 PHASE 1: BASELINE (consistency_outcome + predictability_rate_confidence_correlation/predictability_calibration + safety_compliance)")
     print("=" * 80)
     print(f"   K repetitions: {k_runs}")
     print(f"   Max tasks: {max_tasks if max_tasks is not None else 'all'}")

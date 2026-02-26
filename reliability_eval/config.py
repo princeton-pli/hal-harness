@@ -427,25 +427,25 @@ BENCHMARK_CONFIGS = {
 
 PHASE_SETTINGS = {
     "baseline": {
-        "description": "Baseline runs (C_out, C_traj, C_conf, C_res, P_rc/P_cal)",
+        "description": "Baseline runs (consistency_outcome, C_traj, consistency_confidence, consistency_resource, predictability_rate_confidence_correlation/predictability_calibration)",
         "k_runs": 5,  # Will be overridden by --k argument
     },
     "fault": {
-        "description": "Fault injection (R_fault)",
+        "description": "Fault injection (robustness_fault_injection)",
         "k_runs": 5,
         "fault_rate": 0.2,
     },
     "prompt": {
-        "description": "Prompt sensitivity (R_prompt)",
+        "description": "Prompt sensitivity (robustness_prompt_variation)",
         "num_variations": 3,
         "variation_strength": "naturalistic",
     },
     "structural": {
-        "description": "Structural perturbations (R_struct)",
+        "description": "Structural perturbations (robustness_structural)",
         "perturbation_strength": "medium",
     },
     "safety": {
-        "description": "LLM-based safety analysis (S_harm, S_comp)",
+        "description": "LLM-based safety analysis (safety_harm_severity, safety_compliance)",
         "model": "gpt-4o",  # Note: overridden by --safety_model arg
         # Default constraints - benchmarks can override via compliance_constraints
         "constraints": [

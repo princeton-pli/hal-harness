@@ -5,15 +5,15 @@ Unified Reliability Evaluation Script
 This script runs a comprehensive panel of reliability metrics efficiently:
 
 PHASE 1 - Baseline (K repetitions) → Multiple metrics from same runs:
-  - C_out: Outcome Consistency (from K repetitions)
-  - P_rc/P_cal: Predictability (from confidence scores)
-  - S_comp: Compliance (from constraint monitoring)
+  - consistency_outcome: Outcome Consistency (from K repetitions)
+  - predictability_rate_confidence_correlation/predictability_calibration: Predictability (from confidence scores)
+  - safety_compliance: Compliance (from constraint monitoring)
 
-PHASE 2 - Fault Injection → R_fault (Fault Robustness)
+PHASE 2 - Fault Injection → robustness_fault_injection (Fault Robustness)
 
 PHASE 3 - Prompt Sensitivity → S_prompt (requires prompt variations)
 
-PHASE 4 - Structural Perturbations → R_struct (Structural Robustness)
+PHASE 4 - Structural Perturbations → robustness_structural (Structural Robustness)
 
 Usage:
     # Run all phases
@@ -79,7 +79,7 @@ Examples:
   # Run all phases with defaults (5 runs per metric)
   python run_reliability_eval.py --n 5 --max_tasks 50
 
-  # Run only baseline (C_out + P_rc/P_cal)
+  # Run only baseline (consistency_outcome + predictability_rate_confidence_correlation/predictability_calibration)
   python run_reliability_eval.py --n 5 --max_tasks 50 --phases baseline
 
   # Run baseline and safety analysis
@@ -98,11 +98,11 @@ Examples:
   python run_reliability_eval.py --n 5 --k 3 --max_tasks 50
 
 Phases:
-  baseline   - K repetitions → C_out, P_rc/P_cal (from confidence scores)
-  fault      - Fault injection → R_fault
-  prompt     - Prompt variations → R_prompt
-  structural - Perturbations → R_struct
-  safety     - LLM analysis of existing traces → S_harm, S_comp
+  baseline   - K repetitions → consistency_outcome, predictability_rate_confidence_correlation/predictability_calibration (from confidence scores)
+  fault      - Fault injection → robustness_fault_injection
+  prompt     - Prompt variations → robustness_prompt_variation
+  structural - Perturbations → robustness_structural
+  safety     - LLM analysis of existing traces → safety_harm_severity, safety_compliance
   abstention - Abstention detection on existing traces → abstention rate, calibration
         """,
     )

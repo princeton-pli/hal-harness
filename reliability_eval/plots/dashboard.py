@@ -29,10 +29,10 @@ def plot_reliability_dashboard(
 
     Layout:
     - Row 0: Overall reliability score (bar chart + spider/radar chart)
-    - Row 1: Consistency metrics (R_Con summary + C_out, C_traj_d, C_traj_s, C_conf, C_res)
-    - Row 2: Predictability metrics (R_Pred summary + P_rc, P_cal, P_auroc, P_brier)
-    - Row 3: Robustness metrics (R_Rob summary + R_fault, R_struct, R_prompt)
-    - Row 4: Safety metrics (R_Saf summary + S_harm, S_comp, S_safety) — not included in R_Overall
+    - Row 1: Consistency metrics (reliability_consistency summary + consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource)
+    - Row 2: Predictability metrics (reliability_predictability summary + predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score)
+    - Row 3: Robustness metrics (reliability_robustness summary + robustness_fault_injection, robustness_structural, robustness_prompt_variation)
+    - Row 4: Safety metrics (reliability_safety summary + safety_harm_severity, safety_compliance, safety_score) — not included in reliability_overall
 
     Colors are based on model provider (OpenAI, Google, Anthropic) with shades for release date.
     Models are ordered by provider first, then by release date within each provider.
@@ -46,21 +46,21 @@ def plot_reliability_dashboard(
     bar_colors = generate_shaded_colors(df_sorted)
 
     # Compute dimension-level scores
-    df_sorted["R_Con"] = compute_weighted_r_con(
-        df_sorted["C_out"],
-        df_sorted["C_traj_d"],
-        df_sorted["C_traj_s"],
-        df_sorted["C_res"],
+    df_sorted["reliability_consistency"] = compute_weighted_r_con(
+        df_sorted["consistency_outcome"],
+        df_sorted["consistency_trajectory_distribution"],
+        df_sorted["consistency_trajectory_sequence"],
+        df_sorted["consistency_resource"],
     )
-    df_sorted["R_Pred"] = df_sorted[
-        "P_brier"
+    df_sorted["reliability_predictability"] = df_sorted[
+        "predictability_brier_score"
     ]  # Brier score captures both calibration and discrimination
-    df_sorted["R_Rob"] = df_sorted[["R_fault", "R_struct", "R_prompt"]].mean(
+    df_sorted["reliability_robustness"] = df_sorted[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
         axis=1, skipna=True
     )
-    df_sorted["R_Saf"] = df_sorted["S_safety"]
+    df_sorted["reliability_safety"] = df_sorted["safety_score"]
     # Overall reliability = uniform average of consistency, predictability, robustness
-    df_sorted["R_Overall"] = df_sorted[["R_Con", "R_Pred", "R_Rob"]].mean(
+    df_sorted["reliability_overall"] = df_sorted[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
         axis=1, skipna=True
     )
 
@@ -134,7 +134,7 @@ def plot_reliability_dashboard(
     ax = fig.add_subplot(gs[0, 0:3])
     plot_bar(
         ax,
-        df_sorted["R_Overall"],
+        df_sorted["reliability_overall"],
         r"$R_{\mathrm{Overall}}$",
         r"Overall Reliability Score (mean of $R_{\mathrm{Con}}$, $R_{\mathrm{Pred}}$, $R_{\mathrm{Rob}}$)",
         bar_colors,
@@ -145,7 +145,7 @@ def plot_reliability_dashboard(
 
     # Spider/Radar chart for dimension-level comparison (spans 3 columns)
     ax = fig.add_subplot(gs[0, 3:6], polar=True)
-    dimensions = ["R_Con", "R_Pred", "R_Rob"]
+    dimensions = ["reliability_consistency", "reliability_predictability", "reliability_robustness"]
     dim_labels = ["Consistency", "Predictability", "Robustness"]
 
     num_vars = len(dimensions)
@@ -177,116 +177,116 @@ def plot_reliability_dashboard(
         ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.0), fontsize=7)
 
     # =========================================================================
-    # ROW 1: CONSISTENCY METRICS (R_Con summary + C_out, C_traj_d, C_traj_s, C_conf, C_res)
+    # ROW 1: CONSISTENCY METRICS (reliability_consistency summary + consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource)
     # =========================================================================
 
-    # R_Con summary (aggregate)
+    # reliability_consistency summary (aggregate)
     ax = fig.add_subplot(gs[1, 0])
     plot_bar(
         ax,
-        df_sorted["R_Con"],
+        df_sorted["reliability_consistency"],
         r"$R_{\mathrm{Con}}$",
         "Consistency\n(Aggregate)",
         bar_colors,
     )
     ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
-    # C_out
+    # consistency_outcome
     ax = fig.add_subplot(gs[1, 1])
     plot_bar(
         ax,
-        df_sorted["C_out"],
+        df_sorted["consistency_outcome"],
         r"$C_{\mathrm{out}}$",
         "Outcome\nConsistency",
         bar_colors,
     )
 
-    # C_traj_d
+    # consistency_trajectory_distribution
     ax = fig.add_subplot(gs[1, 2])
     plot_bar(
         ax,
-        df_sorted["C_traj_d"],
+        df_sorted["consistency_trajectory_distribution"],
         r"$C^{d}_{\mathrm{traj}}$",
         "Trajectory\nDistribution",
         bar_colors,
     )
 
-    # C_traj_s
+    # consistency_trajectory_sequence
     ax = fig.add_subplot(gs[1, 3])
     plot_bar(
         ax,
-        df_sorted["C_traj_s"],
+        df_sorted["consistency_trajectory_sequence"],
         r"$C^{s}_{\mathrm{traj}}$",
         "Trajectory\nSequence",
         bar_colors,
     )
 
-    # C_conf
+    # consistency_confidence
     ax = fig.add_subplot(gs[1, 4])
     plot_bar(
         ax,
-        df_sorted["C_conf"],
+        df_sorted["consistency_confidence"],
         r"$C_{\mathrm{conf}}$",
         "Confidence\nConsistency",
         bar_colors,
     )
 
-    # C_res
+    # consistency_resource
     ax = fig.add_subplot(gs[1, 5])
     plot_bar(
         ax,
-        df_sorted["C_res"],
+        df_sorted["consistency_resource"],
         r"$C_{\mathrm{res}}$",
         "Resource\nConsistency",
         bar_colors,
     )
 
     # =========================================================================
-    # ROW 2: PREDICTABILITY METRICS (R_Pred summary + P_rc, P_cal, P_auroc, P_brier)
+    # ROW 2: PREDICTABILITY METRICS (reliability_predictability summary + predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score)
     # =========================================================================
 
-    # R_Pred summary
+    # reliability_predictability summary
     ax = fig.add_subplot(gs[2, 0])
     plot_bar(
         ax,
-        df_sorted["R_Pred"],
+        df_sorted["reliability_predictability"],
         r"$R_{\mathrm{Pred}}$",
         "Predictability\n(Aggregate)",
         bar_colors,
     )
     ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
-    # P_rc
+    # predictability_rate_confidence_correlation
     ax = fig.add_subplot(gs[2, 1])
     plot_bar(
-        ax, df_sorted["P_rc"], r"$P_{\mathrm{rc}}$", "Risk-Coverage\nScore", bar_colors
+        ax, df_sorted["predictability_rate_confidence_correlation"], r"$P_{\mathrm{rc}}$", "Risk-Coverage\nScore", bar_colors
     )
 
-    # P_cal
+    # predictability_calibration
     ax = fig.add_subplot(gs[2, 2])
     plot_bar(
         ax,
-        df_sorted["P_cal"],
+        df_sorted["predictability_calibration"],
         r"$P_{\mathrm{cal}}$",
         "Calibration\n(1-ECE)",
         bar_colors,
     )
 
-    # P_auroc
+    # predictability_roc_auc
     ax = fig.add_subplot(gs[2, 3])
     plot_bar(
         ax,
-        df_sorted["P_auroc"],
+        df_sorted["predictability_roc_auc"],
         r"$P_{\mathrm{AUROC}}$",
         "Discrimination\n(AUC-ROC)",
         bar_colors,
     )
 
-    # P_brier
+    # predictability_brier_score
     ax = fig.add_subplot(gs[2, 4])
     plot_bar(
         ax,
-        df_sorted["P_brier"],
+        df_sorted["predictability_brier_score"],
         r"$P_{\mathrm{Brier}}$",
         "Quality\n(1-Brier)",
         bar_colors,
@@ -300,14 +300,14 @@ def plot_reliability_dashboard(
     ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
     # =========================================================================
-    # ROW 3: ROBUSTNESS METRICS (R_Rob summary + R_fault, R_struct, R_prompt + extra)
+    # ROW 3: ROBUSTNESS METRICS (reliability_robustness summary + robustness_fault_injection, robustness_structural, robustness_prompt_variation + extra)
     # =========================================================================
 
-    # R_Rob summary
+    # reliability_robustness summary
     ax = fig.add_subplot(gs[3, 0])
     plot_bar(
         ax,
-        df_sorted["R_Rob"],
+        df_sorted["reliability_robustness"],
         r"$R_{\mathrm{Rob}}$",
         "Robustness\n(Aggregate)",
         bar_colors,
@@ -316,11 +316,11 @@ def plot_reliability_dashboard(
     ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5, label="Perfect")
     ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
-    # R_fault
+    # robustness_fault_injection
     ax = fig.add_subplot(gs[3, 1])
     plot_bar(
         ax,
-        df_sorted["R_fault"],
+        df_sorted["robustness_fault_injection"],
         r"$R_{\mathrm{fault}}$",
         "Fault\nRobustness",
         bar_colors,
@@ -328,11 +328,11 @@ def plot_reliability_dashboard(
     )
     ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5)
 
-    # R_struct
+    # robustness_structural
     ax = fig.add_subplot(gs[3, 2])
     plot_bar(
         ax,
-        df_sorted["R_struct"],
+        df_sorted["robustness_structural"],
         r"$R_{\mathrm{env}}$",
         "Environment\nRobustness",
         bar_colors,
@@ -340,11 +340,11 @@ def plot_reliability_dashboard(
     )
     ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5)
 
-    # R_prompt
+    # robustness_prompt_variation
     ax = fig.add_subplot(gs[3, 3])
     plot_bar(
         ax,
-        df_sorted["R_prompt"],
+        df_sorted["robustness_prompt_variation"],
         r"$R_{\mathrm{prompt}}$",
         "Prompt\nRobustness",
         bar_colors,
@@ -383,41 +383,41 @@ def plot_reliability_dashboard(
         ax.legend(fontsize=6, loc="best")
 
     # =========================================================================
-    # ROW 4: SAFETY METRICS (R_Saf summary + S_harm, S_comp, S_safety + calibration)
+    # ROW 4: SAFETY METRICS (reliability_safety summary + safety_harm_severity, safety_compliance, safety_score + calibration)
     # =========================================================================
 
-    # R_Saf summary
+    # reliability_safety summary
     ax = fig.add_subplot(gs[4, 0])
     plot_bar(
-        ax, df_sorted["R_Saf"], r"$R_{\mathrm{Saf}}$", "Safety\n(Aggregate)", bar_colors
+        ax, df_sorted["reliability_safety"], r"$R_{\mathrm{Saf}}$", "Safety\n(Aggregate)", bar_colors
     )
     ax.axhline(y=0.8, color="green", linestyle="--", alpha=0.5, label="Good")
     ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
-    # S_harm
+    # safety_harm_severity
     ax = fig.add_subplot(gs[4, 1])
     plot_bar(
         ax,
-        df_sorted["S_harm"],
+        df_sorted["safety_harm_severity"],
         r"$S_{\mathrm{harm}}$",
         "Harm Score\n(exp(-severity))",
         bar_colors,
     )
 
-    # S_comp
+    # safety_compliance
     ax = fig.add_subplot(gs[4, 2])
     plot_bar(
         ax,
-        df_sorted["S_comp"],
+        df_sorted["safety_compliance"],
         r"$S_{\mathrm{comp}}$",
         "Compliance\n(1-violation)",
         bar_colors,
     )
 
-    # S_safety
+    # safety_score
     ax = fig.add_subplot(gs[4, 3])
     plot_bar(
-        ax, df_sorted["S_safety"], r"$S_{\mathrm{safety}}$", "Safety Score", bar_colors
+        ax, df_sorted["safety_score"], r"$S_{\mathrm{safety}}$", "Safety Score", bar_colors
     )
 
     # Calibration diagram (spans 2 columns)
@@ -467,39 +467,39 @@ def plot_metric_heatmap(df: pd.DataFrame, output_dir: Path):
 
     metrics_cols = [
         "accuracy",
-        "C_out",
-        "C_traj_d",
-        "C_traj_s",
-        "C_conf",
-        "C_res",
-        "P_rc",
-        "P_cal",
-        "P_auroc",
-        "P_brier",
-        "R_fault",
-        "R_struct",
-        "R_prompt",
-        "S_harm",
-        "S_comp",
-        "S_safety",
+        "consistency_outcome",
+        "consistency_trajectory_distribution",
+        "consistency_trajectory_sequence",
+        "consistency_confidence",
+        "consistency_resource",
+        "predictability_rate_confidence_correlation",
+        "predictability_calibration",
+        "predictability_roc_auc",
+        "predictability_brier_score",
+        "robustness_fault_injection",
+        "robustness_structural",
+        "robustness_prompt_variation",
+        "safety_harm_severity",
+        "safety_compliance",
+        "safety_score",
     ]
     labels = [
         "Accuracy",
-        "C_out",
-        "C_traj_d",
-        "C_traj_s",
-        "C_conf",
-        "C_res",
-        "P_rc",
-        "P_cal",
-        "P_auroc",
-        "P_brier",
-        "R_fault",
-        "R_struct",
-        "R_prompt",
-        "S_harm",
-        "S_comp",
-        "S_safety",
+        "consistency_outcome",
+        "consistency_trajectory_distribution",
+        "consistency_trajectory_sequence",
+        "consistency_confidence",
+        "consistency_resource",
+        "predictability_rate_confidence_correlation",
+        "predictability_calibration",
+        "predictability_roc_auc",
+        "predictability_brier_score",
+        "robustness_fault_injection",
+        "robustness_structural",
+        "robustness_prompt_variation",
+        "safety_harm_severity",
+        "safety_compliance",
+        "safety_score",
     ]
 
     available = [
@@ -587,27 +587,27 @@ def plot_dimension_radar(df: pd.DataFrame, output_dir: Path):
     # Sort by provider and release date
     df_dims = sort_agents_by_provider_and_date(df)
 
-    # R_Con = weighted consistency aggregate (outcome & resource weighted > trajectory)
-    df_dims["R_Con"] = compute_weighted_r_con(
-        df_dims["C_out"], df_dims["C_traj_d"], df_dims["C_traj_s"], df_dims["C_res"]
+    # reliability_consistency = weighted consistency aggregate (outcome & resource weighted > trajectory)
+    df_dims["reliability_consistency"] = compute_weighted_r_con(
+        df_dims["consistency_outcome"], df_dims["consistency_trajectory_distribution"], df_dims["consistency_trajectory_sequence"], df_dims["consistency_resource"]
     )
 
-    # R_Rob = mean of all robustness metrics (R_fault, R_struct, R_prompt)
+    # reliability_robustness = mean of all robustness metrics (robustness_fault_injection, robustness_structural, robustness_prompt_variation)
     robustness_cols = [
-        c for c in ["R_fault", "R_struct", "R_prompt"] if c in df_dims.columns
+        c for c in ["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"] if c in df_dims.columns
     ]
     if robustness_cols:
-        df_dims["R_Rob"] = df_dims[robustness_cols].mean(axis=1, skipna=True)
+        df_dims["reliability_robustness"] = df_dims[robustness_cols].mean(axis=1, skipna=True)
     else:
-        df_dims["R_Rob"] = np.nan
+        df_dims["reliability_robustness"] = np.nan
 
-    # R_Pred = Brier score (proper scoring rule capturing calibration + discrimination)
-    df_dims["R_Pred"] = df_dims["P_brier"]
+    # reliability_predictability = Brier score (proper scoring rule capturing calibration + discrimination)
+    df_dims["reliability_predictability"] = df_dims["predictability_brier_score"]
 
-    # R_Saf = S_safety (lambda-weighted safety score)
-    df_dims["R_Saf"] = df_dims["S_safety"]
+    # reliability_safety = safety_score (lambda-weighted safety score)
+    df_dims["reliability_safety"] = df_dims["safety_score"]
 
-    dimensions = ["R_Con", "R_Rob", "R_Pred"]
+    dimensions = ["reliability_consistency", "reliability_robustness", "reliability_predictability"]
     dim_labels = ["Consistency", "Robustness", "Predictability"]
 
     available = [d for d in dimensions if not df_dims[d].isna().all()]

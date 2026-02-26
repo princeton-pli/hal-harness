@@ -26,10 +26,10 @@ def run_fault_phase(
 ) -> int:
     """
     Run fault injection phase.
-    Computes: R_fault (fault robustness)
+    Computes: robustness_fault_injection (fault robustness)
     """
     print("\n" + "=" * 80)
-    print("⚠️  PHASE 2: FAULT INJECTION (R_fault)")
+    print("⚠️  PHASE 2: FAULT INJECTION (robustness_fault_injection)")
     print("=" * 80)
     print(f"   K repetitions: {k_runs}")
     print(f"   Fault rate: {fault_rate * 100:.0f}%")

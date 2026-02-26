@@ -165,7 +165,7 @@ def build_base_command(
 
 
 def add_baseline_args(cmd: List[str], benchmark_config: Dict) -> List[str]:
-    """Add arguments for baseline phase (C_out + P_rc/P_cal + S_comp)."""
+    """Add arguments for baseline phase (consistency_outcome + predictability_rate_confidence_correlation/predictability_calibration + safety_compliance)."""
     # Predictability: confidence scoring
     cmd.extend(["-A", "compute_confidence=true"])
     cmd.extend(["-A", "store_confidence_details=true"])
@@ -181,7 +181,7 @@ def add_baseline_args(cmd: List[str], benchmark_config: Dict) -> List[str]:
 
 
 def add_fault_args(cmd: List[str], fault_rate: float) -> List[str]:
-    """Add arguments for fault injection phase (R_fault)."""
+    """Add arguments for fault injection phase (robustness_fault_injection)."""
     cmd.extend(["-A", "enable_fault_injection=true"])
     cmd.extend(["-A", f"fault_rate={fault_rate}"])
     cmd.extend(["-A", "track_recovery=true"])
@@ -211,7 +211,7 @@ def add_prompt_sensitivity_args(
 
 
 def add_structural_args(cmd: List[str], strength: str, ptype: str) -> List[str]:
-    """Add arguments for structural perturbation phase (R_struct)."""
+    """Add arguments for structural perturbation phase (robustness_structural)."""
     cmd.extend(["-A", "enable_structural_perturbations=true"])
     cmd.extend(["-A", f"perturbation_strength={strength}"])
     cmd.extend(["-A", f"perturbation_type={ptype}"])

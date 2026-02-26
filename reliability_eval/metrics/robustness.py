@@ -1,4 +1,4 @@
-"""Robustness metrics: R_fault, R_struct, R_prompt."""
+"""Robustness metrics: robustness_fault_injection, robustness_structural, robustness_prompt_variation."""
 
 import numpy as np
 from typing import Dict, List, Tuple

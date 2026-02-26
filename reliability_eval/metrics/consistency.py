@@ -1,4 +1,4 @@
-"""Consistency metrics: C_out, C_traj_d, C_traj_s, C_conf, C_res."""
+"""Consistency metrics: consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource."""
 
 import numpy as np
 import pandas as pd
@@ -16,16 +16,16 @@ def compute_outcome_consistency(
     """
     Compute outcome consistency for a single task.
 
-    Formula: C_out(t) = 1 - sigma_hat^2 / (p_hat * (1 - p_hat) + epsilon)
+    Formula: consistency_outcome(t) = 1 - sigma_hat^2 / (p_hat * (1 - p_hat) + epsilon)
 
     where p_hat is the observed success rate across K runs and
     sigma_hat^2 is the sample variance (ddof=1).
 
     Normalizes the sample variance by the maximum Bernoulli variance for
-    that task's success rate, so C_out measures how much of the possible
+    that task's success rate, so consistency_outcome measures how much of the possible
     variance is realized:
-      - All runs agree (p=0 or p=1): C_out = 1  (perfect consistency)
-      - Maximally variable:          C_out = 0  (worst consistency)
+      - All runs agree (p=0 or p=1): consistency_outcome = 1  (perfect consistency)
+      - Maximally variable:          consistency_outcome = 0  (worst consistency)
     """
     K = len(task_successes)
     if K < 2:
@@ -34,9 +34,9 @@ def compute_outcome_consistency(
     p_hat = np.mean(task_successes)
     sigma_hat_sq = np.var(task_successes, ddof=1)
 
-    C_out = 1 - sigma_hat_sq / (p_hat * (1 - p_hat) + epsilon)
+    consistency_outcome = 1 - sigma_hat_sq / (p_hat * (1 - p_hat) + epsilon)
 
-    return np.clip(C_out, 0.0, 1.0)
+    return np.clip(consistency_outcome, 0.0, 1.0)
 
 
 def compute_trajectory_consistency_conditioned(
@@ -45,7 +45,7 @@ def compute_trajectory_consistency_conditioned(
     """
     Compute trajectory consistency CONDITIONED on outcome (paper Definition 3.2).
 
-    Returns (C_traj_success, C_traj_failure)
+    Returns (consistency_trajectory_sequenceuccess, C_traj_failure)
     - C_traj^+ : consistency among successful runs
     - C_traj^- : consistency among failed runs
     """
@@ -94,10 +94,10 @@ def compute_trajectory_consistency_conditioned(
         # C_traj = 1 - mean(JSD)
         return 1 - np.mean(js_divs)
 
-    C_traj_success = compute_jsd_consistency(success_trajectories)
+    consistency_trajectory_sequenceuccess = compute_jsd_consistency(success_trajectories)
     C_traj_failure = compute_jsd_consistency(failure_trajectories)
 
-    return C_traj_success, C_traj_failure
+    return consistency_trajectory_sequenceuccess, C_traj_failure
 
 
 def compute_sequence_consistency(
@@ -106,10 +106,10 @@ def compute_sequence_consistency(
     """
     Compute trajectory SEQUENCE consistency using normalized edit distance.
 
-    Unlike distribution-based consistency (C_traj_d), this measures whether
+    Unlike distribution-based consistency (consistency_trajectory_distribution), this measures whether
     actions occur in the same ORDER across runs.
 
-    Returns (C_traj_s_success, C_traj_s_failure)
+    Returns (consistency_trajectory_sequence_success, consistency_trajectory_sequence_failure)
     """
 
     def levenshtein_distance(s1: List[str], s2: List[str]) -> int:
@@ -172,13 +172,13 @@ def compute_confidence_consistency(
     """
     Compute confidence consistency across runs.
 
-    C_conf = exp(-CV_conf)
+    consistency_confidence = exp(-CV_conf)
 
     where CV_conf is the coefficient of variation of confidence scores.
     Also computes consistency separately for successful and failed runs.
 
     Returns:
-        (C_conf, breakdown) where breakdown contains per-outcome CVs
+        (consistency_confidence, breakdown) where breakdown contains per-outcome CVs
     """
     breakdown = {}
 
@@ -194,9 +194,9 @@ def compute_confidence_consistency(
     if mean_conf > 0:
         cv_overall = std_conf / mean_conf
         breakdown["cv_overall"] = cv_overall
-        C_conf = np.exp(-cv_overall)
+        consistency_confidence = np.exp(-cv_overall)
     else:
-        C_conf = np.nan
+        consistency_confidence = np.nan
 
     # Consistency among successful runs
     success_conf = [
@@ -222,7 +222,7 @@ def compute_confidence_consistency(
         if mean_f > 0:
             breakdown["cv_failure"] = std_f / mean_f
 
-    return C_conf, breakdown
+    return consistency_confidence, breakdown
 
 
 def compute_resource_consistency(
@@ -237,12 +237,12 @@ def compute_resource_consistency(
     """
     Compute resource consistency across all runs (paper Definition 3.3).
 
-    C_res = exp(-CV)
+    consistency_resource = exp(-CV)
 
     where CV is the coefficient of variation across all runs.
 
     Returns:
-        (C_res, cv_breakdown) where cv_breakdown contains individual CVs for each metric
+        (consistency_resource, cv_breakdown) where cv_breakdown contains individual CVs for each metric
     """
     # Use all runs (not conditioned on success)
     valid_costs = [c for c in costs if c > 0]
@@ -313,14 +313,14 @@ def compute_resource_consistency(
     cv_avg = np.mean(cvs)
     cv_breakdown["avg_cv"] = cv_avg
 
-    # Exponential transform: C_res = exp(-CV)
-    C_res = np.exp(-cv_avg)
+    # Exponential transform: consistency_resource = exp(-CV)
+    consistency_resource = np.exp(-cv_avg)
 
-    return C_res, cv_breakdown
+    return consistency_resource, cv_breakdown
 
 
 def compute_weighted_r_con(c_out, c_traj_d, c_traj_s, c_res):
-    """Compute weighted R_Con from consistency sub-metrics.
+    """Compute weighted reliability_consistency from consistency sub-metrics.
 
     Uses importance weights (W_OUTCOME, W_TRAJECTORY, W_RESOURCE) that
     bias towards outcome and resource consistency over trajectory consistency.
@@ -372,11 +372,11 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
     """Compute all consistency metrics from baseline runs."""
     if len(baseline_runs) < 2:
         return {
-            "C_out": np.nan,
-            "C_traj_d": np.nan,
-            "C_traj_s": np.nan,
-            "C_conf": np.nan,
-            "C_res": np.nan,
+            "consistency_outcome": np.nan,
+            "consistency_trajectory_distribution": np.nan,
+            "consistency_trajectory_sequence": np.nan,
+            "consistency_confidence": np.nan,
+            "consistency_resource": np.nan,
             "cv_breakdown": {},
             "conf_breakdown": {},
             "task_df": pd.DataFrame(),
@@ -487,43 +487,43 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
 
     # Compute per-task metrics
     task_rows = []
-    all_C_out = []
-    all_C_traj_d = []  # Distribution-based trajectory consistency
-    all_C_traj_s = []  # Sequence-based trajectory consistency
-    all_C_conf = []  # Confidence consistency
-    all_C_res = []
+    all_consistency_outcome = []
+    all_consistency_trajectory_distribution = []  # Distribution-based trajectory consistency
+    all_consistency_trajectory_sequence = []  # Sequence-based trajectory consistency
+    all_consistency_confidence = []  # Confidence consistency
+    all_consistency_resource = []
 
     for task_id, data in task_data.items():
         if len(data["success"]) < 2:
             continue
 
-        # C_out: Normalized outcome consistency
-        C_out = compute_outcome_consistency(data["success"])
-        all_C_out.append(C_out)
+        # consistency_outcome: Normalized outcome consistency
+        consistency_outcome = compute_outcome_consistency(data["success"])
+        all_consistency_outcome.append(consistency_outcome)
 
-        # C_traj_d: Distribution-based trajectory consistency (what actions)
-        C_traj_d_success, C_traj_d_failure = compute_trajectory_consistency_conditioned(
+        # consistency_trajectory_distribution: Distribution-based trajectory consistency (what actions)
+        consistency_trajectory_distribution_success, consistency_trajectory_distribution_failure = compute_trajectory_consistency_conditioned(
             data["trajectories"], data["success"]
         )
-        if not np.isnan(C_traj_d_success):
-            all_C_traj_d.append(C_traj_d_success)
+        if not np.isnan(consistency_trajectory_distribution_success):
+            all_consistency_trajectory_distribution.append(consistency_trajectory_distribution_success)
 
-        # C_traj_s: Sequence-based trajectory consistency (action order)
-        C_traj_s_success, C_traj_s_failure = compute_sequence_consistency(
+        # consistency_trajectory_sequence: Sequence-based trajectory consistency (action order)
+        consistency_trajectory_sequence_success, consistency_trajectory_sequence_failure = compute_sequence_consistency(
             data["trajectories"], data["success"]
         )
-        if not np.isnan(C_traj_s_success):
-            all_C_traj_s.append(C_traj_s_success)
+        if not np.isnan(consistency_trajectory_sequence_success):
+            all_consistency_trajectory_sequence.append(consistency_trajectory_sequence_success)
 
-        # C_conf: Confidence consistency
-        C_conf, conf_breakdown = compute_confidence_consistency(
+        # consistency_confidence: Confidence consistency
+        consistency_confidence, conf_breakdown = compute_confidence_consistency(
             data["confidence"], data["success"]
         )
-        if not np.isnan(C_conf):
-            all_C_conf.append(C_conf)
+        if not np.isnan(consistency_confidence):
+            all_consistency_confidence.append(consistency_confidence)
 
-        # C_res: Resource consistency (across all runs)
-        C_res, cv_breakdown = compute_resource_consistency(
+        # consistency_resource: Resource consistency (across all runs)
+        consistency_resource, cv_breakdown = compute_resource_consistency(
             data["cost"],
             data["time"],
             data["success"],
@@ -532,19 +532,19 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
             num_errors=data["num_errors"],
             call_latencies=data["call_latency"],
         )
-        if not np.isnan(C_res):
-            all_C_res.append(C_res)
+        if not np.isnan(consistency_resource):
+            all_consistency_resource.append(consistency_resource)
 
         task_rows.append(
             {
                 "task_id": task_id,
                 "success_rate": float(np.mean(data["success"])),
                 "n_runs": len(data["success"]),
-                "C_out": C_out,
-                "C_traj_d": C_traj_d_success,
-                "C_traj_s": C_traj_s_success,
-                "C_conf": C_conf,
-                "C_res": C_res,
+                "consistency_outcome": consistency_outcome,
+                "consistency_trajectory_distribution": consistency_trajectory_distribution_success,
+                "consistency_trajectory_sequence": consistency_trajectory_sequence_success,
+                "consistency_confidence": consistency_confidence,
+                "consistency_resource": consistency_resource,
                 "time_cv": cv_breakdown.get("time_cv", np.nan),
                 "cost_cv": cv_breakdown.get("cost_cv", np.nan),
                 "api_calls_cv": cv_breakdown.get("api_calls_cv", np.nan),
@@ -597,16 +597,16 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
         return np.std(vals, ddof=1) / np.sqrt(len(vals))
 
     return {
-        "C_out": np.mean(all_C_out) if all_C_out else np.nan,
-        "C_out_se": _se(all_C_out),
-        "C_traj_d": np.mean(all_C_traj_d) if all_C_traj_d else np.nan,
-        "C_traj_d_se": _se(all_C_traj_d),
-        "C_traj_s": np.mean(all_C_traj_s) if all_C_traj_s else np.nan,
-        "C_traj_s_se": _se(all_C_traj_s),
-        "C_conf": np.mean(all_C_conf) if all_C_conf else np.nan,
-        "C_conf_se": _se(all_C_conf),
-        "C_res": np.mean(all_C_res) if all_C_res else np.nan,
-        "C_res_se": _se(all_C_res),
+        "consistency_outcome": np.mean(all_consistency_outcome) if all_consistency_outcome else np.nan,
+        "consistency_outcome_se": _se(all_consistency_outcome),
+        "consistency_trajectory_distribution": np.mean(all_consistency_trajectory_distribution) if all_consistency_trajectory_distribution else np.nan,
+        "consistency_trajectory_distribution_se": _se(all_consistency_trajectory_distribution),
+        "consistency_trajectory_sequence": np.mean(all_consistency_trajectory_sequence) if all_consistency_trajectory_sequence else np.nan,
+        "consistency_trajectory_sequence_se": _se(all_consistency_trajectory_sequence),
+        "consistency_confidence": np.mean(all_consistency_confidence) if all_consistency_confidence else np.nan,
+        "consistency_confidence_se": _se(all_consistency_confidence),
+        "consistency_resource": np.mean(all_consistency_resource) if all_consistency_resource else np.nan,
+        "consistency_resource_se": _se(all_consistency_resource),
         "cv_breakdown": aggregated_cv,
         "conf_breakdown": aggregated_conf,
         "task_df": task_df,

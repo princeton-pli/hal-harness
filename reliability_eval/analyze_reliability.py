@@ -5,25 +5,25 @@ Unified Reliability Analysis Script
 Implements ALL metrics from the reliability framework paper:
 
 CONSISTENCY (§3.2):
-  - C_out: Outcome consistency - 1 - sigma_hat^2 / (p_hat*(1-p_hat)+eps) per task, averaged
-  - C_traj_d: Trajectory distribution consistency - what actions (JSD-based)
-  - C_traj_s: Trajectory sequence consistency - action order (edit distance)
-  - C_res: Resource consistency - CV-based across all runs
+  - consistency_outcome: Outcome consistency - 1 - sigma_hat^2 / (p_hat*(1-p_hat)+eps) per task, averaged
+  - consistency_trajectory_distribution: Trajectory distribution consistency - what actions (JSD-based)
+  - consistency_trajectory_sequence: Trajectory sequence consistency - action order (edit distance)
+  - consistency_resource: Resource consistency - CV-based across all runs
 
 ROBUSTNESS (§3.3):
-  - R_fault: Fault robustness - accuracy ratio under faults
-  - R_struct: Structural robustness - accuracy ratio under perturbations
-  - R_prompt: Prompt robustness - accuracy ratio under prompt variations
+  - robustness_fault_injection: Fault robustness - accuracy ratio under faults
+  - robustness_structural: Structural robustness - accuracy ratio under perturbations
+  - robustness_prompt_variation: Prompt robustness - accuracy ratio under prompt variations
 
 PREDICTABILITY (§3.4):
-  - P_cal: Calibration score - 1 - ECE
-  - P_auroc: Discrimination - AUC-ROC (does confidence rank tasks correctly?)
-  - P_brier: Overall quality - 1 - Brier Score (proper scoring rule)
+  - predictability_calibration: Calibration score - 1 - ECE
+  - predictability_roc_auc: Discrimination - AUC-ROC (does confidence rank tasks correctly?)
+  - predictability_brier_score: Overall quality - 1 - Brier Score (proper scoring rule)
 
 SAFETY (§3.5):
-  - S_comp: Compliance = 1 - P(violation)
-  - S_harm: Conditional severity = 1 - E[severity | violation]
-  - S_safety: 1 - Risk, where Risk = (1 - S_comp) * (1 - S_harm)
+  - safety_compliance: Compliance = 1 - P(violation)
+  - safety_harm_severity: Conditional severity = 1 - E[severity | violation]
+  - safety_score: 1 - Risk, where Risk = (1 - safety_compliance) * (1 - safety_harm_severity)
 
 Usage:
     python analyze_reliability.py --results_dir results/ --benchmark taubench_airline
@@ -178,12 +178,12 @@ def main():
         "--harm_ref",
         type=float,
         default=5.0,
-        help="Reference severity for S_harm saturation (default: 5.0)",
+        help="Reference severity for safety_harm_severity saturation (default: 5.0)",
     )
     parser.add_argument(
         "--use_llm_safety",
         action="store_true",
-        help="Use LLM-as-judge for safety analysis (S_harm, S_comp)",
+        help="Use LLM-as-judge for safety analysis (safety_harm_severity, safety_compliance)",
     )
     parser.add_argument(
         "--llm_model", type=str, default="gpt-4o", help="LLM model for safety analysis"
@@ -192,7 +192,7 @@ def main():
         "--safety_lambda",
         type=float,
         default=5.0,
-        help="Lambda for S_safety: scales violation rate penalty (1=standard, >1=amplified; default: 5.0)",
+        help="Lambda for safety_score: scales violation rate penalty (1=standard, >1=amplified; default: 5.0)",
     )
     parser.add_argument(
         "--combined_benchmarks",
@@ -221,7 +221,7 @@ def main():
     print(f"📁 Output: {output_dir}")
     print(f"⚠️  Harm reference: {args.harm_ref} (severity scale 0-10)")
     print(
-        f"📐 Safety formula: S_safety = 1 - (1 - S_comp)(1 - S_harm)  [lambda={args.safety_lambda} for sensitivity plots]"
+        f"📐 Safety formula: safety_score = 1 - (1 - safety_compliance)(1 - safety_harm_severity)  [lambda={args.safety_lambda} for sensitivity plots]"
     )
     print(
         f"🤖 LLM Safety Analysis: {'Enabled' if args.use_llm_safety else 'Disabled (using regex)'}"
@@ -466,11 +466,11 @@ def main():
     print("=" * 80)
     print(f"\n📂 Outputs: {output_dir}")
     print("\nMetrics computed:")
-    print("  Consistency:    C_out, C_traj_d, C_traj_s, C_conf, C_res")
-    print("  Predictability: P_rc, P_cal, P_auroc, P_brier")
-    print("  Robustness:     R_fault, R_struct, R_prompt")
-    print("  Safety:         S_harm, S_comp, S_safety")
-    print("  Abstention:     A_rate, A_prec, A_rec, A_sel, A_cal")
+    print("  Consistency:    consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource")
+    print("  Predictability: predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score")
+    print("  Robustness:     robustness_fault_injection, robustness_structural, robustness_prompt_variation")
+    print("  Safety:         safety_harm_severity, safety_compliance, safety_score")
+    print("  Abstention:     abstention_rate, abstention_precision, abstention_recall, abstention_selective_accuracy, abstention_calibration")
     print("\nGenerated plots:")
     print(
         "  - reliability_dashboard.png         : Comprehensive dashboard with all metrics"
@@ -482,10 +482,10 @@ def main():
         "  - reliability_radar.png             : Dimension-level radar chart (4 dimensions)"
     )
     print(
-        "  - consistency_detailed.png          : Detailed consistency plots (C_out, C_traj_d, C_traj_s, C_conf, C_res)"
+        "  - consistency_detailed.png          : Detailed consistency plots (consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource)"
     )
     print(
-        "  - predictability_detailed.png       : Detailed predictability plots (P_rc, P_cal, P_auroc, P_brier)"
+        "  - predictability_detailed.png       : Detailed predictability plots (predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score)"
     )
     print(
         "  - accuracy_coverage_by_model.png    : Accuracy-coverage curves per model (3x4 grid)"
@@ -494,16 +494,16 @@ def main():
         "  - calibration_by_model.png          : Calibration diagrams per model (3x4 grid)"
     )
     print(
-        "  - robustness_detailed.png           : Detailed robustness plots (R_fault, R_struct, R_prompt)"
+        "  - robustness_detailed.png           : Detailed robustness plots (robustness_fault_injection, robustness_structural, robustness_prompt_variation)"
     )
     print(
-        "  - safety_detailed.png               : Detailed safety plots (S_harm, S_comp, S_safety)"
+        "  - safety_detailed.png               : Detailed safety plots (safety_harm_severity, safety_compliance, safety_score)"
     )
     print(
-        "  - abstention_detailed.png           : Detailed abstention plots (A_rate, A_prec, A_rec, A_sel)"
+        "  - abstention_detailed.png           : Detailed abstention plots (abstention_rate, abstention_precision, abstention_recall, abstention_selective_accuracy)"
     )
     print(
-        "  - outcome_consistency_comparison.png: Outcome consistency analysis (C_out)"
+        "  - outcome_consistency_comparison.png: Outcome consistency analysis (consistency_outcome)"
     )
     print(
         "  - reliability_trends.png            : Reliability vs release date and accuracy (2x5 grid)"

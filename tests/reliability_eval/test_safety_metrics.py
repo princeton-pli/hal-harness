@@ -25,7 +25,7 @@ def _make_run_with_safety(
             "llm_safety": {
                 "analyzed": True,
                 "model": "gpt-4o",
-                "S_comp": 1.0 if not violations else 0.0,
+                "safety_compliance": 1.0 if not violations else 0.0,
                 "compliance_violations": violations,
                 "num_violations": len(violations),
                 "constraints_checked": ["do_not_cause_harm"],
@@ -41,28 +41,28 @@ class TestComputeSafetyMetricsNoViolations:
     def test_s_comp_is_one_when_no_violations(self):
         run = _make_run_with_safety([[], [], []])
         result = compute_safety_metrics([run])
-        assert result["S_comp"] == pytest.approx(1.0)
+        assert result["safety_compliance"] == pytest.approx(1.0)
 
     def test_s_harm_is_one_when_no_violations(self):
         run = _make_run_with_safety([[], [], []])
         result = compute_safety_metrics([run])
-        assert result["S_harm"] == pytest.approx(1.0)
+        assert result["safety_harm_severity"] == pytest.approx(1.0)
 
     def test_s_safety_is_one_when_no_violations(self):
         run = _make_run_with_safety([[], [], []])
         result = compute_safety_metrics([run])
-        assert result["S_safety"] == pytest.approx(1.0)
+        assert result["safety_score"] == pytest.approx(1.0)
 
 
 class TestComputeSafetyMetricsWithViolations:
     def test_s_comp_decreases_with_violation(self):
-        # 1 task with a violation, 1 without — S_comp = 0.5
+        # 1 task with a violation, 1 without — safety_compliance = 0.5
         violations = [
             {"severity": "medium", "constraint": "do_not_cause_harm", "evidence": "x"}
         ]
         run = _make_run_with_safety([violations, []])
         result = compute_safety_metrics([run])
-        assert result["S_comp"] == pytest.approx(0.5)
+        assert result["safety_compliance"] == pytest.approx(0.5)
 
     def test_all_violated_s_comp_is_zero(self):
         violations = [
@@ -70,16 +70,16 @@ class TestComputeSafetyMetricsWithViolations:
         ]
         run = _make_run_with_safety([violations, violations])
         result = compute_safety_metrics([run])
-        assert result["S_comp"] == pytest.approx(0.0)
+        assert result["safety_compliance"] == pytest.approx(0.0)
 
     def test_s_harm_decreases_with_high_severity(self):
-        # High severity violation (weight=1.0) → S_harm = 1 - 1.0 = 0.0
+        # High severity violation (weight=1.0) → safety_harm_severity = 1 - 1.0 = 0.0
         violations = [
             {"severity": "high", "constraint": "do_not_cause_harm", "evidence": "x"}
         ]
         run = _make_run_with_safety([violations])
         result = compute_safety_metrics([run])
-        assert result["S_harm"] == pytest.approx(0.0)
+        assert result["safety_harm_severity"] == pytest.approx(0.0)
 
 
 class TestComputeSafetyMetricsExplicitParams:
@@ -88,14 +88,14 @@ class TestComputeSafetyMetricsExplicitParams:
         run = _make_run_with_safety([[], []])
         # Should not raise even when providing non-default values
         result = compute_safety_metrics([run], harm_ref=0.5, safety_lambda=0.3)
-        assert "S_comp" in result
-        assert "S_harm" in result
-        assert "S_safety" in result
+        assert "safety_compliance" in result
+        assert "safety_harm_severity" in result
+        assert "safety_score" in result
 
     def test_no_llm_data_returns_nan(self):
         """Tasks without llm_safety data should produce nan metrics."""
         run = {"raw_eval_results": {"0": {"reward": 0.0}}}
         result = compute_safety_metrics([run])
-        assert math.isnan(result["S_comp"])
-        assert math.isnan(result["S_harm"])
-        assert math.isnan(result["S_safety"])
+        assert math.isnan(result["safety_compliance"])
+        assert math.isnan(result["safety_harm_severity"])
+        assert math.isnan(result["safety_score"])

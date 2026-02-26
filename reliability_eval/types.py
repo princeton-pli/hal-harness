@@ -19,36 +19,36 @@ class ReliabilityMetrics:
     # Capability
     accuracy: float = np.nan
 
-    # Consistency (C_out, C_traj_d, C_traj_s, C_conf, C_res)
-    C_out: float = np.nan
-    C_traj_d: float = np.nan  # Trajectory distribution consistency (what actions)
-    C_traj_s: float = np.nan  # Trajectory sequence consistency (action order)
-    C_conf: float = np.nan  # Confidence consistency
-    C_res: float = np.nan  # Resource consistency
+    # Consistency (consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource)
+    consistency_outcome: float = np.nan
+    consistency_trajectory_distribution: float = np.nan  # Trajectory distribution consistency (what actions)
+    consistency_trajectory_sequence: float = np.nan  # Trajectory sequence consistency (action order)
+    consistency_confidence: float = np.nan  # Confidence consistency
+    consistency_resource: float = np.nan  # Resource consistency
 
-    # Predictability (P_rc, P_cal, P_auroc, P_brier)
-    P_rc: float = np.nan
-    P_cal: float = np.nan
-    P_auroc: float = np.nan  # Discrimination (AUC-ROC)
-    P_brier: float = np.nan  # Overall quality (1 - Brier Score)
+    # Predictability (predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score)
+    predictability_rate_confidence_correlation: float = np.nan
+    predictability_calibration: float = np.nan
+    predictability_roc_auc: float = np.nan  # Discrimination (AUC-ROC)
+    predictability_brier_score: float = np.nan  # Overall quality (1 - Brier Score)
     mean_confidence: float = np.nan
 
-    # Robustness (R_fault, R_struct, R_prompt)
-    R_fault: float = np.nan
-    R_struct: float = np.nan
-    R_prompt: float = np.nan
+    # Robustness (robustness_fault_injection, robustness_structural, robustness_prompt_variation)
+    robustness_fault_injection: float = np.nan
+    robustness_structural: float = np.nan
+    robustness_prompt_variation: float = np.nan
 
-    # Safety (S_harm, S_comp, S_safety)
-    S_harm: float = np.nan  # Harm score: severity of errors (LLM-judged)
-    S_comp: float = np.nan  # Compliance score: constraint violations (LLM-judged)
-    S_safety: float = np.nan  # Aggregate safety = (S_harm + S_comp) / 2
+    # Safety (safety_harm_severity, safety_compliance, safety_score)
+    safety_harm_severity: float = np.nan  # Harm score: severity of errors (LLM-judged)
+    safety_compliance: float = np.nan  # Compliance score: constraint violations (LLM-judged)
+    safety_score: float = np.nan  # Aggregate safety = (safety_harm_severity + safety_compliance) / 2
 
-    # Abstention calibration (A_prec, A_rec, A_sel, A_cal)
-    A_rate: float = np.nan  # Abstention rate: fraction of tasks where model abstained
-    A_prec: float = np.nan  # Abstention precision: P(fail | abstain)
-    A_rec: float = np.nan  # Abstention recall: P(abstain | fail)
-    A_sel: float = np.nan  # Selective accuracy: accuracy when NOT abstaining
-    A_cal: float = (
+    # Abstention calibration (abstention_precision, abstention_recall, abstention_selective_accuracy, abstention_calibration)
+    abstention_rate: float = np.nan  # Abstention rate: fraction of tasks where model abstained
+    abstention_precision: float = np.nan  # Abstention precision: P(fail | abstain)
+    abstention_recall: float = np.nan  # Abstention recall: P(abstain | fail)
+    abstention_selective_accuracy: float = np.nan  # Selective accuracy: accuracy when NOT abstaining
+    abstention_calibration: float = (
         np.nan
     )  # Calibration score: (correct_abstain + correct_proceed) / total
 

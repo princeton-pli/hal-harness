@@ -20,7 +20,7 @@ class TestComputeOutcomeConsistency:
         assert compute_outcome_consistency([0, 0, 0, 0, 0]) == pytest.approx(1.0)
 
     def test_fifty_fifty_split_is_zero_consistency(self):
-        # p_hat = 0.5, sigma^2 = 0.5/(K-1) ≈ p*(1-p) → C_out ≈ 0
+        # p_hat = 0.5, sigma^2 = 0.5/(K-1) ≈ p*(1-p) → consistency_outcome ≈ 0
         result = compute_outcome_consistency([1, 0, 1, 0, 1, 0])
         assert result == pytest.approx(0.0, abs=0.05)
 
@@ -33,7 +33,7 @@ class TestComputeOutcomeConsistency:
 
     def test_any_deviation_clips_to_zero(self):
         # sigma^2 (ddof=1) = K/(K-1) * p*(1-p) which always exceeds p*(1-p),
-        # so any mixed sequence produces a negative raw C_out that clips to 0.
+        # so any mixed sequence produces a negative raw consistency_outcome that clips to 0.
         result = compute_outcome_consistency([1, 1, 1, 1, 0])
         assert result == pytest.approx(0.0)
 
@@ -116,24 +116,24 @@ class TestComputeSequenceConsistency:
 
 class TestComputeResourceConsistency:
     def test_identical_costs_give_perfect_consistency(self):
-        # CV = 0 → C_res = exp(0) = 1.0
+        # CV = 0 → consistency_resource = exp(0) = 1.0
         costs = [1.0, 1.0, 1.0, 1.0]
         times = [10.0, 10.0, 10.0, 10.0]
-        C_res, _ = compute_resource_consistency(costs, times, [1, 1, 1, 1])
-        assert C_res == pytest.approx(1.0)
+        consistency_resource, _ = compute_resource_consistency(costs, times, [1, 1, 1, 1])
+        assert consistency_resource == pytest.approx(1.0)
 
     def test_high_variance_costs_give_low_consistency(self):
         # Pass zero times so they are filtered out; only the highly variable
-        # costs (CV ≈ 1.15) determine C_res = exp(-1.15) ≈ 0.32 < 0.5.
+        # costs (CV ≈ 1.15) determine consistency_resource = exp(-1.15) ≈ 0.32 < 0.5.
         costs = [0.01, 10.0, 0.01, 10.0]
         times = [0.0, 0.0, 0.0, 0.0]
-        C_res, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
-        assert C_res == pytest.approx(0.3158798230934396)
+        consistency_resource, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
+        assert consistency_resource == pytest.approx(0.3158798230934396)
 
     def test_returns_nan_when_no_valid_data(self):
         # All zeros are filtered out, leaving nothing to compute CV on.
-        C_res, _ = compute_resource_consistency([0, 0], [0, 0], [1, 0])
-        assert math.isnan(C_res)
+        consistency_resource, _ = compute_resource_consistency([0, 0], [0, 0], [1, 0])
+        assert math.isnan(consistency_resource)
 
     def test_cv_breakdown_is_returned(self):
         costs = [1.0, 2.0, 3.0]
@@ -145,5 +145,5 @@ class TestComputeResourceConsistency:
     def test_result_bounded_between_zero_and_one(self):
         costs = [1.0, 5.0, 1.0, 5.0]
         times = [2.0, 8.0, 2.0, 8.0]
-        C_res, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
-        assert 0.0 <= C_res <= 1.0
+        consistency_resource, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
+        assert 0.0 <= consistency_resource <= 1.0

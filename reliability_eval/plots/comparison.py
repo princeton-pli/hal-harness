@@ -48,23 +48,23 @@ def plot_reliability_vs_date_and_accuracy(
     df_sorted = sort_agents_by_provider_and_date(df)
 
     # Compute dimension-level scores if not already present
-    if "R_Con" not in df_sorted.columns:
-        df_sorted["R_Con"] = compute_weighted_r_con(
-            df_sorted["C_out"],
-            df_sorted["C_traj_d"],
-            df_sorted["C_traj_s"],
-            df_sorted["C_res"],
+    if "reliability_consistency" not in df_sorted.columns:
+        df_sorted["reliability_consistency"] = compute_weighted_r_con(
+            df_sorted["consistency_outcome"],
+            df_sorted["consistency_trajectory_distribution"],
+            df_sorted["consistency_trajectory_sequence"],
+            df_sorted["consistency_resource"],
         )
-    if "R_Pred" not in df_sorted.columns:
-        df_sorted["R_Pred"] = df_sorted["P_brier"]
-    if "R_Rob" not in df_sorted.columns:
-        df_sorted["R_Rob"] = df_sorted[["R_fault", "R_struct", "R_prompt"]].mean(
+    if "reliability_predictability" not in df_sorted.columns:
+        df_sorted["reliability_predictability"] = df_sorted["predictability_brier_score"]
+    if "reliability_robustness" not in df_sorted.columns:
+        df_sorted["reliability_robustness"] = df_sorted[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
             axis=1, skipna=True
         )
-    if "R_Saf" not in df_sorted.columns:
-        df_sorted["R_Saf"] = df_sorted["S_safety"]
-    if "R_Overall" not in df_sorted.columns:
-        df_sorted["R_Overall"] = df_sorted[["R_Con", "R_Pred", "R_Rob"]].mean(
+    if "reliability_safety" not in df_sorted.columns:
+        df_sorted["reliability_safety"] = df_sorted["safety_score"]
+    if "reliability_overall" not in df_sorted.columns:
+        df_sorted["reliability_overall"] = df_sorted[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
             axis=1, skipna=True
         )
 
@@ -80,13 +80,13 @@ def plot_reliability_vs_date_and_accuracy(
             lambda x: get_model_metadata(x).get("provider", "Unknown")
         )
 
-    # Define dimensions to plot (R_Saf kept as its own trendline but not in R_Overall)
+    # Define dimensions to plot (reliability_safety kept as its own trendline but not in reliability_overall)
     dimensions = [
-        ("R_Overall", r"Overall Reliability ($R$)"),
-        ("R_Con", r"Consistency ($R_{\mathrm{Con}}$)"),
-        ("R_Pred", r"Predictability ($R_{\mathrm{Pred}}$)"),
-        ("R_Rob", r"Robustness ($R_{\mathrm{Rob}}$)"),
-        ("R_Saf", r"Safety ($R_{\mathrm{Saf}}$)"),
+        ("reliability_overall", r"Overall Reliability ($R$)"),
+        ("reliability_consistency", r"Consistency ($R_{\mathrm{Con}}$)"),
+        ("reliability_predictability", r"Predictability ($R_{\mathrm{Pred}}$)"),
+        ("reliability_robustness", r"Robustness ($R_{\mathrm{Rob}}$)"),
+        ("reliability_safety", r"Safety ($R_{\mathrm{Saf}}$)"),
     ]
 
     # Create figure: 2 columns x 5 rows
@@ -324,10 +324,10 @@ def plot_reliability_vs_date_and_accuracy(
 
     # Left: Overall Reliability vs Release Date
     ax = axes_overall[0]
-    valid_mask = df_sorted["release_timestamp"].notna() & df_sorted["R_Overall"].notna()
+    valid_mask = df_sorted["release_timestamp"].notna() & df_sorted["reliability_overall"].notna()
     if valid_mask.sum() >= 2:
         x_valid = df_sorted.loc[valid_mask, "release_timestamp"]
-        y_valid = df_sorted.loc[valid_mask, "R_Overall"]
+        y_valid = df_sorted.loc[valid_mask, "reliability_overall"]
         providers_valid = df_sorted.loc[valid_mask, "provider"]
 
         # Scatter points by provider
@@ -385,10 +385,10 @@ def plot_reliability_vs_date_and_accuracy(
 
     # Right: Overall Reliability vs Accuracy
     ax = axes_overall[1]
-    valid_mask = df_sorted["accuracy"].notna() & df_sorted["R_Overall"].notna()
+    valid_mask = df_sorted["accuracy"].notna() & df_sorted["reliability_overall"].notna()
     if valid_mask.sum() >= 2:
         x_valid = df_sorted.loc[valid_mask, "accuracy"]
-        y_valid = df_sorted.loc[valid_mask, "R_Overall"]
+        y_valid = df_sorted.loc[valid_mask, "reliability_overall"]
         providers_valid = df_sorted.loc[valid_mask, "provider"]
 
         # Scatter points by provider
@@ -498,23 +498,23 @@ def plot_combined_overall_reliability(
         df_sorted = sort_agents_by_provider_and_date(df)
 
         # Compute dimension-level scores if not already present
-        if "R_Con" not in df_sorted.columns:
-            df_sorted["R_Con"] = compute_weighted_r_con(
-                df_sorted["C_out"],
-                df_sorted["C_traj_d"],
-                df_sorted["C_traj_s"],
-                df_sorted["C_res"],
+        if "reliability_consistency" not in df_sorted.columns:
+            df_sorted["reliability_consistency"] = compute_weighted_r_con(
+                df_sorted["consistency_outcome"],
+                df_sorted["consistency_trajectory_distribution"],
+                df_sorted["consistency_trajectory_sequence"],
+                df_sorted["consistency_resource"],
             )
-        if "R_Pred" not in df_sorted.columns:
-            df_sorted["R_Pred"] = df_sorted["P_brier"]
-        if "R_Rob" not in df_sorted.columns:
-            df_sorted["R_Rob"] = df_sorted[["R_fault", "R_struct", "R_prompt"]].mean(
+        if "reliability_predictability" not in df_sorted.columns:
+            df_sorted["reliability_predictability"] = df_sorted["predictability_brier_score"]
+        if "reliability_robustness" not in df_sorted.columns:
+            df_sorted["reliability_robustness"] = df_sorted[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
                 axis=1, skipna=True
             )
-        if "R_Saf" not in df_sorted.columns:
-            df_sorted["R_Saf"] = df_sorted["S_safety"]
-        if "R_Overall" not in df_sorted.columns:
-            df_sorted["R_Overall"] = df_sorted[["R_Con", "R_Pred", "R_Rob"]].mean(
+        if "reliability_safety" not in df_sorted.columns:
+            df_sorted["reliability_safety"] = df_sorted["safety_score"]
+        if "reliability_overall" not in df_sorted.columns:
+            df_sorted["reliability_overall"] = df_sorted[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
                 axis=1, skipna=True
             )
 
@@ -546,11 +546,11 @@ def plot_combined_overall_reliability(
         # Left: Overall Reliability vs Release Date
         ax = axes[row_idx, 0]
         valid_mask = (
-            df_sorted["release_timestamp"].notna() & df_sorted["R_Overall"].notna()
+            df_sorted["release_timestamp"].notna() & df_sorted["reliability_overall"].notna()
         )
         if valid_mask.sum() >= 2:
             x_valid = df_sorted.loc[valid_mask, "release_timestamp"]
-            y_valid = df_sorted.loc[valid_mask, "R_Overall"]
+            y_valid = df_sorted.loc[valid_mask, "reliability_overall"]
             providers_valid = df_sorted.loc[valid_mask, "provider"]
 
             # Scatter points by provider
@@ -617,10 +617,10 @@ def plot_combined_overall_reliability(
 
         # Right: Overall Reliability vs Accuracy
         ax = axes[row_idx, 1]
-        valid_mask = df_sorted["accuracy"].notna() & df_sorted["R_Overall"].notna()
+        valid_mask = df_sorted["accuracy"].notna() & df_sorted["reliability_overall"].notna()
         if valid_mask.sum() >= 2:
             x_valid = df_sorted.loc[valid_mask, "accuracy"]
-            y_valid = df_sorted.loc[valid_mask, "R_Overall"]
+            y_valid = df_sorted.loc[valid_mask, "reliability_overall"]
             providers_valid = df_sorted.loc[valid_mask, "provider"]
 
             # Scatter points by provider
@@ -995,23 +995,23 @@ def plot_combined_overall_reliability_large(
     def prepare_dataframe(df):
         """Prepare dataframe with required columns."""
         df_sorted = sort_agents_by_provider_and_date(df)
-        if "R_Con" not in df_sorted.columns:
-            df_sorted["R_Con"] = compute_weighted_r_con(
-                df_sorted["C_out"],
-                df_sorted["C_traj_d"],
-                df_sorted["C_traj_s"],
-                df_sorted["C_res"],
+        if "reliability_consistency" not in df_sorted.columns:
+            df_sorted["reliability_consistency"] = compute_weighted_r_con(
+                df_sorted["consistency_outcome"],
+                df_sorted["consistency_trajectory_distribution"],
+                df_sorted["consistency_trajectory_sequence"],
+                df_sorted["consistency_resource"],
             )
-        if "R_Pred" not in df_sorted.columns:
-            df_sorted["R_Pred"] = df_sorted["P_brier"]
-        if "R_Rob" not in df_sorted.columns:
-            df_sorted["R_Rob"] = df_sorted[["R_fault", "R_struct", "R_prompt"]].mean(
+        if "reliability_predictability" not in df_sorted.columns:
+            df_sorted["reliability_predictability"] = df_sorted["predictability_brier_score"]
+        if "reliability_robustness" not in df_sorted.columns:
+            df_sorted["reliability_robustness"] = df_sorted[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
                 axis=1, skipna=True
             )
-        if "R_Saf" not in df_sorted.columns:
-            df_sorted["R_Saf"] = df_sorted["S_safety"]
-        if "R_Overall" not in df_sorted.columns:
-            df_sorted["R_Overall"] = df_sorted[["R_Con", "R_Pred", "R_Rob"]].mean(
+        if "reliability_safety" not in df_sorted.columns:
+            df_sorted["reliability_safety"] = df_sorted["safety_score"]
+        if "reliability_overall" not in df_sorted.columns:
+            df_sorted["reliability_overall"] = df_sorted[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
                 axis=1, skipna=True
             )
         if "release_timestamp" not in df_sorted.columns:
@@ -1194,11 +1194,11 @@ def plot_combined_overall_reliability_large(
         # --- Column 1: Overall Reliability vs Release Date ---
         ax = axes[row_idx, 1]
         valid_mask = (
-            df_sorted["release_timestamp"].notna() & df_sorted["R_Overall"].notna()
+            df_sorted["release_timestamp"].notna() & df_sorted["reliability_overall"].notna()
         )
         if valid_mask.sum() >= 2:
             x_valid = df_sorted.loc[valid_mask, "release_timestamp"]
-            y_valid = df_sorted.loc[valid_mask, "R_Overall"]
+            y_valid = df_sorted.loc[valid_mask, "reliability_overall"]
             providers_valid = df_sorted.loc[valid_mask, "provider"]
             agents_valid = df_sorted.loc[valid_mask, "agent"]
 
@@ -1257,10 +1257,10 @@ def plot_combined_overall_reliability_large(
 
         # --- Column 2: Accuracy vs Overall Reliability ---
         ax = axes[row_idx, 2]
-        valid_mask = df_sorted["accuracy"].notna() & df_sorted["R_Overall"].notna()
+        valid_mask = df_sorted["accuracy"].notna() & df_sorted["reliability_overall"].notna()
         if valid_mask.sum() >= 2:
             x_valid = df_sorted.loc[valid_mask, "accuracy"]
-            y_valid = df_sorted.loc[valid_mask, "R_Overall"]
+            y_valid = df_sorted.loc[valid_mask, "reliability_overall"]
             providers_valid = df_sorted.loc[valid_mask, "provider"]
             agents_valid = df_sorted.loc[valid_mask, "agent"]
 
@@ -1461,8 +1461,8 @@ def plot_calibration_selective_comparison(
     Create a 2x2 grid comparing calibration and selective prediction across benchmarks.
 
     Layout:
-    - Row 0: Calibration (P_cal) bar plots
-    - Row 1: Selective prediction (P_rc) bar plots
+    - Row 0: Calibration (predictability_calibration) bar plots
+    - Row 1: Selective prediction (predictability_rate_confidence_correlation) bar plots
     - Column 0: GAIA
     - Column 1: TAU-bench
 
@@ -1486,7 +1486,7 @@ def plot_calibration_selective_comparison(
     #                         'claude_sonnet_4_5', 'claude_opus_4_5']
     # Now includes all models, sorted by provider and date.
 
-    # Build data structure: {benchmark: {agent_name: {P_cal, P_auroc}}}
+    # Build data structure: {benchmark: {agent_name: {predictability_calibration, predictability_roc_auc}}}
     # Also collect sorted agent info per benchmark
     data_by_benchmark = {}
     sorted_agents_by_benchmark = {}
@@ -1501,8 +1501,8 @@ def plot_calibration_selective_comparison(
         for _, row in df_sorted.iterrows():
             agent_name = row["agent"]
             data_by_benchmark[benchmark_name][agent_name] = {
-                "P_cal": row.get("P_cal", np.nan),
-                "P_auroc": row.get("P_auroc", np.nan),
+                "predictability_calibration": row.get("predictability_calibration", np.nan),
+                "predictability_roc_auc": row.get("predictability_roc_auc", np.nan),
             }
 
     # Determine benchmark order (GAIA first, then TAU-bench)
@@ -1526,8 +1526,8 @@ def plot_calibration_selective_comparison(
     fig, axes = plt.subplots(2, 2, figsize=(5, 3.5))
 
     col_metrics = [
-        ("P_cal", r"Calibration ($P_{\mathrm{cal}}$)"),
-        ("P_auroc", r"Discrimination ($P_{\mathrm{AUROC}}$)"),
+        ("predictability_calibration", r"Calibration ($P_{\mathrm{cal}}$)"),
+        ("predictability_roc_auc", r"Discrimination ($P_{\mathrm{AUROC}}$)"),
     ]
 
     for row_idx, benchmark in enumerate(benchmark_order):
@@ -1611,20 +1611,20 @@ def plot_reliability_by_model_size(df: pd.DataFrame, output_dir: Path):
     df_plot["category"] = df_plot["agent"].apply(get_model_category)
 
     # Compute dimension-level scores if not already present
-    if "R_Con" not in df_plot.columns:
-        df_plot["R_Con"] = compute_weighted_r_con(
-            df_plot["C_out"], df_plot["C_traj_d"], df_plot["C_traj_s"], df_plot["C_res"]
+    if "reliability_consistency" not in df_plot.columns:
+        df_plot["reliability_consistency"] = compute_weighted_r_con(
+            df_plot["consistency_outcome"], df_plot["consistency_trajectory_distribution"], df_plot["consistency_trajectory_sequence"], df_plot["consistency_resource"]
         )
-    if "R_Pred" not in df_plot.columns:
-        df_plot["R_Pred"] = df_plot["P_brier"]
-    if "R_Rob" not in df_plot.columns:
-        df_plot["R_Rob"] = df_plot[["R_fault", "R_struct", "R_prompt"]].mean(
+    if "reliability_predictability" not in df_plot.columns:
+        df_plot["reliability_predictability"] = df_plot["predictability_brier_score"]
+    if "reliability_robustness" not in df_plot.columns:
+        df_plot["reliability_robustness"] = df_plot[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
             axis=1, skipna=True
         )
-    if "R_Saf" not in df_plot.columns:
-        df_plot["R_Saf"] = df_plot["S_safety"]
-    if "R_Overall" not in df_plot.columns:
-        df_plot["R_Overall"] = df_plot[["R_Con", "R_Pred", "R_Rob"]].mean(
+    if "reliability_safety" not in df_plot.columns:
+        df_plot["reliability_safety"] = df_plot["safety_score"]
+    if "reliability_overall" not in df_plot.columns:
+        df_plot["reliability_overall"] = df_plot[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
             axis=1, skipna=True
         )
 
@@ -1637,12 +1637,12 @@ def plot_reliability_by_model_size(df: pd.DataFrame, output_dir: Path):
 
     # Define metrics to plot
     metrics = [
-        ("R_Overall", "Overall Reliability"),
+        ("reliability_overall", "Overall Reliability"),
         ("accuracy", "Accuracy"),
-        ("R_Con", "Consistency"),
-        ("R_Pred", "Predictability"),
-        ("R_Rob", "Robustness"),
-        ("R_Saf", "Safety"),
+        ("reliability_consistency", "Consistency"),
+        ("reliability_predictability", "Predictability"),
+        ("reliability_robustness", "Robustness"),
+        ("reliability_safety", "Safety"),
     ]
 
     # Create figure: 2 rows x 3 columns
@@ -1773,20 +1773,20 @@ def plot_reliability_by_provider(df: pd.DataFrame, output_dir: Path):
     )
 
     # Compute dimension-level scores if not already present
-    if "R_Con" not in df_plot.columns:
-        df_plot["R_Con"] = compute_weighted_r_con(
-            df_plot["C_out"], df_plot["C_traj_d"], df_plot["C_traj_s"], df_plot["C_res"]
+    if "reliability_consistency" not in df_plot.columns:
+        df_plot["reliability_consistency"] = compute_weighted_r_con(
+            df_plot["consistency_outcome"], df_plot["consistency_trajectory_distribution"], df_plot["consistency_trajectory_sequence"], df_plot["consistency_resource"]
         )
-    if "R_Pred" not in df_plot.columns:
-        df_plot["R_Pred"] = df_plot["P_brier"]
-    if "R_Rob" not in df_plot.columns:
-        df_plot["R_Rob"] = df_plot[["R_fault", "R_struct", "R_prompt"]].mean(
+    if "reliability_predictability" not in df_plot.columns:
+        df_plot["reliability_predictability"] = df_plot["predictability_brier_score"]
+    if "reliability_robustness" not in df_plot.columns:
+        df_plot["reliability_robustness"] = df_plot[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
             axis=1, skipna=True
         )
-    if "R_Saf" not in df_plot.columns:
-        df_plot["R_Saf"] = df_plot["S_safety"]
-    if "R_Overall" not in df_plot.columns:
-        df_plot["R_Overall"] = df_plot[["R_Con", "R_Pred", "R_Rob"]].mean(
+    if "reliability_safety" not in df_plot.columns:
+        df_plot["reliability_safety"] = df_plot["safety_score"]
+    if "reliability_overall" not in df_plot.columns:
+        df_plot["reliability_overall"] = df_plot[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
             axis=1, skipna=True
         )
 
@@ -1799,12 +1799,12 @@ def plot_reliability_by_provider(df: pd.DataFrame, output_dir: Path):
 
     # Define metrics to plot
     metrics = [
-        ("R_Overall", "Overall Reliability"),
+        ("reliability_overall", "Overall Reliability"),
         ("accuracy", "Accuracy"),
-        ("R_Con", "Consistency"),
-        ("R_Pred", "Predictability"),
-        ("R_Rob", "Robustness"),
-        ("R_Saf", "Safety"),
+        ("reliability_consistency", "Consistency"),
+        ("reliability_predictability", "Predictability"),
+        ("reliability_robustness", "Robustness"),
+        ("reliability_safety", "Safety"),
     ]
 
     # Create figure: 2 rows x 3 columns
@@ -2080,11 +2080,11 @@ def _plot_shared_metric(
 def plot_prompt_robustness(
     benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir: Path
 ):
-    """Shared bar chart of prompt robustness (R_prompt) across benchmarks."""
+    """Shared bar chart of prompt robustness (robustness_prompt_variation) across benchmarks."""
     _plot_shared_metric(
         benchmark_data,
         output_dir,
-        metric_col="R_prompt",
+        metric_col="robustness_prompt_variation",
         metric_label=r"$R_{\mathrm{prompt}}$",
         title=r"Prompt Robustness ($R_{\mathrm{prompt}}$)",
         filename="prompt_robustness.pdf",
@@ -2097,11 +2097,11 @@ def plot_prompt_robustness(
 def plot_outcome_consistency(
     benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir: Path
 ):
-    """Shared bar chart of outcome consistency (C_out) across benchmarks."""
+    """Shared bar chart of outcome consistency (consistency_outcome) across benchmarks."""
     _plot_shared_metric(
         benchmark_data,
         output_dir,
-        metric_col="C_out",
+        metric_col="consistency_outcome",
         metric_label=r"$C_{\mathrm{out}}$",
         title=r"Outcome Consistency ($C_{\mathrm{out}}$)",
         filename="outcome_consistency.pdf",
@@ -2109,11 +2109,11 @@ def plot_outcome_consistency(
 
 
 def plot_calibration(benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir: Path):
-    """Shared bar chart of calibration (P_cal) across benchmarks."""
+    """Shared bar chart of calibration (predictability_calibration) across benchmarks."""
     _plot_shared_metric(
         benchmark_data,
         output_dir,
-        metric_col="P_cal",
+        metric_col="predictability_calibration",
         metric_label=r"$P_{\mathrm{cal}}$",
         title=r"Calibration ($P_{\mathrm{cal}}$)",
         filename="calibration.pdf",
@@ -2127,11 +2127,11 @@ def plot_calibration(benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir:
 def plot_discrimination(
     benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir: Path
 ):
-    """Shared bar chart of discrimination (P_auroc) across benchmarks."""
+    """Shared bar chart of discrimination (predictability_roc_auc) across benchmarks."""
     _plot_shared_metric(
         benchmark_data,
         output_dir,
-        metric_col="P_auroc",
+        metric_col="predictability_roc_auc",
         metric_label=r"$P_{\mathrm{AUROC}}$",
         title=r"Discrimination ($P_{\mathrm{AUROC}}$)",
         filename="discrimination.pdf",
@@ -2148,18 +2148,18 @@ def plot_reasoning_vs_nonreasoning(
     metrics = [
         ("accuracy", "Accuracy"),
         # Consistency
-        ("C_out", r"$C_{\mathrm{out}}$"),
-        ("C_traj_d", r"$C_{\mathrm{traj}}^d$"),
-        ("C_traj_s", r"$C_{\mathrm{traj}}^s$"),
-        ("C_res", r"$C_{\mathrm{res}}$"),
+        ("consistency_outcome", r"$C_{\mathrm{out}}$"),
+        ("consistency_trajectory_distribution", r"$C_{\mathrm{traj}}^d$"),
+        ("consistency_trajectory_sequence", r"$C_{\mathrm{traj}}^s$"),
+        ("consistency_resource", r"$C_{\mathrm{res}}$"),
         # Predictability
-        ("P_cal", r"$P_{\mathrm{cal}}$"),
-        ("P_auroc", r"$P_{\mathrm{AUROC}}$"),
-        ("P_brier", r"$P_{\mathrm{brier}}$"),
+        ("predictability_calibration", r"$P_{\mathrm{cal}}$"),
+        ("predictability_roc_auc", r"$P_{\mathrm{AUROC}}$"),
+        ("predictability_brier_score", r"$P_{\mathrm{brier}}$"),
         # Robustness
-        ("R_fault", r"$R_{\mathrm{fault}}$"),
-        ("R_struct", r"$R_{\mathrm{env}}$"),
-        ("R_prompt", r"$R_{\mathrm{prompt}}$"),
+        ("robustness_fault_injection", r"$R_{\mathrm{fault}}$"),
+        ("robustness_structural", r"$R_{\mathrm{env}}$"),
+        ("robustness_prompt_variation", r"$R_{\mathrm{prompt}}$"),
     ]
 
     benchmark_display = {
@@ -2305,14 +2305,14 @@ def plot_scaffold_comparison(
     # ---- helper: prepare dimension columns ----
     def _prepare(df):
         df = df.copy()
-        if "R_Con" not in df.columns:
-            df["R_Con"] = compute_weighted_r_con(
-                df["C_out"], df["C_traj_d"], df["C_traj_s"], df["C_res"]
+        if "reliability_consistency" not in df.columns:
+            df["reliability_consistency"] = compute_weighted_r_con(
+                df["consistency_outcome"], df["consistency_trajectory_distribution"], df["consistency_trajectory_sequence"], df["consistency_resource"]
             )
-        if "R_Pred" not in df.columns:
-            df["R_Pred"] = df["P_brier"]
-        if "R_Rob" not in df.columns:
-            df["R_Rob"] = df[["R_fault", "R_struct", "R_prompt"]].mean(
+        if "reliability_predictability" not in df.columns:
+            df["reliability_predictability"] = df["predictability_brier_score"]
+        if "reliability_robustness" not in df.columns:
+            df["reliability_robustness"] = df[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
                 axis=1, skipna=True
             )
         return df
@@ -2462,9 +2462,9 @@ def plot_scaffold_comparison(
     # PLOT 1: dimension-level overview (2x2)
     # ==================================================================
     dimensions = [
-        ("R_Con", "Consistency"),
-        ("R_Pred", "Predictability"),
-        ("R_Rob", "Robustness"),
+        ("reliability_consistency", "Consistency"),
+        ("reliability_predictability", "Predictability"),
+        ("reliability_robustness", "Robustness"),
         ("accuracy", "Accuracy"),
     ]
 
@@ -2500,44 +2500,44 @@ def plot_scaffold_comparison(
     # PLOT 2: comprehensive sub-metric breakdown
     # Layout: 4 rows (Consistency, Predictability, Robustness, Safety)
     #         x max-columns across rows.
-    # Consistency  : C_out | C_traj_d | C_traj_s | C_res
-    # Predictability: P_cal | P_auroc  | P_brier  | (accuracy)
-    # Robustness   : R_fault | R_struct | R_prompt
-    # Safety       : S_comp  | S_harm   | S_safety
+    # Consistency  : consistency_outcome | consistency_trajectory_distribution | consistency_trajectory_sequence | consistency_resource
+    # Predictability: predictability_calibration | predictability_roc_auc  | predictability_brier_score  | (accuracy)
+    # Robustness   : robustness_fault_injection | robustness_structural | robustness_prompt_variation
+    # Safety       : safety_compliance  | safety_harm_severity   | safety_score
     # ==================================================================
     section_metrics = [
         (
             "Consistency",
             [
-                ("C_out", r"$C_{out}$"),
-                ("C_traj_d", r"$C_{traj,d}$"),
-                ("C_traj_s", r"$C_{traj,s}$"),
-                ("C_res", r"$C_{res}$"),
+                ("consistency_outcome", r"$C_{out}$"),
+                ("consistency_trajectory_distribution", r"$C_{traj,d}$"),
+                ("consistency_trajectory_sequence", r"$C_{traj,s}$"),
+                ("consistency_resource", r"$C_{res}$"),
             ],
         ),
         (
             "Predictability",
             [
-                ("P_cal", r"$P_{cal}$"),
-                ("P_auroc", r"$P_{auroc}$"),
-                ("P_brier", r"$P_{brier}$"),
+                ("predictability_calibration", r"$P_{cal}$"),
+                ("predictability_roc_auc", r"$P_{auroc}$"),
+                ("predictability_brier_score", r"$P_{brier}$"),
                 ("accuracy", "Accuracy"),
             ],
         ),
         (
             "Robustness",
             [
-                ("R_fault", r"$R_{fault}$"),
-                ("R_struct", r"$R_{struct}$"),
-                ("R_prompt", r"$R_{prompt}$"),
+                ("robustness_fault_injection", r"$R_{fault}$"),
+                ("robustness_structural", r"$R_{struct}$"),
+                ("robustness_prompt_variation", r"$R_{prompt}$"),
             ],
         ),
         (
             "Safety",
             [
-                ("S_comp", r"$S_{comp}$"),
-                ("S_harm", r"$S_{harm}$"),
-                ("S_safety", r"$S_{safety}$"),
+                ("safety_compliance", r"$S_{comp}$"),
+                ("safety_harm_severity", r"$S_{harm}$"),
+                ("safety_score", r"$S_{safety}$"),
             ],
         ),
     ]
@@ -2618,18 +2618,18 @@ def plot_taubench_clean_vs_orig(
     # ---- helper: prepare a df (add dimension scores, provider/date cols) ----
     def _prepare(df):
         df = sort_agents_by_provider_and_date(df)
-        if "R_Con" not in df.columns:
-            df["R_Con"] = compute_weighted_r_con(
-                df["C_out"], df["C_traj_d"], df["C_traj_s"], df["C_res"]
+        if "reliability_consistency" not in df.columns:
+            df["reliability_consistency"] = compute_weighted_r_con(
+                df["consistency_outcome"], df["consistency_trajectory_distribution"], df["consistency_trajectory_sequence"], df["consistency_resource"]
             )
-        if "R_Pred" not in df.columns:
-            df["R_Pred"] = df["P_brier"]
-        if "R_Rob" not in df.columns:
-            df["R_Rob"] = df[["R_fault", "R_struct", "R_prompt"]].mean(
+        if "reliability_predictability" not in df.columns:
+            df["reliability_predictability"] = df["predictability_brier_score"]
+        if "reliability_robustness" not in df.columns:
+            df["reliability_robustness"] = df[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
                 axis=1, skipna=True
             )
-        if "R_Saf" not in df.columns:
-            df["R_Saf"] = df["S_safety"]
+        if "reliability_safety" not in df.columns:
+            df["reliability_safety"] = df["safety_score"]
         return df
 
     df_base = _prepare(df_base.copy())
@@ -2649,14 +2649,14 @@ def plot_taubench_clean_vs_orig(
     # ---- dimensions to plot ----
     # Map dimension column to its sub-metric SE columns for aggregate SE
     dim_se_map = {
-        "R_Con": ["C_out_se", "C_traj_d_se", "C_traj_s_se", "C_res_se"],
-        "R_Pred": ["P_brier_se"],  # R_Pred = P_brier directly
-        "R_Rob": ["R_fault_se", "R_struct_se", "R_prompt_se"],
+        "reliability_consistency": ["consistency_outcome_se", "consistency_trajectory_distribution_se", "consistency_trajectory_sequence_se", "consistency_resource_se"],
+        "reliability_predictability": ["predictability_brier_score_se"],  # reliability_predictability = predictability_brier_score directly
+        "reliability_robustness": ["robustness_fault_injection_se", "robustness_structural_se", "robustness_prompt_variation_se"],
     }
     dimensions = [
-        ("R_Con", "Consistency"),
-        ("R_Pred", "Predictability"),
-        ("R_Rob", "Robustness"),
+        ("reliability_consistency", "Consistency"),
+        ("reliability_predictability", "Predictability"),
+        ("reliability_robustness", "Robustness"),
         ("accuracy", "Accuracy"),
     ]
 
@@ -2684,7 +2684,7 @@ def plot_taubench_clean_vs_orig(
         yerr_clean = None
         if dim_col in dim_se_map:
             # Aggregate dimension: propagate sub-metric SEs
-            if dim_col == "R_Con":
+            if dim_col == "reliability_consistency":
                 yerr_base = _get_weighted_r_con_yerr(df_base, values=base_vals)
             else:
                 se_cols = dim_se_map[dim_col]
@@ -2695,7 +2695,7 @@ def plot_taubench_clean_vs_orig(
                     clean_rows.append(clean_lookup.loc[a])
             if clean_rows:
                 df_clean_ordered = pd.DataFrame(clean_rows)
-                if dim_col == "R_Con":
+                if dim_col == "reliability_consistency":
                     yerr_clean = _get_weighted_r_con_yerr(
                         df_clean_ordered, values=clean_vals
                     )

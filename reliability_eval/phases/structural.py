@@ -27,10 +27,10 @@ def run_structural_phase(
 ) -> int:
     """
     Run structural perturbation phase.
-    Computes: R_struct (structural robustness)
+    Computes: robustness_structural (structural robustness)
     """
     print("\n" + "=" * 80)
-    print("🔧 PHASE 4: STRUCTURAL PERTURBATIONS (R_struct)")
+    print("🔧 PHASE 4: STRUCTURAL PERTURBATIONS (robustness_structural)")
     print("=" * 80)
     print(f"   Perturbation strength: {perturbation_strength}")
     print(f"   Perturbation type: {perturbation_type}")

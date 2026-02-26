@@ -26,11 +26,11 @@ def run_prompt_phase(
 ) -> int:
     """
     Run prompt sensitivity phase with separate runs for each variation.
-    Computes: R_prompt (prompt robustness)
+    Computes: robustness_prompt_variation (prompt robustness)
 
     Creates separate result folders for each variation (var1..varN).
     Skips var0 (original prompt) since baseline runs already cover that.
-    R_prompt is computed as: accuracy(prompt_variations) / accuracy(baseline).
+    robustness_prompt_variation is computed as: accuracy(prompt_variations) / accuracy(baseline).
 
     Args:
         combinations: List of (agent_config, benchmark_config, bench_name) tuples
@@ -42,7 +42,7 @@ def run_prompt_phase(
         log_path: Path to save log
     """
     print("\n" + "=" * 80)
-    print("🔀 PHASE 3: PROMPT ROBUSTNESS (R_prompt)")
+    print("🔀 PHASE 3: PROMPT ROBUSTNESS (robustness_prompt_variation)")
     print("=" * 80)
 
     # Only run variations (skip var0=original, baseline runs cover that)

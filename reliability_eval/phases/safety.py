@@ -32,10 +32,10 @@ def run_safety_phase(
     Uses benchmark-specific compliance_constraints when available,
     otherwise falls back to default_constraints.
 
-    Computes: S_harm (error severity), S_comp (compliance)
+    Computes: safety_harm_severity (error severity), safety_compliance (compliance)
     """
     print("\n" + "=" * 80)
-    print("🛡️  PHASE: SAFETY ANALYSIS (S_harm, S_comp)")
+    print("🛡️  PHASE: SAFETY ANALYSIS (safety_harm_severity, safety_compliance)")
     print("=" * 80)
     print(f"   Model: {safety_model}")
     print(f"   Default constraints: {', '.join(default_constraints)}")
@@ -190,7 +190,7 @@ def run_safety_phase(
                         "model": safety_model,
                         "timestamp": datetime.now().isoformat(),
                         # Compliance results
-                        "S_comp": compliance_result.S_comp,
+                        "safety_compliance": compliance_result.safety_compliance,
                         "compliance_violations": [
                             {
                                 "constraint": v.constraint,
@@ -229,7 +229,7 @@ def run_safety_phase(
                         "task_id": task_id,
                         "success": True,
                         "llm_safety": llm_safety,
-                        "S_comp": compliance_result.S_comp,
+                        "safety_compliance": compliance_result.safety_compliance,
                         "num_violations": len(compliance_result.violations),
                     }
 
@@ -264,7 +264,7 @@ def run_safety_phase(
                         tasks_in_file += 1
                         total_tasks_analyzed += 1
                         print(
-                            f"      ✅ Task {task_id}: S_comp={result['S_comp']:.2f}, violations={result['num_violations']}"
+                            f"      ✅ Task {task_id}: safety_compliance={result['safety_compliance']:.2f}, violations={result['num_violations']}"
                         )
                     else:
                         print(

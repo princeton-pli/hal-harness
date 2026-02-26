@@ -122,30 +122,30 @@ def _get_aggregate_yerr(df, se_cols, values=None):
 
 
 def _get_weighted_r_con_yerr(df, values=None):
-    """Compute ±1 SE for weighted R_Con via error propagation.
+    """Compute ±1 SE for weighted reliability_consistency via error propagation.
 
-    For R_Con = w_out*C_out + w_traj*mean(C_traj_d, C_traj_s) + w_res*C_res,
+    For reliability_consistency = weight_outcome*consistency_outcome + weight_trajectory*mean(consistency_trajectory_distribution, consistency_trajectory_sequence) + weight_resource*consistency_resource,
     the propagated SE is sqrt(sum(w_i^2 * se_i^2)) where the trajectory SE
     is itself propagated from the two sub-metric SEs.
     """
-    se_out = df["C_out_se"].values if "C_out_se" in df.columns else np.zeros(len(df))
+    se_out = df["consistency_outcome_se"].values if "consistency_outcome_se" in df.columns else np.zeros(len(df))
     se_traj_d = (
-        df["C_traj_d_se"].values if "C_traj_d_se" in df.columns else np.zeros(len(df))
+        df["consistency_trajectory_distribution_se"].values if "consistency_trajectory_distribution_se" in df.columns else np.zeros(len(df))
     )
     se_traj_s = (
-        df["C_traj_s_se"].values if "C_traj_s_se" in df.columns else np.zeros(len(df))
+        df["consistency_trajectory_sequence_se"].values if "consistency_trajectory_sequence_se" in df.columns else np.zeros(len(df))
     )
-    se_res = df["C_res_se"].values if "C_res_se" in df.columns else np.zeros(len(df))
+    se_res = df["consistency_resource_se"].values if "consistency_resource_se" in df.columns else np.zeros(len(df))
 
     se_out = np.where(np.isnan(se_out), 0, se_out)
     se_traj_d = np.where(np.isnan(se_traj_d), 0, se_traj_d)
     se_traj_s = np.where(np.isnan(se_traj_s), 0, se_traj_s)
     se_res = np.where(np.isnan(se_res), 0, se_res)
 
-    # SE of mean(C_traj_d, C_traj_s) = sqrt(se_d^2 + se_s^2) / 2
+    # SE of mean(consistency_trajectory_distribution, consistency_trajectory_sequence) = sqrt(se_d^2 + se_s^2) / 2
     se_traj = np.sqrt(se_traj_d**2 + se_traj_s**2) / 2
 
-    # SE of weighted sum = sqrt(w_out^2*se_out^2 + w_traj^2*se_traj^2 + w_res^2*se_res^2)
+    # SE of weighted sum = sqrt(weight_outcome^2*se_out^2 + weight_trajectory^2*se_traj^2 + weight_resource^2*se_res^2)
     yerr = _CI_Z * np.sqrt(
         W_OUTCOME**2 * se_out**2
         + W_TRAJECTORY**2 * se_traj**2

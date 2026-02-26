@@ -76,16 +76,16 @@ class TestAnalyzeAgentPipeline:
         assert agent_metrics.num_tasks == 2
 
     def test_r_fault_computed(self, agent_metrics):
-        # fault acc = 0.0, baseline acc = 0.5 → R_fault = 0.0 / 0.5 = 0.0
-        assert agent_metrics.R_fault == pytest.approx(0.0)
+        # fault acc = 0.0, baseline acc = 0.5 → robustness_fault_injection = 0.0 / 0.5 = 0.0
+        assert agent_metrics.robustness_fault_injection == pytest.approx(0.0)
 
     def test_consistency_nan_with_single_baseline_run(self, agent_metrics):
         # Only 1 baseline run — consistency requires ≥2
-        assert math.isnan(agent_metrics.C_out)
+        assert math.isnan(agent_metrics.consistency_outcome)
 
     def test_no_safety_violations_in_fixture(self, agent_metrics):
-        # Fixture has no llm_safety data → S_harm should be 1.0 (no harm)
-        assert not math.isnan(agent_metrics.S_harm)
+        # Fixture has no llm_safety data → safety_harm_severity should be 1.0 (no harm)
+        assert not math.isnan(agent_metrics.safety_harm_severity)
 
 
 class TestMetricsToDataframePipeline:
@@ -96,14 +96,14 @@ class TestMetricsToDataframePipeline:
         assert len(metrics_df) == 1
 
     def test_has_core_columns(self, metrics_df):
-        for col in ("agent", "accuracy", "C_out", "R_fault", "P_rc", "S_harm"):
+        for col in ("agent", "accuracy", "consistency_outcome", "robustness_fault_injection", "predictability_rate_confidence_correlation", "safety_harm_severity"):
             assert col in metrics_df.columns, f"missing column: {col}"
 
     def test_accuracy_value_in_dataframe(self, metrics_df):
         assert metrics_df["accuracy"].iloc[0] == pytest.approx(0.5)
 
     def test_r_fault_value_in_dataframe(self, metrics_df):
-        assert metrics_df["R_fault"].iloc[0] == pytest.approx(0.0)
+        assert metrics_df["robustness_fault_injection"].iloc[0] == pytest.approx(0.0)
 
 
 class TestAnalyzeAllAgentsPipeline:

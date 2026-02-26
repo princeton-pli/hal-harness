@@ -1,4 +1,4 @@
-"""Predictability metrics: P_rc, P_cal, P_auroc, P_brier."""
+"""Predictability metrics: predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score."""
 
 import numpy as np
 from typing import Dict, List
@@ -8,9 +8,9 @@ from reliability_eval.constants import EPSILON
 
 def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
     """
-    Compute P_rc: Risk-Coverage Score (paper Definition 3.5).
+    Compute predictability_rate_confidence_correlation: Risk-Coverage Score (paper Definition 3.5).
 
-    P_rc = 1 - E-AuRC / E-AuRC_max
+    predictability_rate_confidence_correlation = 1 - E-AuRC / E-AuRC_max
 
     where E-AuRC is excess AuRC over optimal selector.
     """
@@ -21,7 +21,7 @@ def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict
     N = len(confidences)
     if N == 0:
         return {
-            "P_rc": np.nan,
+            "predictability_rate_confidence_correlation": np.nan,
             "aurc": np.nan,
             "coverages": [],
             "risks": [],
@@ -56,12 +56,12 @@ def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict
     excess_aurc = aurc - aurc_optimal
     excess_max = aurc_random - aurc_optimal
 
-    # P_rc score
-    P_rc = 1 - (excess_aurc / (excess_max + EPSILON)) if excess_max > EPSILON else 1.0
-    P_rc = np.clip(P_rc, 0.0, 1.0)
+    # predictability_rate_confidence_correlation score
+    predictability_rate_confidence_correlation = 1 - (excess_aurc / (excess_max + EPSILON)) if excess_max > EPSILON else 1.0
+    predictability_rate_confidence_correlation = np.clip(predictability_rate_confidence_correlation, 0.0, 1.0)
 
     return {
-        "P_rc": P_rc,
+        "predictability_rate_confidence_correlation": predictability_rate_confidence_correlation,
         "aurc": aurc,
         "coverages": coverages,
         "risks": risks,
@@ -73,9 +73,9 @@ def compute_ece_metrics(
     confidences: np.ndarray, successes: np.ndarray, n_bins: int = 10
 ) -> Dict:
     """
-    Compute P_cal: Calibration Score (paper Definition 3.6).
+    Compute predictability_calibration: Calibration Score (paper Definition 3.6).
 
-    P_cal = 1 - ECE
+    predictability_calibration = 1 - ECE
 
     where ECE is Expected Calibration Error.
     """
@@ -84,7 +84,7 @@ def compute_ece_metrics(
     successes = successes[valid]
 
     if len(confidences) == 0:
-        return {"P_cal": np.nan, "ece": np.nan, "bin_stats": []}
+        return {"predictability_calibration": np.nan, "ece": np.nan, "bin_stats": []}
 
     bin_edges = np.linspace(0, 1, n_bins + 1)
     ece = 0.0
@@ -113,16 +113,16 @@ def compute_ece_metrics(
                 }
             )
 
-    P_cal = 1 - ece
+    predictability_calibration = 1 - ece
 
-    return {"P_cal": P_cal, "ece": ece, "bin_stats": bin_stats}
+    return {"predictability_calibration": predictability_calibration, "ece": ece, "bin_stats": bin_stats}
 
 
 def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
     """
-    Compute P_auroc: Discrimination Score (AUC-ROC).
+    Compute predictability_roc_auc: Discrimination Score (AUC-ROC).
 
-    P_auroc = P(conf_success > conf_failure)
+    predictability_roc_auc = P(conf_success > conf_failure)
 
     This is the probability that a randomly chosen successful task
     has higher confidence than a randomly chosen failed task.
@@ -136,14 +136,14 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     successes = successes[valid]
 
     if len(confidences) == 0:
-        return {"P_auroc": np.nan, "n_positive": 0, "n_negative": 0}
+        return {"predictability_roc_auc": np.nan, "n_positive": 0, "n_negative": 0}
 
     n_positive = np.sum(successes == 1)
     n_negative = np.sum(successes == 0)
 
     # Need at least one of each class
     if n_positive == 0 or n_negative == 0:
-        return {"P_auroc": np.nan, "n_positive": n_positive, "n_negative": n_negative}
+        return {"predictability_roc_auc": np.nan, "n_positive": n_positive, "n_negative": n_negative}
 
     # Compute AUC-ROC using the Mann-Whitney U statistic formulation
     # AUC = P(conf_pos > conf_neg) + 0.5 * P(conf_pos == conf_neg)
@@ -163,10 +163,10 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
         tied += np.sum(neg_confidences == pos_conf)
 
     total_pairs = n_positive * n_negative
-    P_auroc = (concordant + 0.5 * tied) / total_pairs
+    predictability_roc_auc = (concordant + 0.5 * tied) / total_pairs
 
     return {
-        "P_auroc": P_auroc,
+        "predictability_roc_auc": predictability_roc_auc,
         "n_positive": n_positive,
         "n_negative": n_negative,
         "concordant_pairs": concordant,
@@ -177,40 +177,40 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
 
 def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
     """
-    Compute P_brier: Overall Predictability Score (1 - Brier Score).
+    Compute predictability_brier_score: Overall Predictability Score (1 - Brier Score).
 
     Brier Score = (1/N) * sum((confidence - success)^2)
-    P_brier = 1 - Brier Score
+    predictability_brier_score = 1 - Brier Score
 
     The Brier Score is a proper scoring rule that combines calibration
     and discrimination into a single metric. Lower Brier = better predictions.
 
-    We return P_brier = 1 - Brier so that higher is better (consistent with other metrics).
+    We return predictability_brier_score = 1 - Brier so that higher is better (consistent with other metrics).
 
     Interpretation:
-    - P_brier = 1.0: Perfect predictions (confidence always matches outcome)
-    - P_brier = 0.75: Equivalent to always predicting 0.5 for 50% base rate
-    - P_brier = 0.0: Worst possible (confident and always wrong)
+    - predictability_brier_score = 1.0: Perfect predictions (confidence always matches outcome)
+    - predictability_brier_score = 0.75: Equivalent to always predicting 0.5 for 50% base rate
+    - predictability_brier_score = 0.0: Worst possible (confident and always wrong)
     """
     valid = ~(np.isnan(confidences) | np.isnan(successes))
     confidences = confidences[valid]
     successes = successes[valid]
 
     if len(confidences) == 0:
-        return {"P_brier": np.nan, "brier_score": np.nan}
+        return {"predictability_brier_score": np.nan, "brier_score": np.nan}
 
     # Brier Score: mean squared error between confidence and outcome
     brier_score = np.mean((confidences - successes) ** 2)
 
     # Transform to higher-is-better
-    P_brier = 1 - brier_score
+    predictability_brier_score = 1 - brier_score
 
     # Also compute reference Brier scores for context
     base_rate = np.mean(successes)
     brier_baseline = base_rate * (1 - base_rate)  # Brier if always predicting base rate
 
     return {
-        "P_brier": P_brier,
+        "predictability_brier_score": predictability_brier_score,
         "brier_score": brier_score,
         "brier_baseline": brier_baseline,
         "base_rate": base_rate,
@@ -218,7 +218,7 @@ def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
 
 
 def compute_predictability_metrics(runs: List[Dict]) -> Dict:
-    """Compute predictability metrics (P_rc, P_cal, P_auroc, P_brier) from runs with confidence scores."""
+    """Compute predictability metrics (predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score) from runs with confidence scores."""
     all_confidences = []
     all_successes = []
 
@@ -233,10 +233,10 @@ def compute_predictability_metrics(runs: List[Dict]) -> Dict:
 
     if not all_confidences:
         return {
-            "P_rc": np.nan,
-            "P_cal": np.nan,
-            "P_auroc": np.nan,
-            "P_brier": np.nan,
+            "predictability_rate_confidence_correlation": np.nan,
+            "predictability_calibration": np.nan,
+            "predictability_roc_auc": np.nan,
+            "predictability_brier_score": np.nan,
             "mean_confidence": np.nan,
             "aurc_data": {},
             "bin_stats": [],
@@ -256,26 +256,26 @@ def compute_predictability_metrics(runs: List[Dict]) -> Dict:
     n_boot = 200
     rng = np.random.default_rng(42)
     n = len(confidences)
-    boot_P_cal, boot_P_auroc, boot_P_brier = [], [], []
+    boot_predictability_calibration, boot_predictability_roc_auc, boot_predictability_brier_score = [], [], []
     for _ in range(n_boot):
         idx = rng.choice(n, size=n, replace=True)
         c_b, s_b = confidences[idx], successes[idx]
-        boot_P_cal.append(compute_ece_metrics(c_b, s_b)["P_cal"])
-        boot_P_auroc.append(compute_auroc_metrics(c_b, s_b)["P_auroc"])
-        boot_P_brier.append(compute_brier_metrics(c_b, s_b)["P_brier"])
+        boot_predictability_calibration.append(compute_ece_metrics(c_b, s_b)["predictability_calibration"])
+        boot_predictability_roc_auc.append(compute_auroc_metrics(c_b, s_b)["predictability_roc_auc"])
+        boot_predictability_brier_score.append(compute_brier_metrics(c_b, s_b)["predictability_brier_score"])
 
     def _boot_se(vals):
         valid = [v for v in vals if not np.isnan(v)]
         return np.std(valid) if len(valid) >= 2 else np.nan
 
     return {
-        "P_rc": aurc_result["P_rc"],
-        "P_cal": ece_result["P_cal"],
-        "P_auroc": auroc_result["P_auroc"],
-        "P_brier": brier_result["P_brier"],
-        "P_cal_se": _boot_se(boot_P_cal),
-        "P_auroc_se": _boot_se(boot_P_auroc),
-        "P_brier_se": _boot_se(boot_P_brier),
+        "predictability_rate_confidence_correlation": aurc_result["predictability_rate_confidence_correlation"],
+        "predictability_calibration": ece_result["predictability_calibration"],
+        "predictability_roc_auc": auroc_result["predictability_roc_auc"],
+        "predictability_brier_score": brier_result["predictability_brier_score"],
+        "predictability_calibration_se": _boot_se(boot_predictability_calibration),
+        "predictability_roc_auc_se": _boot_se(boot_predictability_roc_auc),
+        "predictability_brier_score_se": _boot_se(boot_predictability_brier_score),
         "mean_confidence": np.mean(confidences),
         "aurc_data": aurc_result,
         "bin_stats": ece_result["bin_stats"],

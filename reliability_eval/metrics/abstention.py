@@ -1,4 +1,4 @@
-"""Abstention calibration metrics: A_rate, A_prec, A_rec, A_sel, A_cal."""
+"""Abstention calibration metrics: abstention_rate, abstention_precision, abstention_recall, abstention_selective_accuracy, abstention_calibration."""
 
 import numpy as np
 from typing import Dict, List
