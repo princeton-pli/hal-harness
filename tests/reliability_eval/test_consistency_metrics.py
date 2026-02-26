@@ -52,11 +52,11 @@ class TestComputeTrajectoryConsistencyConditioned:
         trajs = [["a", "a", "a"], ["b", "b", "b"], ["c", "c", "c"]]
         successes = [1, 1, 1]
         C_success, _ = compute_trajectory_consistency_conditioned(trajs, successes)
-        assert C_success < 0.5
+        assert C_success == pytest.approx(0.1674453888423023)
 
     def test_returns_nan_when_fewer_than_two_successful_runs(self):
         trajs = [["a", "b"], ["c", "d"]]
-        successes = [1, 0]
+        successes = [1, 0] # only one successful run
         C_success, _ = compute_trajectory_consistency_conditioned(trajs, successes)
         assert math.isnan(C_success)
 
