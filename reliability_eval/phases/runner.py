@@ -1,6 +1,7 @@
 """Command building, execution, and environment setup for reliability_eval phases."""
 
 import os
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -86,6 +87,24 @@ def check_api_keys():
 # COMMAND BUILDING
 # =============================================================================
 
+_AGENT_FUNCTION_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def _validate_agent_config(agent_config: Dict) -> None:
+    """Validate agent_function and agent_dir before use in subprocess commands."""
+    agent_function = agent_config.get("agent_function", "")
+    if not _AGENT_FUNCTION_RE.match(agent_function):
+        raise ValueError(
+            f"Invalid agent_function {agent_function!r}: must match "
+            r"'^[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_]*$'"
+        )
+
+    agent_dir = agent_config.get("agent_dir", "")
+    if not isinstance(agent_dir, str):
+        raise ValueError(
+            f"Invalid agent_dir {agent_dir!r}: must be a string"
+        )
+
 
 def build_base_command(
     agent_config: Dict,
@@ -99,6 +118,7 @@ def build_base_command(
     results_dir: Optional[str] = None,
 ) -> List[str]:
     """Build the base hal-eval command."""
+    _validate_agent_config(agent_config)
     benchmark_name = benchmark_config["benchmark_name"]
     agent_name = f"{agent_config['name']}{agent_name_suffix}"
 

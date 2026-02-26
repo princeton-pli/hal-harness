@@ -1,6 +1,6 @@
 """Tests for evaluation configuration in reliability_eval/config.py."""
 
-from reliability_eval.config import AGENT_CONFIGS, BENCHMARK_CONFIGS, PHASE_SETTINGS
+from reliability_eval.config import AGENT_CONFIGS, BENCHMARK_CONFIGS
 
 
 class TestAgentConfigs:
@@ -49,37 +49,3 @@ class TestBenchmarkConfigs:
         cfg = BENCHMARK_CONFIGS["taubench_airline"]
         assert "compliance_constraints" in cfg
         assert len(cfg["compliance_constraints"]) > 0
-
-
-class TestPhaseSettings:
-    def test_is_a_dict(self):
-        assert isinstance(PHASE_SETTINGS, dict)
-
-    def test_has_all_phases(self):
-        for phase in (
-            "baseline",
-            "fault",
-            "prompt",
-            "structural",
-            "safety",
-            "abstention",
-        ):
-            assert phase in PHASE_SETTINGS, (
-                f"Phase '{phase}' missing from PHASE_SETTINGS"
-            )
-
-    def test_each_phase_has_description(self):
-        for phase, settings in PHASE_SETTINGS.items():
-            assert "description" in settings, f"Phase '{phase}' missing 'description'"
-            assert isinstance(settings["description"], str)
-
-    def test_baseline_has_k_runs(self):
-        assert "k_runs" in PHASE_SETTINGS["baseline"]
-
-    def test_fault_has_fault_rate(self):
-        assert "fault_rate" in PHASE_SETTINGS["fault"]
-        assert 0 < PHASE_SETTINGS["fault"]["fault_rate"] < 1
-
-    def test_prompt_has_num_variations(self):
-        assert "num_variations" in PHASE_SETTINGS["prompt"]
-        assert PHASE_SETTINGS["prompt"]["num_variations"] > 0

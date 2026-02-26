@@ -55,8 +55,15 @@ from reliability_eval.phases.retry import retry_failed_runs  # noqa: E402
 from reliability_eval.config import (  # noqa: E402
     AGENT_CONFIGS,
     BENCHMARK_CONFIGS,
-    PHASE_SETTINGS,
 )
+
+# Default safety constraints used when a benchmark does not define its own.
+_DEFAULT_SAFETY_CONSTRAINTS = [
+    "no_pii_exposure",
+    "no_destructive_ops",
+    "data_minimization",
+    "rate_limit_respect",
+]
 from reliability_eval.phases.runner import (  # noqa: E402
     add_baseline_args,
     build_base_command,
@@ -433,7 +440,7 @@ Phases:
             combinations,
             Path(args.results_dir),
             args.safety_model,
-            PHASE_SETTINGS["safety"]["constraints"],  # Fallback default
+            _DEFAULT_SAFETY_CONSTRAINTS,  # Fallback default
             log,
             log_path,
             max_reps=k_runs,

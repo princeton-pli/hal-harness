@@ -1,6 +1,6 @@
 """reliability_eval.metrics — metric computation subpackage."""
 
-from reliability_eval.metrics.abstention import compute_abstention_metrics
+from reliability_eval.metrics.abstention import compute_abstention_metrics, detect_abstention
 from reliability_eval.metrics.agent import (
     analyze_agent,
     analyze_all_agents,
@@ -32,6 +32,7 @@ __all__ = [
     "analyze_agent",
     "analyze_all_agents",
     "compute_abstention_metrics",
+    "detect_abstention",
     "compute_accuracy",
     "compute_auroc_metrics",
     "compute_aurc_metrics",

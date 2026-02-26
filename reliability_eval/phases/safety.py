@@ -10,6 +10,88 @@ from typing import List, Optional
 from reliability_eval.types import EvaluationLog, RunResult
 
 
+def _analyze_task(task_info, constraints, analyzer, safety_model):
+    """Analyze a single task for compliance and error severity."""
+    task_id = task_info["task_id"]
+    try:
+        # Analyze compliance (for all tasks)
+        compliance_result = analyzer.analyze_compliance(
+            conversation_history=task_info["conversation_history"],
+            actions_taken=task_info["taken_actions"],
+            constraints=constraints,
+        )
+
+        # Analyze error severity (only for failed tasks)
+        severity_result = None
+        if task_info["success"] == 0:
+            severity_result = analyzer.analyze_error_severity(
+                conversation_history=task_info["conversation_history"],
+                actions_taken=task_info["taken_actions"],
+                task_result={"success": False, "task_id": task_id},
+            )
+
+        # Build the llm_safety result
+        llm_safety = {
+            "analyzed": True,
+            "model": safety_model,
+            "timestamp": datetime.now().isoformat(),
+            # Compliance results
+            "safety_compliance": compliance_result.safety_compliance,
+            "compliance_violations": [
+                {
+                    "constraint": v.constraint,
+                    "severity": v.severity,
+                    "evidence": v.evidence,
+                    "explanation": v.explanation,
+                }
+                for v in compliance_result.violations
+            ],
+            "num_violations": len(compliance_result.violations),
+            "constraints_checked": constraints,
+        }
+
+        # Add severity results if task failed
+        if severity_result:
+            errors_list = []
+            for err in severity_result.errors:
+                err_dict = {
+                    "error_type": err.error_type,
+                    "severity": err.severity,
+                    "severity_level": err.severity_level,
+                    "context_analysis": err.context_analysis,
+                    "is_false_positive": err.is_false_positive,
+                }
+                errors_list.append(err_dict)
+
+            llm_safety["errors"] = errors_list
+            llm_safety["mean_severity"] = severity_result.S_cost
+            llm_safety["max_severity"] = severity_result.S_tail_max
+        else:
+            llm_safety["errors"] = []
+            llm_safety["mean_severity"] = 0.0
+            llm_safety["max_severity"] = 0.0
+
+        return {
+            "task_id": task_id,
+            "success": True,
+            "llm_safety": llm_safety,
+            "safety_compliance": compliance_result.safety_compliance,
+            "num_violations": len(compliance_result.violations),
+        }
+
+    except Exception as ex:
+        return {
+            "task_id": task_id,
+            "success": False,
+            "llm_safety": {
+                "analyzed": False,
+                "error": str(ex),
+                "timestamp": datetime.now().isoformat(),
+            },
+            "error": str(ex),
+        }
+
+
 def run_safety_phase(
     combinations: List[tuple],
     results_dir: Path,
@@ -164,93 +246,13 @@ def run_safety_phase(
                 f"      🔬 Analyzing {len(tasks_to_analyze)} tasks (max_concurrent={max_concurrent})..."
             )
 
-            # Helper function to analyze a single task
-            def analyze_task(task_info):
-                task_id = task_info["task_id"]
-                try:
-                    # Analyze compliance (for all tasks)
-                    compliance_result = analyzer.analyze_compliance(
-                        conversation_history=task_info["conversation_history"],
-                        actions_taken=task_info["taken_actions"],
-                        constraints=constraints,
-                    )
-
-                    # Analyze error severity (only for failed tasks)
-                    severity_result = None
-                    if task_info["success"] == 0:
-                        severity_result = analyzer.analyze_error_severity(
-                            conversation_history=task_info["conversation_history"],
-                            actions_taken=task_info["taken_actions"],
-                            task_result={"success": False, "task_id": task_id},
-                        )
-
-                    # Build the llm_safety result
-                    llm_safety = {
-                        "analyzed": True,
-                        "model": safety_model,
-                        "timestamp": datetime.now().isoformat(),
-                        # Compliance results
-                        "safety_compliance": compliance_result.safety_compliance,
-                        "compliance_violations": [
-                            {
-                                "constraint": v.constraint,
-                                "severity": v.severity,
-                                "evidence": v.evidence,
-                                "explanation": v.explanation,
-                            }
-                            for v in compliance_result.violations
-                        ],
-                        "num_violations": len(compliance_result.violations),
-                        "constraints_checked": constraints,
-                    }
-
-                    # Add severity results if task failed
-                    if severity_result:
-                        errors_list = []
-                        for err in severity_result.errors:
-                            err_dict = {
-                                "error_type": err.error_type,
-                                "severity": err.severity,
-                                "severity_level": err.severity_level,
-                                "context_analysis": err.context_analysis,
-                                "is_false_positive": err.is_false_positive,
-                            }
-                            errors_list.append(err_dict)
-
-                        llm_safety["errors"] = errors_list
-                        llm_safety["mean_severity"] = severity_result.S_cost
-                        llm_safety["max_severity"] = severity_result.S_tail_max
-                    else:
-                        llm_safety["errors"] = []
-                        llm_safety["mean_severity"] = 0.0
-                        llm_safety["max_severity"] = 0.0
-
-                    return {
-                        "task_id": task_id,
-                        "success": True,
-                        "llm_safety": llm_safety,
-                        "safety_compliance": compliance_result.safety_compliance,
-                        "num_violations": len(compliance_result.violations),
-                    }
-
-                except Exception as ex:
-                    return {
-                        "task_id": task_id,
-                        "success": False,
-                        "llm_safety": {
-                            "analyzed": False,
-                            "error": str(ex),
-                            "timestamp": datetime.now().isoformat(),
-                        },
-                        "error": str(ex),
-                    }
-
             # Process tasks in parallel
             tasks_in_file = 0
             modified = False
             with ThreadPoolExecutor(max_workers=max_concurrent) as executor:
                 future_to_task = {
-                    executor.submit(analyze_task, t): t for t in tasks_to_analyze
+                    executor.submit(_analyze_task, t, constraints, analyzer, safety_model): t
+                    for t in tasks_to_analyze
                 }
                 for future in as_completed(future_to_task):
                     result = future.result()

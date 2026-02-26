@@ -11,7 +11,7 @@ from reliability_eval.metrics.predictability import (
     compute_brier_metrics,
     compute_ece_metrics,
 )
-from reliability_eval.phases.abstention import detect_abstention
+from reliability_eval.metrics.abstention import detect_abstention
 
 __all__ = [
     "compute_auroc_metrics",
