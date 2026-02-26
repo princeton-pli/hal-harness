@@ -655,15 +655,6 @@ PHASE_SETTINGS = {
 # DATA CLASSES
 # =============================================================================
 
-class Phase(Enum):
-    BASELINE = "baseline"
-    FAULT = "fault"
-    PROMPT = "prompt"
-    STRUCTURAL = "structural"
-    SAFETY = "safety"
-    ABSTENTION = "abstention"
-
-
 @dataclass
 class RunResult:
     agent: str
@@ -2122,7 +2113,7 @@ Phases:
         exit(1)
 
     print(f"\n📋 Found {len(combinations)} agent-benchmark combinations:")
-    for agent, bench, bench_name in combinations:
+    for agent, _, bench_name in combinations:
         print(f"   • {agent['name']} on {bench_name}")
 
     # Initialize log

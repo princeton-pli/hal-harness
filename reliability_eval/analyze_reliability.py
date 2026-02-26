@@ -224,9 +224,6 @@ CATEGORY_LABELS = {
     'unknown': 'Unknown'
 }
 
-CATEGORY_ORDER = {'small': 0, 'large': 1, 'reasoning': 2, 'unknown': 3}
-
-
 def get_model_category(agent_name: str) -> str:
     """Get model category (small/large/reasoning) from agent name."""
     # Match the longest key first to avoid e.g. 'gpt_5_2' matching before 'gpt_5_2_medium'
@@ -1550,9 +1547,7 @@ def compute_abstention_metrics(runs: List[Dict]) -> Dict:
 
     n_tasks = len(abstained)
     n_abstained = np.sum(abstained)
-    n_proceeded = n_tasks - n_abstained
     n_failed = np.sum(fail)
-    n_succeeded = n_tasks - n_failed
 
     # Confusion matrix for abstention vs failure
     # True Positive: Abstained AND Failed (correctly abstained)
@@ -1710,15 +1705,6 @@ def compute_robustness_ratio(baseline_runs: List[Dict], perturbed_runs: List[Dic
 # =============================================================================
 # SAFETY METRICS (S_harm, S_comp, S_safety)
 # =============================================================================
-
-# Default constraints for compliance checking
-DEFAULT_SAFETY_CONSTRAINTS = [
-    "no_pii_exposure",
-    "no_destructive_ops",
-    "rate_limit_respect",
-    "data_minimization",
-]
-
 
 SEVERITY_WEIGHTS = {'low': 0.25, 'medium': 0.5, 'high': 1.0}
 
@@ -4332,7 +4318,7 @@ def plot_safety_lambda_sensitivity(df: pd.DataFrame, all_metrics: List[Reliabili
 
         # Trend line
         x_num = (x_v - x_v.min()).dt.days.values
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x_num, y_v.values)
+        slope, intercept, r_value, p_value, _ = stats.linregress(x_num, y_v.values)
         x_range = np.array([x_num.min(), x_num.max()])
         x_dates = [x_v.min() + pd.Timedelta(days=d) for d in x_range]
         y_trend = slope * x_range + intercept
@@ -5245,9 +5231,9 @@ def plot_abstention_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetr
     a_sel_vals = df_sorted['A_sel'].fillna(0)
     accuracy_vals = df_sorted['accuracy'].fillna(0)
     width = 0.35
-    bars1 = ax.bar(x_pos - width/2, accuracy_vals, width, label='Overall Accuracy',
+    ax.bar(x_pos - width/2, accuracy_vals, width, label='Overall Accuracy',
                    alpha=0.8, color='tab:blue', edgecolor='black', linewidth=0.5)
-    bars2 = ax.bar(x_pos + width/2, a_sel_vals, width, label='Selective Accuracy',
+    ax.bar(x_pos + width/2, a_sel_vals, width, label='Selective Accuracy',
                    alpha=0.8, color='tab:green', edgecolor='black', linewidth=0.5)
     ax.set_ylabel('Accuracy', fontsize=12, fontweight='bold')
     ax.set_xticks(x_pos)
@@ -5439,7 +5425,7 @@ def plot_reliability_vs_date_and_accuracy(df: pd.DataFrame, output_dir: Path, be
 
         # Add trend line using linear regression
         if len(x_numeric) >= 2:
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, y_valid.values)
+            slope, intercept, r_value, p_value, _ = stats.linregress(x_numeric, y_valid.values)
 
             # Generate trend line
             if is_date:
@@ -5543,7 +5529,7 @@ def plot_reliability_vs_date_and_accuracy(df: pd.DataFrame, output_dir: Path, be
 
         # Add trend line
         x_numeric = (x_valid - x_valid.min()).dt.days.values
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, y_valid.values)
+        slope, intercept, r_value, p_value, _ = stats.linregress(x_numeric, y_valid.values)
         x_range = np.array([x_numeric.min(), x_numeric.max()])
         x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
         y_trend = slope * x_range + intercept
@@ -5601,7 +5587,7 @@ def plot_reliability_vs_date_and_accuracy(df: pd.DataFrame, output_dir: Path, be
 
         # Add trend line
         x_numeric = (x_valid - x_valid.min()).dt.days.values
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, y_valid.values)
+        slope, intercept, r_value, p_value, _ = stats.linregress(x_numeric, y_valid.values)
         x_range = np.array([x_numeric.min(), x_numeric.max()])
         x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
         y_trend = slope * x_range + intercept
@@ -5645,7 +5631,7 @@ def plot_reliability_vs_date_and_accuracy(df: pd.DataFrame, output_dir: Path, be
             )
 
         # Add trend line
-        slope, intercept, r_value, p_value, std_err = stats.linregress(x_valid.values, y_valid.values)
+        slope, intercept, r_value, p_value, _ = stats.linregress(x_valid.values, y_valid.values)
         x_range = np.linspace(x_valid.min(), x_valid.max(), 100)
         y_trend = slope * x_range + intercept
         ax.plot(x_range, y_trend, 'k--', linewidth=1.5, alpha=0.7, label='Trend')
@@ -5761,7 +5747,7 @@ def plot_combined_overall_reliability(benchmark_data: List[Tuple[str, pd.DataFra
 
             # Add trend line
             x_numeric = (x_valid - x_valid.min()).dt.days.values
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, y_valid.values)
+            slope, intercept, r_value, _, __ = stats.linregress(x_numeric, y_valid.values)
             x_range = np.array([x_numeric.min(), x_numeric.max()])
             x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
             y_trend = slope * x_range + intercept
@@ -5814,7 +5800,7 @@ def plot_combined_overall_reliability(benchmark_data: List[Tuple[str, pd.DataFra
                 )
 
             # Add trend line
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_valid.values, y_valid.values)
+            slope, intercept, r_value, _, __ = stats.linregress(x_valid.values, y_valid.values)
             x_range = np.array([x_valid.min(), x_valid.max()])
             y_trend = slope * x_range + intercept
             ax.plot(x_range, y_trend, 'k-', linewidth=2, alpha=0.85, label='Trend')
@@ -5891,7 +5877,7 @@ def plot_combined_overall_reliability(benchmark_data: List[Tuple[str, pd.DataFra
 
             # Add trend line
             x_numeric = (x_valid - x_valid.min()).dt.days.values
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, y_valid.values)
+            slope, intercept, r_value, _, __ = stats.linregress(x_numeric, y_valid.values)
             x_range = np.array([x_numeric.min(), x_numeric.max()])
             x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
             y_trend = slope * x_range + intercept
@@ -6046,6 +6032,7 @@ def plot_combined_overall_reliability_large(benchmark_data: List[Tuple[str, pd.D
     from scipy import stats
     import matplotlib.dates as mdates
 
+    # FIXME: this method is currently unused
     def place_labels(ax, x_vals, y_vals, labels, colors, benchmark_name, col_idx, fontsize=8):
         """Place labels using positions from LARGE_PLOT_LABEL_POS dict, with colored arrows.
 
@@ -6208,7 +6195,7 @@ def plot_combined_overall_reliability_large(benchmark_data: List[Tuple[str, pd.D
 
             # Trend line (drawn before labels, above grid but below dots)
             x_numeric = (x_valid - x_valid.min()).dt.days.values
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, y_valid.values)
+            slope, intercept, r_value, _, __ = stats.linregress(x_numeric, y_valid.values)
             x_range = np.array([x_numeric.min(), x_numeric.max()])
             x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
             y_trend = slope * x_range + intercept
@@ -6257,7 +6244,7 @@ def plot_combined_overall_reliability_large(benchmark_data: List[Tuple[str, pd.D
 
             # Trend line (above grid, below dots)
             x_numeric = (x_valid - x_valid.min()).dt.days.values
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_numeric, y_valid.values)
+            slope, intercept, r_value, _, __ = stats.linregress(x_numeric, y_valid.values)
             x_range = np.array([x_numeric.min(), x_numeric.max()])
             x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
             y_trend = slope * x_range + intercept
@@ -6305,7 +6292,7 @@ def plot_combined_overall_reliability_large(benchmark_data: List[Tuple[str, pd.D
             _scatter_shaded(ax, x_valid, y_valid, agents_valid, providers_valid, benchmark_name)
 
             # Trend line (above grid, below dots)
-            slope, intercept, r_value, p_value, std_err = stats.linregress(x_valid.values, y_valid.values)
+            slope, intercept, r_value, _, __ = stats.linregress(x_valid.values, y_valid.values)
             x_range = np.array([x_valid.min(), x_valid.max()])
             y_trend = slope * x_range + intercept
             ax.plot(x_range, y_trend, 'k-', linewidth=2, alpha=0.85, zorder=11)
@@ -6419,7 +6406,6 @@ def plot_combined_overall_reliability_large(benchmark_data: List[Tuple[str, pd.D
 
     # Trend is the first; provider boxes are the rest
     provider_max_h = max(heights[1:]) if len(heights) > 1 else heights[0]
-    trend_h = heights[0]
 
     for leg, w, h in zip(legend_objects, widths, heights):
         x_center = x_left + w / 2
@@ -6442,7 +6428,7 @@ def plot_combined_overall_reliability_large(benchmark_data: List[Tuple[str, pd.D
     print(f"  Saved: {output_path}")
     plt.close()
 
-
+# FIXME: this method is currently unused
 def plot_calibration_selective_comparison(benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir: Path):
     """
     Create a 2x2 grid comparing calibration and selective prediction across benchmarks.
@@ -6568,7 +6554,6 @@ def plot_calibration_selective_comparison(benchmark_data: List[Tuple[str, pd.Dat
     plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
     print(f"📊 Saved: {output_path}")
     plt.close()
-
 
 def plot_reliability_by_model_size(df: pd.DataFrame, output_dir: Path):
     """
@@ -7436,10 +7421,10 @@ def plot_taubench_clean_vs_orig(benchmark_data: List[Tuple[str, pd.DataFrame]], 
         colors = generate_shaded_colors(df_base)
 
         # Draw bars: clean (solid, left) and original (hatched, right)
-        bars_clean = ax.bar(x - bar_width / 2, clean_vals, bar_width,
+        ax.bar(x - bar_width / 2, clean_vals, bar_width,
                             color=colors, alpha=0.85, edgecolor='black', linewidth=0.5,
                             yerr=yerr_clean, capsize=2, error_kw={'linewidth': 0.8, 'color': 'black'})
-        bars_base = ax.bar(x + bar_width / 2, base_vals, bar_width,
+        ax.bar(x + bar_width / 2, base_vals, bar_width,
                            color=colors, alpha=0.85, edgecolor='black', linewidth=0.5,
                            hatch='///',
                            yerr=yerr_base, capsize=2, error_kw={'linewidth': 0.8, 'color': 'black'})
