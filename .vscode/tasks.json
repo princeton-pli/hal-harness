@@ -20,6 +20,20 @@
         "reveal": "always",
         "panel": "new"
       }
+    },
+    {
+      "label": "Run Tests",
+      "type": "shell",
+      "command": "python -m pytest tests/ -v",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
     }
   ]
 }
