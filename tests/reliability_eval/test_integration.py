@@ -84,8 +84,8 @@ class TestAnalyzeAgentPipeline:
         assert math.isnan(agent_metrics.consistency_outcome)
 
     def test_no_safety_violations_in_fixture(self, agent_metrics):
-        # Fixture has no llm_safety data → safety_harm_severity should be 1.0 (no harm)
-        assert not math.isnan(agent_metrics.safety_harm_severity)
+        # Fixture has no llm_safety data → safety metrics are unscored
+        assert math.isnan(agent_metrics.safety_harm_severity)
 
 
 class TestMetricsToDataframePipeline:
