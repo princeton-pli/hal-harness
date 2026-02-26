@@ -120,13 +120,17 @@ def plot_level_stratified_analysis(
     # 0.0 Accuracy by Level
     plot_metric_by_level(
         axes[0, 0],
-        lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("accuracy_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("accuracy_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$\mathrm{Accuracy}$",
-        se_getter=lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("accuracy_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("accuracy_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # 0.1 Mean Actions by Level
@@ -138,14 +142,18 @@ def plot_level_stratified_analysis(
                 max_traj = v
     plot_metric_by_level(
         axes[0, 1],
-        lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("trajectory_complexity", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("trajectory_complexity", {})
+            .get(lvl, np.nan)
+        ),
         r"$\mathrm{Mean\ Actions}$",
         ylim=(0, max(max_traj * 1.1, 10)),
-        se_getter=lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("trajectory_complexity_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("trajectory_complexity_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # ===== ROW 1: consistency_outcome, consistency_resource =====
@@ -153,25 +161,33 @@ def plot_level_stratified_analysis(
     # 1.0 consistency_outcome (Outcome Consistency) by Level
     plot_metric_by_level(
         axes[1, 0],
-        lambda m, lvl: m.extra.get("consistency_by_level", {})
-        .get("consistency_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("consistency_by_level", {})
+            .get("consistency_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$C_{\mathrm{out}}$",
-        se_getter=lambda m, lvl: m.extra.get("consistency_by_level", {})
-        .get("consistency_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("consistency_by_level", {})
+            .get("consistency_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # 1.1 consistency_resource (Resource Consistency) by Level
     plot_metric_by_level(
         axes[1, 1],
-        lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("consistency_resource_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("consistency_resource_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$C_{\mathrm{res}}$",
-        se_getter=lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("consistency_resource_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("consistency_resource_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # ===== ROW 2: predictability_brier_score, predictability_calibration =====
@@ -179,25 +195,33 @@ def plot_level_stratified_analysis(
     # 2.0 predictability_brier_score (Brier Score) by Level
     plot_metric_by_level(
         axes[2, 0],
-        lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("predictability_brier_score_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("predictability_brier_score_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$P_{\mathrm{Brier}}$",
-        se_getter=lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("predictability_brier_score_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("predictability_brier_score_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # 2.1 predictability_calibration (Calibration = 1-ECE) by Level
     plot_metric_by_level(
         axes[2, 1],
-        lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("predictability_calibration_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("predictability_calibration_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$P_{\mathrm{cal}}$",
-        se_getter=lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("predictability_calibration_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("predictability_calibration_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # ===== ROW 3: predictability_roc_auc, robustness_fault_injection =====
@@ -205,26 +229,34 @@ def plot_level_stratified_analysis(
     # 3.0 predictability_roc_auc (Discrimination) by Level
     plot_metric_by_level(
         axes[3, 0],
-        lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("predictability_roc_auc_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("predictability_roc_auc_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$P_{\mathrm{AUROC}}$",
-        se_getter=lambda m, lvl: m.extra.get("level_metrics", {})
-        .get("predictability_roc_auc_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("level_metrics", {})
+            .get("predictability_roc_auc_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # 3.1 robustness_fault_injection (Fault Robustness) by Level
     plot_metric_by_level(
         axes[3, 1],
-        lambda m, lvl: m.extra.get("fault_robustness_by_level", {})
-        .get("robustness_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("fault_robustness_by_level", {})
+            .get("robustness_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$R_{\mathrm{fault}}$",
         clamp_at=1.0,
-        se_getter=lambda m, lvl: m.extra.get("fault_robustness_by_level", {})
-        .get("robustness_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("fault_robustness_by_level", {})
+            .get("robustness_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # ===== ROW 4: robustness_structural, robustness_prompt_variation =====
@@ -232,29 +264,37 @@ def plot_level_stratified_analysis(
     # 4.0 robustness_structural (Structural Robustness) by Level
     plot_metric_by_level(
         axes[4, 0],
-        lambda m, lvl: m.extra.get("struct_robustness_by_level", {})
-        .get("robustness_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("struct_robustness_by_level", {})
+            .get("robustness_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$R_{\mathrm{env}}$",
         clamp_at=1.0,
         show_xticks=True,
-        se_getter=lambda m, lvl: m.extra.get("struct_robustness_by_level", {})
-        .get("robustness_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("struct_robustness_by_level", {})
+            .get("robustness_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # 4.1 robustness_prompt_variation (Prompt Robustness) by Level
     plot_metric_by_level(
         axes[4, 1],
-        lambda m, lvl: m.extra.get("prompt_robustness_by_level", {})
-        .get("robustness_by_level", {})
-        .get(lvl, np.nan),
+        lambda m, lvl: (
+            m.extra.get("prompt_robustness_by_level", {})
+            .get("robustness_by_level", {})
+            .get(lvl, np.nan)
+        ),
         r"$R_{\mathrm{prompt}}$",
         clamp_at=1.0,
         show_xticks=True,
-        se_getter=lambda m, lvl: m.extra.get("prompt_robustness_by_level", {})
-        .get("robustness_by_level_se", {})
-        .get(lvl, 0.0),
+        se_getter=lambda m, lvl: (
+            m.extra.get("prompt_robustness_by_level", {})
+            .get("robustness_by_level_se", {})
+            .get(lvl, 0.0)
+        ),
     )
 
     # Add global legend at top center (where title used to be)
