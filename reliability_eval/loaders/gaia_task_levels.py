@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict
 
 
-def extract_task_levels(run_dir: Path) -> Dict[str, str]:
+def extract_gaia_task_levels(run_dir: Path) -> Dict[str, str]:
     """
     Extract task difficulty levels from input.json files in a GAIA run directory.
 

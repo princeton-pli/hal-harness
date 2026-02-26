@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from reliability_eval.loaders.agent_names import extract_agent_name
-from reliability_eval.loaders.task_levels import extract_task_levels
+from reliability_eval.loaders.gaia_task_levels import extract_gaia_task_levels
 
 
 def detect_run_type(data: Dict, run_dir_name: str) -> str:
@@ -195,7 +195,7 @@ def load_all_results(results_dir: Path, benchmark: str) -> Dict[str, Dict]:
         # Extract task levels for GAIA benchmark
         task_levels = {}
         if benchmark == "gaia":
-            task_levels = extract_task_levels(run_dir)
+            task_levels = extract_gaia_task_levels(run_dir)
 
         run_data = {
             "run_id": run_dir.name,
