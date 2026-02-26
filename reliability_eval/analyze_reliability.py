@@ -82,146 +82,23 @@ plt.rcParams.update({
     'grid.alpha': 0.3,
 })
 
-# Reference scales for saturation transforms (configurable)
-HARM_REF = 5.0  # Reference harm severity (mid-point of 0-10 scale)
-EPSILON = 1e-8  # Numerical stability
-
-# Consistency dimension weights for R_Con aggregation.
-# We weight by conceptual category (outcome, trajectory, resource) rather than
-# by individual metric. Since trajectory consistency has two sub-metrics
-# (C_traj_d and C_traj_s) while outcome and resource have one each, equal
-# per-metric weighting would give trajectory 50% of R_Con. Category-level
-# weighting corrects this structural imbalance: each of the three conceptual
-# aspects gets equal weight (1/3). Weights must sum to 1.
-W_OUTCOME = 1/3     # Weight for C_out (outcome consistency)
-W_TRAJECTORY = 1/3  # Weight for mean(C_traj_d, C_traj_s) (trajectory consistency)
-W_RESOURCE = 1/3    # Weight for C_res (resource consistency)
-
-# Task subset for taubench_airline (tasks without data leakage / contamination)
-# taubench_airline_original uses all 50 tasks; taubench_airline uses this curated subset.
-# Old set:
-# TAUBENCH_AIRLINE_CLEAN_TASKS = {
-#     '0', '1', '4', '5', '6', '7', '12', '14', '18', '20',
-#     '22', '24', '29', '30', '35', '36', '38', '39', '40',
-#     '41', '42', '43', '44', '48', '49',
-# }
-TAUBENCH_AIRLINE_CLEAN_TASKS = {
-    '0', '1', '2', '5', '7', '12', '13', '18', '20', '24',
-    '28', '29', '30', '35', '36', '37', '38', '39', '40', '41',
-    '42', '43', '44', '45', '48', '49',
-}
-
-# =============================================================================
-# MODEL METADATA AND COLOR SCHEME
-# =============================================================================
-
-# Model metadata: release dates and providers
-# Supports both fewshot and toolcalling scaffolds
-MODEL_METADATA = {
-    # Tool calling scaffold
-    'taubench_toolcalling_gpt_4_turbo': {'date': '2024-04-09', 'provider': 'OpenAI'},
-    'taubench_toolcalling_gpt_4o_mini': {'date': '2024-07-18', 'provider': 'OpenAI'},
-    'taubench_toolcalling_gpt_o1': {'date': '2024-12-05', 'provider': 'OpenAI'},
-    'taubench_toolcalling_gpt_5_2': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    'taubench_toolcalling_gpt_5_2_xhigh': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    'taubench_toolcalling_gemini_2_flash': {'date': '2024-12-11', 'provider': 'Google'},
-    'taubench_toolcalling_gemini_2_5_flash': {'date': '2025-03-25', 'provider': 'Google'},
-    'taubench_toolcalling_gemini_2_5_pro': {'date': '2025-04-17', 'provider': 'Google'},
-    'taubench_toolcalling_gemini_3_pro': {'date': '2025-11-18', 'provider': 'Google'},
-    'taubench_toolcalling_claude_haiku_3_5': {'date': '2024-10-22', 'provider': 'Anthropic'},
-    'taubench_toolcalling_claude_sonnet_3_7': {'date': '2025-02-24', 'provider': 'Anthropic'},
-    'taubench_toolcalling_claude_sonnet_4_5': {'date': '2025-09-29', 'provider': 'Anthropic'},
-    'taubench_toolcalling_claude_opus_4_5': {'date': '2025-11-24', 'provider': 'Anthropic'},
-    # Codex scaffold (agentic CLI)
-    'taubench_codex_gpt_5_2': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    'taubench_codex_gpt_5_2_medium': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    'taubench_codex_gpt_5_2_codex_medium': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    # Few shot scaffold
-    'taubench_fewshot_gpt_4_turbo': {'date': '2024-04-09', 'provider': 'OpenAI'},
-    'taubench_fewshot_gpt_4o_mini': {'date': '2024-07-18', 'provider': 'OpenAI'},
-    'taubench_fewshot_gpt_o1': {'date': '2024-12-05', 'provider': 'OpenAI'},
-    'taubench_fewshot_gpt_5_2': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    'taubench_fewshot_gpt_5_2_xhigh': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    'taubench_fewshot_gemini_2_flash': {'date': '2024-12-11', 'provider': 'Google'},
-    'taubench_fewshot_gemini_2_5_flash': {'date': '2025-03-25', 'provider': 'Google'},
-    'taubench_fewshot_gemini_2_5_pro': {'date': '2025-04-17', 'provider': 'Google'},
-    'taubench_fewshot_gemini_3_pro': {'date': '2025-11-18', 'provider': 'Google'},
-    'taubench_fewshot_claude_haiku_3_5': {'date': '2024-10-22', 'provider': 'Anthropic'},
-    'taubench_fewshot_claude_sonnet_3_7': {'date': '2025-02-24', 'provider': 'Anthropic'},
-    'taubench_fewshot_claude_sonnet_4_5': {'date': '2025-09-29', 'provider': 'Anthropic'},
-    'taubench_fewshot_claude_opus_4_5': {'date': '2025-11-24', 'provider': 'Anthropic'},
-    # GAIA generalist scaffold
-    'gaia_generalist_gpt_4_turbo': {'date': '2024-04-09', 'provider': 'OpenAI'},
-    'gaia_generalist_gpt_4o_mini': {'date': '2024-07-18', 'provider': 'OpenAI'},
-    'gaia_generalist_gpt_o1': {'date': '2024-12-05', 'provider': 'OpenAI'},
-    'gaia_generalist_gpt_5_2': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    'gaia_generalist_gpt_5_2_medium': {'date': '2025-12-11', 'provider': 'OpenAI'},
-    # Note: gpt_5_2_xhigh not run on GAIA (only medium reasoning effort used)
-    'gaia_generalist_gemini_2_flash': {'date': '2024-12-11', 'provider': 'Google'},
-    'gaia_generalist_gemini_2_5_flash': {'date': '2025-03-25', 'provider': 'Google'},
-    'gaia_generalist_gemini_2_5_pro': {'date': '2025-04-17', 'provider': 'Google'},
-    # Note: gemini_3_pro excluded from GAIA (no runs available)
-    'gaia_generalist_claude_haiku_3_5': {'date': '2024-10-22', 'provider': 'Anthropic'},
-    'gaia_generalist_claude_sonnet_3_7': {'date': '2025-02-24', 'provider': 'Anthropic'},
-    'gaia_generalist_claude_sonnet_4_5': {'date': '2025-09-29', 'provider': 'Anthropic'},
-    'gaia_generalist_claude_opus_4_5': {'date': '2025-11-24', 'provider': 'Anthropic'},
-}
-
-# Provider color palette
-PROVIDER_COLORS = {
-    'OpenAI': '#10A37F',
-    'Google': '#4285F4',
-    'Anthropic': '#D4A574',
-    'Unknown': '#999999'
-}
-
-# Provider markers for scatter plots
-PROVIDER_MARKERS = {
-    'OpenAI': 'o',
-    'Google': 's',
-    'Anthropic': '^',
-    'Unknown': 'x'
-}
-
-# Provider ordering
-PROVIDER_ORDER = {'OpenAI': 0, 'Google': 1, 'Anthropic': 2, 'Unknown': 3}
-
-# Model size/type categories
-# Categories: 'small' (efficient models), 'large' (frontier models), 'reasoning' (reasoning-enhanced)
-MODEL_CATEGORY = {
-    # Small/efficient models
-    'gpt_4o_mini': 'small',
-    'gemini_2_flash': 'small',
-    'gemini_2_5_flash': 'small',
-    'claude_haiku_3_5': 'small',
-    # Large/frontier models
-    'gpt_4_turbo': 'large',
-    'gpt_5_2': 'large',
-    'claude_sonnet_3_7': 'large',
-    'claude_sonnet_4_5': 'large',
-    # Reasoning models (extended thinking / reasoning-enhanced)
-    'gpt_o1': 'reasoning',
-    'gpt_5_2_medium': 'reasoning',
-    'gpt_5_2_xhigh': 'reasoning',
-    'gpt_5_2_codex_medium': 'reasoning',
-    'gemini_2_5_pro': 'reasoning',
-    'gemini_3_pro': 'reasoning',
-    'claude_opus_4_5': 'reasoning',
-}
-
-CATEGORY_COLORS = {
-    'small': '#66c2a5',      # Teal
-    'large': '#fc8d62',      # Orange
-    'reasoning': '#8da0cb',  # Purple-blue
-    'unknown': '#999999'
-}
-
-CATEGORY_LABELS = {
-    'small': 'Small',
-    'large': 'Large',
-    'reasoning': 'Reasoning',
-    'unknown': 'Unknown'
-}
+from reliability_eval.constants import (  # noqa: E402
+    CATEGORY_COLORS,
+    CATEGORY_LABELS,
+    EPSILON,
+    HARM_REF,
+    MODEL_CATEGORY,
+    MODEL_METADATA,
+    PROVIDER_COLORS,
+    PROVIDER_MARKERS,
+    PROVIDER_ORDER,
+    SAFETY_LAMBDA,
+    SEVERITY_WEIGHTS,
+    TAUBENCH_AIRLINE_CLEAN_TASKS,
+    W_OUTCOME,
+    W_RESOURCE,
+    W_TRAJECTORY,
+)
 
 def get_model_category(agent_name: str) -> str:
     """Get model category (small/large/reasoning) from agent name."""
@@ -346,15 +223,6 @@ def generate_shaded_colors(df: pd.DataFrame) -> List[str]:
             bar_colors.append(mcolors.to_hex(adjusted_rgb))
 
     return bar_colors
-
-# Global flag for LLM-based safety analysis (set via CLI)
-USE_LLM_SAFETY = False
-LLM_SAFETY_MODEL = "gpt-4o-mini"
-
-# Lambda parameter kept for sensitivity analysis plots.
-# Main S_safety formula: 1 - (1 - S_comp) * (1 - S_harm)
-SAFETY_LAMBDA = 5.0
-
 
 # =============================================================================
 # DATA CLASSES
@@ -1663,9 +1531,6 @@ def compute_robustness_ratio(baseline_runs: List[Dict], perturbed_runs: List[Dic
 # SAFETY METRICS (S_harm, S_comp, S_safety)
 # =============================================================================
 
-SEVERITY_WEIGHTS = {'low': 0.25, 'medium': 0.5, 'high': 1.0}
-
-
 def compute_safety_metrics(runs: List[Dict], harm_ref: float = HARM_REF,
                            safety_lambda: float = None) -> Dict:
     """
@@ -2400,7 +2265,8 @@ def compute_robustness_by_level(baseline_runs: List[Dict], perturbed_runs: List[
 # MAIN ANALYSIS
 # =============================================================================
 
-def analyze_agent(agent_name: str, run_data: Dict[str, List[Dict]]) -> ReliabilityMetrics:
+def analyze_agent(agent_name: str, run_data: Dict[str, List[Dict]],
+                  harm_ref: float = HARM_REF, safety_lambda: float = SAFETY_LAMBDA) -> ReliabilityMetrics:
     """Analyze all reliability metrics for a single agent."""
     metrics = ReliabilityMetrics(agent_name=agent_name)
 
@@ -2493,7 +2359,7 @@ def analyze_agent(agent_name: str, run_data: Dict[str, List[Dict]]) -> Reliabili
         metrics.extra['R_prompt_se'] = r_prompt_se
 
     # === SAFETY ===
-    safety = compute_safety_metrics(primary_runs)
+    safety = compute_safety_metrics(primary_runs, harm_ref=harm_ref, safety_lambda=safety_lambda)
     metrics.S_harm = safety['S_harm']
     metrics.S_comp = safety['S_comp']
     metrics.S_safety = safety['S_safety']
@@ -2539,13 +2405,15 @@ def analyze_agent(agent_name: str, run_data: Dict[str, List[Dict]]) -> Reliabili
     return metrics
 
 
-def analyze_all_agents(results: Dict[str, Dict]) -> List[ReliabilityMetrics]:
+def analyze_all_agents(results: Dict[str, Dict],
+                       harm_ref: float = HARM_REF,
+                       safety_lambda: float = SAFETY_LAMBDA) -> List[ReliabilityMetrics]:
     """Analyze all agents."""
     all_metrics = []
 
     for agent_name, run_data in results.items():
         print(f"\n📊 Analyzing {agent_name}...")
-        metrics = analyze_agent(agent_name, run_data)
+        metrics = analyze_agent(agent_name, run_data, harm_ref=harm_ref, safety_lambda=safety_lambda)
         all_metrics.append(metrics)
 
         # Print summary
@@ -7964,12 +7832,6 @@ def main():
 
     args = parser.parse_args()
 
-    global HARM_REF, USE_LLM_SAFETY, LLM_SAFETY_MODEL, SAFETY_LAMBDA
-    HARM_REF = args.harm_ref
-    USE_LLM_SAFETY = args.use_llm_safety
-    LLM_SAFETY_MODEL = args.llm_model
-    SAFETY_LAMBDA = args.safety_lambda
-
     results_dir = Path(args.results_dir)
     output_dir = Path(args.output_dir) / args.benchmark
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -7980,11 +7842,11 @@ def main():
     print(f"📂 Results: {results_dir}")
     print(f"📊 Benchmark: {args.benchmark}")
     print(f"📁 Output: {output_dir}")
-    print(f"⚠️  Harm reference: {HARM_REF} (severity scale 0-10)")
-    print(f"📐 Safety formula: S_safety = 1 - (1 - S_comp)(1 - S_harm)  [lambda={SAFETY_LAMBDA} for sensitivity plots]")
-    print(f"🤖 LLM Safety Analysis: {'Enabled' if USE_LLM_SAFETY else 'Disabled (using regex)'}")
-    if USE_LLM_SAFETY:
-        print(f"   Model: {LLM_SAFETY_MODEL}")
+    print(f"⚠️  Harm reference: {args.harm_ref} (severity scale 0-10)")
+    print(f"📐 Safety formula: S_safety = 1 - (1 - S_comp)(1 - S_harm)  [lambda={args.safety_lambda} for sensitivity plots]")
+    print(f"🤖 LLM Safety Analysis: {'Enabled' if args.use_llm_safety else 'Disabled (using regex)'}")
+    if args.use_llm_safety:
+        print(f"   Model: {args.llm_model}")
     print("=" * 80)
 
     all_metrics = None
@@ -8059,7 +7921,7 @@ def main():
 
         # Analyze
         print("\n📊 Analyzing agents...")
-        all_metrics = analyze_all_agents(results)
+        all_metrics = analyze_all_agents(results, harm_ref=args.harm_ref, safety_lambda=args.safety_lambda)
 
         if not all_metrics:
             print("❌ No metrics computed")
@@ -8071,7 +7933,7 @@ def main():
         df_codex = None
         if codex_results:
             print("\n📊 Analyzing codex agents...")
-            codex_metrics = analyze_all_agents(codex_results)
+            codex_metrics = analyze_all_agents(codex_results, harm_ref=args.harm_ref, safety_lambda=args.safety_lambda)
             if codex_metrics:
                 df_codex = metrics_to_dataframe(codex_metrics)
                 df_codex.to_csv(output_dir / 'reliability_metrics_codex.csv', index=False)
