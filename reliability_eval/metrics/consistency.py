@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 from collections import Counter, defaultdict
-from typing import Dict, List, Optional, Tuple
 
 from scipy.spatial.distance import jensenshannon
 
@@ -11,7 +10,7 @@ from reliability_eval.constants import EPSILON, W_OUTCOME, W_TRAJECTORY, W_RESOU
 
 
 def compute_outcome_consistency(
-    task_successes: List[int], epsilon: float = 1e-8
+    task_successes: list[int], epsilon: float = 1e-8
 ) -> float:
     """
     Compute outcome consistency for a single task.
@@ -40,7 +39,7 @@ def compute_outcome_consistency(
 
 
 def compute_trajectory_consistency_conditioned(
-    trajectories: List[List[str]], successes: List[int]
+    trajectories: list[list[str]], successes: list[int]
 ) -> float:
     """
     Compute trajectory consistency CONDITIONED on outcome (paper Definition 3.2).
@@ -51,7 +50,7 @@ def compute_trajectory_consistency_conditioned(
     # Separate trajectories by outcome; only success trajectories are used
     success_trajectories = [t for t, s in zip(trajectories, successes) if s == 1 and t]
 
-    def compute_jsd_consistency(trajs: List[List[str]]) -> float:
+    def compute_jsd_consistency(trajs: list[list[str]]) -> float:
         if len(trajs) < 2:
             return np.nan
 
@@ -96,7 +95,7 @@ def compute_trajectory_consistency_conditioned(
 
 
 def compute_sequence_consistency(
-    trajectories: List[List[str]], successes: List[int]
+    trajectories: list[list[str]], successes: list[int]
 ) -> float:
     """
     Compute trajectory SEQUENCE consistency using normalized edit distance.
@@ -107,7 +106,7 @@ def compute_sequence_consistency(
     Returns consistency_trajectory_sequence_success as a single float.
     """
 
-    def levenshtein_distance(s1: List[str], s2: List[str]) -> int:
+    def levenshtein_distance(s1: list[str], s2: list[str]) -> int:
         """Compute Levenshtein (edit) distance between two sequences."""
         if len(s1) < len(s2):
             s1, s2 = s2, s1
@@ -127,7 +126,7 @@ def compute_sequence_consistency(
 
         return prev_row[-1]
 
-    def normalized_similarity(s1: List[str], s2: List[str]) -> float:
+    def normalized_similarity(s1: list[str], s2: list[str]) -> float:
         """Compute normalized similarity (1 - normalized edit distance)."""
         if not s1 and not s2:
             return 1.0
@@ -137,7 +136,7 @@ def compute_sequence_consistency(
         dist = levenshtein_distance(s1, s2)
         return 1.0 - (dist / max_len)
 
-    def compute_seq_consistency(trajs: List[List[str]]) -> float:
+    def compute_seq_consistency(trajs: list[list[str]]) -> float:
         """Compute mean pairwise sequence similarity."""
         valid_trajs = [t for t in trajs if t]
         if len(valid_trajs) < 2:
@@ -158,8 +157,8 @@ def compute_sequence_consistency(
 
 
 def compute_confidence_consistency(
-    confidences: List[float], successes: List[int]
-) -> Tuple[float, Dict[str, float]]:
+    confidences: list[float], successes: list[int]
+) -> tuple[float, dict[str, float]]:
     """
     Compute confidence consistency across runs.
 
@@ -217,14 +216,14 @@ def compute_confidence_consistency(
 
 
 def compute_resource_consistency(
-    costs: List[float],
-    times: List[float],
-    successes: List[int],
-    api_calls: Optional[List[int]] = None,
-    num_actions: Optional[List[int]] = None,
-    num_errors: Optional[List[int]] = None,
-    call_latencies: Optional[List[float]] = None,
-) -> Tuple[float, Dict[str, float]]:
+    costs: list[float],
+    times: list[float],
+    successes: list[int],
+    api_calls: list[int] | None = None,
+    num_actions: list[int] | None = None,
+    num_errors: list[int] | None = None,
+    call_latencies: list[float] | None = None,
+) -> tuple[float, dict[str, float]]:
     """
     Compute resource consistency across all runs (paper Definition 3.3).
 
@@ -242,7 +241,7 @@ def compute_resource_consistency(
     cvs = []
     cv_breakdown = {}
 
-    def compute_cv(values: List[float], name: str) -> Optional[float]:
+    def compute_cv(values: list[float], name: str) -> float | None:
         """Compute CV for a list of values if sufficient data."""
         if len(values) >= 2:
             mean_val = np.mean(values)
@@ -359,7 +358,7 @@ def compute_weighted_r_con(c_out, c_traj_d, c_traj_s, c_res):
     return result
 
 
-def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
+def compute_consistency_metrics(baseline_runs: list[dict]) -> dict:
     """Compute all consistency metrics from baseline runs."""
     if len(baseline_runs) < 2:
         return {

@@ -3,7 +3,6 @@
 import numpy as np
 import pandas as pd
 from collections import defaultdict
-from typing import Dict, List
 
 from reliability_eval.constants import SAFETY_LAMBDA
 from reliability_eval.types import ReliabilityMetrics
@@ -24,7 +23,7 @@ from reliability_eval.metrics.robustness import (
 from reliability_eval.metrics.safety import compute_safety_metrics
 
 
-def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
+def compute_level_stratified_metrics(runs: list[dict]) -> dict:
     """
     Compute ALL reliability metrics stratified by GAIA difficulty level (1, 2, 3).
 
@@ -362,7 +361,7 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
 
 
 def compute_ece_for_level(
-    confidences: List[float], outcomes: List[int], n_bins: int = 10
+    confidences: list[float], outcomes: list[int], n_bins: int = 10
 ) -> float:
     """Compute Expected Calibration Error for a subset of tasks."""
     if not confidences:
@@ -374,7 +373,7 @@ def compute_ece_for_level(
     return ece if ece is not None and not np.isnan(ece) else 0.0
 
 
-def compute_consistency_by_level(runs: List[Dict]) -> Dict:
+def compute_consistency_by_level(runs: list[dict]) -> dict:
     """
     Compute outcome consistency stratified by GAIA difficulty level.
 
@@ -458,8 +457,8 @@ def compute_consistency_by_level(runs: List[Dict]) -> Dict:
 
 
 def compute_robustness_by_level(
-    baseline_runs: List[Dict], perturbed_runs: List[Dict]
-) -> Dict:
+    baseline_runs: list[dict], perturbed_runs: list[dict]
+) -> dict:
     """
     Compute robustness metrics stratified by GAIA difficulty level.
 
@@ -537,7 +536,7 @@ def compute_robustness_by_level(
 
 def analyze_agent(
     agent_name: str,
-    run_data: Dict[str, List[Dict]],
+    run_data: dict[str, list[dict]],
     safety_lambda: float = SAFETY_LAMBDA,
 ) -> ReliabilityMetrics:
     """Analyze all reliability metrics for a single agent."""
@@ -735,9 +734,9 @@ def analyze_agent(
 
 
 def analyze_all_agents(
-    results: Dict[str, Dict],
+    results: dict[str, dict],
     safety_lambda: float = SAFETY_LAMBDA,
-) -> List[ReliabilityMetrics]:
+) -> list[ReliabilityMetrics]:
     """Analyze all agents."""
     all_metrics = []
 
@@ -783,7 +782,7 @@ def analyze_all_agents(
     return all_metrics
 
 
-def metrics_to_dataframe(all_metrics: List[ReliabilityMetrics]) -> pd.DataFrame:
+def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
     """Convert metrics list to DataFrame."""
     rows = []
     for m in all_metrics:

@@ -1,12 +1,11 @@
 """Predictability metrics: predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score."""
 
 import numpy as np
-from typing import Dict, List
 
 from reliability_eval.constants import EPSILON
 
 
-def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
+def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> dict:
     """
     Compute predictability_rate_confidence_correlation: Risk-Coverage Score (paper Definition 3.5).
 
@@ -75,7 +74,7 @@ def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict
 
 def compute_ece_metrics(
     confidences: np.ndarray, successes: np.ndarray, n_bins: int = 10
-) -> Dict:
+) -> dict:
     """
     Compute predictability_calibration: Calibration Score (paper Definition 3.6).
 
@@ -126,7 +125,7 @@ def compute_ece_metrics(
     }
 
 
-def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
+def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> dict:
     """
     Compute predictability_roc_auc: Discrimination Score (AUC-ROC).
 
@@ -187,7 +186,7 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     }
 
 
-def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
+def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> dict:
     """
     Compute predictability_brier_score: Overall Predictability Score (1 - Brier Score).
 
@@ -229,7 +228,7 @@ def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     }
 
 
-def compute_predictability_metrics(runs: List[Dict]) -> Dict:
+def compute_predictability_metrics(runs: list[dict]) -> dict:
     """Compute predictability metrics (predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score) from runs with confidence scores."""
     all_confidences = []
     all_successes = []

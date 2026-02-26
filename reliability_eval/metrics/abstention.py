@@ -3,7 +3,6 @@
 import re
 
 import numpy as np
-from typing import Dict, List
 
 
 def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
@@ -147,7 +146,7 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
     }
 
 
-def compute_abstention_metrics(runs: List[Dict]) -> Dict:
+def compute_abstention_metrics(runs: list[dict]) -> dict:
     """
     Compute abstention calibration metrics from runs with abstention detection.
 

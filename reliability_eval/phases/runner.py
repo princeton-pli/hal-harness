@@ -5,7 +5,6 @@ import re
 import subprocess
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from reliability_eval.config import AGENT_CONFIGS, BENCHMARK_CONFIGS
 
@@ -90,7 +89,7 @@ def check_api_keys():
 _AGENT_FUNCTION_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
-def _validate_agent_config(agent_config: Dict) -> None:
+def _validate_agent_config(agent_config: dict) -> None:
     """Validate agent_function and agent_dir before use in subprocess commands."""
     agent_function = agent_config.get("agent_function", "")
     if not _AGENT_FUNCTION_RE.match(agent_function):
@@ -107,16 +106,16 @@ def _validate_agent_config(agent_config: Dict) -> None:
 
 
 def build_base_command(
-    agent_config: Dict,
-    benchmark_config: Dict,
+    agent_config: dict,
+    benchmark_config: dict,
     agent_name_suffix: str,
-    max_tasks: Optional[int],
-    conda_env: Optional[str] = None,
-    max_concurrent: Optional[int] = None,
-    run_id: Optional[str] = None,
+    max_tasks: int | None,
+    conda_env: str | None = None,
+    max_concurrent: int | None = None,
+    run_id: str | None = None,
     continue_run: bool = False,
-    results_dir: Optional[str] = None,
-) -> List[str]:
+    results_dir: str | None = None,
+) -> list[str]:
     """Build the base hal-eval command."""
     _validate_agent_config(agent_config)
     benchmark_name = benchmark_config["benchmark_name"]
@@ -184,7 +183,7 @@ def build_base_command(
     return cmd
 
 
-def add_baseline_args(cmd: List[str], benchmark_config: Dict) -> List[str]:
+def add_baseline_args(cmd: list[str], benchmark_config: dict) -> list[str]:
     """Add arguments for baseline phase (consistency_outcome + predictability_rate_confidence_correlation/predictability_calibration + safety_compliance)."""
     # Predictability: confidence scoring
     cmd.extend(["-A", "compute_confidence=true"])
@@ -200,7 +199,7 @@ def add_baseline_args(cmd: List[str], benchmark_config: Dict) -> List[str]:
     return cmd
 
 
-def add_fault_args(cmd: List[str], fault_rate: float) -> List[str]:
+def add_fault_args(cmd: list[str], fault_rate: float) -> list[str]:
     """Add arguments for fault injection phase (robustness_fault_injection)."""
     cmd.extend(["-A", "enable_fault_injection=true"])
     cmd.extend(["-A", f"fault_rate={fault_rate}"])
@@ -209,11 +208,11 @@ def add_fault_args(cmd: List[str], fault_rate: float) -> List[str]:
 
 
 def add_prompt_sensitivity_args(
-    cmd: List[str],
+    cmd: list[str],
     num_variations: int,
     variation_strength: str = "mild",
-    variation_index: Optional[int] = None,
-) -> List[str]:
+    variation_index: int | None = None,
+) -> list[str]:
     """Add arguments for prompt sensitivity phase (S_prompt).
 
     Args:
@@ -230,7 +229,7 @@ def add_prompt_sensitivity_args(
     return cmd
 
 
-def add_structural_args(cmd: List[str], strength: str, ptype: str) -> List[str]:
+def add_structural_args(cmd: list[str], strength: str, ptype: str) -> list[str]:
     """Add arguments for structural perturbation phase (robustness_structural)."""
     cmd.extend(["-A", "enable_structural_perturbations=true"])
     cmd.extend(["-A", f"perturbation_strength={strength}"])
@@ -244,8 +243,8 @@ def add_structural_args(cmd: List[str], strength: str, ptype: str) -> List[str]:
 
 
 def run_command(
-    cmd: List[str], max_retries: int = 3
-) -> tuple[bool, float, Optional[str]]:
+    cmd: list[str], max_retries: int = 3
+) -> tuple[bool, float, str | None]:
     """Run a command with real-time output and retry logic."""
     for attempt in range(max_retries):
         start_time = time.time()
@@ -272,7 +271,7 @@ def run_command(
     return False, 0, "Max retries exceeded"
 
 
-def get_valid_combinations(benchmark_filter: Optional[str] = None) -> List[tuple]:
+def get_valid_combinations(benchmark_filter: str | None = None) -> list[tuple]:
     """Get valid agent-benchmark combinations."""
     combinations = []
     for agent_config in AGENT_CONFIGS:

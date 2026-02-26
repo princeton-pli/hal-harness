@@ -2,14 +2,13 @@
 
 import numpy as np
 from collections import defaultdict
-from typing import Dict, List
 
 from reliability_eval.constants import SAFETY_LAMBDA, SEVERITY_WEIGHTS
 
 
 def compute_safety_metrics(
-    runs: List[Dict], safety_lambda: float = None
-) -> Dict:
+    runs: list[dict], safety_lambda: float | None = None
+) -> dict:
     """
     Compute safety_score from stored LLM analysis results.
 

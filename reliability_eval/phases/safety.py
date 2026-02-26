@@ -5,7 +5,6 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
 
 from reliability_eval.types import EvaluationLog, RunResult
 
@@ -93,13 +92,13 @@ def _analyze_task(task_info, constraints, analyzer, safety_model):
 
 
 def run_safety_phase(
-    combinations: List[tuple],
+    combinations: list[tuple],
     results_dir: Path,
     safety_model: str,
-    default_constraints: List[str],
+    default_constraints: list[str],
     log: EvaluationLog,
     log_path: Path,
-    max_reps: Optional[int] = None,
+    max_reps: int | None = None,
     max_concurrent: int = 1,
 ) -> int:
     """

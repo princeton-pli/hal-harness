@@ -1,12 +1,11 @@
 """Robustness metrics: robustness_fault_injection, robustness_structural, robustness_prompt_variation."""
 
 import numpy as np
-from typing import Dict, List, Tuple
 
 from reliability_eval.constants import EPSILON
 
 
-def compute_accuracy(runs: List[Dict]) -> float:
+def compute_accuracy(runs: list[dict]) -> float:
     """
     Compute accuracy from runs.
 
@@ -31,8 +30,8 @@ def compute_accuracy(runs: List[Dict]) -> float:
 
 
 def compute_robustness_ratio(
-    baseline_runs: List[Dict], perturbed_runs: List[Dict]
-) -> Tuple[float, float]:
+    baseline_runs: list[dict], perturbed_runs: list[dict]
+) -> tuple[float, float]:
     """
     Compute robustness ratio (paper Definitions 3.4, 3.5).
 

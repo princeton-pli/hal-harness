@@ -3,7 +3,6 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 from reliability_eval.metrics.abstention import detect_abstention
 from reliability_eval.types import EvaluationLog, RunResult
@@ -20,7 +19,7 @@ from reliability_eval.types import EvaluationLog, RunResult
 
 
 def run_abstention_phase(
-    combinations: List[tuple],
+    combinations: list[tuple],
     results_dir: Path,
     log: EvaluationLog,
     log_path: Path,

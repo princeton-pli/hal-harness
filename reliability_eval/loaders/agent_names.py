@@ -1,7 +1,6 @@
 """Agent name parsing and model metadata lookups."""
 
 import re
-from typing import Dict
 
 import pandas as pd
 
@@ -24,7 +23,7 @@ def get_model_category(agent_name: str) -> str:
     return best_match
 
 
-def get_model_metadata(agent_name: str) -> Dict:
+def get_model_metadata(agent_name: str) -> dict:
     """Get metadata for a model, with fallback for unknown models."""
     return MODEL_METADATA.get(agent_name, {"date": "2024-01-01", "provider": "Unknown"})
 

@@ -3,7 +3,7 @@
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
@@ -75,7 +75,7 @@ class ReliabilityMetrics:
     abstention_calibration: float = np.nan
 
     # Extra data for plotting
-    extra: Dict = field(default_factory=dict)
+    extra: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -87,17 +87,17 @@ class RunResult:
     success: bool
     timestamp: str
     duration_seconds: float = 0.0
-    error_message: Optional[str] = None
-    run_id: Optional[str] = None  # hal-eval run_id for retry support
+    error_message: str | None = None
+    run_id: str | None = None  # hal-eval run_id for retry support
 
 
 @dataclass
 class EvaluationLog:
     start_time: str
-    config: Dict[str, Any]
-    phases_to_run: List[str]
-    results: List[Dict] = field(default_factory=list)
-    end_time: Optional[str] = None
+    config: dict[str, Any]
+    phases_to_run: list[str]
+    results: list[dict] = field(default_factory=list)
+    end_time: str | None = None
 
     def add_result(self, result: RunResult):
         self.results.append(asdict(result))
@@ -108,7 +108,7 @@ class EvaluationLog:
             json.dump(asdict(self), f, indent=2)
 
     @classmethod
-    def load(cls, path: Path) -> Optional["EvaluationLog"]:
+    def load(cls, path: Path) -> "EvaluationLog | None":
         """Load log from file."""
         if not path.exists():
             return None
@@ -122,6 +122,6 @@ class EvaluationLog:
             end_time=data.get("end_time"),
         )
 
-    def get_failed_runs(self) -> List[Dict]:
+    def get_failed_runs(self) -> list[dict]:
         """Get all failed runs that have a run_id (can be retried)."""
         return [r for r in self.results if not r["success"] and r.get("run_id")]

@@ -3,13 +3,12 @@
 import json
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List
 
 from reliability_eval.loaders.agent_names import extract_agent_name
 from reliability_eval.loaders.gaia_task_levels import extract_gaia_task_levels
 
 
-def detect_run_type(data: Dict, run_dir_name: str) -> str:
+def detect_run_type(data: dict, run_dir_name: str) -> str:
     """Detect the type of run (baseline, fault, structural, prompt, etc.)."""
     agent_args = data.get("metadata", {}).get("agent_args", {})
     config = data.get("config", {})
@@ -42,7 +41,7 @@ def detect_run_type(data: Dict, run_dir_name: str) -> str:
     return "baseline"
 
 
-def extract_minimal_logging_data(raw_logging: List[Dict]) -> List[Dict]:
+def extract_minimal_logging_data(raw_logging: list[dict]) -> list[dict]:
     """
     Extract only the minimal fields needed from raw_logging_results.
     This avoids keeping large conversation histories in memory.
@@ -82,7 +81,7 @@ def extract_minimal_logging_data(raw_logging: List[Dict]) -> List[Dict]:
     return minimal
 
 
-def extract_minimal_eval_data(raw_eval: Dict) -> Dict:
+def extract_minimal_eval_data(raw_eval: dict) -> dict:
     """
     Extract only the minimal fields needed from raw_eval_results.
     This avoids keeping large action details, tool outputs, etc. in memory.
@@ -147,7 +146,7 @@ def extract_minimal_eval_data(raw_eval: Dict) -> Dict:
     return minimal
 
 
-def load_all_results(results_dir: Path, benchmark: str) -> Dict[str, Dict]:
+def load_all_results(results_dir: Path, benchmark: str) -> dict[str, dict]:
     """
     Load all evaluation results for a benchmark.
     Extracts only minimal fields needed for analysis to reduce memory usage.
