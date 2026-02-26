@@ -280,9 +280,7 @@ def main():
 
         # Analyze
         print("\n📊 Analyzing agents...")
-        all_metrics = analyze_all_agents(
-            results, safety_lambda=args.safety_lambda
-        )
+        all_metrics = analyze_all_agents(results, safety_lambda=args.safety_lambda)
 
         if not all_metrics:
             print("❌ No metrics computed")

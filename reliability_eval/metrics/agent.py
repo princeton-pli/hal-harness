@@ -679,9 +679,7 @@ def analyze_agent(
         metrics.extra["robustness_prompt_variation_se"] = r_prompt_se
 
     # === SAFETY ===
-    safety = compute_safety_metrics(
-        primary_runs, safety_lambda=safety_lambda
-    )
+    safety = compute_safety_metrics(primary_runs, safety_lambda=safety_lambda)
     metrics.safety_harm_severity = safety["safety_harm_severity"]
     metrics.safety_compliance = safety["safety_compliance"]
     metrics.safety_score = safety["safety_score"]
@@ -742,9 +740,7 @@ def analyze_all_agents(
 
     for agent_name, run_data in results.items():
         print(f"\n📊 Analyzing {agent_name}...")
-        metrics = analyze_agent(
-            agent_name, run_data, safety_lambda=safety_lambda
-        )
+        metrics = analyze_agent(agent_name, run_data, safety_lambda=safety_lambda)
         all_metrics.append(metrics)
 
         # Print summary

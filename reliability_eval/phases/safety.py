@@ -250,7 +250,9 @@ def run_safety_phase(
             modified = False
             with ThreadPoolExecutor(max_workers=max_concurrent) as executor:
                 future_to_task = {
-                    executor.submit(_analyze_task, t, constraints, analyzer, safety_model): t
+                    executor.submit(
+                        _analyze_task, t, constraints, analyzer, safety_model
+                    ): t
                     for t in tasks_to_analyze
                 }
                 for future in as_completed(future_to_task):

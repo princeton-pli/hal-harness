@@ -420,4 +420,3 @@ BENCHMARK_CONFIGS = {
         ],
     },
 }
-

@@ -1,6 +1,9 @@
 """reliability_eval.metrics — metric computation subpackage."""
 
-from reliability_eval.metrics.abstention import compute_abstention_metrics, detect_abstention
+from reliability_eval.metrics.abstention import (
+    compute_abstention_metrics,
+    detect_abstention,
+)
 from reliability_eval.metrics.agent import (
     analyze_agent,
     analyze_all_agents,

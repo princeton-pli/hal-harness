@@ -100,9 +100,7 @@ def _validate_agent_config(agent_config: dict) -> None:
 
     agent_dir = agent_config.get("agent_dir", "")
     if not isinstance(agent_dir, str):
-        raise ValueError(
-            f"Invalid agent_dir {agent_dir!r}: must be a string"
-        )
+        raise ValueError(f"Invalid agent_dir {agent_dir!r}: must be a string")
 
 
 def build_base_command(
@@ -242,9 +240,7 @@ def add_structural_args(cmd: list[str], strength: str, ptype: str) -> list[str]:
 # =============================================================================
 
 
-def run_command(
-    cmd: list[str], max_retries: int = 3
-) -> tuple[bool, float, str | None]:
+def run_command(cmd: list[str], max_retries: int = 3) -> tuple[bool, float, str | None]:
     """Run a command with real-time output and retry logic."""
     for attempt in range(max_retries):
         start_time = time.time()
