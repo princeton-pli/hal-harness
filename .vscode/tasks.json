@@ -24,7 +24,7 @@
     {
       "label": "Run Tests",
       "type": "shell",
-      "command": "python -m pytest tests/ -v",
+      "command": "conda run -n hal python -m pytest tests/ -v",
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
