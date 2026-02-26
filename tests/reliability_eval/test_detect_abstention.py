@@ -1,6 +1,6 @@
 """Tests for detect_abstention in run_reliability_eval.py."""
 
-from run_reliability_eval import detect_abstention
+from reliability_eval import detect_abstention
 
 
 def msg(role, content):

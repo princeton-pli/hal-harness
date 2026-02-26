@@ -4,7 +4,7 @@ import math
 
 import pytest
 
-from analyze_reliability import (
+from reliability_eval import (
     compute_outcome_consistency,
     compute_resource_consistency,
     compute_sequence_consistency,

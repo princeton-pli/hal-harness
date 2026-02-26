@@ -5,7 +5,7 @@ import math
 import numpy as np
 import pytest
 
-from analyze_reliability import (
+from reliability_eval import (
     compute_auroc_metrics,
     compute_brier_metrics,
     compute_ece_metrics,

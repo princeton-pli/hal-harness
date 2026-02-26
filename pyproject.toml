@@ -144,7 +144,7 @@ hal-upload = "hal.utils.upload:upload_results"
 hal-decrypt = "hal.utils.decrypt:decrypt_cli"
 
 [tool.setuptools]
-packages = ["hal"]
+packages = ["hal", "reliability_eval"]
 
 [tool.ruff]
 # Ignore all git submodules and external agent code
@@ -164,5 +164,4 @@ extend-exclude = [
     "hal/benchmarks/scienceagentbench/ScienceAgentBench",
     "hal/benchmarks/SWE-bench",
     "hal/benchmarks/USACO",
-    "reliability_eval",
 ]
