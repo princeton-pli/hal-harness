@@ -31,28 +31,30 @@ def compute_abstention_metrics(runs: List[Dict]) -> Dict:
     abstention_strengths = []
 
     for run in runs:
-        raw_eval = run.get('raw_eval_results', {})
+        raw_eval = run.get("raw_eval_results", {})
         for task_eval in raw_eval.values():
             if isinstance(task_eval, dict):
-                abstention = task_eval.get('abstention', {})
+                abstention = task_eval.get("abstention", {})
                 if abstention:
-                    abstained = abstention.get('abstained', False)
+                    abstained = abstention.get("abstained", False)
                     abstained_list.append(1 if abstained else 0)
-                    success_list.append(int(task_eval.get('reward', 0.0)))
-                    abstention_types.append(abstention.get('abstention_type', 'none'))
-                    abstention_strengths.append(abstention.get('abstention_strength', 0.0))
+                    success_list.append(int(task_eval.get("reward", 0.0)))
+                    abstention_types.append(abstention.get("abstention_type", "none"))
+                    abstention_strengths.append(
+                        abstention.get("abstention_strength", 0.0)
+                    )
 
     if not abstained_list:
         return {
-            'abstention_rate': np.nan,
-            'abstention_precision': np.nan,
-            'abstention_recall': np.nan,
-            'selective_accuracy': np.nan,
-            'abstention_f1': np.nan,
-            'calibration_score': np.nan,
-            'confusion_matrix': {},
-            'type_breakdown': {},
-            'n_tasks': 0,
+            "abstention_rate": np.nan,
+            "abstention_precision": np.nan,
+            "abstention_recall": np.nan,
+            "selective_accuracy": np.nan,
+            "abstention_f1": np.nan,
+            "calibration_score": np.nan,
+            "confusion_matrix": {},
+            "type_breakdown": {},
+            "n_tasks": 0,
         }
 
     abstained = np.array(abstained_list)
@@ -88,7 +90,11 @@ def compute_abstention_metrics(runs: List[Dict]) -> Dict:
     # F1 score for abstention
     if not np.isnan(abstention_precision) and not np.isnan(abstention_recall):
         if (abstention_precision + abstention_recall) > 0:
-            abstention_f1 = 2 * (abstention_precision * abstention_recall) / (abstention_precision + abstention_recall)
+            abstention_f1 = (
+                2
+                * (abstention_precision * abstention_recall)
+                / (abstention_precision + abstention_recall)
+            )
         else:
             abstention_f1 = 0.0
     else:
@@ -110,28 +116,40 @@ def compute_abstention_metrics(runs: List[Dict]) -> Dict:
 
     type_breakdown = {
         t: {
-            'count': type_counts[t],
-            'success_rate': np.mean(type_success_rates[t]) if type_success_rates[t] else 0.0
+            "count": type_counts[t],
+            "success_rate": np.mean(type_success_rates[t])
+            if type_success_rates[t]
+            else 0.0,
         }
         for t in type_counts
     }
 
     return {
-        'abstention_rate': float(abstention_rate),
-        'abstention_precision': float(abstention_precision) if not np.isnan(abstention_precision) else None,
-        'abstention_recall': float(abstention_recall) if not np.isnan(abstention_recall) else None,
-        'selective_accuracy': float(selective_accuracy) if not np.isnan(selective_accuracy) else None,
-        'abstention_f1': float(abstention_f1) if not np.isnan(abstention_f1) else None,
-        'calibration_score': float(calibration_score) if not np.isnan(calibration_score) else None,
-        'confusion_matrix': {
-            'abstained_and_failed': int(tp),
-            'abstained_and_succeeded': int(fp),
-            'proceeded_and_failed': int(fn),
-            'proceeded_and_succeeded': int(tn),
+        "abstention_rate": float(abstention_rate),
+        "abstention_precision": float(abstention_precision)
+        if not np.isnan(abstention_precision)
+        else None,
+        "abstention_recall": float(abstention_recall)
+        if not np.isnan(abstention_recall)
+        else None,
+        "selective_accuracy": float(selective_accuracy)
+        if not np.isnan(selective_accuracy)
+        else None,
+        "abstention_f1": float(abstention_f1) if not np.isnan(abstention_f1) else None,
+        "calibration_score": float(calibration_score)
+        if not np.isnan(calibration_score)
+        else None,
+        "confusion_matrix": {
+            "abstained_and_failed": int(tp),
+            "abstained_and_succeeded": int(fp),
+            "proceeded_and_failed": int(fn),
+            "proceeded_and_succeeded": int(tn),
         },
-        'type_breakdown': type_breakdown,
-        'mean_abstention_strength': float(np.mean(abstention_strengths)) if abstention_strengths else 0.0,
-        'n_tasks': n_tasks,
-        'n_abstained': int(n_abstained),
-        'n_failed': int(n_failed),
+        "type_breakdown": type_breakdown,
+        "mean_abstention_strength": float(np.mean(abstention_strengths))
+        if abstention_strengths
+        else 0.0,
+        "n_tasks": n_tasks,
+        "n_abstained": int(n_abstained),
+        "n_failed": int(n_failed),
     }

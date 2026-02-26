@@ -82,9 +82,7 @@ class TestBuildBaseCommand:
 
     def test_docker_flag_when_required(self):
         bm = {**BENCHMARK_CONFIG, "requires_docker": True}
-        cmd = build_base_command(
-            AGENT_CONFIG, bm, "_r0", max_tasks=None
-        )
+        cmd = build_base_command(AGENT_CONFIG, bm, "_r0", max_tasks=None)
         assert "--docker" in cmd
 
     def test_reasoning_effort_included_when_set(self):

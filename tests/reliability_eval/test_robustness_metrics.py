@@ -2,17 +2,17 @@
 
 import math
 
-import numpy as np
 import pytest
 
-from reliability_eval.metrics.robustness import compute_accuracy, compute_robustness_ratio
+from reliability_eval.metrics.robustness import (
+    compute_accuracy,
+    compute_robustness_ratio,
+)
 
 
 def _make_run(rewards: list[float]) -> dict:
     """Build a minimal run dict with the given reward values."""
-    return {
-        "raw_eval_results": {str(i): {"reward": r} for i, r in enumerate(rewards)}
-    }
+    return {"raw_eval_results": {str(i): {"reward": r} for i, r in enumerate(rewards)}}
 
 
 class TestComputeAccuracy:

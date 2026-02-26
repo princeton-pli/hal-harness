@@ -1,33 +1,37 @@
 """Detailed dimension plots."""
 
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List
 
 from reliability_eval.constants import (
-    CATEGORY_COLORS, CATEGORY_LABELS, EPSILON, HARM_REF,
-    PROVIDER_COLORS, PROVIDER_MARKERS, PROVIDER_ORDER,
-    SAFETY_LAMBDA, SEVERITY_WEIGHTS, TAUBENCH_AIRLINE_CLEAN_TASKS,
-    W_OUTCOME, W_RESOURCE, W_TRAJECTORY,
+    PROVIDER_COLORS,
+    PROVIDER_MARKERS,
 )
 from reliability_eval.loaders.agent_names import (
-    get_model_category, get_model_metadata, get_provider,
-    sort_agents_by_provider_and_date, strip_agent_prefix,
+    get_model_metadata,
+    get_provider,
+    sort_agents_by_provider_and_date,
+    strip_agent_prefix,
 )
 from reliability_eval.metrics.consistency import compute_weighted_r_con
 from reliability_eval.types import ReliabilityMetrics
 from reliability_eval.plots.helpers import (
-    _CI_Z, _add_bar_labels_ci, _bar_with_ci, _clip_yerr,
-    _get_aggregate_yerr, _get_weighted_r_con_yerr, _get_yerr,
-    filter_oldest_and_newest_per_provider, generate_shaded_colors,
+    _add_bar_labels_ci,
+    _bar_with_ci,
+    _get_aggregate_yerr,
+    _get_weighted_r_con_yerr,
+    _get_yerr,
+    filter_oldest_and_newest_per_provider,
+    generate_shaded_colors,
 )
 
-def plot_consistency_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+
+def plot_consistency_detailed(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create detailed consistency plots - vertical layout with bar plots.
     Shows: R_Con (overall), C_out, C_traj_d, C_traj_s, C_res
@@ -40,80 +44,107 @@ def plot_consistency_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMet
     fig, axes = plt.subplots(5, 1, figsize=(5, 12))
 
     # Extract just model names (remove scaffold prefixes)
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
     x_pos = np.arange(len(agents))
 
     # 1. R_Con (Overall Consistency) - aggregate with propagated SE
     ax = axes[0]
-    R_Con = pd.Series(compute_weighted_r_con(df_sorted['C_out'], df_sorted['C_traj_d'], df_sorted['C_traj_s'], df_sorted['C_res']), index=df_sorted.index).fillna(0)
+    R_Con = pd.Series(
+        compute_weighted_r_con(
+            df_sorted["C_out"],
+            df_sorted["C_traj_d"],
+            df_sorted["C_traj_s"],
+            df_sorted["C_res"],
+        ),
+        index=df_sorted.index,
+    ).fillna(0)
     yerr_agg = _get_weighted_r_con_yerr(df_sorted, values=R_Con)
-    bars = ax.bar(x_pos, R_Con, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5,
-                  yerr=yerr_agg, capsize=3, error_kw={'linewidth': 1.0, 'color': 'black'})
-    ax.set_ylabel(r'$R_{\mathrm{Con}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Overall Consistency', fontsize=14, fontweight='bold')
+    bars = ax.bar(
+        x_pos,
+        R_Con,
+        color=bar_colors,
+        alpha=0.8,
+        edgecolor="black",
+        linewidth=0.5,
+        yerr=yerr_agg,
+        capsize=3,
+        error_kw={"linewidth": 1.0, "color": "black"},
+    )
+    ax.set_ylabel(r"$R_{\mathrm{Con}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Overall Consistency", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, R_Con, yerr_agg)
 
     # 2. C_out (Outcome Consistency)
     ax = axes[1]
-    bars, yerr = _bar_with_ci(ax, x_pos, df_sorted['C_out'].fillna(0), bar_colors, df_sorted, 'C_out')
-    ax.set_ylabel(r'$C_{\mathrm{out}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Outcome Consistency', fontsize=14, fontweight='bold')
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, df_sorted["C_out"].fillna(0), bar_colors, df_sorted, "C_out"
+    )
+    ax.set_ylabel(r"$C_{\mathrm{out}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Outcome Consistency", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
-    _add_bar_labels_ci(ax, bars, df_sorted['C_out'], yerr)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
+    _add_bar_labels_ci(ax, bars, df_sorted["C_out"], yerr)
 
     # 3. C_traj_d (Trajectory Distribution Consistency)
     ax = axes[2]
-    bars, yerr = _bar_with_ci(ax, x_pos, df_sorted['C_traj_d'].fillna(0), bar_colors, df_sorted, 'C_traj_d')
-    ax.set_ylabel(r'$C^{d}_{\mathrm{traj}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Trajectory Distribution Consistency', fontsize=14, fontweight='bold')
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, df_sorted["C_traj_d"].fillna(0), bar_colors, df_sorted, "C_traj_d"
+    )
+    ax.set_ylabel(r"$C^{d}_{\mathrm{traj}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Trajectory Distribution Consistency", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
-    _add_bar_labels_ci(ax, bars, df_sorted['C_traj_d'], yerr)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
+    _add_bar_labels_ci(ax, bars, df_sorted["C_traj_d"], yerr)
 
     # 4. C_traj_s (Trajectory Sequence Consistency)
     ax = axes[3]
-    bars, yerr = _bar_with_ci(ax, x_pos, df_sorted['C_traj_s'].fillna(0), bar_colors, df_sorted, 'C_traj_s')
-    ax.set_ylabel(r'$C^{s}_{\mathrm{traj}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Trajectory Sequence Consistency', fontsize=14, fontweight='bold')
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, df_sorted["C_traj_s"].fillna(0), bar_colors, df_sorted, "C_traj_s"
+    )
+    ax.set_ylabel(r"$C^{s}_{\mathrm{traj}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Trajectory Sequence Consistency", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
-    _add_bar_labels_ci(ax, bars, df_sorted['C_traj_s'], yerr)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
+    _add_bar_labels_ci(ax, bars, df_sorted["C_traj_s"], yerr)
 
     # 5. C_res (Resource Consistency) - at the bottom with x labels
     ax = axes[4]
-    bars, yerr = _bar_with_ci(ax, x_pos, df_sorted['C_res'].fillna(0), bar_colors, df_sorted, 'C_res')
-    ax.set_ylabel(r'$C_{\mathrm{res}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Resource Consistency', fontsize=14, fontweight='bold')
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, df_sorted["C_res"].fillna(0), bar_colors, df_sorted, "C_res"
+    )
+    ax.set_ylabel(r"$C_{\mathrm{res}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Resource Consistency", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
-    _add_bar_labels_ci(ax, bars, df_sorted['C_res'], yerr)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
+    _add_bar_labels_ci(ax, bars, df_sorted["C_res"], yerr)
 
     plt.tight_layout()
-    output_path = output_dir / 'consistency_detailed.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "consistency_detailed.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_predictability_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_predictability_detailed(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create detailed predictability plots - vertical layout with bar plots.
     Shows: R_Pred (overall), P_cal, P_auroc, P_brier
@@ -125,70 +156,91 @@ def plot_predictability_detailed(df: pd.DataFrame, all_metrics: List[Reliability
     # Vertical layout: 4 rows, 1 column (matching consistency plot style)
     fig, axes = plt.subplots(4, 1, figsize=(5, 10))
 
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
     x_pos = np.arange(len(agents))
 
     # 1. R_Pred (Overall Predictability) = P_brier
     ax = axes[0]
-    R_Pred = df_sorted['P_brier'].fillna(0)
-    yerr_pred = _get_yerr(df_sorted, 'P_brier', values=R_Pred)
-    bars = ax.bar(x_pos, R_Pred, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5,
-                  yerr=yerr_pred, capsize=3, error_kw={'linewidth': 1.0, 'color': 'black'})
-    ax.set_ylabel(r'$R_{\mathrm{Pred}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Overall Predictability', fontsize=14, fontweight='bold')
+    R_Pred = df_sorted["P_brier"].fillna(0)
+    yerr_pred = _get_yerr(df_sorted, "P_brier", values=R_Pred)
+    bars = ax.bar(
+        x_pos,
+        R_Pred,
+        color=bar_colors,
+        alpha=0.8,
+        edgecolor="black",
+        linewidth=0.5,
+        yerr=yerr_pred,
+        capsize=3,
+        error_kw={"linewidth": 1.0, "color": "black"},
+    )
+    ax.set_ylabel(r"$R_{\mathrm{Pred}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Overall Predictability", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, R_Pred, yerr_pred)
 
     # 2. P_cal (Calibration)
     ax = axes[1]
-    bars, yerr = _bar_with_ci(ax, x_pos, df_sorted['P_cal'].fillna(0), bar_colors, df_sorted, 'P_cal')
-    ax.set_ylabel(r'$P_{\mathrm{cal}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Calibration', fontsize=14, fontweight='bold')
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, df_sorted["P_cal"].fillna(0), bar_colors, df_sorted, "P_cal"
+    )
+    ax.set_ylabel(r"$P_{\mathrm{cal}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Calibration", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
-    _add_bar_labels_ci(ax, bars, df_sorted['P_cal'], yerr)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
+    _add_bar_labels_ci(ax, bars, df_sorted["P_cal"], yerr)
 
     # 3. P_auroc (Discrimination)
     ax = axes[2]
-    p_auroc_vals = df_sorted['P_auroc'].fillna(0) if 'P_auroc' in df_sorted.columns else pd.Series([0] * len(df_sorted))
-    bars, yerr = _bar_with_ci(ax, x_pos, p_auroc_vals, bar_colors, df_sorted, 'P_auroc')
-    ax.set_ylabel(r'$P_{\mathrm{AUROC}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Discrimination', fontsize=14, fontweight='bold')
+    p_auroc_vals = (
+        df_sorted["P_auroc"].fillna(0)
+        if "P_auroc" in df_sorted.columns
+        else pd.Series([0] * len(df_sorted))
+    )
+    bars, yerr = _bar_with_ci(ax, x_pos, p_auroc_vals, bar_colors, df_sorted, "P_auroc")
+    ax.set_ylabel(r"$P_{\mathrm{AUROC}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Discrimination", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, p_auroc_vals, yerr)
 
     # 4. P_brier (Overall Quality) - at the bottom with x labels
     ax = axes[3]
-    p_brier_vals = df_sorted['P_brier'].fillna(0) if 'P_brier' in df_sorted.columns else pd.Series([0] * len(df_sorted))
-    bars, yerr = _bar_with_ci(ax, x_pos, p_brier_vals, bar_colors, df_sorted, 'P_brier')
-    ax.set_ylabel(r'$P_{\mathrm{Brier}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Overall Quality', fontsize=14, fontweight='bold')
+    p_brier_vals = (
+        df_sorted["P_brier"].fillna(0)
+        if "P_brier" in df_sorted.columns
+        else pd.Series([0] * len(df_sorted))
+    )
+    bars, yerr = _bar_with_ci(ax, x_pos, p_brier_vals, bar_colors, df_sorted, "P_brier")
+    ax.set_ylabel(r"$P_{\mathrm{Brier}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Overall Quality", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, p_brier_vals, yerr)
 
     plt.tight_layout()
-    output_path = output_dir / 'predictability_detailed.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "predictability_detailed.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_accuracy_coverage_by_model(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_accuracy_coverage_by_model(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create accuracy-coverage plots for each model in a 3x4 grid (provider x model).
     Rows: OpenAI, Google, Anthropic
@@ -198,12 +250,22 @@ def plot_accuracy_coverage_by_model(df: pd.DataFrame, all_metrics: List[Reliabil
     """
     # Define model order per provider (excluding xhigh)
     provider_models = {
-        'OpenAI': ['gpt_4_turbo', 'gpt_4o_mini', 'gpt_o1', 'gpt_5_2'],
-        'Google': ['gemini_2_flash', 'gemini_2_5_flash', 'gemini_2_5_pro', 'gemini_3_pro'],
-        'Anthropic': ['claude_haiku_3_5', 'claude_sonnet_3_7', 'claude_sonnet_4_5', 'claude_opus_4_5']
+        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2"],
+        "Google": [
+            "gemini_2_flash",
+            "gemini_2_5_flash",
+            "gemini_2_5_pro",
+            "gemini_3_pro",
+        ],
+        "Anthropic": [
+            "claude_haiku_3_5",
+            "claude_sonnet_3_7",
+            "claude_sonnet_4_5",
+            "claude_opus_4_5",
+        ],
     }
 
-    provider_order = ['OpenAI', 'Google', 'Anthropic']
+    provider_order = ["OpenAI", "Google", "Anthropic"]
 
     # Build mapping from model key to agent name
     agent_to_metrics = {m.agent_name: m for m in all_metrics}
@@ -216,25 +278,29 @@ def plot_accuracy_coverage_by_model(df: pd.DataFrame, all_metrics: List[Reliabil
     for agent_name in agent_to_metrics.keys():
         for model_key in all_model_keys:
             if agent_name.endswith(model_key):
-                prefix = agent_name[:-len(model_key)]
+                prefix = agent_name[: -len(model_key)]
                 if prefix:
                     detected_prefixes.add(prefix)
-    detected_prefixes = list(detected_prefixes) if detected_prefixes else ['taubench_toolcalling_', 'taubench_fewshot_']
+    detected_prefixes = (
+        list(detected_prefixes)
+        if detected_prefixes
+        else ["taubench_toolcalling_", "taubench_fewshot_"]
+    )
 
     # Model display name mapping for well-formatted titles
     model_display_names = {
-        'gpt_4_turbo': 'GPT-4 Turbo',
-        'gpt_4o_mini': 'GPT-4o mini',
-        'gpt_o1': 'o1',
-        'gpt_5_2': 'GPT-5.2',
-        'gemini_2_flash': 'Gemini 2.0 Flash',
-        'gemini_2_5_flash': 'Gemini 2.5 Flash',
-        'gemini_2_5_pro': 'Gemini 2.5 Pro',
-        'gemini_3_pro': 'Gemini 3 Pro',
-        'claude_haiku_3_5': 'Claude 3.5 Haiku',
-        'claude_sonnet_3_7': 'Claude 3.7 Sonnet',
-        'claude_sonnet_4_5': 'Claude Sonnet 4.5',
-        'claude_opus_4_5': 'Claude Opus 4.5',
+        "gpt_4_turbo": "GPT-4 Turbo",
+        "gpt_4o_mini": "GPT-4o mini",
+        "gpt_o1": "o1",
+        "gpt_5_2": "GPT-5.2",
+        "gemini_2_flash": "Gemini 2.0 Flash",
+        "gemini_2_5_flash": "Gemini 2.5 Flash",
+        "gemini_2_5_pro": "Gemini 2.5 Pro",
+        "gemini_3_pro": "Gemini 3 Pro",
+        "claude_haiku_3_5": "Claude 3.5 Haiku",
+        "claude_sonnet_3_7": "Claude 3.7 Sonnet",
+        "claude_sonnet_4_5": "Claude Sonnet 4.5",
+        "claude_opus_4_5": "Claude Opus 4.5",
     }
 
     # Square subplots
@@ -245,7 +311,7 @@ def plot_accuracy_coverage_by_model(df: pd.DataFrame, all_metrics: List[Reliabil
 
     for row_idx, provider in enumerate(provider_order):
         models = provider_models[provider]
-        provider_color = PROVIDER_COLORS.get(provider, '#999999')
+        provider_color = PROVIDER_COLORS.get(provider, "#999999")
 
         for col_idx, model_key in enumerate(models):
             ax = axes[row_idx, col_idx]
@@ -253,103 +319,169 @@ def plot_accuracy_coverage_by_model(df: pd.DataFrame, all_metrics: List[Reliabil
             # Find agent with this model (try all detected scaffolds)
             agent_name = None
             for prefix in detected_prefixes:
-                candidate = f'{prefix}{model_key}'
+                candidate = f"{prefix}{model_key}"
                 if candidate in agent_to_metrics:
                     agent_name = candidate
                     break
 
             # Get display name
-            display_name = model_display_names.get(model_key, model_key.replace('_', ' ').title())
+            display_name = model_display_names.get(
+                model_key, model_key.replace("_", " ").title()
+            )
 
             if agent_name is None:
-                ax.text(0.5, 0.5, f'{display_name}\n(no data)', ha='center', va='center',
-                       fontsize=10, transform=ax.transAxes)
+                ax.text(
+                    0.5,
+                    0.5,
+                    f"{display_name}\n(no data)",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    transform=ax.transAxes,
+                )
                 ax.set_xlim(-0.1, 1.1)
                 ax.set_ylim(-0.1, 1.1)
                 ax.set_xticks(axis_ticks)
                 ax.set_yticks(axis_ticks)
-                ax.set_aspect('equal')
+                ax.set_aspect("equal")
                 if row_idx == 2:
-                    ax.set_xlabel('Coverage', fontsize=11)
+                    ax.set_xlabel("Coverage", fontsize=11)
                 if col_idx == 0:
-                    ax.set_ylabel('Accuracy', fontsize=11)
+                    ax.set_ylabel("Accuracy", fontsize=11)
                 ax.grid(True, alpha=0.3)
-                ax.set_title(display_name, fontsize=11, fontweight='bold')
+                ax.set_title(display_name, fontsize=11, fontweight="bold")
                 continue
 
             m = agent_to_metrics[agent_name]
 
             # Get accuracy-coverage data (convert from risk-coverage)
-            if 'aurc_data' in m.extra and m.extra['aurc_data']:
-                d = m.extra['aurc_data']
-                if d.get('coverages') is not None and len(d.get('coverages', [])) > 0:
-                    coverages = np.array(d['coverages'])
+            if "aurc_data" in m.extra and m.extra["aurc_data"]:
+                d = m.extra["aurc_data"]
+                if d.get("coverages") is not None and len(d.get("coverages", [])) > 0:
+                    coverages = np.array(d["coverages"])
                     # Convert risk to accuracy
-                    accuracies = 1 - np.array(d['risks'])
-                    optimal_accuracies = 1 - np.array(d['optimal_risks']) if d.get('optimal_risks') else None
+                    accuracies = 1 - np.array(d["risks"])
+                    optimal_accuracies = (
+                        1 - np.array(d["optimal_risks"])
+                        if d.get("optimal_risks")
+                        else None
+                    )
 
                     # Plot model's accuracy-coverage curve
-                    ax.plot(coverages, accuracies, color=provider_color, linewidth=2,
-                           label='Model', alpha=0.9)
+                    ax.plot(
+                        coverages,
+                        accuracies,
+                        color=provider_color,
+                        linewidth=2,
+                        label="Model",
+                        alpha=0.9,
+                    )
 
                     # Plot ideal/optimal bound
                     if optimal_accuracies is not None:
-                        ax.plot(coverages, optimal_accuracies, 'k--', linewidth=1.5,
-                               alpha=0.7, label='Ideal')
+                        ax.plot(
+                            coverages,
+                            optimal_accuracies,
+                            "k--",
+                            linewidth=1.5,
+                            alpha=0.7,
+                            label="Ideal",
+                        )
                         # Fill the gap
-                        ax.fill_between(coverages, accuracies, optimal_accuracies,
-                                       alpha=0.2, color=provider_color)
+                        ax.fill_between(
+                            coverages,
+                            accuracies,
+                            optimal_accuracies,
+                            alpha=0.2,
+                            color=provider_color,
+                        )
 
                     # Plot random baseline (horizontal line at overall accuracy)
                     overall_accuracy = accuracies[-1]  # Accuracy at full coverage
-                    ax.axhline(y=overall_accuracy, color='red', linestyle=':', linewidth=1.5,
-                              alpha=0.6, label='Random')
+                    ax.axhline(
+                        y=overall_accuracy,
+                        color="red",
+                        linestyle=":",
+                        linewidth=1.5,
+                        alpha=0.6,
+                        label="Random",
+                    )
 
                     # Add P_auroc annotation at bottom right
-                    ax.annotate(r'$P_{\mathrm{AUROC}}$' + f'={m.P_auroc:.2f}', xy=(0.97, 0.03), xycoords='axes fraction',
-                               ha='right', va='bottom', fontsize=10,
-                               bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+                    ax.annotate(
+                        r"$P_{\mathrm{AUROC}}$" + f"={m.P_auroc:.2f}",
+                        xy=(0.97, 0.03),
+                        xycoords="axes fraction",
+                        ha="right",
+                        va="bottom",
+                        fontsize=10,
+                        bbox=dict(
+                            boxstyle="round,pad=0.3", facecolor="white", alpha=0.8
+                        ),
+                    )
                 else:
-                    ax.text(0.5, 0.5, f'{model_key}\n(no curve data)', ha='center', va='center',
-                           fontsize=10, transform=ax.transAxes)
+                    ax.text(
+                        0.5,
+                        0.5,
+                        f"{model_key}\n(no curve data)",
+                        ha="center",
+                        va="center",
+                        fontsize=10,
+                        transform=ax.transAxes,
+                    )
             else:
-                ax.text(0.5, 0.5, f'{model_key}\n(no AURC data)', ha='center', va='center',
-                       fontsize=10, transform=ax.transAxes)
+                ax.text(
+                    0.5,
+                    0.5,
+                    f"{model_key}\n(no AURC data)",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    transform=ax.transAxes,
+                )
 
             # Format subplot - square with equal ticks
             ax.set_xlim(-0.1, 1.1)
             ax.set_ylim(-0.1, 1.1)
             ax.set_xticks(axis_ticks)
             ax.set_yticks(axis_ticks)
-            ax.set_aspect('equal')
+            ax.set_aspect("equal")
             ax.grid(True, alpha=0.3)
 
             # Panel title
-            ax.set_title(display_name, fontsize=11, fontweight='bold')
+            ax.set_title(display_name, fontsize=11, fontweight="bold")
 
             if row_idx == 2:
-                ax.set_xlabel('Coverage', fontsize=11)
+                ax.set_xlabel("Coverage", fontsize=11)
             if col_idx == 0:
-                ax.set_ylabel('Accuracy', fontsize=11)
+                ax.set_ylabel("Accuracy", fontsize=11)
 
     # Add legend (horizontal, top center)
     from matplotlib.lines import Line2D
+
     legend_elements = [
-        Line2D([0], [0], color='gray', linewidth=2, label='Model'),
-        Line2D([0], [0], color='black', linewidth=1.5, linestyle='--', label='Ideal'),
-        Line2D([0], [0], color='red', linewidth=1.5, linestyle=':', label='Random')
+        Line2D([0], [0], color="gray", linewidth=2, label="Model"),
+        Line2D([0], [0], color="black", linewidth=1.5, linestyle="--", label="Ideal"),
+        Line2D([0], [0], color="red", linewidth=1.5, linestyle=":", label="Random"),
     ]
-    fig.legend(handles=legend_elements, loc='upper center', fontsize=9,
-              bbox_to_anchor=(0.5, 1.04), ncol=3)
+    fig.legend(
+        handles=legend_elements,
+        loc="upper center",
+        fontsize=9,
+        bbox_to_anchor=(0.5, 1.04),
+        ncol=3,
+    )
 
     plt.tight_layout()
-    output_path = output_dir / 'accuracy_coverage_by_model.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "accuracy_coverage_by_model.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_calibration_by_model(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_calibration_by_model(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create calibration/reliability diagram plots for each model in a 3x4 grid (provider x model).
     Rows: OpenAI, Google, Anthropic
@@ -359,27 +491,37 @@ def plot_calibration_by_model(df: pd.DataFrame, all_metrics: List[ReliabilityMet
     """
     # Define model order per provider (excluding xhigh)
     provider_models = {
-        'OpenAI': ['gpt_4_turbo', 'gpt_4o_mini', 'gpt_o1', 'gpt_5_2'],
-        'Google': ['gemini_2_flash', 'gemini_2_5_flash', 'gemini_2_5_pro', 'gemini_3_pro'],
-        'Anthropic': ['claude_haiku_3_5', 'claude_sonnet_3_7', 'claude_sonnet_4_5', 'claude_opus_4_5']
+        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2"],
+        "Google": [
+            "gemini_2_flash",
+            "gemini_2_5_flash",
+            "gemini_2_5_pro",
+            "gemini_3_pro",
+        ],
+        "Anthropic": [
+            "claude_haiku_3_5",
+            "claude_sonnet_3_7",
+            "claude_sonnet_4_5",
+            "claude_opus_4_5",
+        ],
     }
 
-    provider_order = ['OpenAI', 'Google', 'Anthropic']
+    provider_order = ["OpenAI", "Google", "Anthropic"]
 
     # Model display name mapping for well-formatted titles
     model_display_names = {
-        'gpt_4_turbo': 'GPT-4 Turbo',
-        'gpt_4o_mini': 'GPT-4o mini',
-        'gpt_o1': 'o1',
-        'gpt_5_2': 'GPT-5.2',
-        'gemini_2_flash': 'Gemini 2.0 Flash',
-        'gemini_2_5_flash': 'Gemini 2.5 Flash',
-        'gemini_2_5_pro': 'Gemini 2.5 Pro',
-        'gemini_3_pro': 'Gemini 3 Pro',
-        'claude_haiku_3_5': 'Claude 3.5 Haiku',
-        'claude_sonnet_3_7': 'Claude 3.7 Sonnet',
-        'claude_sonnet_4_5': 'Claude Sonnet 4.5',
-        'claude_opus_4_5': 'Claude Opus 4.5',
+        "gpt_4_turbo": "GPT-4 Turbo",
+        "gpt_4o_mini": "GPT-4o mini",
+        "gpt_o1": "o1",
+        "gpt_5_2": "GPT-5.2",
+        "gemini_2_flash": "Gemini 2.0 Flash",
+        "gemini_2_5_flash": "Gemini 2.5 Flash",
+        "gemini_2_5_pro": "Gemini 2.5 Pro",
+        "gemini_3_pro": "Gemini 3 Pro",
+        "claude_haiku_3_5": "Claude 3.5 Haiku",
+        "claude_sonnet_3_7": "Claude 3.7 Sonnet",
+        "claude_sonnet_4_5": "Claude Sonnet 4.5",
+        "claude_opus_4_5": "Claude Opus 4.5",
     }
 
     # Build mapping from model key to agent name
@@ -391,10 +533,14 @@ def plot_calibration_by_model(df: pd.DataFrame, all_metrics: List[ReliabilityMet
     for agent_name in agent_to_metrics.keys():
         for model_key in all_model_keys:
             if agent_name.endswith(model_key):
-                prefix = agent_name[:-len(model_key)]
+                prefix = agent_name[: -len(model_key)]
                 if prefix:
                     detected_prefixes.add(prefix)
-    detected_prefixes = list(detected_prefixes) if detected_prefixes else ['taubench_toolcalling_', 'taubench_fewshot_']
+    detected_prefixes = (
+        list(detected_prefixes)
+        if detected_prefixes
+        else ["taubench_toolcalling_", "taubench_fewshot_"]
+    )
 
     # Square subplots
     fig, axes = plt.subplots(3, 4, figsize=(10, 7.5))
@@ -404,7 +550,7 @@ def plot_calibration_by_model(df: pd.DataFrame, all_metrics: List[ReliabilityMet
 
     for row_idx, provider in enumerate(provider_order):
         models = provider_models[provider]
-        provider_color = PROVIDER_COLORS.get(provider, '#999999')
+        provider_color = PROVIDER_COLORS.get(provider, "#999999")
 
         for col_idx, model_key in enumerate(models):
             ax = axes[row_idx, col_idx]
@@ -412,106 +558,169 @@ def plot_calibration_by_model(df: pd.DataFrame, all_metrics: List[ReliabilityMet
             # Find agent with this model (try all detected scaffolds)
             agent_name = None
             for prefix in detected_prefixes:
-                candidate = f'{prefix}{model_key}'
+                candidate = f"{prefix}{model_key}"
                 if candidate in agent_to_metrics:
                     agent_name = candidate
                     break
 
             # Get display name
-            display_name = model_display_names.get(model_key, model_key.replace('_', ' ').title())
+            display_name = model_display_names.get(
+                model_key, model_key.replace("_", " ").title()
+            )
 
             if agent_name is None:
-                ax.text(0.5, 0.5, f'{display_name}\n(no data)', ha='center', va='center',
-                       fontsize=10, transform=ax.transAxes)
-                ax.plot([0, 1], [0, 1], 'k--', linewidth=1.5, alpha=0.7)
+                ax.text(
+                    0.5,
+                    0.5,
+                    f"{display_name}\n(no data)",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    transform=ax.transAxes,
+                )
+                ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
                 ax.set_xlim(-0.1, 1.1)
                 ax.set_ylim(-0.1, 1.1)
                 ax.set_xticks(axis_ticks)
                 ax.set_yticks(axis_ticks)
-                ax.set_aspect('equal')
+                ax.set_aspect("equal")
                 if row_idx == 2:
-                    ax.set_xlabel('Confidence', fontsize=11)
+                    ax.set_xlabel("Confidence", fontsize=11)
                 if col_idx == 0:
-                    ax.set_ylabel('Accuracy', fontsize=11)
+                    ax.set_ylabel("Accuracy", fontsize=11)
                 ax.grid(True, alpha=0.3)
-                ax.set_title(display_name, fontsize=11, fontweight='bold')
+                ax.set_title(display_name, fontsize=11, fontweight="bold")
                 continue
 
             m = agent_to_metrics[agent_name]
-            bins = m.extra.get('calibration_bins', [])
+            bins = m.extra.get("calibration_bins", [])
 
             if bins:
-                valid_bins = [b for b in bins if b.get('count', 0) > 0]
+                valid_bins = [b for b in bins if b.get("count", 0) > 0]
                 if valid_bins:
-                    confs = [b['avg_confidence'] for b in valid_bins]
-                    accs = [b['avg_accuracy'] for b in valid_bins]
-                    counts = [b['count'] for b in valid_bins]
+                    confs = [b["avg_confidence"] for b in valid_bins]
+                    accs = [b["avg_accuracy"] for b in valid_bins]
+                    counts = [b["count"] for b in valid_bins]
                     max_count = max(counts)
                     sizes = [c / max_count * 300 + 50 for c in counts]
 
                     # Plot calibration points
-                    ax.scatter(confs, accs, s=sizes, alpha=0.7, color=provider_color,
-                              edgecolors='black', linewidth=1)
+                    ax.scatter(
+                        confs,
+                        accs,
+                        s=sizes,
+                        alpha=0.7,
+                        color=provider_color,
+                        edgecolors="black",
+                        linewidth=1,
+                    )
 
                     # Perfect calibration line
-                    ax.plot([0, 1], [0, 1], 'k--', linewidth=1.5, alpha=0.7)
+                    ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
 
                     # Gap lines showing miscalibration
                     for conf, acc in zip(confs, accs):
-                        ax.plot([conf, conf], [conf, acc], color='red', alpha=0.4, linewidth=1)
+                        ax.plot(
+                            [conf, conf],
+                            [conf, acc],
+                            color="red",
+                            alpha=0.4,
+                            linewidth=1,
+                        )
 
                     # ECE annotation at top left
                     ece = 1 - m.P_cal if not np.isnan(m.P_cal) else np.nan
                     if not np.isnan(ece):
-                        ax.annotate(f'ECE={ece:.3f}', xy=(0.03, 0.97), xycoords='axes fraction',
-                                   ha='left', va='top', fontsize=10,
-                                   bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+                        ax.annotate(
+                            f"ECE={ece:.3f}",
+                            xy=(0.03, 0.97),
+                            xycoords="axes fraction",
+                            ha="left",
+                            va="top",
+                            fontsize=10,
+                            bbox=dict(
+                                boxstyle="round,pad=0.3", facecolor="white", alpha=0.8
+                            ),
+                        )
                 else:
-                    ax.text(0.5, 0.5, f'{display_name}\n(no valid bins)', ha='center', va='center',
-                           fontsize=10, transform=ax.transAxes)
-                    ax.plot([0, 1], [0, 1], 'k--', linewidth=1.5, alpha=0.7)
+                    ax.text(
+                        0.5,
+                        0.5,
+                        f"{display_name}\n(no valid bins)",
+                        ha="center",
+                        va="center",
+                        fontsize=10,
+                        transform=ax.transAxes,
+                    )
+                    ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
             else:
-                ax.text(0.5, 0.5, f'{display_name}\n(no calibration data)', ha='center', va='center',
-                       fontsize=10, transform=ax.transAxes)
-                ax.plot([0, 1], [0, 1], 'k--', linewidth=1.5, alpha=0.7)
+                ax.text(
+                    0.5,
+                    0.5,
+                    f"{display_name}\n(no calibration data)",
+                    ha="center",
+                    va="center",
+                    fontsize=10,
+                    transform=ax.transAxes,
+                )
+                ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
 
             # Format subplot - square with equal ticks
             ax.set_xlim(-0.1, 1.1)
             ax.set_ylim(-0.1, 1.1)
             ax.set_xticks(axis_ticks)
             ax.set_yticks(axis_ticks)
-            ax.set_aspect('equal')
+            ax.set_aspect("equal")
             ax.grid(True, alpha=0.3)
 
             # Panel title
-            ax.set_title(display_name, fontsize=11, fontweight='bold')
+            ax.set_title(display_name, fontsize=11, fontweight="bold")
 
             if row_idx == 2:
-                ax.set_xlabel('Confidence', fontsize=11)
+                ax.set_xlabel("Confidence", fontsize=11)
             if col_idx == 0:
-                ax.set_ylabel('Accuracy', fontsize=11)
+                ax.set_ylabel("Accuracy", fontsize=11)
 
     # Add global legend for circle sizes (scaled down for legend display)
     from matplotlib.lines import Line2D
+
     legend_marker_sizes = [5, 9, 13]  # scaled down for legend
-    legend_labels = ['Few samples', 'Medium', 'Many samples']
+    legend_labels = ["Few samples", "Medium", "Many samples"]
     legend_elements = [
-        Line2D([0], [0], marker='o', color='w', markerfacecolor='gray',
-               markersize=s, markeredgecolor='black', markeredgewidth=1,
-               label=label, linestyle='None')
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            markerfacecolor="gray",
+            markersize=s,
+            markeredgecolor="black",
+            markeredgewidth=1,
+            label=label,
+            linestyle="None",
+        )
         for s, label in zip(legend_marker_sizes, legend_labels)
     ]
-    fig.legend(handles=legend_elements, loc='upper center', fontsize=9,
-               bbox_to_anchor=(0.5, 1.06), ncol=3, title='Sample count', title_fontsize=9)
+    fig.legend(
+        handles=legend_elements,
+        loc="upper center",
+        fontsize=9,
+        bbox_to_anchor=(0.5, 1.06),
+        ncol=3,
+        title="Sample count",
+        title_fontsize=9,
+    )
 
     plt.tight_layout()
-    output_path = output_dir / 'calibration_by_model.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "calibration_by_model.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_robustness_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_robustness_detailed(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create detailed robustness plots - vertical layout with bar plots.
     Shows: R_Rob (overall), R_fault, R_struct, R_prompt
@@ -523,75 +732,96 @@ def plot_robustness_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetr
     # Vertical layout: 4 rows, 1 column
     fig, axes = plt.subplots(4, 1, figsize=(5, 10))
 
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
     x_pos = np.arange(len(agents))
 
     # 1. R_Rob (Overall Robustness) - aggregate with propagated SE
     ax = axes[0]
-    robustness_cols = ['R_fault', 'R_struct']
-    if 'R_prompt' in df_sorted.columns:
-        robustness_cols.append('R_prompt')
+    robustness_cols = ["R_fault", "R_struct"]
+    if "R_prompt" in df_sorted.columns:
+        robustness_cols.append("R_prompt")
     R_Rob = df_sorted[robustness_cols].mean(axis=1, skipna=True).fillna(0)
-    rob_se_cols = ['R_fault_se', 'R_struct_se']
-    if 'R_prompt' in df_sorted.columns:
-        rob_se_cols.append('R_prompt_se')
+    rob_se_cols = ["R_fault_se", "R_struct_se"]
+    if "R_prompt" in df_sorted.columns:
+        rob_se_cols.append("R_prompt_se")
     yerr_agg = _get_aggregate_yerr(df_sorted, rob_se_cols, values=R_Rob)
-    bars = ax.bar(x_pos, R_Rob, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5,
-                  yerr=yerr_agg, capsize=3, error_kw={'linewidth': 1.0, 'color': 'black'})
-    ax.set_ylabel(r'$R_{\mathrm{Rob}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Overall Robustness', fontsize=14, fontweight='bold')
+    bars = ax.bar(
+        x_pos,
+        R_Rob,
+        color=bar_colors,
+        alpha=0.8,
+        edgecolor="black",
+        linewidth=0.5,
+        yerr=yerr_agg,
+        capsize=3,
+        error_kw={"linewidth": 1.0, "color": "black"},
+    )
+    ax.set_ylabel(r"$R_{\mathrm{Rob}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Overall Robustness", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, R_Rob, yerr_agg)
 
     # 2. R_fault (Fault Robustness)
     ax = axes[1]
-    bars, yerr = _bar_with_ci(ax, x_pos, df_sorted['R_fault'].fillna(0), bar_colors, df_sorted, 'R_fault')
-    ax.set_ylabel(r'$R_{\mathrm{fault}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Fault Robustness', fontsize=14, fontweight='bold')
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, df_sorted["R_fault"].fillna(0), bar_colors, df_sorted, "R_fault"
+    )
+    ax.set_ylabel(r"$R_{\mathrm{fault}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Fault Robustness", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
-    _add_bar_labels_ci(ax, bars, df_sorted['R_fault'], yerr)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
+    _add_bar_labels_ci(ax, bars, df_sorted["R_fault"], yerr)
 
     # 3. R_struct (Structural Robustness)
     ax = axes[2]
-    bars, yerr = _bar_with_ci(ax, x_pos, df_sorted['R_struct'].fillna(0), bar_colors, df_sorted, 'R_struct')
-    ax.set_ylabel(r'$R_{\mathrm{env}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Environment Robustness', fontsize=14, fontweight='bold')
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, df_sorted["R_struct"].fillna(0), bar_colors, df_sorted, "R_struct"
+    )
+    ax.set_ylabel(r"$R_{\mathrm{env}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Environment Robustness", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
-    _add_bar_labels_ci(ax, bars, df_sorted['R_struct'], yerr)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
+    _add_bar_labels_ci(ax, bars, df_sorted["R_struct"], yerr)
 
     # 4. R_prompt (Prompt Robustness) - at the bottom with x labels
     ax = axes[3]
-    r_prompt_vals = df_sorted['R_prompt'].fillna(0) if 'R_prompt' in df_sorted.columns else pd.Series([0] * len(agents))
-    bars, yerr = _bar_with_ci(ax, x_pos, r_prompt_vals, bar_colors, df_sorted, 'R_prompt')
-    ax.set_ylabel(r'$R_{\mathrm{prompt}}$', fontsize=14, fontweight='bold')
-    ax.set_title('Prompt Robustness', fontsize=14, fontweight='bold')
+    r_prompt_vals = (
+        df_sorted["R_prompt"].fillna(0)
+        if "R_prompt" in df_sorted.columns
+        else pd.Series([0] * len(agents))
+    )
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, r_prompt_vals, bar_colors, df_sorted, "R_prompt"
+    )
+    ax.set_ylabel(r"$R_{\mathrm{prompt}}$", fontsize=14, fontweight="bold")
+    ax.set_title("Prompt Robustness", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
     ax.set_ylim(0, 1.15)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, r_prompt_vals, yerr)
 
     plt.tight_layout()
-    output_path = output_dir / 'robustness_detailed.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "robustness_detailed.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_safety_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_safety_detailed(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create detailed safety plots - vertical layout with bar plots.
     Shows: R_Saf (overall weighted score), Severity Distribution (stacked bars),
@@ -600,8 +830,8 @@ def plot_safety_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics]
     df_sorted = sort_agents_by_provider_and_date(df)
     bar_colors = generate_shaded_colors(df_sorted)
 
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
-    agent_names_full = df_sorted['agent'].tolist()
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
+    agent_names_full = df_sorted["agent"].tolist()
     x_pos = np.arange(len(agents))
     agent_to_metrics = {m.agent_name: m for m in all_metrics}
 
@@ -611,7 +841,7 @@ def plot_safety_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics]
     for agent_name in agent_names_full:
         m = agent_to_metrics.get(agent_name)
         if m:
-            pc = m.extra.get('safety_per_constraint', {})
+            pc = m.extra.get("safety_per_constraint", {})
             per_constraint_by_agent[agent_name] = pc
             all_constraints.update(pc.keys())
 
@@ -630,77 +860,105 @@ def plot_safety_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics]
     def add_bar_labels(ax, bars, values):
         for bar, val in zip(bars, values):
             if not np.isnan(val):
-                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
-                       f'{val:.2f}', ha='center', va='bottom', fontsize=10)
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.02,
+                    f"{val:.2f}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=10,
+                )
 
     # 1a. S_comp (Compliance: fraction of tasks with no violations)
-    s_comp = df_sorted['S_comp'].fillna(0)
-    bars = ax_comp.bar(x_pos, s_comp, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-    ax_comp.set_ylabel(r'$S_{\mathrm{comp}}$', fontsize=14, fontweight='bold')
-    ax_comp.set_title('Compliance (Violation-Free Rate)', fontsize=14, fontweight='bold')
+    s_comp = df_sorted["S_comp"].fillna(0)
+    bars = ax_comp.bar(
+        x_pos, s_comp, color=bar_colors, alpha=0.8, edgecolor="black", linewidth=0.5
+    )
+    ax_comp.set_ylabel(r"$S_{\mathrm{comp}}$", fontsize=14, fontweight="bold")
+    ax_comp.set_title(
+        "Compliance (Violation-Free Rate)", fontsize=14, fontweight="bold"
+    )
     ax_comp.set_xticks(x_pos)
-    ax_comp.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
+    ax_comp.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
     ax_comp.set_ylim(0, 1.15)
-    ax_comp.grid(True, alpha=0.3, axis='y')
-    ax_comp.tick_params(axis='y', labelsize=11)
+    ax_comp.grid(True, alpha=0.3, axis="y")
+    ax_comp.tick_params(axis="y", labelsize=11)
     add_bar_labels(ax_comp, bars, s_comp)
 
     # 1b. S_harm (Conditional severity: 1 - E[severity | violation])
-    s_harm = df_sorted['S_harm'].fillna(1.0)
-    bars = ax_harm.bar(x_pos, s_harm, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-    ax_harm.set_ylabel(r'$S_{\mathrm{harm}}$', fontsize=14, fontweight='bold')
-    ax_harm.set_title('Harm (Conditional Severity)', fontsize=14, fontweight='bold')
+    s_harm = df_sorted["S_harm"].fillna(1.0)
+    bars = ax_harm.bar(
+        x_pos, s_harm, color=bar_colors, alpha=0.8, edgecolor="black", linewidth=0.5
+    )
+    ax_harm.set_ylabel(r"$S_{\mathrm{harm}}$", fontsize=14, fontweight="bold")
+    ax_harm.set_title("Harm (Conditional Severity)", fontsize=14, fontweight="bold")
     ax_harm.set_xticks(x_pos)
-    ax_harm.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
+    ax_harm.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
     ax_harm.set_ylim(0, 1.15)
-    ax_harm.grid(True, alpha=0.3, axis='y')
-    ax_harm.tick_params(axis='y', labelsize=11)
+    ax_harm.grid(True, alpha=0.3, axis="y")
+    ax_harm.tick_params(axis="y", labelsize=11)
     add_bar_labels(ax_harm, bars, s_harm)
 
     # 2. Severity Distribution (stacked bars: low/medium/high)
     ax = axes_rest[0]
-    severity_data = {agent: {'low': 0.0, 'medium': 0.0, 'high': 0.0} for agent in agent_names_full}
+    severity_data = {
+        agent: {"low": 0.0, "medium": 0.0, "high": 0.0} for agent in agent_names_full
+    }
     for agent_name in agent_names_full:
         m = agent_to_metrics.get(agent_name)
         if not m:
             continue
-        violations = m.extra.get('safety_violations', [])
+        violations = m.extra.get("safety_violations", [])
         num_runs = max(m.num_runs, 1)
         for v in violations:
-            sev = v.get('severity', 'medium')
+            sev = v.get("severity", "medium")
             if sev in severity_data[agent_name]:
                 severity_data[agent_name][sev] += 1
         for sev in severity_data[agent_name]:
             severity_data[agent_name][sev] /= num_runs
 
-    severity_levels = ['low', 'medium', 'high']
-    severity_colors = {'low': '#4CAF50', 'medium': '#FF9800', 'high': '#F44336'}
+    severity_levels = ["low", "medium", "high"]
+    severity_colors = {"low": "#4CAF50", "medium": "#FF9800", "high": "#F44336"}
     bottom = np.zeros(len(agents))
     for sev in severity_levels:
         counts = [severity_data[a][sev] for a in agent_names_full]
-        display_label = 'Med' if sev == 'medium' else sev.capitalize()
-        ax.bar(x_pos, counts, bottom=bottom, label=display_label,
-               color=severity_colors[sev], alpha=0.8, edgecolor='black', linewidth=0.5)
+        display_label = "Med" if sev == "medium" else sev.capitalize()
+        ax.bar(
+            x_pos,
+            counts,
+            bottom=bottom,
+            label=display_label,
+            color=severity_colors[sev],
+            alpha=0.8,
+            edgecolor="black",
+            linewidth=0.5,
+        )
         bottom += np.array(counts)
-    ax.set_ylabel('Violations', fontsize=14, fontweight='bold')
-    ax.set_title('Severity Distribution', fontsize=14, fontweight='bold')
+    ax.set_ylabel("Violations", fontsize=14, fontweight="bold")
+    ax.set_title("Severity Distribution", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
-    ax.legend(title='Severity', fontsize=9, title_fontsize=10, loc='upper right')
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
+    ax.legend(title="Severity", fontsize=9, title_fontsize=10, loc="upper right")
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
 
     # 3. Violation Rate (fraction of tasks with any violation = 1 - S_comp)
     ax = axes_rest[1]
-    viol_rate = (1 - df_sorted['S_comp'].fillna(1)).clip(lower=0)
-    bars = ax.bar(x_pos, viol_rate, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-    ax.set_ylabel('Rate', fontsize=14, fontweight='bold')
-    ax.set_title('Violation Rate (Fraction of Tasks with Violations)', fontsize=14, fontweight='bold')
+    viol_rate = (1 - df_sorted["S_comp"].fillna(1)).clip(lower=0)
+    bars = ax.bar(
+        x_pos, viol_rate, color=bar_colors, alpha=0.8, edgecolor="black", linewidth=0.5
+    )
+    ax.set_ylabel("Rate", fontsize=14, fontweight="bold")
+    ax.set_title(
+        "Violation Rate (Fraction of Tasks with Violations)",
+        fontsize=14,
+        fontweight="bold",
+    )
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
     ax.set_ylim(0, max(viol_rate.max() * 1.3, 0.1) if viol_rate.max() > 0 else 0.1)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=11)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=11)
     add_bar_labels(ax, bars, viol_rate)
 
     # 4. Per-constraint violation rates (grouped bars)
@@ -712,10 +970,10 @@ def plot_safety_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics]
         constraint_colors = plt.cm.Set2(np.linspace(0, 1, n_c))
 
         def shorten_constraint(name):
-            name = name.replace('_customer_service', '').replace('_gaia', '')
-            name = name.replace('_', ' ').title()
+            name = name.replace("_customer_service", "").replace("_gaia", "")
+            name = name.replace("_", " ").title()
             if len(name) > 22:
-                name = name[:20] + '..'
+                name = name[:20] + ".."
             return name
 
         for i, constraint in enumerate(constraint_list):
@@ -726,26 +984,36 @@ def plot_safety_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics]
                 pass_rate = pc.get(constraint, 1.0)
                 vals.append(1.0 - pass_rate)
             offset = (i - n_c / 2 + 0.5) * bar_width
-            ax.bar(x_pos + offset, vals, bar_width, label=shorten_constraint(constraint),
-                   color=constraint_colors[i], alpha=0.8, edgecolor='black', linewidth=0.3)
+            ax.bar(
+                x_pos + offset,
+                vals,
+                bar_width,
+                label=shorten_constraint(constraint),
+                color=constraint_colors[i],
+                alpha=0.8,
+                edgecolor="black",
+                linewidth=0.3,
+            )
 
-        ax.set_ylabel('Violation Rate', fontsize=14, fontweight='bold')
-        ax.set_title('Per-Constraint Violation Rates', fontsize=14, fontweight='bold')
+        ax.set_ylabel("Violation Rate", fontsize=14, fontweight="bold")
+        ax.set_title("Per-Constraint Violation Rates", fontsize=14, fontweight="bold")
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=11)
+        ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
         ax.set_ylim(0, None)
-        ax.grid(True, alpha=0.3, axis='y')
-        ax.tick_params(axis='y', labelsize=11)
-        ax.legend(fontsize=8, loc='upper center', ncol=2)
+        ax.grid(True, alpha=0.3, axis="y")
+        ax.tick_params(axis="y", labelsize=11)
+        ax.legend(fontsize=8, loc="upper center", ncol=2)
 
     plt.tight_layout()
-    output_path = output_dir / 'safety_detailed.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "safety_detailed.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_safety_severity_violations(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_safety_severity_violations(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create a side-by-side plot showing severity distribution and violation types.
 
@@ -757,14 +1025,15 @@ def plot_safety_severity_violations(df: pd.DataFrame, all_metrics: List[Reliabil
     df_sorted = sort_agents_by_provider_and_date(df)
     # Only include oldest and newest model per provider
     df_sorted = filter_oldest_and_newest_per_provider(df_sorted)
-    bar_colors = generate_shaded_colors(df_sorted)
 
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
-    agent_names_full = df_sorted['agent'].tolist()
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
+    agent_names_full = df_sorted["agent"].tolist()
     agent_to_metrics = {m.agent_name: m for m in all_metrics}
 
     # Collect severity and violation data per agent (averaged across runs)
-    severity_data = {agent: {'low': 0.0, 'medium': 0.0, 'high': 0.0} for agent in agent_names_full}
+    severity_data = {
+        agent: {"low": 0.0, "medium": 0.0, "high": 0.0} for agent in agent_names_full
+    }
     violation_data = {}  # constraint_type -> {agent: avg_count}
     all_constraint_types = set()
 
@@ -772,17 +1041,17 @@ def plot_safety_severity_violations(df: pd.DataFrame, all_metrics: List[Reliabil
         if agent_name not in agent_to_metrics:
             continue
         m = agent_to_metrics[agent_name]
-        violations = m.extra.get('safety_violations', [])
+        violations = m.extra.get("safety_violations", [])
         num_runs = max(m.num_runs, 1)  # Avoid division by zero
 
         for v in violations:
             # Count severity levels (will normalize after)
-            sev = v.get('severity', 'medium')
+            sev = v.get("severity", "medium")
             if sev in severity_data[agent_name]:
                 severity_data[agent_name][sev] += 1
 
             # Count constraint types (will normalize after)
-            constraint = v.get('constraint', 'unknown')
+            constraint = v.get("constraint", "unknown")
             all_constraint_types.add(constraint)
             if constraint not in violation_data:
                 violation_data[constraint] = {a: 0.0 for a in agent_names_full}
@@ -803,53 +1072,67 @@ def plot_safety_severity_violations(df: pd.DataFrame, all_metrics: List[Reliabil
 
     # Shorten constraint names for display
     _constraint_abbrevs = {
-        'authentication_bypass': 'Auth Byp.',
-        'financial_accuracy': 'Fin. Acc.',
-        'destructive_ops': 'Destr. Ops',
-        'policy_circumvention': 'Pol. Circ.',
-        'no_unauthorized_access': 'Unauth. Acc.',
-        'no_destructive_ops': 'Destr. Ops',
-        'data_minimization': 'Data Min.',
-        'commitment_overreach': 'Commit. Over.',
+        "authentication_bypass": "Auth Byp.",
+        "financial_accuracy": "Fin. Acc.",
+        "destructive_ops": "Destr. Ops",
+        "policy_circumvention": "Pol. Circ.",
+        "no_unauthorized_access": "Unauth. Acc.",
+        "no_destructive_ops": "Destr. Ops",
+        "data_minimization": "Data Min.",
+        "commitment_overreach": "Commit. Over.",
     }
+
     def shorten_constraint(name):
-        name = name.replace('_customer_service', '').replace('_gaia', '')
+        name = name.replace("_customer_service", "").replace("_gaia", "")
         if name in _constraint_abbrevs:
             return _constraint_abbrevs[name]
-        name = name.replace('_', ' ').title()
+        name = name.replace("_", " ").title()
         if len(name) > 22:
-            name = name[:20] + '..'
+            name = name[:20] + ".."
         return name
 
     # Constraints to exclude from the violation types plot
-    excluded_constraints = {'data_minimization_customer_service', 'commitment_overreach_customer_service'}
+    excluded_constraints = {
+        "data_minimization_customer_service",
+        "commitment_overreach_customer_service",
+    }
 
     # Create figure with 2 stacked subplots
-    fig, axes = plt.subplots(2, 1, figsize=(4.25, 4.8), gridspec_kw={'height_ratios': [0.7, 1]})
+    fig, axes = plt.subplots(
+        2, 1, figsize=(4.25, 4.8), gridspec_kw={"height_ratios": [0.7, 1]}
+    )
 
     x_pos = np.arange(len(agents))
 
     # === Top subplot: Severity Distribution ===
     ax = axes[0]
-    severity_levels = ['low', 'medium', 'high']
-    severity_colors = {'low': '#4CAF50', 'medium': '#FF9800', 'high': '#F44336'}
+    severity_levels = ["low", "medium", "high"]
+    severity_colors = {"low": "#4CAF50", "medium": "#FF9800", "high": "#F44336"}
 
     bottom = np.zeros(len(agents))
     for sev in severity_levels:
         counts = [severity_data[a][sev] for a in agent_names_full]
-        display_label = 'Med' if sev == 'medium' else sev.capitalize()
-        ax.bar(x_pos, counts, bottom=bottom, label=display_label,
-               color=severity_colors[sev], alpha=0.8, edgecolor='black', linewidth=0.5)
+        display_label = "Med" if sev == "medium" else sev.capitalize()
+        ax.bar(
+            x_pos,
+            counts,
+            bottom=bottom,
+            label=display_label,
+            color=severity_colors[sev],
+            alpha=0.8,
+            edgecolor="black",
+            linewidth=0.5,
+        )
         bottom += np.array(counts)
 
-    ax.set_ylabel('Violations', fontsize=11, fontweight='bold')
+    ax.set_ylabel("Violations", fontsize=11, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])  # No x-axis labels on top plot
     ax.set_xlim(-0.6, len(agents) - 0.4)
-    ax.set_title('Harm Severity', fontsize=12, fontweight='bold')
-    ax.legend(fontsize=8, loc='upper left', ncol=3)
-    ax.grid(True, alpha=0.3, axis='y')
-    ax.tick_params(axis='y', labelsize=10)
+    ax.set_title("Harm Severity", fontsize=12, fontweight="bold")
+    ax.legend(fontsize=8, loc="upper left", ncol=3)
+    ax.grid(True, alpha=0.3, axis="y")
+    ax.tick_params(axis="y", labelsize=10)
 
     # === Bottom subplot: Violation Types ===
     ax = axes[1]
@@ -858,7 +1141,8 @@ def plot_safety_severity_violations(df: pd.DataFrame, all_metrics: List[Reliabil
     constraint_types = sorted(
         [c for c in all_constraint_types if c not in excluded_constraints],
         key=lambda c: sum(violation_data.get(c, {}).values()),
-        reverse=True)
+        reverse=True,
+    )
 
     if len(constraint_types) > 0:
         n_constraints = min(len(constraint_types), 6)
@@ -868,34 +1152,52 @@ def plot_safety_severity_violations(df: pd.DataFrame, all_metrics: List[Reliabil
         constraint_colors = plt.cm.Set2(np.linspace(0, 1, n_constraints))
 
         for i, constraint in enumerate(constraint_types):
-            counts = [violation_data.get(constraint, {}).get(a, 0) for a in agent_names_full]
-            offset = (i - n_constraints/2 + 0.5) * bar_width
-            ax.bar(x_pos + offset, counts, bar_width, label=shorten_constraint(constraint),
-                   color=constraint_colors[i], alpha=0.8, edgecolor='black', linewidth=0.3)
+            counts = [
+                violation_data.get(constraint, {}).get(a, 0) for a in agent_names_full
+            ]
+            offset = (i - n_constraints / 2 + 0.5) * bar_width
+            ax.bar(
+                x_pos + offset,
+                counts,
+                bar_width,
+                label=shorten_constraint(constraint),
+                color=constraint_colors[i],
+                alpha=0.8,
+                edgecolor="black",
+                linewidth=0.3,
+            )
 
-        ax.set_ylabel('Violations', fontsize=11, fontweight='bold')
+        ax.set_ylabel("Violations", fontsize=11, fontweight="bold")
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=9)
+        ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=9)
         ax.set_xlim(-0.6, len(agents) - 0.4)
-        ax.set_title('Compliance Violations', fontsize=12, fontweight='bold')
-        ax.legend(fontsize=7.5,
-                  bbox_to_anchor=(0.38, 1.0), loc='upper center', ncol=2)
-        ax.grid(True, alpha=0.3, axis='y')
-        ax.tick_params(axis='y', labelsize=10)
+        ax.set_title("Compliance Violations", fontsize=12, fontweight="bold")
+        ax.legend(fontsize=7.5, bbox_to_anchor=(0.38, 1.0), loc="upper center", ncol=2)
+        ax.grid(True, alpha=0.3, axis="y")
+        ax.tick_params(axis="y", labelsize=10)
     else:
-        ax.text(0.5, 0.5, 'No constraint data available',
-                ha='center', va='center', transform=ax.transAxes, fontsize=12)
+        ax.text(
+            0.5,
+            0.5,
+            "No constraint data available",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=12,
+        )
         ax.set_xticks([])
         ax.set_yticks([])
 
     plt.tight_layout()
-    output_path = output_dir / 'safety_severity_violations.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "safety_severity_violations.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_safety_deep_analysis(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create comprehensive safety analysis with deeper insights.
 
@@ -906,10 +1208,9 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
     - Bottom-right: Violation count vs accuracy scatter (with provider colors)
     """
     df_sorted = sort_agents_by_provider_and_date(df)
-    bar_colors = generate_shaded_colors(df_sorted)
 
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
-    agent_names_full = df_sorted['agent'].tolist()
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
+    agent_names_full = df_sorted["agent"].tolist()
     agent_to_metrics = {m.agent_name: m for m in all_metrics}
 
     # Collect all data (averaged across runs)
@@ -926,8 +1227,8 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
         if agent_name not in agent_to_metrics:
             continue
         m = agent_to_metrics[agent_name]
-        violations = m.extra.get('safety_violations', [])
-        per_constraint = m.extra.get('safety_per_constraint', {})
+        violations = m.extra.get("safety_violations", [])
+        per_constraint = m.extra.get("safety_per_constraint", {})
         num_runs = max(m.num_runs, 1)  # Avoid division by zero
 
         violations_per_agent[agent_name] = len(violations) / num_runs
@@ -942,8 +1243,8 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
 
         # Violation matrix and severity breakdown
         for v in violations:
-            constraint = v.get('constraint', 'unknown')
-            severity = v.get('severity', 'medium')
+            constraint = v.get("constraint", "unknown")
+            severity = v.get("severity", "medium")
             all_constraints.add(constraint)
 
             if constraint not in violation_matrix:
@@ -951,17 +1252,24 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
             violation_matrix[constraint][agent_name] += 1
 
             if constraint not in _severity_raw:
-                _severity_raw[constraint] = {'low': 0.0, 'medium': 0.0, 'high': 0.0}
+                _severity_raw[constraint] = {"low": 0.0, "medium": 0.0, "high": 0.0}
             if severity in _severity_raw[constraint]:
                 _severity_raw[constraint][severity] += 1
 
         # Normalize violation_matrix counts by num_runs for this agent
         for constraint in violation_matrix:
-            if agent_name in violation_matrix[constraint] and violation_matrix[constraint][agent_name] > 0:
+            if (
+                agent_name in violation_matrix[constraint]
+                and violation_matrix[constraint][agent_name] > 0
+            ):
                 violation_matrix[constraint][agent_name] /= num_runs
 
     # Normalize severity_by_constraint by total number of runs across all agents
-    total_runs = sum(max(agent_to_metrics[a].num_runs, 1) for a in agent_names_full if a in agent_to_metrics)
+    total_runs = sum(
+        max(agent_to_metrics[a].num_runs, 1)
+        for a in agent_names_full
+        if a in agent_to_metrics
+    )
     num_agents = sum(1 for a in agent_names_full if a in agent_to_metrics)
     avg_runs = total_runs / max(num_agents, 1)
     severity_by_constraint = {}
@@ -975,19 +1283,21 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
         return
 
     # Sort constraints by total violations
-    constraint_list = sorted(all_constraints,
-                             key=lambda c: sum(violation_matrix.get(c, {}).values()),
-                             reverse=True)
+    constraint_list = sorted(
+        all_constraints,
+        key=lambda c: sum(violation_matrix.get(c, {}).values()),
+        reverse=True,
+    )
     # Limit to top 7 for readability
     constraint_list = constraint_list[:7]
 
     # Shorten constraint names for display
     def shorten_constraint(name):
         # Remove common suffixes and shorten
-        name = name.replace('_customer_service', '')
-        name = name.replace('_', ' ').title()
+        name = name.replace("_customer_service", "")
+        name = name.replace("_", " ").title()
         if len(name) > 18:
-            name = name[:16] + '..'
+            name = name[:16] + ".."
         return name
 
     short_constraints = [shorten_constraint(c) for c in constraint_list]
@@ -1002,44 +1312,61 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
         for j, agent in enumerate(agent_names_full):
             heatmap_data[i, j] = violation_matrix.get(constraint, {}).get(agent, 0)
 
-    im = ax.imshow(heatmap_data, cmap='YlOrRd', aspect='auto')
+    im = ax.imshow(heatmap_data, cmap="YlOrRd", aspect="auto")
     ax.set_xticks(np.arange(len(agents)))
     ax.set_yticks(np.arange(len(constraint_list)))
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=8)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=8)
     ax.set_yticklabels(short_constraints, fontsize=9)
-    ax.set_title('Avg Violation Count by Model & Constraint', fontsize=11, fontweight='bold')
+    ax.set_title(
+        "Avg Violation Count by Model & Constraint", fontsize=11, fontweight="bold"
+    )
 
     # Add text annotations
     for i in range(len(constraint_list)):
         for j in range(len(agents)):
             val = heatmap_data[i, j]
             if val > 0:
-                text_color = 'white' if val > heatmap_data.max() * 0.5 else 'black'
-                label = f'{val:.1f}' if val != int(val) else str(int(val))
-                ax.text(j, i, label, ha='center', va='center', fontsize=7, color=text_color)
+                text_color = "white" if val > heatmap_data.max() * 0.5 else "black"
+                label = f"{val:.1f}" if val != int(val) else str(int(val))
+                ax.text(
+                    j, i, label, ha="center", va="center", fontsize=7, color=text_color
+                )
 
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
-    cbar.set_label('Avg Violations', fontsize=9)
+    cbar.set_label("Avg Violations", fontsize=9)
 
     # === Top-right: Severity by constraint type ===
     ax = axes[0, 1]
     x_pos = np.arange(len(constraint_list))
     bar_width = 0.6
-    severity_colors = {'low': '#4CAF50', 'medium': '#FF9800', 'high': '#F44336'}
+    severity_colors = {"low": "#4CAF50", "medium": "#FF9800", "high": "#F44336"}
 
     bottom = np.zeros(len(constraint_list))
-    for sev in ['low', 'medium', 'high']:
-        counts = [severity_by_constraint.get(c, {}).get(sev, 0) for c in constraint_list]
-        ax.bar(x_pos, counts, bar_width, bottom=bottom, label=sev.capitalize(),
-               color=severity_colors[sev], alpha=0.85, edgecolor='black', linewidth=0.5)
+    for sev in ["low", "medium", "high"]:
+        counts = [
+            severity_by_constraint.get(c, {}).get(sev, 0) for c in constraint_list
+        ]
+        ax.bar(
+            x_pos,
+            counts,
+            bar_width,
+            bottom=bottom,
+            label=sev.capitalize(),
+            color=severity_colors[sev],
+            alpha=0.85,
+            edgecolor="black",
+            linewidth=0.5,
+        )
         bottom += np.array(counts)
 
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(short_constraints, rotation=45, ha='right', fontsize=9)
-    ax.set_ylabel('Avg Violations per Run', fontsize=10, fontweight='bold')
-    ax.set_title('Violation Severity by Constraint Type', fontsize=11, fontweight='bold')
-    ax.legend(title='Severity', fontsize=8, title_fontsize=9, loc='upper right')
-    ax.grid(True, alpha=0.3, axis='y')
+    ax.set_xticklabels(short_constraints, rotation=45, ha="right", fontsize=9)
+    ax.set_ylabel("Avg Violations per Run", fontsize=10, fontweight="bold")
+    ax.set_title(
+        "Violation Severity by Constraint Type", fontsize=11, fontweight="bold"
+    )
+    ax.legend(title="Severity", fontsize=8, title_fontsize=9, loc="upper right")
+    ax.grid(True, alpha=0.3, axis="y")
 
     # === Bottom-left: Per-constraint pass rates ===
     ax = axes[1, 0]
@@ -1052,50 +1379,93 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
 
         x_pos = np.arange(len(agents))
         for i, constraint in enumerate(top_constraints):
-            rates = [per_constraint_rates.get(constraint, {}).get(a, 1.0) for a in agent_names_full]
-            offset = (i - n_constraints/2 + 0.5) * bar_width
-            ax.bar(x_pos + offset, rates, bar_width, label=shorten_constraint(constraint),
-                   color=constraint_colors[i], alpha=0.85, edgecolor='black', linewidth=0.3)
+            rates = [
+                per_constraint_rates.get(constraint, {}).get(a, 1.0)
+                for a in agent_names_full
+            ]
+            offset = (i - n_constraints / 2 + 0.5) * bar_width
+            ax.bar(
+                x_pos + offset,
+                rates,
+                bar_width,
+                label=shorten_constraint(constraint),
+                color=constraint_colors[i],
+                alpha=0.85,
+                edgecolor="black",
+                linewidth=0.3,
+            )
 
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=8)
-        ax.set_ylabel('Pass Rate (1 = no violations)', fontsize=10, fontweight='bold')
+        ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=8)
+        ax.set_ylabel("Pass Rate (1 = no violations)", fontsize=10, fontweight="bold")
         ax.set_ylim(0, 1.05)
-        ax.set_title('Per-Constraint Compliance Rate by Model', fontsize=11, fontweight='bold')
-        ax.legend(title='Constraint', fontsize=7, title_fontsize=8, loc='lower right', ncol=2)
-        ax.grid(True, alpha=0.3, axis='y')
-        ax.axhline(y=1.0, color='green', linestyle='--', alpha=0.5, linewidth=1)
+        ax.set_title(
+            "Per-Constraint Compliance Rate by Model", fontsize=11, fontweight="bold"
+        )
+        ax.legend(
+            title="Constraint", fontsize=7, title_fontsize=8, loc="lower right", ncol=2
+        )
+        ax.grid(True, alpha=0.3, axis="y")
+        ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5, linewidth=1)
     else:
-        ax.text(0.5, 0.5, 'No per-constraint data available',
-                ha='center', va='center', transform=ax.transAxes, fontsize=12)
+        ax.text(
+            0.5,
+            0.5,
+            "No per-constraint data available",
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=12,
+        )
 
     # === Bottom-right: Violations vs Accuracy scatter ===
     ax = axes[1, 1]
 
     # Get provider colors
-    provider_colors = {'openai': '#10A37F', 'anthropic': '#D97706', 'google': '#4285F4'}
+    provider_colors = {"openai": "#10A37F", "anthropic": "#D97706", "google": "#4285F4"}
     scatter_colors = []
     for agent in agent_names_full:
         provider = get_provider(agent)
-        scatter_colors.append(provider_colors.get(provider, '#888888'))
+        scatter_colors.append(provider_colors.get(provider, "#888888"))
 
     x_vals = [violations_per_agent.get(a, 0) for a in agent_names_full]
     y_vals = [accuracy_per_agent.get(a, 0) for a in agent_names_full]
 
     for i, agent in enumerate(agent_names_full):
-        ax.scatter(x_vals[i], y_vals[i], c=scatter_colors[i], s=100, alpha=0.7,
-                   edgecolors='black', linewidth=0.5)
-        ax.annotate(agents[i], (x_vals[i], y_vals[i]), fontsize=7,
-                    xytext=(5, 5), textcoords='offset points', alpha=0.8)
+        ax.scatter(
+            x_vals[i],
+            y_vals[i],
+            c=scatter_colors[i],
+            s=100,
+            alpha=0.7,
+            edgecolors="black",
+            linewidth=0.5,
+        )
+        ax.annotate(
+            agents[i],
+            (x_vals[i], y_vals[i]),
+            fontsize=7,
+            xytext=(5, 5),
+            textcoords="offset points",
+            alpha=0.8,
+        )
 
     # Add legend for providers
     for provider, color in provider_colors.items():
-        ax.scatter([], [], c=color, s=80, label=provider.capitalize(), edgecolors='black', linewidth=0.5)
-    ax.legend(title='Provider', fontsize=8, title_fontsize=9, loc='upper right')
+        ax.scatter(
+            [],
+            [],
+            c=color,
+            s=80,
+            label=provider.capitalize(),
+            edgecolors="black",
+            linewidth=0.5,
+        )
+    ax.legend(title="Provider", fontsize=8, title_fontsize=9, loc="upper right")
 
-    ax.set_xlabel('Avg Violations per Run', fontsize=10, fontweight='bold')
-    ax.set_ylabel('Accuracy', fontsize=10, fontweight='bold')
-    ax.set_title('Avg Violations vs Task Accuracy', fontsize=11, fontweight='bold')
+    ax.set_xlabel("Avg Violations per Run", fontsize=10, fontweight="bold")
+    ax.set_ylabel("Accuracy", fontsize=10, fontweight="bold")
+    ax.set_title("Avg Violations vs Task Accuracy", fontsize=11, fontweight="bold")
     ax.grid(True, alpha=0.3)
 
     # Add trend line if enough data
@@ -1103,16 +1473,18 @@ def plot_safety_deep_analysis(df: pd.DataFrame, all_metrics: List[ReliabilityMet
         z = np.polyfit(x_vals, y_vals, 1)
         p = np.poly1d(z)
         x_line = np.linspace(0, max(x_vals), 100)
-        ax.plot(x_line, p(x_line), 'r--', alpha=0.5, linewidth=1.5, label='Trend')
+        ax.plot(x_line, p(x_line), "r--", alpha=0.5, linewidth=1.5, label="Trend")
 
     plt.tight_layout()
-    output_path = output_dir / 'safety_deep_analysis.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "safety_deep_analysis.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
 
-def plot_safety_lambda_sensitivity(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+def plot_safety_lambda_sensitivity(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Plot S_safety vs release date for several choices of lambda.
 
@@ -1128,28 +1500,32 @@ def plot_safety_lambda_sensitivity(df: pd.DataFrame, all_metrics: List[Reliabili
 
     df_sorted = sort_agents_by_provider_and_date(df)
 
-    if 'release_timestamp' not in df_sorted.columns:
-        df_sorted['release_timestamp'] = pd.to_datetime(df_sorted['agent'].map(
-            lambda x: get_model_metadata(x).get('date', '2024-01-01')))
-    if 'provider' not in df_sorted.columns:
-        df_sorted['provider'] = df_sorted['agent'].map(
-            lambda x: get_model_metadata(x).get('provider', 'Unknown'))
+    if "release_timestamp" not in df_sorted.columns:
+        df_sorted["release_timestamp"] = pd.to_datetime(
+            df_sorted["agent"].map(
+                lambda x: get_model_metadata(x).get("date", "2024-01-01")
+            )
+        )
+    if "provider" not in df_sorted.columns:
+        df_sorted["provider"] = df_sorted["agent"].map(
+            lambda x: get_model_metadata(x).get("provider", "Unknown")
+        )
 
     # Check that S_harm and S_comp are available
-    if 'S_harm' not in df_sorted.columns or 'S_comp' not in df_sorted.columns:
+    if "S_harm" not in df_sorted.columns or "S_comp" not in df_sorted.columns:
         print("📊 Skipping safety_lambda_sensitivity.pdf (no S_harm/S_comp data)")
         return
 
-    has_data = df_sorted['S_harm'].notna().any() and df_sorted['S_comp'].notna().any()
+    has_data = df_sorted["S_harm"].notna().any() and df_sorted["S_comp"].notna().any()
     if not has_data:
         print("📊 Skipping safety_lambda_sensitivity.pdf (S_harm/S_comp all NaN)")
         return
 
     # Compute S_safety = max(1 - lambda * P(violation), 0) * S_harm for each lambda
-    P_violation = 1.0 - df_sorted['S_comp']
+    P_violation = 1.0 - df_sorted["S_comp"]
     for lam in lambda_values:
-        col = f'S_safety_lam{lam}'
-        df_sorted[col] = (1.0 - lam * P_violation).clip(lower=0.0) * df_sorted['S_harm']
+        col = f"S_safety_lam{lam}"
+        df_sorted[col] = (1.0 - lam * P_violation).clip(lower=0.0) * df_sorted["S_harm"]
 
     fig, axes = plt.subplots(1, len(lambda_values), figsize=(4 * len(lambda_values), 4))
     if len(lambda_values) == 1:
@@ -1157,30 +1533,40 @@ def plot_safety_lambda_sensitivity(df: pd.DataFrame, all_metrics: List[Reliabili
 
     for idx, lam in enumerate(lambda_values):
         ax = axes[idx]
-        col = f'S_safety_lam{lam}'
+        col = f"S_safety_lam{lam}"
         y = df_sorted[col]
-        x = df_sorted['release_timestamp']
-        providers = df_sorted['provider']
+        x = df_sorted["release_timestamp"]
+        providers = df_sorted["provider"]
 
         valid = x.notna() & y.notna()
         if valid.sum() < 2:
-            ax.text(0.5, 0.5, 'Insufficient data', ha='center', va='center',
-                    transform=ax.transAxes)
-            ax.set_title(f'$\\lambda$ = {lam}')
+            ax.text(
+                0.5,
+                0.5,
+                "Insufficient data",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+            )
+            ax.set_title(f"$\\lambda$ = {lam}")
             continue
 
         x_v, y_v, prov_v = x[valid], y[valid], providers[valid]
 
-        for provider in ['OpenAI', 'Google', 'Anthropic']:
+        for provider in ["OpenAI", "Google", "Anthropic"]:
             mask = prov_v == provider
             if mask.sum() == 0:
                 continue
             ax.scatter(
-                x_v[mask], y_v[mask],
-                c=PROVIDER_COLORS.get(provider, '#999999'),
-                marker=PROVIDER_MARKERS.get(provider, 'o'),
-                s=50, alpha=0.85, edgecolors='black', linewidth=0.6,
-                label=provider
+                x_v[mask],
+                y_v[mask],
+                c=PROVIDER_COLORS.get(provider, "#999999"),
+                marker=PROVIDER_MARKERS.get(provider, "o"),
+                s=50,
+                alpha=0.85,
+                edgecolors="black",
+                linewidth=0.6,
+                label=provider,
             )
 
         # Trend line
@@ -1189,41 +1575,63 @@ def plot_safety_lambda_sensitivity(df: pd.DataFrame, all_metrics: List[Reliabili
         x_range = np.array([x_num.min(), x_num.max()])
         x_dates = [x_v.min() + pd.Timedelta(days=d) for d in x_range]
         y_trend = slope * x_range + intercept
-        ax.plot(x_dates, y_trend, 'k--', linewidth=1.5, alpha=0.7)
+        ax.plot(x_dates, y_trend, "k--", linewidth=1.5, alpha=0.7)
 
         slope_yr = slope * 365
-        ax.annotate(f'r={r_value:+.2f}\nslope={slope_yr:+.2f}/yr\np={p_value:.2f}',
-                    xy=(0.975, 0.04), xycoords='axes fraction',
-                    fontsize=8, ha='right', va='bottom',
-                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
-                              edgecolor='gray', alpha=0.9, linewidth=0.5))
+        ax.annotate(
+            f"r={r_value:+.2f}\nslope={slope_yr:+.2f}/yr\np={p_value:.2f}",
+            xy=(0.975, 0.04),
+            xycoords="axes fraction",
+            fontsize=8,
+            ha="right",
+            va="bottom",
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                facecolor="white",
+                edgecolor="gray",
+                alpha=0.9,
+                linewidth=0.5,
+            ),
+        )
 
-        lam_label = {1.0: 'baseline'}.get(lam, f'{lam:.0f}x penalty')
-        ax.set_title(f'$S_{{\\mathrm{{safety}}}}$  ($\\lambda$={lam:.0f}, {lam_label})', fontsize=11)
-        ax.set_ylabel(r'$S_{\mathrm{safety}}$' if idx == 0 else '')
-        ax.set_xlabel('Release Date')
+        lam_label = {1.0: "baseline"}.get(lam, f"{lam:.0f}x penalty")
+        ax.set_title(
+            f"$S_{{\\mathrm{{safety}}}}$  ($\\lambda$={lam:.0f}, {lam_label})",
+            fontsize=11,
+        )
+        ax.set_ylabel(r"$S_{\mathrm{safety}}$" if idx == 0 else "")
+        ax.set_xlabel("Release Date")
         ax.set_ylim(0, 1.05)
         ax.grid(True, alpha=0.3, linewidth=0.5)
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
         ax.xaxis.set_major_locator(mdates.MonthLocator(interval=4))
-        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha='right')
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
         if idx > 0:
-            ax.tick_params(axis='y', labelleft=False)
+            ax.tick_params(axis="y", labelleft=False)
 
     # Shared legend
     handles, labels = axes[0].get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    fig.legend(by_label.values(), by_label.keys(),
-              loc='upper center', bbox_to_anchor=(0.5, 1.05),
-              ncol=len(by_label), framealpha=0.95, edgecolor='gray')
+    fig.legend(
+        by_label.values(),
+        by_label.keys(),
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.05),
+        ncol=len(by_label),
+        framealpha=0.95,
+        edgecolor="gray",
+    )
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
-    output_path = output_dir / 'safety_lambda_sensitivity.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "safety_lambda_sensitivity.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
-def plot_abstention_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+
+def plot_abstention_detailed(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create detailed abstention plots showing abstention rate and calibration metrics.
 
@@ -1242,117 +1650,209 @@ def plot_abstention_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetr
 
     fig, axes = plt.subplots(2, 3, figsize=(12, 7))
 
-    agent_names_full = df_sorted['agent'].tolist()
+    agent_names_full = df_sorted["agent"].tolist()
     agents = [strip_agent_prefix(a) for a in agent_names_full]
     x_pos = np.arange(len(agents))
     sorted_metrics = [agent_to_metrics.get(a) for a in agent_names_full]
 
     # 1. Abstention Rate
     ax = axes[0, 0]
-    a_rate_vals = df_sorted['A_rate'].fillna(0)
-    bars = ax.bar(x_pos, a_rate_vals, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-    ax.set_ylabel('Abstention Rate\nP(abstain)', fontsize=12, fontweight='bold')
+    a_rate_vals = df_sorted["A_rate"].fillna(0)
+    bars = ax.bar(
+        x_pos,
+        a_rate_vals,
+        color=bar_colors,
+        alpha=0.8,
+        edgecolor="black",
+        linewidth=0.5,
+    )
+    ax.set_ylabel("Abstention Rate\nP(abstain)", fontsize=12, fontweight="bold")
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=9)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=9)
     ax.set_ylim(0, 1.05)
-    ax.grid(True, alpha=0.3, axis='y')
-    for bar, val in zip(bars, df_sorted['A_rate']):
+    ax.grid(True, alpha=0.3, axis="y")
+    for bar, val in zip(bars, df_sorted["A_rate"]):
         if not np.isnan(val):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
-                   f'{val:.2f}', ha='center', va='bottom', fontsize=8)
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.02,
+                f"{val:.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
 
     # 2. Abstention Precision - P(fail | abstain)
     ax = axes[0, 1]
-    a_prec_vals = df_sorted['A_prec'].fillna(0)
-    bars = ax.bar(x_pos, a_prec_vals, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-    ax.set_ylabel('Abstention Precision\nP(would fail | abstained)', fontsize=12, fontweight='bold')
+    a_prec_vals = df_sorted["A_prec"].fillna(0)
+    bars = ax.bar(
+        x_pos,
+        a_prec_vals,
+        color=bar_colors,
+        alpha=0.8,
+        edgecolor="black",
+        linewidth=0.5,
+    )
+    ax.set_ylabel(
+        "Abstention Precision\nP(would fail | abstained)",
+        fontsize=12,
+        fontweight="bold",
+    )
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=9)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=9)
     ax.set_ylim(0, 1.05)
-    ax.grid(True, alpha=0.3, axis='y')
-    for bar, val in zip(bars, df_sorted['A_prec']):
+    ax.grid(True, alpha=0.3, axis="y")
+    for bar, val in zip(bars, df_sorted["A_prec"]):
         if not np.isnan(val):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
-                   f'{val:.2f}', ha='center', va='bottom', fontsize=8)
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.02,
+                f"{val:.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
 
     # 3. Abstention Recall - P(abstain | fail)
     ax = axes[0, 2]
-    a_rec_vals = df_sorted['A_rec'].fillna(0)
-    bars = ax.bar(x_pos, a_rec_vals, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=0.5)
-    ax.set_ylabel('Abstention Recall\nP(abstained | failed)', fontsize=12, fontweight='bold')
+    a_rec_vals = df_sorted["A_rec"].fillna(0)
+    bars = ax.bar(
+        x_pos, a_rec_vals, color=bar_colors, alpha=0.8, edgecolor="black", linewidth=0.5
+    )
+    ax.set_ylabel(
+        "Abstention Recall\nP(abstained | failed)", fontsize=12, fontweight="bold"
+    )
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=9)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=9)
     ax.set_ylim(0, 1.05)
-    ax.grid(True, alpha=0.3, axis='y')
-    for bar, val in zip(bars, df_sorted['A_rec']):
+    ax.grid(True, alpha=0.3, axis="y")
+    for bar, val in zip(bars, df_sorted["A_rec"]):
         if not np.isnan(val):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.02,
-                   f'{val:.2f}', ha='center', va='bottom', fontsize=8)
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                bar.get_height() + 0.02,
+                f"{val:.2f}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
 
     # 4. Selective Accuracy - accuracy when NOT abstaining
     ax = axes[1, 0]
-    a_sel_vals = df_sorted['A_sel'].fillna(0)
-    accuracy_vals = df_sorted['accuracy'].fillna(0)
+    a_sel_vals = df_sorted["A_sel"].fillna(0)
+    accuracy_vals = df_sorted["accuracy"].fillna(0)
     width = 0.35
-    ax.bar(x_pos - width/2, accuracy_vals, width, label='Overall Accuracy',
-                   alpha=0.8, color='tab:blue', edgecolor='black', linewidth=0.5)
-    ax.bar(x_pos + width/2, a_sel_vals, width, label='Selective Accuracy',
-                   alpha=0.8, color='tab:green', edgecolor='black', linewidth=0.5)
-    ax.set_ylabel('Accuracy', fontsize=12, fontweight='bold')
+    ax.bar(
+        x_pos - width / 2,
+        accuracy_vals,
+        width,
+        label="Overall Accuracy",
+        alpha=0.8,
+        color="tab:blue",
+        edgecolor="black",
+        linewidth=0.5,
+    )
+    ax.bar(
+        x_pos + width / 2,
+        a_sel_vals,
+        width,
+        label="Selective Accuracy",
+        alpha=0.8,
+        color="tab:green",
+        edgecolor="black",
+        linewidth=0.5,
+    )
+    ax.set_ylabel("Accuracy", fontsize=12, fontweight="bold")
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=9)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=9)
     ax.set_ylim(0, 1.05)
     ax.legend(fontsize=10)
-    ax.grid(True, alpha=0.3, axis='y')
+    ax.grid(True, alpha=0.3, axis="y")
 
     # 5. Stacked bar: Confusion matrix breakdown
     ax = axes[1, 1]
-    confusion_data = {'abstained_failed': [], 'abstained_succeeded': [],
-                      'proceeded_failed': [], 'proceeded_succeeded': []}
+    confusion_data = {
+        "abstained_failed": [],
+        "abstained_succeeded": [],
+        "proceeded_failed": [],
+        "proceeded_succeeded": [],
+    }
 
     for m in sorted_metrics:
         if not m:
-            confusion_data['abstained_failed'].append(0)
-            confusion_data['abstained_succeeded'].append(0)
-            confusion_data['proceeded_failed'].append(0)
-            confusion_data['proceeded_succeeded'].append(0)
+            confusion_data["abstained_failed"].append(0)
+            confusion_data["abstained_succeeded"].append(0)
+            confusion_data["proceeded_failed"].append(0)
+            confusion_data["proceeded_succeeded"].append(0)
             continue
 
-        abstention_data = m.extra.get('abstention_data', {})
-        cm = abstention_data.get('confusion_matrix', {})
-        n_tasks = abstention_data.get('n_tasks', 0)
+        abstention_data = m.extra.get("abstention_data", {})
+        cm = abstention_data.get("confusion_matrix", {})
+        n_tasks = abstention_data.get("n_tasks", 0)
 
         if n_tasks > 0:
-            confusion_data['abstained_failed'].append(cm.get('abstained_and_failed', 0) / n_tasks)
-            confusion_data['abstained_succeeded'].append(cm.get('abstained_and_succeeded', 0) / n_tasks)
-            confusion_data['proceeded_failed'].append(cm.get('proceeded_and_failed', 0) / n_tasks)
-            confusion_data['proceeded_succeeded'].append(cm.get('proceeded_and_succeeded', 0) / n_tasks)
+            confusion_data["abstained_failed"].append(
+                cm.get("abstained_and_failed", 0) / n_tasks
+            )
+            confusion_data["abstained_succeeded"].append(
+                cm.get("abstained_and_succeeded", 0) / n_tasks
+            )
+            confusion_data["proceeded_failed"].append(
+                cm.get("proceeded_and_failed", 0) / n_tasks
+            )
+            confusion_data["proceeded_succeeded"].append(
+                cm.get("proceeded_and_succeeded", 0) / n_tasks
+            )
         else:
-            confusion_data['abstained_failed'].append(0)
-            confusion_data['abstained_succeeded'].append(0)
-            confusion_data['proceeded_failed'].append(0)
-            confusion_data['proceeded_succeeded'].append(0)
+            confusion_data["abstained_failed"].append(0)
+            confusion_data["abstained_succeeded"].append(0)
+            confusion_data["proceeded_failed"].append(0)
+            confusion_data["proceeded_succeeded"].append(0)
 
     # Stacked bar chart
     bottom = np.zeros(len(agents))
-    ax.bar(x_pos, confusion_data['proceeded_succeeded'], label='Proceeded + Succeeded',
-           color='tab:green', alpha=0.8, bottom=bottom)
-    bottom += confusion_data['proceeded_succeeded']
-    ax.bar(x_pos, confusion_data['proceeded_failed'], label='Proceeded + Failed',
-           color='tab:red', alpha=0.8, bottom=bottom)
-    bottom += confusion_data['proceeded_failed']
-    ax.bar(x_pos, confusion_data['abstained_succeeded'], label='Abstained + Succeeded',
-           color='tab:orange', alpha=0.8, bottom=bottom)
-    bottom += confusion_data['abstained_succeeded']
-    ax.bar(x_pos, confusion_data['abstained_failed'], label='Abstained + Failed',
-           color='tab:purple', alpha=0.8, bottom=bottom)
+    ax.bar(
+        x_pos,
+        confusion_data["proceeded_succeeded"],
+        label="Proceeded + Succeeded",
+        color="tab:green",
+        alpha=0.8,
+        bottom=bottom,
+    )
+    bottom += confusion_data["proceeded_succeeded"]
+    ax.bar(
+        x_pos,
+        confusion_data["proceeded_failed"],
+        label="Proceeded + Failed",
+        color="tab:red",
+        alpha=0.8,
+        bottom=bottom,
+    )
+    bottom += confusion_data["proceeded_failed"]
+    ax.bar(
+        x_pos,
+        confusion_data["abstained_succeeded"],
+        label="Abstained + Succeeded",
+        color="tab:orange",
+        alpha=0.8,
+        bottom=bottom,
+    )
+    bottom += confusion_data["abstained_succeeded"]
+    ax.bar(
+        x_pos,
+        confusion_data["abstained_failed"],
+        label="Abstained + Failed",
+        color="tab:purple",
+        alpha=0.8,
+        bottom=bottom,
+    )
 
-    ax.set_ylabel('Fraction of Tasks', fontsize=12, fontweight='bold')
+    ax.set_ylabel("Fraction of Tasks", fontsize=12, fontweight="bold")
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=9)
+    ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=9)
     ax.set_ylim(0, 1.05)
-    ax.legend(fontsize=9, loc='upper right')
-    ax.grid(True, alpha=0.3, axis='y')
+    ax.legend(fontsize=9, loc="upper right")
+    ax.grid(True, alpha=0.3, axis="y")
 
     # 6. Abstention type breakdown (grouped bar)
     ax = axes[1, 2]
@@ -1360,13 +1860,13 @@ def plot_abstention_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetr
     for m in sorted_metrics:
         if not m:
             continue
-        abstention_data = m.extra.get('abstention_data', {})
-        type_breakdown = abstention_data.get('type_breakdown', {})
+        abstention_data = m.extra.get("abstention_data", {})
+        type_breakdown = abstention_data.get("type_breakdown", {})
         all_types.update(type_breakdown.keys())
 
     # Remove 'none' from types and sort with 'inability' first
-    other_types = sorted([t for t in all_types if t != 'none' and t != 'inability'])
-    abstention_types = (['inability'] if 'inability' in all_types else []) + other_types
+    other_types = sorted([t for t in all_types if t != "none" and t != "inability"])
+    abstention_types = (["inability"] if "inability" in all_types else []) + other_types
 
     if abstention_types:
         n_types = len(abstention_types)
@@ -1375,28 +1875,43 @@ def plot_abstention_detailed(df: pd.DataFrame, all_metrics: List[ReliabilityMetr
         for i, m in enumerate(sorted_metrics):
             if not m:
                 continue
-            abstention_data = m.extra.get('abstention_data', {})
-            type_breakdown = abstention_data.get('type_breakdown', {})
-            n_tasks = abstention_data.get('n_tasks', 1) or 1
+            abstention_data = m.extra.get("abstention_data", {})
+            type_breakdown = abstention_data.get("type_breakdown", {})
+            n_tasks = abstention_data.get("n_tasks", 1) or 1
 
             # Get counts for each type (as fraction of total)
-            type_fractions = [type_breakdown.get(t, {}).get('count', 0) / n_tasks
-                             for t in abstention_types]
+            type_fractions = [
+                type_breakdown.get(t, {}).get("count", 0) / n_tasks
+                for t in abstention_types
+            ]
 
             x_type = np.arange(n_types)
-            ax.bar(x_type + i * width, type_fractions, width,
-                   label=strip_agent_prefix(m.agent_name), alpha=0.8, color=bar_colors[i])
+            ax.bar(
+                x_type + i * width,
+                type_fractions,
+                width,
+                label=strip_agent_prefix(m.agent_name),
+                alpha=0.8,
+                color=bar_colors[i],
+            )
 
-        ax.set_ylabel('Fraction of Tasks', fontsize=12, fontweight='bold')
+        ax.set_ylabel("Fraction of Tasks", fontsize=12, fontweight="bold")
         ax.set_xticks(x_type + width * len(sorted_metrics) / 2)
-        ax.set_xticklabels(abstention_types, rotation=45, ha='right', fontsize=10)
-        ax.legend(fontsize=8, loc='upper right')
-        ax.grid(True, alpha=0.3, axis='y')
+        ax.set_xticklabels(abstention_types, rotation=45, ha="right", fontsize=10)
+        ax.legend(fontsize=8, loc="upper right")
+        ax.grid(True, alpha=0.3, axis="y")
     else:
-        ax.text(0.5, 0.5, 'No abstention type data available',
-                ha='center', va='center', fontsize=12, transform=ax.transAxes)
+        ax.text(
+            0.5,
+            0.5,
+            "No abstention type data available",
+            ha="center",
+            va="center",
+            fontsize=12,
+            transform=ax.transAxes,
+        )
     plt.tight_layout()
-    output_path = output_dir / 'abstention_detailed.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "abstention_detailed.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()

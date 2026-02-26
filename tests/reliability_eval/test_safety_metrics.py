@@ -2,13 +2,14 @@
 
 import math
 
-import numpy as np
 import pytest
 
 from reliability_eval.metrics.safety import compute_safety_metrics
 
 
-def _make_run_with_safety(task_violations: list[list[dict]], reward: float = 0.0) -> dict:
+def _make_run_with_safety(
+    task_violations: list[list[dict]], reward: float = 0.0
+) -> dict:
     """
     Build a minimal run dict with llm_safety data.
 
@@ -56,20 +57,26 @@ class TestComputeSafetyMetricsNoViolations:
 class TestComputeSafetyMetricsWithViolations:
     def test_s_comp_decreases_with_violation(self):
         # 1 task with a violation, 1 without — S_comp = 0.5
-        violations = [{"severity": "medium", "constraint": "do_not_cause_harm", "evidence": "x"}]
+        violations = [
+            {"severity": "medium", "constraint": "do_not_cause_harm", "evidence": "x"}
+        ]
         run = _make_run_with_safety([violations, []])
         result = compute_safety_metrics([run])
         assert result["S_comp"] == pytest.approx(0.5)
 
     def test_all_violated_s_comp_is_zero(self):
-        violations = [{"severity": "high", "constraint": "do_not_cause_harm", "evidence": "x"}]
+        violations = [
+            {"severity": "high", "constraint": "do_not_cause_harm", "evidence": "x"}
+        ]
         run = _make_run_with_safety([violations, violations])
         result = compute_safety_metrics([run])
         assert result["S_comp"] == pytest.approx(0.0)
 
     def test_s_harm_decreases_with_high_severity(self):
         # High severity violation (weight=1.0) → S_harm = 1 - 1.0 = 0.0
-        violations = [{"severity": "high", "constraint": "do_not_cause_harm", "evidence": "x"}]
+        violations = [
+            {"severity": "high", "constraint": "do_not_cause_harm", "evidence": "x"}
+        ]
         run = _make_run_with_safety([violations])
         result = compute_safety_metrics([run])
         assert result["S_harm"] == pytest.approx(0.0)

@@ -55,15 +55,21 @@ class TestDetectRunType:
 
 class TestExtractAgentName:
     def test_strips_benchmark_prefix(self):
-        name = extract_agent_name("taubench_airline_toolcalling_gpt_4o_mini", "taubench_airline")
+        name = extract_agent_name(
+            "taubench_airline_toolcalling_gpt_4o_mini", "taubench_airline"
+        )
         assert "gpt_4o_mini" in name
 
     def test_strips_numeric_timestamp(self):
-        name = extract_agent_name("taubench_airline_gpt_4o_mini_12345", "taubench_airline")
+        name = extract_agent_name(
+            "taubench_airline_gpt_4o_mini_12345", "taubench_airline"
+        )
         assert "12345" not in name
 
     def test_strips_repetition_marker(self):
-        name = extract_agent_name("taubench_airline_gpt_4o_mini_rep1", "taubench_airline")
+        name = extract_agent_name(
+            "taubench_airline_gpt_4o_mini_rep1", "taubench_airline"
+        )
         assert "rep1" not in name
 
     def test_returns_string(self):
@@ -134,15 +140,17 @@ class TestExtractMinimalLoggingData:
         assert len(result) == 0
 
     def test_extracts_token_counts(self):
-        entries = [{
-            "weave_task_id": "t1",
-            "summary": {
-                "usage": {
-                    "model_a": {"prompt_tokens": 100, "completion_tokens": 50}
+        entries = [
+            {
+                "weave_task_id": "t1",
+                "summary": {
+                    "usage": {
+                        "model_a": {"prompt_tokens": 100, "completion_tokens": 50}
+                    },
+                    "weave": {"latency_ms": 1000},
                 },
-                "weave": {"latency_ms": 1000}
             }
-        }]
+        ]
         result = extract_minimal_logging_data(entries)
         assert result[0]["prompt_tokens"] == 100
         assert result[0]["completion_tokens"] == 50
@@ -150,13 +158,25 @@ class TestExtractMinimalLoggingData:
 
 class TestExtractMinimalEvalData:
     def test_normal_task_format(self):
-        raw = {"task_1": {"reward": 1.0, "cost": 0.01, "taken_actions": [], "confidence": 0.9}}
+        raw = {
+            "task_1": {
+                "reward": 1.0,
+                "cost": 0.01,
+                "taken_actions": [],
+                "confidence": 0.9,
+            }
+        }
         result = extract_minimal_eval_data(raw)
         assert "task_1" in result
         assert result["task_1"]["reward"] == 1.0
 
     def test_extracts_action_names(self):
-        raw = {"t1": {"reward": 1.0, "taken_actions": [{"name": "action_a"}, {"name": "action_b"}]}}
+        raw = {
+            "t1": {
+                "reward": 1.0,
+                "taken_actions": [{"name": "action_a"}, {"name": "action_b"}],
+            }
+        }
         result = extract_minimal_eval_data(raw)
         assert result["t1"]["action_names"] == ["action_a", "action_b"]
 

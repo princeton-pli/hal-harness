@@ -58,7 +58,6 @@ AGENT_CONFIGS = [
     # -------------------------------------------------------------------------
     # Anthropic Models
     # -------------------------------------------------------------------------
-
     # {
     #     "name": "taubench_toolcalling_claude_haiku_3_5",
     #     "agent_dir": "agents/taubench_tool_calling",
@@ -94,7 +93,6 @@ AGENT_CONFIGS = [
     #     "provider": "anthropic",
     #     "benchmarks": ["taubench_airline"],
     # },
-
     # -------------------------------------------------------------------------
     # Google Gemini Models
     # -------------------------------------------------------------------------
@@ -130,7 +128,6 @@ AGENT_CONFIGS = [
     #     "provider": "google",
     #     "benchmarks": ["taubench_airline"],
     # },
-
     # =========================================================================
     # Agentic Scaffold Agents (Claude Code, OpenAI Codex)
     # These use full agentic CLI tools rather than raw model APIs.
@@ -138,7 +135,6 @@ AGENT_CONFIGS = [
     # For GAIA: the CLI agent uses its built-in tools (web search, bash, etc.)
     # Requirements: respective CLI tools must be installed.
     # =========================================================================
-
     # -------------------------------------------------------------------------
     # Claude Code (Anthropic CLI agent)
     # Install: npm install -g @anthropic-ai/claude-code
@@ -167,7 +163,6 @@ AGENT_CONFIGS = [
     #     "provider": "anthropic",
     #     "benchmarks": ["gaia"],
     # },
-
     # -------------------------------------------------------------------------
     # OpenAI Codex (OpenAI CLI agent)
     # Install: npm install -g @openai/codex
@@ -225,11 +220,9 @@ AGENT_CONFIGS = [
         "task_timeout": 1800,
         "benchmarks": ["taubench_airline"],
     },
-
     # =========================================================================
     # GAIA Benchmark Agents (using hal_generalist_agent)
     # =========================================================================
-
     # -------------------------------------------------------------------------
     # OpenAI Models (GAIA)
     # -------------------------------------------------------------------------
@@ -239,9 +232,7 @@ AGENT_CONFIGS = [
         "agent_function": "main.run",
         "model_name": "gpt-4o-mini-2024-07-18",
         "benchmarks": ["gaia"],
-        "extra_agent_args": {
-            "temperature": 0.0
-        }
+        "extra_agent_args": {"temperature": 0.0},
     },
     # {
     #     "name": "gaia_generalist_gpt_4_turbo",
@@ -284,7 +275,6 @@ AGENT_CONFIGS = [
     #         "temperature": 0.0
     #     }
     # },
-
     # -------------------------------------------------------------------------
     # Anthropic Models (GAIA) - via OpenRouter
     # -------------------------------------------------------------------------
@@ -332,7 +322,6 @@ AGENT_CONFIGS = [
     #         "temperature": 0.0
     #     }
     # },
-
     # -------------------------------------------------------------------------
     # Google Gemini Models (GAIA)
     # -------------------------------------------------------------------------

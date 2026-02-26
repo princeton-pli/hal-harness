@@ -4,30 +4,26 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List
 
 from reliability_eval.constants import (
-    CATEGORY_COLORS, CATEGORY_LABELS, EPSILON, HARM_REF,
-    PROVIDER_COLORS, PROVIDER_MARKERS, PROVIDER_ORDER,
-    SAFETY_LAMBDA, SEVERITY_WEIGHTS, TAUBENCH_AIRLINE_CLEAN_TASKS,
-    W_OUTCOME, W_RESOURCE, W_TRAJECTORY,
+    PROVIDER_COLORS,
 )
 from reliability_eval.loaders.agent_names import (
-    get_model_category, get_model_metadata, get_provider,
-    sort_agents_by_provider_and_date, strip_agent_prefix,
+    sort_agents_by_provider_and_date,
+    strip_agent_prefix,
 )
 from reliability_eval.metrics.consistency import compute_weighted_r_con
 from reliability_eval.types import ReliabilityMetrics
 from reliability_eval.plots.helpers import (
-    _CI_Z, _add_bar_labels_ci, _bar_with_ci, _clip_yerr,
-    _get_aggregate_yerr, _get_weighted_r_con_yerr, _get_yerr,
-    filter_oldest_and_newest_per_provider, generate_shaded_colors,
+    generate_shaded_colors,
 )
 
-def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path):
+
+def plot_reliability_dashboard(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
     """
     Create comprehensive reliability dashboard with ALL metrics.
 
@@ -43,54 +39,92 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
     """
     # Sort by provider and release date
     df_sorted = sort_agents_by_provider_and_date(df)
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
     x_pos = np.arange(len(agents))
 
     # Generate provider-based colors with shades
     bar_colors = generate_shaded_colors(df_sorted)
 
     # Compute dimension-level scores
-    df_sorted['R_Con'] = compute_weighted_r_con(df_sorted['C_out'], df_sorted['C_traj_d'], df_sorted['C_traj_s'], df_sorted['C_res'])
-    df_sorted['R_Pred'] = df_sorted['P_brier']  # Brier score captures both calibration and discrimination
-    df_sorted['R_Rob'] = df_sorted[['R_fault', 'R_struct', 'R_prompt']].mean(axis=1, skipna=True)
-    df_sorted['R_Saf'] = df_sorted['S_safety']
+    df_sorted["R_Con"] = compute_weighted_r_con(
+        df_sorted["C_out"],
+        df_sorted["C_traj_d"],
+        df_sorted["C_traj_s"],
+        df_sorted["C_res"],
+    )
+    df_sorted["R_Pred"] = df_sorted[
+        "P_brier"
+    ]  # Brier score captures both calibration and discrimination
+    df_sorted["R_Rob"] = df_sorted[["R_fault", "R_struct", "R_prompt"]].mean(
+        axis=1, skipna=True
+    )
+    df_sorted["R_Saf"] = df_sorted["S_safety"]
     # Overall reliability = uniform average of consistency, predictability, robustness
-    df_sorted['R_Overall'] = df_sorted[['R_Con', 'R_Pred', 'R_Rob']].mean(axis=1, skipna=True)
+    df_sorted["R_Overall"] = df_sorted[["R_Con", "R_Pred", "R_Rob"]].mean(
+        axis=1, skipna=True
+    )
 
     # Create figure with GridSpec layout
     # Row 0: 2 plots (bar + radar for overall)
     # Rows 1-4: 6 plots each (1 summary + 5 submetrics for consistency, 1+4 for others)
     fig = plt.figure(figsize=(28, 26))
-    gs = gridspec.GridSpec(5, 6, figure=fig, hspace=0.45, wspace=0.35,
-                           height_ratios=[1.2, 1, 1, 1, 1])
+    gs = gridspec.GridSpec(
+        5, 6, figure=fig, hspace=0.45, wspace=0.35, height_ratios=[1.2, 1, 1, 1, 1]
+    )
 
-    def plot_bar(ax, data, ylabel, title, colors_to_use, show_labels=True, ylim_max=1.05):
+    def plot_bar(
+        ax, data, ylabel, title, colors_to_use, show_labels=True, ylim_max=1.05
+    ):
         """Helper to create bar chart with provider-based colors."""
         valid_data = data.fillna(0)
-        bars = ax.bar(x_pos, valid_data, color=colors_to_use, alpha=0.85, edgecolor='black', linewidth=0.5)
-        ax.set_ylabel(ylabel, fontweight='bold', fontsize=9)
-        ax.set_title(title, fontweight='bold', fontsize=10)
+        bars = ax.bar(
+            x_pos,
+            valid_data,
+            color=colors_to_use,
+            alpha=0.85,
+            edgecolor="black",
+            linewidth=0.5,
+        )
+        ax.set_ylabel(ylabel, fontweight="bold", fontsize=9)
+        ax.set_title(title, fontweight="bold", fontsize=10)
         ax.set_xticks(x_pos)
-        ax.set_xticklabels(agents, rotation=45, ha='right', fontsize=7)
+        ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=7)
         ax.set_ylim(0, ylim_max)
-        ax.grid(True, alpha=0.3, axis='y')
+        ax.grid(True, alpha=0.3, axis="y")
         if show_labels:
             for bar, val in zip(bars, data):
                 if not np.isnan(val):
-                    ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.02,
-                            f'{val:.2f}', ha='center', va='bottom', fontsize=6)
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        bar.get_height() + 0.02,
+                        f"{val:.2f}",
+                        ha="center",
+                        va="bottom",
+                        fontsize=6,
+                    )
         return bars
 
     # Add legend for providers
     def add_provider_legend(ax):
         """Add a legend showing provider colors."""
         from matplotlib.patches import Patch
+
         legend_elements = [
-            Patch(facecolor=PROVIDER_COLORS['OpenAI'], edgecolor='black', label='OpenAI'),
-            Patch(facecolor=PROVIDER_COLORS['Google'], edgecolor='black', label='Google'),
-            Patch(facecolor=PROVIDER_COLORS['Anthropic'], edgecolor='black', label='Anthropic'),
+            Patch(
+                facecolor=PROVIDER_COLORS["OpenAI"], edgecolor="black", label="OpenAI"
+            ),
+            Patch(
+                facecolor=PROVIDER_COLORS["Google"], edgecolor="black", label="Google"
+            ),
+            Patch(
+                facecolor=PROVIDER_COLORS["Anthropic"],
+                edgecolor="black",
+                label="Anthropic",
+            ),
         ]
-        ax.legend(handles=legend_elements, loc='upper right', fontsize=8, framealpha=0.9)
+        ax.legend(
+            handles=legend_elements, loc="upper right", fontsize=8, framealpha=0.9
+        )
 
     # =========================================================================
     # ROW 0: OVERALL RELIABILITY (Bar Chart + Spider Chart)
@@ -98,15 +132,21 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
 
     # Overall reliability bar chart (spans 3 columns)
     ax = fig.add_subplot(gs[0, 0:3])
-    bars = plot_bar(ax, df_sorted['R_Overall'], r'$R_{\mathrm{Overall}}$', r'Overall Reliability Score (mean of $R_{\mathrm{Con}}$, $R_{\mathrm{Pred}}$, $R_{\mathrm{Rob}}$)', bar_colors)
-    ax.axhline(y=0.5, color='red', linestyle='--', alpha=0.5, label='Moderate')
-    ax.axhline(y=0.8, color='green', linestyle='--', alpha=0.5, label='Good')
+    plot_bar(
+        ax,
+        df_sorted["R_Overall"],
+        r"$R_{\mathrm{Overall}}$",
+        r"Overall Reliability Score (mean of $R_{\mathrm{Con}}$, $R_{\mathrm{Pred}}$, $R_{\mathrm{Rob}}$)",
+        bar_colors,
+    )
+    ax.axhline(y=0.5, color="red", linestyle="--", alpha=0.5, label="Moderate")
+    ax.axhline(y=0.8, color="green", linestyle="--", alpha=0.5, label="Good")
     add_provider_legend(ax)
 
     # Spider/Radar chart for dimension-level comparison (spans 3 columns)
     ax = fig.add_subplot(gs[0, 3:6], polar=True)
-    dimensions = ['R_Con', 'R_Pred', 'R_Rob']
-    dim_labels = ['Consistency', 'Predictability', 'Robustness']
+    dimensions = ["R_Con", "R_Pred", "R_Rob"]
+    dim_labels = ["Consistency", "Predictability", "Robustness"]
 
     num_vars = len(dimensions)
     angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
@@ -115,17 +155,26 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
     for idx, (_, row) in enumerate(df_sorted.iterrows()):
         values = [row[d] if not np.isnan(row[d]) else 0 for d in dimensions]
         values += values[:1]  # Close the polygon
-        ax.plot(angles, values, 'o-', linewidth=1.5, label=row['agent'][:15],
-                color=bar_colors[idx], alpha=0.7)
+        ax.plot(
+            angles,
+            values,
+            "o-",
+            linewidth=1.5,
+            label=row["agent"][:15],
+            color=bar_colors[idx],
+            alpha=0.7,
+        )
         ax.fill(angles, values, alpha=0.1, color=bar_colors[idx])
 
     ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(dim_labels, fontsize=10, fontweight='bold')
+    ax.set_xticklabels(dim_labels, fontsize=10, fontweight="bold")
     ax.set_ylim(0, 1)
-    ax.set_title('Reliability Dimension Profile', fontsize=11, fontweight='bold', pad=15)
+    ax.set_title(
+        "Reliability Dimension Profile", fontsize=11, fontweight="bold", pad=15
+    )
     # Only show legend if few agents
     if len(agents) <= 6:
-        ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.0), fontsize=7)
+        ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.0), fontsize=7)
 
     # =========================================================================
     # ROW 1: CONSISTENCY METRICS (R_Con summary + C_out, C_traj_d, C_traj_s, C_conf, C_res)
@@ -133,28 +182,64 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
 
     # R_Con summary (aggregate)
     ax = fig.add_subplot(gs[1, 0])
-    plot_bar(ax, df_sorted['R_Con'], r'$R_{\mathrm{Con}}$', 'Consistency\n(Aggregate)', bar_colors)
-    ax.axhline(y=0.5, color='orange', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax,
+        df_sorted["R_Con"],
+        r"$R_{\mathrm{Con}}$",
+        "Consistency\n(Aggregate)",
+        bar_colors,
+    )
+    ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
     # C_out
     ax = fig.add_subplot(gs[1, 1])
-    plot_bar(ax, df_sorted['C_out'], r'$C_{\mathrm{out}}$', 'Outcome\nConsistency', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["C_out"],
+        r"$C_{\mathrm{out}}$",
+        "Outcome\nConsistency",
+        bar_colors,
+    )
 
     # C_traj_d
     ax = fig.add_subplot(gs[1, 2])
-    plot_bar(ax, df_sorted['C_traj_d'], r'$C^{d}_{\mathrm{traj}}$', 'Trajectory\nDistribution', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["C_traj_d"],
+        r"$C^{d}_{\mathrm{traj}}$",
+        "Trajectory\nDistribution",
+        bar_colors,
+    )
 
     # C_traj_s
     ax = fig.add_subplot(gs[1, 3])
-    plot_bar(ax, df_sorted['C_traj_s'], r'$C^{s}_{\mathrm{traj}}$', 'Trajectory\nSequence', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["C_traj_s"],
+        r"$C^{s}_{\mathrm{traj}}$",
+        "Trajectory\nSequence",
+        bar_colors,
+    )
 
     # C_conf
     ax = fig.add_subplot(gs[1, 4])
-    plot_bar(ax, df_sorted['C_conf'], r'$C_{\mathrm{conf}}$', 'Confidence\nConsistency', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["C_conf"],
+        r"$C_{\mathrm{conf}}$",
+        "Confidence\nConsistency",
+        bar_colors,
+    )
 
     # C_res
     ax = fig.add_subplot(gs[1, 5])
-    plot_bar(ax, df_sorted['C_res'], r'$C_{\mathrm{res}}$', 'Resource\nConsistency', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["C_res"],
+        r"$C_{\mathrm{res}}$",
+        "Resource\nConsistency",
+        bar_colors,
+    )
 
     # =========================================================================
     # ROW 2: PREDICTABILITY METRICS (R_Pred summary + P_rc, P_cal, P_auroc, P_brier)
@@ -162,29 +247,57 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
 
     # R_Pred summary
     ax = fig.add_subplot(gs[2, 0])
-    plot_bar(ax, df_sorted['R_Pred'], r'$R_{\mathrm{Pred}}$', 'Predictability\n(Aggregate)', bar_colors)
-    ax.axhline(y=0.5, color='orange', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax,
+        df_sorted["R_Pred"],
+        r"$R_{\mathrm{Pred}}$",
+        "Predictability\n(Aggregate)",
+        bar_colors,
+    )
+    ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
     # P_rc
     ax = fig.add_subplot(gs[2, 1])
-    plot_bar(ax, df_sorted['P_rc'], r'$P_{\mathrm{rc}}$', 'Risk-Coverage\nScore', bar_colors)
+    plot_bar(
+        ax, df_sorted["P_rc"], r"$P_{\mathrm{rc}}$", "Risk-Coverage\nScore", bar_colors
+    )
 
     # P_cal
     ax = fig.add_subplot(gs[2, 2])
-    plot_bar(ax, df_sorted['P_cal'], r'$P_{\mathrm{cal}}$', 'Calibration\n(1-ECE)', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["P_cal"],
+        r"$P_{\mathrm{cal}}$",
+        "Calibration\n(1-ECE)",
+        bar_colors,
+    )
 
     # P_auroc
     ax = fig.add_subplot(gs[2, 3])
-    plot_bar(ax, df_sorted['P_auroc'], r'$P_{\mathrm{AUROC}}$', 'Discrimination\n(AUC-ROC)', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["P_auroc"],
+        r"$P_{\mathrm{AUROC}}$",
+        "Discrimination\n(AUC-ROC)",
+        bar_colors,
+    )
 
     # P_brier
     ax = fig.add_subplot(gs[2, 4])
-    plot_bar(ax, df_sorted['P_brier'], r'$P_{\mathrm{Brier}}$', 'Quality\n(1-Brier)', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["P_brier"],
+        r"$P_{\mathrm{Brier}}$",
+        "Quality\n(1-Brier)",
+        bar_colors,
+    )
 
     # Capability (accuracy) for context
     ax = fig.add_subplot(gs[2, 5])
-    plot_bar(ax, df_sorted['accuracy'], 'Accuracy', 'Capability\n(Accuracy)', bar_colors)
-    ax.axhline(y=0.5, color='orange', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax, df_sorted["accuracy"], "Accuracy", "Capability\n(Accuracy)", bar_colors
+    )
+    ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
     # =========================================================================
     # ROW 3: ROBUSTNESS METRICS (R_Rob summary + R_fault, R_struct, R_prompt + extra)
@@ -192,24 +305,52 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
 
     # R_Rob summary
     ax = fig.add_subplot(gs[3, 0])
-    plot_bar(ax, df_sorted['R_Rob'], r'$R_{\mathrm{Rob}}$', 'Robustness\n(Aggregate)', bar_colors, ylim_max=1.15)
-    ax.axhline(y=1.0, color='green', linestyle='--', alpha=0.5, label='Perfect')
-    ax.axhline(y=0.5, color='orange', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax,
+        df_sorted["R_Rob"],
+        r"$R_{\mathrm{Rob}}$",
+        "Robustness\n(Aggregate)",
+        bar_colors,
+        ylim_max=1.15,
+    )
+    ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5, label="Perfect")
+    ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
     # R_fault
     ax = fig.add_subplot(gs[3, 1])
-    plot_bar(ax, df_sorted['R_fault'], r'$R_{\mathrm{fault}}$', 'Fault\nRobustness', bar_colors, ylim_max=1.15)
-    ax.axhline(y=1.0, color='green', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax,
+        df_sorted["R_fault"],
+        r"$R_{\mathrm{fault}}$",
+        "Fault\nRobustness",
+        bar_colors,
+        ylim_max=1.15,
+    )
+    ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5)
 
     # R_struct
     ax = fig.add_subplot(gs[3, 2])
-    plot_bar(ax, df_sorted['R_struct'], r'$R_{\mathrm{env}}$', 'Environment\nRobustness', bar_colors, ylim_max=1.15)
-    ax.axhline(y=1.0, color='green', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax,
+        df_sorted["R_struct"],
+        r"$R_{\mathrm{env}}$",
+        "Environment\nRobustness",
+        bar_colors,
+        ylim_max=1.15,
+    )
+    ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5)
 
     # R_prompt
     ax = fig.add_subplot(gs[3, 3])
-    plot_bar(ax, df_sorted['R_prompt'], r'$R_{\mathrm{prompt}}$', 'Prompt\nRobustness', bar_colors, ylim_max=1.15)
-    ax.axhline(y=1.0, color='green', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax,
+        df_sorted["R_prompt"],
+        r"$R_{\mathrm{prompt}}$",
+        "Prompt\nRobustness",
+        bar_colors,
+        ylim_max=1.15,
+    )
+    ax.axhline(y=1.0, color="green", linestyle="--", alpha=0.5)
 
     # Risk-Coverage Curves (spans 2 columns)
     ax = fig.add_subplot(gs[3, 4:6])
@@ -217,19 +358,29 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
     agent_to_metrics = {m.agent_name: m for m in all_metrics}
     for idx, agent in enumerate(agents):
         m = agent_to_metrics.get(agent)
-        if m and 'aurc_data' in m.extra and m.extra['aurc_data'].get('coverages') is not None:
-            d = m.extra['aurc_data']
-            if len(d.get('coverages', [])) > 0:
-                ax.plot(d['coverages'], d['risks'], label=strip_agent_prefix(m.agent_name)[:12],
-                        linewidth=2, color=bar_colors[idx], alpha=0.8)
-    ax.set_xlabel('Coverage', fontweight='bold', fontsize=9)
-    ax.set_ylabel('Risk', fontweight='bold', fontsize=9)
-    ax.set_title('Risk-Coverage Curves', fontweight='bold', fontsize=10)
+        if (
+            m
+            and "aurc_data" in m.extra
+            and m.extra["aurc_data"].get("coverages") is not None
+        ):
+            d = m.extra["aurc_data"]
+            if len(d.get("coverages", [])) > 0:
+                ax.plot(
+                    d["coverages"],
+                    d["risks"],
+                    label=strip_agent_prefix(m.agent_name)[:12],
+                    linewidth=2,
+                    color=bar_colors[idx],
+                    alpha=0.8,
+                )
+    ax.set_xlabel("Coverage", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Risk", fontweight="bold", fontsize=9)
+    ax.set_title("Risk-Coverage Curves", fontweight="bold", fontsize=10)
     ax.grid(True, alpha=0.3)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     if len(agents) <= 8:
-        ax.legend(fontsize=6, loc='best')
+        ax.legend(fontsize=6, loc="best")
 
     # =========================================================================
     # ROW 4: SAFETY METRICS (R_Saf summary + S_harm, S_comp, S_safety + calibration)
@@ -237,46 +388,74 @@ def plot_reliability_dashboard(df: pd.DataFrame, all_metrics: List[ReliabilityMe
 
     # R_Saf summary
     ax = fig.add_subplot(gs[4, 0])
-    plot_bar(ax, df_sorted['R_Saf'], r'$R_{\mathrm{Saf}}$', 'Safety\n(Aggregate)', bar_colors)
-    ax.axhline(y=0.8, color='green', linestyle='--', alpha=0.5, label='Good')
-    ax.axhline(y=0.5, color='orange', linestyle='--', alpha=0.5)
+    plot_bar(
+        ax, df_sorted["R_Saf"], r"$R_{\mathrm{Saf}}$", "Safety\n(Aggregate)", bar_colors
+    )
+    ax.axhline(y=0.8, color="green", linestyle="--", alpha=0.5, label="Good")
+    ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
 
     # S_harm
     ax = fig.add_subplot(gs[4, 1])
-    plot_bar(ax, df_sorted['S_harm'], r'$S_{\mathrm{harm}}$', 'Harm Score\n(exp(-severity))', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["S_harm"],
+        r"$S_{\mathrm{harm}}$",
+        "Harm Score\n(exp(-severity))",
+        bar_colors,
+    )
 
     # S_comp
     ax = fig.add_subplot(gs[4, 2])
-    plot_bar(ax, df_sorted['S_comp'], r'$S_{\mathrm{comp}}$', 'Compliance\n(1-violation)', bar_colors)
+    plot_bar(
+        ax,
+        df_sorted["S_comp"],
+        r"$S_{\mathrm{comp}}$",
+        "Compliance\n(1-violation)",
+        bar_colors,
+    )
 
     # S_safety
     ax = fig.add_subplot(gs[4, 3])
-    plot_bar(ax, df_sorted['S_safety'], r'$S_{\mathrm{safety}}$', 'Safety Score', bar_colors)
+    plot_bar(
+        ax, df_sorted["S_safety"], r"$S_{\mathrm{safety}}$", "Safety Score", bar_colors
+    )
 
     # Calibration diagram (spans 2 columns)
     ax = fig.add_subplot(gs[4, 4:6])
     for idx, agent in enumerate(agents):
         m = agent_to_metrics.get(agent)
-        if m and 'calibration_bins' in m.extra and m.extra['calibration_bins']:
-            bins = m.extra['calibration_bins']
-            confs = [b['avg_confidence'] for b in bins if b.get('count', 0) > 0]
-            accs = [b['avg_accuracy'] for b in bins if b.get('count', 0) > 0]
+        if m and "calibration_bins" in m.extra and m.extra["calibration_bins"]:
+            bins = m.extra["calibration_bins"]
+            confs = [b["avg_confidence"] for b in bins if b.get("count", 0) > 0]
+            accs = [b["avg_accuracy"] for b in bins if b.get("count", 0) > 0]
             if confs:
-                ax.scatter(confs, accs, s=60, color=bar_colors[idx], alpha=0.7, label=strip_agent_prefix(m.agent_name)[:12])
-    ax.plot([0, 1], [0, 1], 'k--', linewidth=2, alpha=0.5, label='Perfect calibration')
-    ax.set_xlabel('Confidence', fontweight='bold', fontsize=9)
-    ax.set_ylabel('Accuracy', fontweight='bold', fontsize=9)
-    ax.set_title('Reliability Diagram (Calibration)', fontweight='bold', fontsize=10)
+                ax.scatter(
+                    confs,
+                    accs,
+                    s=60,
+                    color=bar_colors[idx],
+                    alpha=0.7,
+                    label=strip_agent_prefix(m.agent_name)[:12],
+                )
+    ax.plot([0, 1], [0, 1], "k--", linewidth=2, alpha=0.5, label="Perfect calibration")
+    ax.set_xlabel("Confidence", fontweight="bold", fontsize=9)
+    ax.set_ylabel("Accuracy", fontweight="bold", fontsize=9)
+    ax.set_title("Reliability Diagram (Calibration)", fontweight="bold", fontsize=10)
     ax.grid(True, alpha=0.3)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     if len(agents) <= 8:
-        ax.legend(fontsize=6, loc='best')
+        ax.legend(fontsize=6, loc="best")
 
-    plt.suptitle('Comprehensive Reliability Evaluation Dashboard', fontsize=18, fontweight='bold', y=1.01)
+    plt.suptitle(
+        "Comprehensive Reliability Evaluation Dashboard",
+        fontsize=18,
+        fontweight="bold",
+        y=1.01,
+    )
 
-    output_path = output_dir / 'reliability_dashboard.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "reliability_dashboard.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
@@ -286,12 +465,48 @@ def plot_metric_heatmap(df: pd.DataFrame, output_dir: Path):
     # Sort by provider and release date
     df_sorted = sort_agents_by_provider_and_date(df)
 
-    metrics_cols = ['accuracy', 'C_out', 'C_traj_d', 'C_traj_s', 'C_conf', 'C_res', 'P_rc', 'P_cal', 'P_auroc', 'P_brier',
-                    'R_fault', 'R_struct', 'R_prompt', 'S_harm', 'S_comp', 'S_safety']
-    labels = ['Accuracy', 'C_out', 'C_traj_d', 'C_traj_s', 'C_conf', 'C_res', 'P_rc', 'P_cal', 'P_auroc', 'P_brier',
-              'R_fault', 'R_struct', 'R_prompt', 'S_harm', 'S_comp', 'S_safety']
+    metrics_cols = [
+        "accuracy",
+        "C_out",
+        "C_traj_d",
+        "C_traj_s",
+        "C_conf",
+        "C_res",
+        "P_rc",
+        "P_cal",
+        "P_auroc",
+        "P_brier",
+        "R_fault",
+        "R_struct",
+        "R_prompt",
+        "S_harm",
+        "S_comp",
+        "S_safety",
+    ]
+    labels = [
+        "Accuracy",
+        "C_out",
+        "C_traj_d",
+        "C_traj_s",
+        "C_conf",
+        "C_res",
+        "P_rc",
+        "P_cal",
+        "P_auroc",
+        "P_brier",
+        "R_fault",
+        "R_struct",
+        "R_prompt",
+        "S_harm",
+        "S_comp",
+        "S_safety",
+    ]
 
-    available = [c for c in metrics_cols if c in df_sorted.columns and not df_sorted[c].isna().all()]
+    available = [
+        c
+        for c in metrics_cols
+        if c in df_sorted.columns and not df_sorted[c].isna().all()
+    ]
     avail_labels = [labels[metrics_cols.index(c)] for c in available]
 
     if not available:
@@ -301,44 +516,68 @@ def plot_metric_heatmap(df: pd.DataFrame, output_dir: Path):
     matrix = df_sorted[available].values
 
     fig, ax = plt.subplots(figsize=(14, max(6, len(df_sorted) * 0.7)))
-    im = ax.imshow(matrix, aspect='auto', cmap='RdYlGn', vmin=0, vmax=1)
+    im = ax.imshow(matrix, aspect="auto", cmap="RdYlGn", vmin=0, vmax=1)
 
     ax.set_xticks(np.arange(len(available)))
-    ax.set_xticklabels(avail_labels, fontsize=10, fontweight='bold', rotation=45, ha='right')
+    ax.set_xticklabels(
+        avail_labels, fontsize=10, fontweight="bold", rotation=45, ha="right"
+    )
     ax.set_yticks(np.arange(len(df_sorted)))
 
     # Add provider color indicators to y-axis labels
-    agents = [strip_agent_prefix(a) for a in df_sorted['agent'].tolist()]
-    providers = df_sorted['provider'].tolist()
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
+    providers = df_sorted["provider"].tolist()
     ax.set_yticklabels(agents, fontsize=10)
 
     # Color the y-axis labels by provider
     for idx, (tick_label, provider) in enumerate(zip(ax.get_yticklabels(), providers)):
-        tick_label.set_color(PROVIDER_COLORS.get(provider, '#999999'))
-        tick_label.set_fontweight('bold')
+        tick_label.set_color(PROVIDER_COLORS.get(provider, "#999999"))
+        tick_label.set_fontweight("bold")
 
     for i in range(len(df_sorted)):
         for j in range(len(available)):
             val = matrix[i, j]
             if not np.isnan(val):
-                color = 'white' if val < 0.4 or val > 0.8 else 'black'
-                ax.text(j, i, f'{val:.2f}', ha='center', va='center', color=color, fontsize=8, fontweight='bold')
+                color = "white" if val < 0.4 or val > 0.8 else "black"
+                ax.text(
+                    j,
+                    i,
+                    f"{val:.2f}",
+                    ha="center",
+                    va="center",
+                    color=color,
+                    fontsize=8,
+                    fontweight="bold",
+                )
 
-    plt.colorbar(im, ax=ax, label='Score', shrink=0.8)
-    ax.set_title('Reliability Metrics Heatmap\n(sorted by provider and release date)', fontsize=14, fontweight='bold', pad=20)
+    plt.colorbar(im, ax=ax, label="Score", shrink=0.8)
+    ax.set_title(
+        "Reliability Metrics Heatmap\n(sorted by provider and release date)",
+        fontsize=14,
+        fontweight="bold",
+        pad=20,
+    )
 
     # Add provider legend
     from matplotlib.patches import Patch
+
     legend_elements = [
-        Patch(facecolor=PROVIDER_COLORS['OpenAI'], edgecolor='black', label='OpenAI'),
-        Patch(facecolor=PROVIDER_COLORS['Google'], edgecolor='black', label='Google'),
-        Patch(facecolor=PROVIDER_COLORS['Anthropic'], edgecolor='black', label='Anthropic'),
+        Patch(facecolor=PROVIDER_COLORS["OpenAI"], edgecolor="black", label="OpenAI"),
+        Patch(facecolor=PROVIDER_COLORS["Google"], edgecolor="black", label="Google"),
+        Patch(
+            facecolor=PROVIDER_COLORS["Anthropic"], edgecolor="black", label="Anthropic"
+        ),
     ]
-    ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.15, 1.0), fontsize=9)
+    ax.legend(
+        handles=legend_elements,
+        loc="upper left",
+        bbox_to_anchor=(1.15, 1.0),
+        fontsize=9,
+    )
 
     plt.tight_layout()
-    output_path = output_dir / 'reliability_heatmap.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "reliability_heatmap.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()
 
@@ -349,23 +588,27 @@ def plot_dimension_radar(df: pd.DataFrame, output_dir: Path):
     df_dims = sort_agents_by_provider_and_date(df)
 
     # R_Con = weighted consistency aggregate (outcome & resource weighted > trajectory)
-    df_dims['R_Con'] = compute_weighted_r_con(df_dims['C_out'], df_dims['C_traj_d'], df_dims['C_traj_s'], df_dims['C_res'])
+    df_dims["R_Con"] = compute_weighted_r_con(
+        df_dims["C_out"], df_dims["C_traj_d"], df_dims["C_traj_s"], df_dims["C_res"]
+    )
 
     # R_Rob = mean of all robustness metrics (R_fault, R_struct, R_prompt)
-    robustness_cols = [c for c in ['R_fault', 'R_struct', 'R_prompt'] if c in df_dims.columns]
+    robustness_cols = [
+        c for c in ["R_fault", "R_struct", "R_prompt"] if c in df_dims.columns
+    ]
     if robustness_cols:
-        df_dims['R_Rob'] = df_dims[robustness_cols].mean(axis=1, skipna=True)
+        df_dims["R_Rob"] = df_dims[robustness_cols].mean(axis=1, skipna=True)
     else:
-        df_dims['R_Rob'] = np.nan
+        df_dims["R_Rob"] = np.nan
 
     # R_Pred = Brier score (proper scoring rule capturing calibration + discrimination)
-    df_dims['R_Pred'] = df_dims['P_brier']
+    df_dims["R_Pred"] = df_dims["P_brier"]
 
     # R_Saf = S_safety (lambda-weighted safety score)
-    df_dims['R_Saf'] = df_dims['S_safety']
+    df_dims["R_Saf"] = df_dims["S_safety"]
 
-    dimensions = ['R_Con', 'R_Rob', 'R_Pred']
-    dim_labels = ['Consistency', 'Robustness', 'Predictability']
+    dimensions = ["R_Con", "R_Rob", "R_Pred"]
+    dim_labels = ["Consistency", "Robustness", "Predictability"]
 
     available = [d for d in dimensions if not df_dims[d].isna().all()]
     avail_labels = [dim_labels[dimensions.index(d)] for d in available]
@@ -386,20 +629,33 @@ def plot_dimension_radar(df: pd.DataFrame, output_dir: Path):
     for idx, (_, row) in enumerate(df_dims.iterrows()):
         values = [row[d] if not np.isnan(row[d]) else 0 for d in available]
         values += values[:1]
-        ax.plot(angles, values, 'o-', linewidth=2, label=row['agent'], color=bar_colors[idx], alpha=0.7)
+        ax.plot(
+            angles,
+            values,
+            "o-",
+            linewidth=2,
+            label=row["agent"],
+            color=bar_colors[idx],
+            alpha=0.7,
+        )
         ax.fill(angles, values, alpha=0.15, color=bar_colors[idx])
 
     ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(avail_labels, fontsize=11, fontweight='bold')
+    ax.set_xticklabels(avail_labels, fontsize=11, fontweight="bold")
     ax.set_ylim(0, 1)
-    ax.set_title('Reliability Dimension Profile\n(sorted by provider and release date)', fontsize=14, fontweight='bold', pad=20)
+    ax.set_title(
+        "Reliability Dimension Profile\n(sorted by provider and release date)",
+        fontsize=14,
+        fontweight="bold",
+        pad=20,
+    )
 
     # Show legend only for small number of agents
     if len(df_dims) <= 8:
-        ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.0), fontsize=9)
+        ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.0), fontsize=9)
 
     plt.tight_layout()
-    output_path = output_dir / 'reliability_radar.pdf'
-    plt.savefig(output_path, dpi=300, bbox_inches='tight', format='pdf')
+    output_path = output_dir / "reliability_radar.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
     print(f"📊 Saved: {output_path}")
     plt.close()

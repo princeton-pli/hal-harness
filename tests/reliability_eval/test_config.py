@@ -28,7 +28,12 @@ class TestBenchmarkConfigs:
         assert "gaia" in BENCHMARK_CONFIGS
 
     def test_each_entry_has_required_keys(self):
-        required = {"benchmark_name", "requires_docker", "requires_vm", "max_concurrent"}
+        required = {
+            "benchmark_name",
+            "requires_docker",
+            "requires_vm",
+            "max_concurrent",
+        }
         for name, cfg in BENCHMARK_CONFIGS.items():
             for key in required:
                 assert key in cfg, f"Benchmark '{name}' missing '{key}'"
@@ -36,7 +41,9 @@ class TestBenchmarkConfigs:
     def test_max_concurrent_is_positive_int(self):
         for name, cfg in BENCHMARK_CONFIGS.items():
             assert isinstance(cfg["max_concurrent"], int)
-            assert cfg["max_concurrent"] > 0, f"Benchmark '{name}' max_concurrent must be > 0"
+            assert cfg["max_concurrent"] > 0, (
+                f"Benchmark '{name}' max_concurrent must be > 0"
+            )
 
     def test_taubench_airline_has_compliance_constraints(self):
         cfg = BENCHMARK_CONFIGS["taubench_airline"]
@@ -49,8 +56,17 @@ class TestPhaseSettings:
         assert isinstance(PHASE_SETTINGS, dict)
 
     def test_has_all_phases(self):
-        for phase in ("baseline", "fault", "prompt", "structural", "safety", "abstention"):
-            assert phase in PHASE_SETTINGS, f"Phase '{phase}' missing from PHASE_SETTINGS"
+        for phase in (
+            "baseline",
+            "fault",
+            "prompt",
+            "structural",
+            "safety",
+            "abstention",
+        ):
+            assert phase in PHASE_SETTINGS, (
+                f"Phase '{phase}' missing from PHASE_SETTINGS"
+            )
 
     def test_each_phase_has_description(self):
         for phase, settings in PHASE_SETTINGS.items():

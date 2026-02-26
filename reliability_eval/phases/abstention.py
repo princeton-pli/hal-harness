@@ -2,11 +2,9 @@
 
 import json
 import re
-import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from reliability_eval.types import EvaluationLog, RunResult
 
@@ -62,10 +60,10 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
 
     evidence = []
     abstention_scores = {
-        'inability': 0.0,
-        'uncertainty': 0.0,
-        'clarification': 0.0,
-        'refusal': 0.0,
+        "inability": 0.0,
+        "uncertainty": 0.0,
+        "clarification": 0.0,
+        "refusal": 0.0,
     }
 
     # Extract ONLY assistant/agent messages from conversation
@@ -73,21 +71,23 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
     assistant_messages = []
     for msg in conversation_history:
         if isinstance(msg, dict):
-            role = msg.get('role', '')
-            content = msg.get('content', '')
+            role = msg.get("role", "")
+            content = msg.get("content", "")
         else:
-            role = getattr(msg, 'role', '')
-            content = getattr(msg, 'content', '')
+            role = getattr(msg, "role", "")
+            content = getattr(msg, "content", "")
 
         # Only process assistant messages, skip user/system messages
-        if role == 'assistant' and content:
-            assistant_messages.append(content.lower() if isinstance(content, str) else str(content).lower())
+        if role == "assistant" and content:
+            assistant_messages.append(
+                content.lower() if isinstance(content, str) else str(content).lower()
+            )
 
     # Check each pattern category
     for text in assistant_messages:
         for pattern in INABILITY_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
-                abstention_scores['inability'] += 1.0
+                abstention_scores["inability"] += 1.0
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     start = max(0, match.start() - 30)
@@ -96,7 +96,7 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
 
         for pattern in UNCERTAINTY_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
-                abstention_scores['uncertainty'] += 0.7
+                abstention_scores["uncertainty"] += 0.7
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     start = max(0, match.start() - 30)
@@ -105,7 +105,7 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
 
         for pattern in CLARIFICATION_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
-                abstention_scores['clarification'] += 0.5
+                abstention_scores["clarification"] += 0.5
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     start = max(0, match.start() - 30)
@@ -114,7 +114,7 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
 
         for pattern in REFUSAL_PATTERNS:
             if re.search(pattern, text, re.IGNORECASE):
-                abstention_scores['refusal'] += 1.0
+                abstention_scores["refusal"] += 1.0
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     start = max(0, match.start() - 30)
@@ -130,21 +130,23 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
 
     # Determine primary abstention type
     if total_score == 0:
-        abstention_type = 'none'
+        abstention_type = "none"
     else:
         abstention_type = max(abstention_scores, key=abstention_scores.get)
 
     # Determine if abstention occurred
-    abstained = abstention_strength >= 0.3 or any(abstention_scores[t] >= 1.0 for t in ['inability', 'refusal'])
+    abstained = abstention_strength >= 0.3 or any(
+        abstention_scores[t] >= 1.0 for t in ["inability", "refusal"]
+    )
 
     return {
-        'abstained': abstained,
-        'abstention_type': abstention_type,
-        'abstention_strength': abstention_strength,
-        'evidence': evidence[:5],
-        'early_termination': early_termination,
-        'scores_by_type': abstention_scores,
-        'num_assistant_messages': len(assistant_messages),
+        "abstained": abstained,
+        "abstention_type": abstention_type,
+        "abstention_strength": abstention_strength,
+        "evidence": evidence[:5],
+        "early_termination": early_termination,
+        "scores_by_type": abstention_scores,
+        "num_assistant_messages": len(assistant_messages),
     }
 
 
@@ -152,14 +154,10 @@ def detect_abstention(conversation_history: list, actions_taken: list) -> dict:
 # CONFIGURATION - Edit config.py to customize your evaluation
 # =============================================================================
 
-from reliability_eval.config import AGENT_CONFIGS, BENCHMARK_CONFIGS, PHASE_SETTINGS  # noqa: E402
-
 
 # =============================================================================
 # DATA CLASSES
 # =============================================================================
-
-from reliability_eval.types import EvaluationLog, RunResult  # noqa: E402
 
 
 def run_abstention_phase(
@@ -179,28 +177,34 @@ def run_abstention_phase(
 
     Computes: Abstention rate, type distribution, correlation with success/failure
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🛑 PHASE: ABSTENTION DETECTION")
-    print("="*80)
+    print("=" * 80)
     print(f"   Results dir: {results_dir}")
 
     total_tasks_analyzed = 0
     total_files_updated = 0
     abstention_summary = {
-        'total_abstained': 0,
-        'by_type': {'inability': 0, 'uncertainty': 0, 'clarification': 0, 'refusal': 0, 'none': 0},
-        'abstained_and_failed': 0,
-        'abstained_and_succeeded': 0,
-        'not_abstained_and_failed': 0,
-        'not_abstained_and_succeeded': 0,
+        "total_abstained": 0,
+        "by_type": {
+            "inability": 0,
+            "uncertainty": 0,
+            "clarification": 0,
+            "refusal": 0,
+            "none": 0,
+        },
+        "abstained_and_failed": 0,
+        "abstained_and_succeeded": 0,
+        "not_abstained_and_failed": 0,
+        "not_abstained_and_succeeded": 0,
     }
 
     for agent_config, benchmark_config, bench_name in combinations:
-        agent_name = agent_config['name']
+        agent_name = agent_config["name"]
 
-        print(f"\n{'─'*60}")
+        print(f"\n{'─' * 60}")
         print(f"🔍 Analyzing: {agent_name} on {bench_name}")
-        print(f"{'─'*60}")
+        print(f"{'─' * 60}")
 
         # Find all result directories for this agent/benchmark
         benchmark_dir = results_dir / bench_name
@@ -219,7 +223,19 @@ def run_abstention_phase(
 
             # Skip non-baseline results (fault, structural, prompt_sensitivity)
             run_dir_name = run_dir.name.lower()
-            if any(phase in run_dir_name for phase in ['fault', 'struct', 'structural', 'prompt_sensitivity', 'prompt_mild', 'prompt_medium', 'prompt_strong', 'prompt_naturalistic']):
+            if any(
+                phase in run_dir_name
+                for phase in [
+                    "fault",
+                    "struct",
+                    "structural",
+                    "prompt_sensitivity",
+                    "prompt_mild",
+                    "prompt_medium",
+                    "prompt_strong",
+                    "prompt_naturalistic",
+                ]
+            ):
                 continue
 
             # Find the UPLOAD.json file
@@ -232,13 +248,13 @@ def run_abstention_phase(
 
             # Load the results
             try:
-                with open(upload_file, 'r') as f:
+                with open(upload_file, "r") as f:
                     data = json.load(f)
             except Exception as e:
                 print(f"      ❌ Failed to load: {e}")
                 continue
 
-            raw_eval = data.get('raw_eval_results', {})
+            raw_eval = data.get("raw_eval_results", {})
             if not raw_eval:
                 print("      ⚠️  No raw_eval_results found")
                 continue
@@ -252,18 +268,18 @@ def run_abstention_phase(
 
                 # Always recompute abstention (replace existing data if present)
                 # Get conversation history and actions
-                conversation_history = task_eval.get('conversation_history', [])
-                taken_actions = task_eval.get('taken_actions', [])
+                conversation_history = task_eval.get("conversation_history", [])
+                taken_actions = task_eval.get("taken_actions", [])
 
                 if not conversation_history:
                     # Try to get from other possible locations
-                    if 'messages' in task_eval:
-                        conversation_history = task_eval['messages']
+                    if "messages" in task_eval:
+                        conversation_history = task_eval["messages"]
 
                 if not conversation_history and not taken_actions:
                     continue
 
-                success = float(task_eval.get('reward', 0.0)) > 0
+                success = float(task_eval.get("reward", 0.0)) > 0
 
                 print(f"      🔬 Task {task_id}: Analyzing...", end=" ", flush=True)
 
@@ -275,13 +291,13 @@ def run_abstention_phase(
                     )
 
                     # Store back in task
-                    task_eval['abstention'] = {
-                        'abstained': abstention_result['abstained'],
-                        'abstention_type': abstention_result['abstention_type'],
-                        'abstention_strength': abstention_result['abstention_strength'],
-                        'early_termination': abstention_result['early_termination'],
-                        'evidence': abstention_result['evidence'],
-                        'scores_by_type': abstention_result['scores_by_type'],
+                    task_eval["abstention"] = {
+                        "abstained": abstention_result["abstained"],
+                        "abstention_type": abstention_result["abstention_type"],
+                        "abstention_strength": abstention_result["abstention_strength"],
+                        "early_termination": abstention_result["early_termination"],
+                        "evidence": abstention_result["evidence"],
+                        "scores_by_type": abstention_result["scores_by_type"],
                     }
 
                     modified = True
@@ -289,36 +305,42 @@ def run_abstention_phase(
                     total_tasks_analyzed += 1
 
                     # Update summary
-                    if abstention_result['abstained']:
-                        abstention_summary['total_abstained'] += 1
-                        abstention_summary['by_type'][abstention_result['abstention_type']] += 1
+                    if abstention_result["abstained"]:
+                        abstention_summary["total_abstained"] += 1
+                        abstention_summary["by_type"][
+                            abstention_result["abstention_type"]
+                        ] += 1
                         if success:
-                            abstention_summary['abstained_and_succeeded'] += 1
+                            abstention_summary["abstained_and_succeeded"] += 1
                         else:
-                            abstention_summary['abstained_and_failed'] += 1
-                        print(f"🛑 {abstention_result['abstention_type']} (strength={abstention_result['abstention_strength']:.2f})")
+                            abstention_summary["abstained_and_failed"] += 1
+                        print(
+                            f"🛑 {abstention_result['abstention_type']} (strength={abstention_result['abstention_strength']:.2f})"
+                        )
                     else:
-                        abstention_summary['by_type']['none'] += 1
+                        abstention_summary["by_type"]["none"] += 1
                         if success:
-                            abstention_summary['not_abstained_and_succeeded'] += 1
+                            abstention_summary["not_abstained_and_succeeded"] += 1
                         else:
-                            abstention_summary['not_abstained_and_failed'] += 1
+                            abstention_summary["not_abstained_and_failed"] += 1
                         print("✅ no abstention")
 
                 except Exception as e:
                     print(f"❌ Error: {e}")
-                    task_eval['abstention'] = {
-                        'abstained': None,
-                        'error': str(e),
+                    task_eval["abstention"] = {
+                        "abstained": None,
+                        "error": str(e),
                     }
                     modified = True
 
             # Save back to file if modified
             if modified:
                 try:
-                    with open(upload_file, 'w') as f:
+                    with open(upload_file, "w") as f:
                         json.dump(data, f, indent=2)
-                    print(f"   💾 Saved {tasks_in_file} task analyses to {upload_file.name}")
+                    print(
+                        f"   💾 Saved {tasks_in_file} task analyses to {upload_file.name}"
+                    )
                     total_files_updated += 1
                 except Exception as e:
                     print(f"   ❌ Failed to save: {e}")
@@ -346,19 +368,41 @@ def run_abstention_phase(
     print(f"      By type: {abstention_summary['by_type']}")
     print("\n   🎯 Correlation with success:")
     print(f"      Abstained + Failed:     {abstention_summary['abstained_and_failed']}")
-    print(f"      Abstained + Succeeded:  {abstention_summary['abstained_and_succeeded']}")
-    print(f"      No abstention + Failed: {abstention_summary['not_abstained_and_failed']}")
-    print(f"      No abstention + Succeeded: {abstention_summary['not_abstained_and_succeeded']}")
+    print(
+        f"      Abstained + Succeeded:  {abstention_summary['abstained_and_succeeded']}"
+    )
+    print(
+        f"      No abstention + Failed: {abstention_summary['not_abstained_and_failed']}"
+    )
+    print(
+        f"      No abstention + Succeeded: {abstention_summary['not_abstained_and_succeeded']}"
+    )
 
     # Compute calibration metrics if we have data
-    total = (abstention_summary['abstained_and_failed'] + abstention_summary['abstained_and_succeeded'] +
-             abstention_summary['not_abstained_and_failed'] + abstention_summary['not_abstained_and_succeeded'])
-    if total > 0 and abstention_summary['total_abstained'] > 0:
+    total = (
+        abstention_summary["abstained_and_failed"]
+        + abstention_summary["abstained_and_succeeded"]
+        + abstention_summary["not_abstained_and_failed"]
+        + abstention_summary["not_abstained_and_succeeded"]
+    )
+    if total > 0 and abstention_summary["total_abstained"] > 0:
         # Precision: P(fail | abstain)
-        precision = abstention_summary['abstained_and_failed'] / abstention_summary['total_abstained'] if abstention_summary['total_abstained'] > 0 else 0
+        precision = (
+            abstention_summary["abstained_and_failed"]
+            / abstention_summary["total_abstained"]
+            if abstention_summary["total_abstained"] > 0
+            else 0
+        )
         # Recall: P(abstain | fail)
-        total_failed = abstention_summary['abstained_and_failed'] + abstention_summary['not_abstained_and_failed']
-        recall = abstention_summary['abstained_and_failed'] / total_failed if total_failed > 0 else 0
+        total_failed = (
+            abstention_summary["abstained_and_failed"]
+            + abstention_summary["not_abstained_and_failed"]
+        )
+        recall = (
+            abstention_summary["abstained_and_failed"] / total_failed
+            if total_failed > 0
+            else 0
+        )
         print("\n   📊 Abstention Calibration:")
         print(f"      Precision (P(fail|abstain)): {precision:.2%}")
         print(f"      Recall (P(abstain|fail)):    {recall:.2%}")

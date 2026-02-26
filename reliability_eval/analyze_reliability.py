@@ -33,25 +33,18 @@ Usage:
 """
 
 import argparse
-import json
 import sys
-import numpy as np
 import pandas as pd
 from pathlib import Path
-from collections import defaultdict, Counter
-from typing import Dict, List, Tuple, Optional
-from datetime import datetime
 import warnings
 
 # Allow running as a script: ensure repo root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import seaborn as sns
-from scipy.spatial.distance import jensenshannon
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 # =============================================================================
 # MATPLOTLIB STYLE FOR ICML PAPER
@@ -60,66 +53,47 @@ warnings.filterwarnings('ignore')
 sns.set_style("whitegrid")
 sns.set_palette("husl")
 
-plt.rcParams.update({
-    # Font settings - Computer Modern (LaTeX serif)
-    'font.family': 'serif',
-    'font.serif': ['CMU Serif', 'Computer Modern Roman', 'DejaVu Serif'],
-    'mathtext.fontset': 'cm',
-    # Font sizes
-    'font.size': 10,
-    'axes.labelsize': 11,
-    'axes.titlesize': 12,
-    'xtick.labelsize': 9,
-    'ytick.labelsize': 9,
-    'legend.fontsize': 9,
-    'figure.titlesize': 14,
-    # Line widths
-    'axes.linewidth': 0.8,
-    'grid.linewidth': 0.5,
-    'lines.linewidth': 1.5,
-    'patch.linewidth': 0.8,
-    # Figure settings
-    'figure.dpi': 150,
-    'savefig.dpi': 300,
-    'savefig.bbox': 'tight',
-    # Grid
-    'grid.alpha': 0.3,
-})
-
-from reliability_eval.constants import (  # noqa: E402
-    CATEGORY_COLORS,
-    CATEGORY_LABELS,
-    EPSILON,
-    HARM_REF,
-    PROVIDER_COLORS,
-    PROVIDER_MARKERS,
-    PROVIDER_ORDER,
-    SAFETY_LAMBDA,
-    SEVERITY_WEIGHTS,
-    TAUBENCH_AIRLINE_CLEAN_TASKS,
-    W_OUTCOME,
-    W_RESOURCE,
-    W_TRAJECTORY,
+plt.rcParams.update(
+    {
+        # Font settings - Computer Modern (LaTeX serif)
+        "font.family": "serif",
+        "font.serif": ["CMU Serif", "Computer Modern Roman", "DejaVu Serif"],
+        "mathtext.fontset": "cm",
+        # Font sizes
+        "font.size": 10,
+        "axes.labelsize": 11,
+        "axes.titlesize": 12,
+        "xtick.labelsize": 9,
+        "ytick.labelsize": 9,
+        "legend.fontsize": 9,
+        "figure.titlesize": 14,
+        # Line widths
+        "axes.linewidth": 0.8,
+        "grid.linewidth": 0.5,
+        "lines.linewidth": 1.5,
+        "patch.linewidth": 0.8,
+        # Figure settings
+        "figure.dpi": 150,
+        "savefig.dpi": 300,
+        "savefig.bbox": "tight",
+        # Grid
+        "grid.alpha": 0.3,
+    }
 )
 
-from reliability_eval.loaders.agent_names import (  # noqa: E402
-    get_model_category,
-    get_model_metadata,
-    get_provider,
-    sort_agents_by_provider_and_date,
-    strip_agent_prefix,
+from reliability_eval.constants import (  # noqa: E402
+    TAUBENCH_AIRLINE_CLEAN_TASKS,
+)
+from reliability_eval.loaders.results import load_all_results  # noqa: E402
+from reliability_eval.metrics.agent import (  # noqa: E402
+    analyze_all_agents,
+    metrics_to_dataframe,
 )
 
 
 # =============================================================================
 # PLOT HELPERS
 # =============================================================================
-
-from reliability_eval.plots.helpers import (  # noqa: E402
-    _CI_Z, _add_bar_labels_ci, _bar_with_ci, _clip_yerr,
-    _get_aggregate_yerr, _get_weighted_r_con_yerr, _get_yerr,
-    filter_oldest_and_newest_per_provider, generate_shaded_colors,
-)
 
 
 # =============================================================================
@@ -157,7 +131,6 @@ from reliability_eval.plots.levels import (  # noqa: E402
 
 from reliability_eval.plots.comparison import (  # noqa: E402
     plot_calibration,
-    plot_calibration_selective_comparison,
     plot_combined_overall_reliability,
     plot_combined_overall_reliability_large,
     plot_discrimination,
@@ -187,22 +160,52 @@ from reliability_eval.plots.reports import (  # noqa: E402
 # MAIN
 # =============================================================================
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Unified reliability analysis (all metrics from paper)")
+    parser = argparse.ArgumentParser(
+        description="Unified reliability analysis (all metrics from paper)"
+    )
     parser.add_argument("--results_dir", type=str, default="results")
     parser.add_argument("--benchmark", type=str, default="taubench_airline")
-    parser.add_argument("--output_dir", type=str, default="reliability_eval/analysis",
-                       help="Base output directory (benchmark name will be appended)")
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="reliability_eval/analysis",
+        help="Base output directory (benchmark name will be appended)",
+    )
     parser.add_argument("--scaffold", type=str, default="all")
-    parser.add_argument("--harm_ref", type=float, default=5.0, help="Reference severity for S_harm saturation (default: 5.0)")
-    parser.add_argument("--use_llm_safety", action="store_true", help="Use LLM-as-judge for safety analysis (S_harm, S_comp)")
-    parser.add_argument("--llm_model", type=str, default="gpt-4o", help="LLM model for safety analysis")
-    parser.add_argument("--safety_lambda", type=float, default=5.0,
-                       help="Lambda for S_safety: scales violation rate penalty (1=standard, >1=amplified; default: 5.0)")
-    parser.add_argument("--combined_benchmarks", nargs="+", type=str, default=None,
-                       help="Generate combined overall reliability plot for multiple benchmarks (e.g., --combined_benchmarks gaia taubench_airline)")
-    parser.add_argument("--from_csv", action="store_true",
-                       help="Skip metric recomputation; load from previously saved reliability_metrics.csv files")
+    parser.add_argument(
+        "--harm_ref",
+        type=float,
+        default=5.0,
+        help="Reference severity for S_harm saturation (default: 5.0)",
+    )
+    parser.add_argument(
+        "--use_llm_safety",
+        action="store_true",
+        help="Use LLM-as-judge for safety analysis (S_harm, S_comp)",
+    )
+    parser.add_argument(
+        "--llm_model", type=str, default="gpt-4o", help="LLM model for safety analysis"
+    )
+    parser.add_argument(
+        "--safety_lambda",
+        type=float,
+        default=5.0,
+        help="Lambda for S_safety: scales violation rate penalty (1=standard, >1=amplified; default: 5.0)",
+    )
+    parser.add_argument(
+        "--combined_benchmarks",
+        nargs="+",
+        type=str,
+        default=None,
+        help="Generate combined overall reliability plot for multiple benchmarks (e.g., --combined_benchmarks gaia taubench_airline)",
+    )
+    parser.add_argument(
+        "--from_csv",
+        action="store_true",
+        help="Skip metric recomputation; load from previously saved reliability_metrics.csv files",
+    )
 
     args = parser.parse_args()
 
@@ -217,8 +220,12 @@ def main():
     print(f"📊 Benchmark: {args.benchmark}")
     print(f"📁 Output: {output_dir}")
     print(f"⚠️  Harm reference: {args.harm_ref} (severity scale 0-10)")
-    print(f"📐 Safety formula: S_safety = 1 - (1 - S_comp)(1 - S_harm)  [lambda={args.safety_lambda} for sensitivity plots]")
-    print(f"🤖 LLM Safety Analysis: {'Enabled' if args.use_llm_safety else 'Disabled (using regex)'}")
+    print(
+        f"📐 Safety formula: S_safety = 1 - (1 - S_comp)(1 - S_harm)  [lambda={args.safety_lambda} for sensitivity plots]"
+    )
+    print(
+        f"🤖 LLM Safety Analysis: {'Enabled' if args.use_llm_safety else 'Disabled (using regex)'}"
+    )
     if args.use_llm_safety:
         print(f"   Model: {args.llm_model}")
     print("=" * 80)
@@ -226,7 +233,7 @@ def main():
     all_metrics = None
     df_codex = None
     if args.from_csv:
-        csv_path = output_dir / 'reliability_metrics.csv'
+        csv_path = output_dir / "reliability_metrics.csv"
         if csv_path.exists():
             print(f"\n📥 Loading metrics from {csv_path}")
             df = pd.read_csv(csv_path)
@@ -235,7 +242,7 @@ def main():
             print(f"❌ CSV not found: {csv_path}")
             return
         # Load codex metrics if available
-        codex_csv_path = output_dir / 'reliability_metrics_codex.csv'
+        codex_csv_path = output_dir / "reliability_metrics_codex.csv"
         if codex_csv_path.exists():
             print(f"📥 Loading codex metrics from {codex_csv_path}")
             df_codex = pd.read_csv(codex_csv_path)
@@ -247,11 +254,11 @@ def main():
         # Both load from the taubench_airline results directory
         load_benchmark = args.benchmark
         task_filter = None
-        if args.benchmark == 'taubench_airline':
+        if args.benchmark == "taubench_airline":
             task_filter = TAUBENCH_AIRLINE_CLEAN_TASKS
             print(f"   Using curated task subset: {len(task_filter)} tasks")
-        elif args.benchmark == 'taubench_airline_original':
-            load_benchmark = 'taubench_airline'
+        elif args.benchmark == "taubench_airline_original":
+            load_benchmark = "taubench_airline"
             print("   Loading all tasks (original 50-task set)")
         results = load_all_results(results_dir, load_benchmark)
 
@@ -261,14 +268,16 @@ def main():
                 for run_type, runs in run_types.items():
                     for run_data in runs:
                         # Filter raw_eval_results
-                        run_data['raw_eval_results'] = {
-                            tid: v for tid, v in run_data['raw_eval_results'].items()
+                        run_data["raw_eval_results"] = {
+                            tid: v
+                            for tid, v in run_data["raw_eval_results"].items()
                             if tid in task_filter
                         }
                         # Filter latencies
-                        if run_data.get('latencies'):
-                            run_data['latencies'] = {
-                                tid: v for tid, v in run_data['latencies'].items()
+                        if run_data.get("latencies"):
+                            run_data["latencies"] = {
+                                tid: v
+                                for tid, v in run_data["latencies"].items()
                                 if tid in task_filter
                             }
             print(f"   Filtered to {len(task_filter)} tasks per run")
@@ -278,14 +287,18 @@ def main():
             return
 
         # Separate codex runs for dedicated scaffold comparison plot
-        codex_results = {k: v for k, v in results.items() if 'codex' in k.lower()}
-        results = {k: v for k, v in results.items() if 'codex' not in k.lower()}
+        codex_results = {k: v for k, v in results.items() if "codex" in k.lower()}
+        results = {k: v for k, v in results.items() if "codex" not in k.lower()}
         if codex_results:
-            print(f"📦 Separated {len(codex_results)} codex agents (excluded from main analysis)")
+            print(
+                f"📦 Separated {len(codex_results)} codex agents (excluded from main analysis)"
+            )
 
         # Filter by scaffold
-        if args.scaffold.lower() != 'all':
-            filtered = {k: v for k, v in results.items() if args.scaffold.lower() in k.lower()}
+        if args.scaffold.lower() != "all":
+            filtered = {
+                k: v for k, v in results.items() if args.scaffold.lower() in k.lower()
+            }
             results = filtered
             print(f"🔍 Filtered to {len(results)} agents")
 
@@ -295,7 +308,9 @@ def main():
 
         # Analyze
         print("\n📊 Analyzing agents...")
-        all_metrics = analyze_all_agents(results, harm_ref=args.harm_ref, safety_lambda=args.safety_lambda)
+        all_metrics = analyze_all_agents(
+            results, harm_ref=args.harm_ref, safety_lambda=args.safety_lambda
+        )
 
         if not all_metrics:
             print("❌ No metrics computed")
@@ -307,15 +322,19 @@ def main():
         df_codex = None
         if codex_results:
             print("\n📊 Analyzing codex agents...")
-            codex_metrics = analyze_all_agents(codex_results, harm_ref=args.harm_ref, safety_lambda=args.safety_lambda)
+            codex_metrics = analyze_all_agents(
+                codex_results, harm_ref=args.harm_ref, safety_lambda=args.safety_lambda
+            )
             if codex_metrics:
                 df_codex = metrics_to_dataframe(codex_metrics)
-                df_codex.to_csv(output_dir / 'reliability_metrics_codex.csv', index=False)
+                df_codex.to_csv(
+                    output_dir / "reliability_metrics_codex.csv", index=False
+                )
                 print(f"   Saved: {output_dir / 'reliability_metrics_codex.csv'}")
 
         # Save
         print("\n💾 Saving results...")
-        df.to_csv(output_dir / 'reliability_metrics.csv', index=False)
+        df.to_csv(output_dir / "reliability_metrics.csv", index=False)
         print(f"   Saved: {output_dir / 'reliability_metrics.csv'}")
 
     # Visualize — df-only plots always run; all_metrics plots only when available
@@ -343,7 +362,7 @@ def main():
         print("\n💾 Saving detailed JSON data files...")
         save_detailed_json(df, all_metrics, output_dir)
 
-        if args.benchmark == 'gaia':
+        if args.benchmark == "gaia":
             print("\n📊 Generating GAIA level-stratified analysis...")
             plot_level_stratified_analysis(df, all_metrics, output_dir)
             plot_confidence_difficulty_alignment(df, all_metrics, output_dir)
@@ -359,7 +378,7 @@ def main():
         print("\n⏭️  Skipping detail plots and report (--from_csv mode, no all_metrics)")
 
     # Generate scaffold comparison plot (codex vs toolcalling) for taubench
-    if df_codex is not None and 'taubench' in args.benchmark:
+    if df_codex is not None and "taubench" in args.benchmark:
         print("\n📊 Generating scaffold comparison plot (codex vs tool-calling)...")
         plot_scaffold_comparison(df, df_codex, output_dir)
 
@@ -374,7 +393,7 @@ def main():
             if bm == args.benchmark:
                 benchmark_data.append((bm, df))
             elif args.from_csv:
-                bm_csv = Path(args.output_dir) / bm / 'reliability_metrics.csv'
+                bm_csv = Path(args.output_dir) / bm / "reliability_metrics.csv"
                 if bm_csv.exists():
                     bm_df = pd.read_csv(bm_csv)
                     benchmark_data.append((bm, bm_df))
@@ -384,24 +403,30 @@ def main():
             else:
                 # Load the other benchmark
                 # Both taubench_airline and taubench_airline_original load from taubench_airline dir
-                bm_load = 'taubench_airline' if bm == 'taubench_airline_original' else bm
+                bm_load = (
+                    "taubench_airline" if bm == "taubench_airline_original" else bm
+                )
                 bm_results = load_all_results(results_dir, bm_load)
                 # Apply task filter for taubench_airline (curated subset)
-                if bm == 'taubench_airline' and bm_results:
+                if bm == "taubench_airline" and bm_results:
                     for agent_name, run_types in bm_results.items():
                         for run_type, runs in run_types.items():
                             for run_data in runs:
-                                run_data['raw_eval_results'] = {
-                                    tid: v for tid, v in run_data['raw_eval_results'].items()
+                                run_data["raw_eval_results"] = {
+                                    tid: v
+                                    for tid, v in run_data["raw_eval_results"].items()
                                     if tid in TAUBENCH_AIRLINE_CLEAN_TASKS
                                 }
-                                if run_data.get('latencies'):
-                                    run_data['latencies'] = {
-                                        tid: v for tid, v in run_data['latencies'].items()
+                                if run_data.get("latencies"):
+                                    run_data["latencies"] = {
+                                        tid: v
+                                        for tid, v in run_data["latencies"].items()
                                         if tid in TAUBENCH_AIRLINE_CLEAN_TASKS
                                     }
                 # Exclude codex agents from combined plots
-                bm_results = {k: v for k, v in bm_results.items() if 'codex' not in k.lower()}
+                bm_results = {
+                    k: v for k, v in bm_results.items() if "codex" not in k.lower()
+                }
                 if bm_results:
                     bm_metrics = analyze_all_agents(bm_results)
                     if bm_metrics:
@@ -419,9 +444,13 @@ def main():
             combined_output_dir.mkdir(parents=True, exist_ok=True)
             plot_combined_overall_reliability(benchmark_data, combined_output_dir)
             # Exclude taubench_airline_original from the large plot
-            large_plot_data = [(bm, d) for bm, d in benchmark_data if bm != 'taubench_airline_original']
+            large_plot_data = [
+                (bm, d) for bm, d in benchmark_data if bm != "taubench_airline_original"
+            ]
             if large_plot_data:
-                plot_combined_overall_reliability_large(large_plot_data, combined_output_dir)
+                plot_combined_overall_reliability_large(
+                    large_plot_data, combined_output_dir
+                )
             plot_prompt_robustness(benchmark_data, combined_output_dir)
             plot_outcome_consistency(benchmark_data, combined_output_dir)
             plot_calibration(benchmark_data, combined_output_dir)
@@ -443,24 +472,56 @@ def main():
     print("  Safety:         S_harm, S_comp, S_safety")
     print("  Abstention:     A_rate, A_prec, A_rec, A_sel, A_cal")
     print("\nGenerated plots:")
-    print("  - reliability_dashboard.png         : Comprehensive dashboard with all metrics")
-    print("  - reliability_heatmap.png           : Heatmap of all metrics across agents")
-    print("  - reliability_radar.png             : Dimension-level radar chart (4 dimensions)")
-    print("  - consistency_detailed.png          : Detailed consistency plots (C_out, C_traj_d, C_traj_s, C_conf, C_res)")
-    print("  - predictability_detailed.png       : Detailed predictability plots (P_rc, P_cal, P_auroc, P_brier)")
-    print("  - accuracy_coverage_by_model.png    : Accuracy-coverage curves per model (3x4 grid)")
-    print("  - calibration_by_model.png          : Calibration diagrams per model (3x4 grid)")
-    print("  - robustness_detailed.png           : Detailed robustness plots (R_fault, R_struct, R_prompt)")
-    print("  - safety_detailed.png               : Detailed safety plots (S_harm, S_comp, S_safety)")
-    print("  - abstention_detailed.png           : Detailed abstention plots (A_rate, A_prec, A_rec, A_sel)")
-    print("  - outcome_consistency_comparison.png: Outcome consistency analysis (C_out)")
-    print("  - reliability_trends.png            : Reliability vs release date and accuracy (2x5 grid)")
-    print("  - reliability_by_model_size.png     : Comparison across small/large/reasoning models")
-    print("  - reliability_by_provider.png       : Comparison across OpenAI/Google/Anthropic")
+    print(
+        "  - reliability_dashboard.png         : Comprehensive dashboard with all metrics"
+    )
+    print(
+        "  - reliability_heatmap.png           : Heatmap of all metrics across agents"
+    )
+    print(
+        "  - reliability_radar.png             : Dimension-level radar chart (4 dimensions)"
+    )
+    print(
+        "  - consistency_detailed.png          : Detailed consistency plots (C_out, C_traj_d, C_traj_s, C_conf, C_res)"
+    )
+    print(
+        "  - predictability_detailed.png       : Detailed predictability plots (P_rc, P_cal, P_auroc, P_brier)"
+    )
+    print(
+        "  - accuracy_coverage_by_model.png    : Accuracy-coverage curves per model (3x4 grid)"
+    )
+    print(
+        "  - calibration_by_model.png          : Calibration diagrams per model (3x4 grid)"
+    )
+    print(
+        "  - robustness_detailed.png           : Detailed robustness plots (R_fault, R_struct, R_prompt)"
+    )
+    print(
+        "  - safety_detailed.png               : Detailed safety plots (S_harm, S_comp, S_safety)"
+    )
+    print(
+        "  - abstention_detailed.png           : Detailed abstention plots (A_rate, A_prec, A_rec, A_sel)"
+    )
+    print(
+        "  - outcome_consistency_comparison.png: Outcome consistency analysis (C_out)"
+    )
+    print(
+        "  - reliability_trends.png            : Reliability vs release date and accuracy (2x5 grid)"
+    )
+    print(
+        "  - reliability_by_model_size.png     : Comparison across small/large/reasoning models"
+    )
+    print(
+        "  - reliability_by_provider.png       : Comparison across OpenAI/Google/Anthropic"
+    )
     print("  - reliability_report.md             : Full markdown report")
     if args.combined_benchmarks:
-        print("  - combined_overall_reliability.pdf  : Overall reliability trends for multiple benchmarks")
-        print("  - calibration_selective_comparison.pdf : Calibration & selective prediction across benchmarks (2x2)")
+        print(
+            "  - combined_overall_reliability.pdf  : Overall reliability trends for multiple benchmarks"
+        )
+        print(
+            "  - calibration_selective_comparison.pdf : Calibration & selective prediction across benchmarks (2x2)"
+        )
 
 
 if __name__ == "__main__":

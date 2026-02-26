@@ -13,6 +13,7 @@ from reliability_eval.config import AGENT_CONFIGS, BENCHMARK_CONFIGS
 # ENVIRONMENT SETUP
 # =============================================================================
 
+
 def load_environment():
     """Load environment variables from .env file if available."""
     env_file = Path(".env")
@@ -20,17 +21,18 @@ def load_environment():
         print(f"📄 Loading environment variables from {env_file}")
         try:
             from dotenv import load_dotenv
+
             load_dotenv(env_file)
             print("✅ Loaded .env file using python-dotenv")
         except ImportError:
             print("⚠️  python-dotenv not found, manually parsing .env")
-            with open(env_file, 'r') as f:
+            with open(env_file, "r") as f:
                 for line in f:
                     line = line.strip()
-                    if not line or line.startswith('#'):
+                    if not line or line.startswith("#"):
                         continue
-                    if '=' in line:
-                        key, value = line.split('=', 1)
+                    if "=" in line:
+                        key, value = line.split("=", 1)
                         key = key.strip()
                         value = value.strip().strip('"').strip("'")
                         if key and not os.getenv(key):
@@ -46,21 +48,23 @@ def check_api_keys():
     required_vars = ["WANDB_API_KEY"]
 
     # Check which providers are in use
-    providers_in_use = {cfg.get('provider', 'openai') for cfg in AGENT_CONFIGS}
-    models_in_use = {cfg['model_name'] for cfg in AGENT_CONFIGS}
+    providers_in_use = {cfg.get("provider", "openai") for cfg in AGENT_CONFIGS}
+    models_in_use = {cfg["model_name"] for cfg in AGENT_CONFIGS}
 
     # Add provider-specific keys
-    if 'openai' in providers_in_use or any('gpt' in m or 'o1' in m for m in models_in_use):
+    if "openai" in providers_in_use or any(
+        "gpt" in m or "o1" in m for m in models_in_use
+    ):
         required_vars.append("OPENAI_API_KEY")
 
-    if 'anthropic' in providers_in_use or any('claude' in m for m in models_in_use):
+    if "anthropic" in providers_in_use or any("claude" in m for m in models_in_use):
         required_vars.append("ANTHROPIC_API_KEY")
 
-    if 'google' in providers_in_use or any('gemini' in m for m in models_in_use):
+    if "google" in providers_in_use or any("gemini" in m for m in models_in_use):
         required_vars.append("GEMINI_API_KEY")
 
     # Check for OpenRouter
-    if any('openrouter/' in m for m in models_in_use):
+    if any("openrouter/" in m for m in models_in_use):
         required_vars.append("OPENROUTER_API_KEY")
 
     # Validate
@@ -74,13 +78,14 @@ def check_api_keys():
         print(f"\n⚠️  Warning: Missing API keys: {', '.join(missing)}")
         print("   Some evaluations may fail.")
         response = input("   Continue anyway? (y/n): ")
-        if response.lower() != 'y':
+        if response.lower() != "y":
             exit(1)
 
 
 # =============================================================================
 # COMMAND BUILDING
 # =============================================================================
+
 
 def build_base_command(
     agent_config: Dict,
@@ -99,15 +104,24 @@ def build_base_command(
 
     cmd = [
         "hal-eval",
-        "--benchmark", benchmark_name,
-        "--agent_dir", agent_config["agent_dir"],
-        "--agent_function", agent_config["agent_function"],
-        "--agent_name", agent_name,
-        "-A", f"model_name={agent_config['model_name']}",
-        "-A", f"provider={agent_config.get('provider', 'openai')}",
-        "-A", f"benchmark_name={benchmark_name}",
-        "-A", "temperature=0.0",
-        "--max_concurrent", str(max_concurrent or benchmark_config.get("max_concurrent", 1)),
+        "--benchmark",
+        benchmark_name,
+        "--agent_dir",
+        agent_config["agent_dir"],
+        "--agent_function",
+        agent_config["agent_function"],
+        "--agent_name",
+        agent_name,
+        "-A",
+        f"model_name={agent_config['model_name']}",
+        "-A",
+        f"provider={agent_config.get('provider', 'openai')}",
+        "-A",
+        f"benchmark_name={benchmark_name}",
+        "-A",
+        "temperature=0.0",
+        "--max_concurrent",
+        str(max_concurrent or benchmark_config.get("max_concurrent", 1)),
     ]
 
     # Only add --max_tasks if explicitly set (None means run all tasks)
@@ -208,7 +222,10 @@ def add_structural_args(cmd: List[str], strength: str, ptype: str) -> List[str]:
 # EXECUTION
 # =============================================================================
 
-def run_command(cmd: List[str], max_retries: int = 3) -> tuple[bool, float, Optional[str]]:
+
+def run_command(
+    cmd: List[str], max_retries: int = 3
+) -> tuple[bool, float, Optional[str]]:
     """Run a command with real-time output and retry logic."""
     for attempt in range(max_retries):
         start_time = time.time()
@@ -239,9 +256,11 @@ def get_valid_combinations(benchmark_filter: Optional[str] = None) -> List[tuple
     """Get valid agent-benchmark combinations."""
     combinations = []
     for agent_config in AGENT_CONFIGS:
-        for bench_name in agent_config.get('benchmarks', []):
+        for bench_name in agent_config.get("benchmarks", []):
             if bench_name in BENCHMARK_CONFIGS:
                 if benchmark_filter and bench_name != benchmark_filter:
                     continue
-                combinations.append((agent_config, BENCHMARK_CONFIGS[bench_name], bench_name))
+                combinations.append(
+                    (agent_config, BENCHMARK_CONFIGS[bench_name], bench_name)
+                )
     return combinations

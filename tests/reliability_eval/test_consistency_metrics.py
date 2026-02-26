@@ -38,7 +38,9 @@ class TestComputeOutcomeConsistency:
         assert result == pytest.approx(0.0)
 
     def test_a_specific_sequence(self):
-        assert compute_outcome_consistency([1, 0.9, 0.789, 0.98, 0.83, 0.67]) == pytest.approx(0.8698810638081038)
+        assert compute_outcome_consistency(
+            [1, 0.9, 0.789, 0.98, 0.83, 0.67]
+        ) == pytest.approx(0.8698810638081038)
 
 
 class TestComputeTrajectoryConsistencyConditioned:
@@ -56,7 +58,7 @@ class TestComputeTrajectoryConsistencyConditioned:
 
     def test_returns_nan_when_fewer_than_two_successful_runs(self):
         trajs = [["a", "b"], ["c", "d"]]
-        successes = [1, 0] # only one successful run
+        successes = [1, 0]  # only one successful run
         C_success, _ = compute_trajectory_consistency_conditioned(trajs, successes)
         assert math.isnan(C_success)
 

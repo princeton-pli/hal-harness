@@ -17,7 +17,9 @@ class TestDetectAbstentionNoSignals:
 
     def test_normal_assistant_response_is_not_abstention(self):
         history = [msg("assistant", "I have booked your flight to Paris.")]
-        result = detect_abstention(history, ["search_flights", "book_flight", "confirm"])
+        result = detect_abstention(
+            history, ["search_flights", "book_flight", "confirm"]
+        )
         assert result["abstained"] is False
         assert result["abstention_type"] == "none"
 
@@ -161,10 +163,12 @@ class TestDetectAbstentionEdgeCases:
 
     def test_abstention_strength_capped_at_one(self):
         # Very high accumulated score should not push strength above 1.0.
-        text = " ".join([
-            "I cannot do this. I am unable to help. I can't proceed.",
-            "I must stop. Stopping here. Unable to continue. Cannot proceed.",
-        ])
+        text = " ".join(
+            [
+                "I cannot do this. I am unable to help. I can't proceed.",
+                "I must stop. Stopping here. Unable to continue. Cannot proceed.",
+            ]
+        )
         history = [msg("assistant", text)]
         result = detect_abstention(history, [])
         assert result["abstention_strength"] <= 1.0

@@ -46,24 +46,28 @@ class TestNumericalConstants:
 
 class TestSeverityWeights:
     def test_severity_weights_keys(self):
-        assert set(SEVERITY_WEIGHTS.keys()) == {'low', 'medium', 'high'}
+        assert set(SEVERITY_WEIGHTS.keys()) == {"low", "medium", "high"}
 
     def test_severity_weights_ordered(self):
-        assert SEVERITY_WEIGHTS['low'] < SEVERITY_WEIGHTS['medium'] < SEVERITY_WEIGHTS['high']
+        assert (
+            SEVERITY_WEIGHTS["low"]
+            < SEVERITY_WEIGHTS["medium"]
+            < SEVERITY_WEIGHTS["high"]
+        )
 
     def test_high_severity_is_one(self):
-        assert SEVERITY_WEIGHTS['high'] == 1.0
+        assert SEVERITY_WEIGHTS["high"] == 1.0
 
 
 class TestProviderConstants:
     def test_provider_colors_has_known_providers(self):
-        for provider in ('OpenAI', 'Google', 'Anthropic'):
+        for provider in ("OpenAI", "Google", "Anthropic"):
             assert provider in PROVIDER_COLORS
             assert isinstance(PROVIDER_COLORS[provider], str)
-            assert PROVIDER_COLORS[provider].startswith('#')
+            assert PROVIDER_COLORS[provider].startswith("#")
 
     def test_provider_markers_has_known_providers(self):
-        for provider in ('OpenAI', 'Google', 'Anthropic'):
+        for provider in ("OpenAI", "Google", "Anthropic"):
             assert provider in PROVIDER_MARKERS
 
     def test_provider_order_is_numeric(self):
@@ -78,21 +82,21 @@ class TestProviderConstants:
 class TestModelConstants:
     def test_model_metadata_entries_have_required_keys(self):
         for name, meta in MODEL_METADATA.items():
-            assert 'date' in meta, f"{name} missing 'date'"
-            assert 'provider' in meta, f"{name} missing 'provider'"
-            assert meta['provider'] in ('OpenAI', 'Google', 'Anthropic')
+            assert "date" in meta, f"{name} missing 'date'"
+            assert "provider" in meta, f"{name} missing 'provider'"
+            assert meta["provider"] in ("OpenAI", "Google", "Anthropic")
 
     def test_model_category_values_are_valid(self):
-        valid = {'small', 'large', 'reasoning'}
+        valid = {"small", "large", "reasoning"}
         for model, cat in MODEL_CATEGORY.items():
             assert cat in valid, f"{model} has invalid category {cat!r}"
 
     def test_category_colors_covers_all_categories(self):
-        for cat in ('small', 'large', 'reasoning'):
+        for cat in ("small", "large", "reasoning"):
             assert cat in CATEGORY_COLORS
 
     def test_category_labels_covers_all_categories(self):
-        for cat in ('small', 'large', 'reasoning'):
+        for cat in ("small", "large", "reasoning"):
             assert cat in CATEGORY_LABELS
 
 

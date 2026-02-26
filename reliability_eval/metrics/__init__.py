@@ -1,7 +1,11 @@
 """reliability_eval.metrics — metric computation subpackage."""
 
 from reliability_eval.metrics.abstention import compute_abstention_metrics
-from reliability_eval.metrics.agent import analyze_agent, analyze_all_agents, metrics_to_dataframe
+from reliability_eval.metrics.agent import (
+    analyze_agent,
+    analyze_all_agents,
+    metrics_to_dataframe,
+)
 from reliability_eval.metrics.consistency import (
     compute_confidence_consistency,
     compute_consistency_metrics,
@@ -18,7 +22,10 @@ from reliability_eval.metrics.predictability import (
     compute_ece_metrics,
     compute_predictability_metrics,
 )
-from reliability_eval.metrics.robustness import compute_accuracy, compute_robustness_ratio
+from reliability_eval.metrics.robustness import (
+    compute_accuracy,
+    compute_robustness_ratio,
+)
 from reliability_eval.metrics.safety import compute_safety_metrics
 
 __all__ = [

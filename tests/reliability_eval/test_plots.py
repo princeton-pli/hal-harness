@@ -8,9 +8,8 @@ Full plot rendering is not tested here (matplotlib + file I/O; no display availa
 """
 
 import matplotlib
-matplotlib.use("Agg")  # must be before any pyplot import
 
-import pytest
+matplotlib.use("Agg")  # must be before any pyplot import
 
 
 class TestPlotImports:
@@ -23,6 +22,7 @@ class TestPlotImports:
             _clip_yerr,
             _get_yerr,
         )
+
         assert callable(generate_shaded_colors)
         assert callable(filter_oldest_and_newest_per_provider)
         assert callable(_clip_yerr)
@@ -34,6 +34,7 @@ class TestPlotImports:
             plot_metric_heatmap,
             plot_dimension_radar,
         )
+
         assert callable(plot_reliability_dashboard)
         assert callable(plot_metric_heatmap)
         assert callable(plot_dimension_radar)
@@ -46,6 +47,7 @@ class TestPlotImports:
             plot_safety_detailed,
             plot_abstention_detailed,
         )
+
         assert callable(plot_consistency_detailed)
         assert callable(plot_predictability_detailed)
         assert callable(plot_robustness_detailed)
@@ -57,6 +59,7 @@ class TestPlotImports:
             plot_reliability_vs_date_and_accuracy,
             plot_combined_overall_reliability,
         )
+
         assert callable(plot_reliability_vs_date_and_accuracy)
         assert callable(plot_combined_overall_reliability)
 
@@ -65,6 +68,7 @@ class TestPlotImports:
             plot_level_stratified_analysis,
             plot_provider_level_heatmap,
         )
+
         assert callable(plot_level_stratified_analysis)
         assert callable(plot_provider_level_heatmap)
 
@@ -74,11 +78,13 @@ class TestPlotImports:
             save_detailed_json,
             generate_full_latex_table,
         )
+
         assert callable(generate_report)
         assert callable(save_detailed_json)
         assert callable(generate_full_latex_table)
 
     def test_package_init_importable(self):
         import reliability_eval.plots
+
         assert hasattr(reliability_eval.plots, "plot_reliability_dashboard")
         assert hasattr(reliability_eval.plots, "generate_report")

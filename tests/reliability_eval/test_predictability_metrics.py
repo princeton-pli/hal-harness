@@ -96,7 +96,11 @@ class TestComputeAurocMetrics:
         confidences = np.array([0.8, 0.6, 0.4, 0.2])
         successes = np.array([1, 1, 0, 0], dtype=float)
         result = compute_auroc_metrics(confidences, successes)
-        total = result["concordant_pairs"] + result["discordant_pairs"] + result["tied_pairs"]
+        total = (
+            result["concordant_pairs"]
+            + result["discordant_pairs"]
+            + result["tied_pairs"]
+        )
         assert total == result["n_positive"] * result["n_negative"]
 
 

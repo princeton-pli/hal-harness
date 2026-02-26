@@ -1,13 +1,11 @@
 """Prompt sensitivity phase runner."""
 
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
 from reliability_eval.phases.runner import (
-    add_baseline_args,
     add_prompt_sensitivity_args,
     build_base_command,
     run_command,
@@ -43,9 +41,9 @@ def run_prompt_phase(
         log: Evaluation log object
         log_path: Path to save log
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🔀 PHASE 3: PROMPT ROBUSTNESS (R_prompt)")
-    print("="*80)
+    print("=" * 80)
 
     # Only run variations (skip var0=original, baseline runs cover that)
     print(f"   Variations per agent: {num_variations}")
@@ -63,18 +61,21 @@ def run_prompt_phase(
         for var_idx in range(1, num_variations + 1):
             run_number += 1
 
-            print(f"\n{'─'*60}")
-            print(f"🔄 Run {run_number}/{total_runs} | Variation {var_idx}/{num_variations}")
+            print(f"\n{'─' * 60}")
+            print(
+                f"🔄 Run {run_number}/{total_runs} | Variation {var_idx}/{num_variations}"
+            )
             print(f"   Agent: {agent_config['name']}")
             print(f"   Strength: {variation_strength}")
-            print(f"{'─'*60}")
+            print(f"{'─' * 60}")
 
             # Generate run_id for this specific variation
             run_id = f"{bench_name}_{agent_config['name']}_prompt_{variation_strength}_var{var_idx}_{int(time.time())}"
 
             # Build command
             cmd = build_base_command(
-                agent_config, benchmark_config,
+                agent_config,
+                benchmark_config,
                 agent_name_suffix=f"_prompt_{variation_strength}_var{var_idx}",
                 max_tasks=max_tasks,
                 conda_env=conda_env,
@@ -83,7 +84,9 @@ def run_prompt_phase(
                 results_dir=results_dir,
             )
             # Pass variation_index to run only this specific variation
-            cmd = add_prompt_sensitivity_args(cmd, num_variations, variation_strength, variation_index=var_idx)
+            cmd = add_prompt_sensitivity_args(
+                cmd, num_variations, variation_strength, variation_index=var_idx
+            )
 
             print(f"🚀 Command: {' '.join(cmd[:10])}...")
 
@@ -98,7 +101,7 @@ def run_prompt_phase(
 
             # Log result
             result = RunResult(
-                agent=agent_config['name'],
+                agent=agent_config["name"],
                 benchmark=bench_name,
                 phase="prompt",
                 repetition=var_idx,  # Use variation index as repetition for consistency

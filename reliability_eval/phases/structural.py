@@ -5,7 +5,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from reliability_eval.phases.runner import add_structural_args, build_base_command, run_command
+from reliability_eval.phases.runner import (
+    add_structural_args,
+    build_base_command,
+    run_command,
+)
 from reliability_eval.types import EvaluationLog, RunResult
 
 
@@ -25,9 +29,9 @@ def run_structural_phase(
     Run structural perturbation phase.
     Computes: R_struct (structural robustness)
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🔧 PHASE 4: STRUCTURAL PERTURBATIONS (R_struct)")
-    print("="*80)
+    print("=" * 80)
     print(f"   Perturbation strength: {perturbation_strength}")
     print(f"   Perturbation type: {perturbation_type}")
     print(f"   Max tasks: {max_tasks if max_tasks is not None else 'all'}")
@@ -42,16 +46,17 @@ def run_structural_phase(
         # Optionally run baseline first (for comparison)
         if run_baseline:
             run_number += 1
-            print(f"\n{'─'*60}")
+            print(f"\n{'─' * 60}")
             print(f"🔄 Run {run_number}/{total_runs} | BASELINE")
             print(f"   Agent: {agent_config['name']}")
-            print(f"{'─'*60}")
+            print(f"{'─' * 60}")
 
             # Generate run_id for baseline
             run_id_baseline = f"{bench_name}_{agent_config['name']}_struct_baseline_{int(time.time())}"
 
             cmd = build_base_command(
-                agent_config, benchmark_config,
+                agent_config,
+                benchmark_config,
                 agent_name_suffix="_struct_baseline",
                 max_tasks=max_tasks,
                 conda_env=conda_env,
@@ -69,7 +74,7 @@ def run_structural_phase(
                 print(f"❌ Failed: {error}")
 
             result = RunResult(
-                agent=agent_config['name'],
+                agent=agent_config["name"],
                 benchmark=bench_name,
                 phase="structural_baseline",
                 repetition=1,
@@ -85,16 +90,17 @@ def run_structural_phase(
 
         # Run perturbed
         run_number += 1
-        print(f"\n{'─'*60}")
+        print(f"\n{'─' * 60}")
         print(f"🔄 Run {run_number}/{total_runs} | PERTURBED ({perturbation_strength})")
         print(f"   Agent: {agent_config['name']}")
-        print(f"{'─'*60}")
+        print(f"{'─' * 60}")
 
         # Generate run_id for perturbed
         run_id_perturbed = f"{bench_name}_{agent_config['name']}_struct_{perturbation_strength}_{int(time.time())}"
 
         cmd = build_base_command(
-            agent_config, benchmark_config,
+            agent_config,
+            benchmark_config,
             agent_name_suffix=f"_struct_{perturbation_strength}",
             max_tasks=max_tasks,
             conda_env=conda_env,
@@ -113,7 +119,7 @@ def run_structural_phase(
             print(f"❌ Failed: {error}")
 
         result = RunResult(
-            agent=agent_config['name'],
+            agent=agent_config["name"],
             benchmark=bench_name,
             phase="structural_perturbed",
             repetition=1,

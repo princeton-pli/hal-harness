@@ -61,7 +61,12 @@ class TestComputeAbstentionMetrics:
             {"abstained": False, "success": False},
         ]
         result = compute_abstention_metrics([_make_run(tasks)])
-        for key in ("abstention_rate", "abstention_precision", "abstention_recall", "selective_accuracy"):
+        for key in (
+            "abstention_rate",
+            "abstention_precision",
+            "abstention_recall",
+            "selective_accuracy",
+        ):
             val = result[key]
             if val is not None:
                 assert 0.0 <= val <= 1.0, f"{key}={val} out of [0, 1]"

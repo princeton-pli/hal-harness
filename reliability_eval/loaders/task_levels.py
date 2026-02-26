@@ -25,12 +25,12 @@ def extract_task_levels(run_dir: Path) -> Dict[str, str]:
         if not input_file.exists():
             continue
         try:
-            with open(input_file, 'r') as f:
+            with open(input_file, "r") as f:
                 data = json.load(f)
             # Input format: {task_id: {task_id, Question, Level, ...}}
             for task_id, task_data in data.items():
-                if isinstance(task_data, dict) and 'Level' in task_data:
-                    levels[task_id] = str(task_data['Level'])
+                if isinstance(task_data, dict) and "Level" in task_data:
+                    levels[task_id] = str(task_data["Level"])
         except Exception:
             continue
 

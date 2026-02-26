@@ -20,7 +20,13 @@ def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict
 
     N = len(confidences)
     if N == 0:
-        return {'P_rc': np.nan, 'aurc': np.nan, 'coverages': [], 'risks': [], 'optimal_risks': []}
+        return {
+            "P_rc": np.nan,
+            "aurc": np.nan,
+            "coverages": [],
+            "risks": [],
+            "optimal_risks": [],
+        }
 
     # Sort by decreasing confidence
     sorted_idx = np.argsort(-confidences)
@@ -55,15 +61,17 @@ def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict
     P_rc = np.clip(P_rc, 0.0, 1.0)
 
     return {
-        'P_rc': P_rc,
-        'aurc': aurc,
-        'coverages': coverages,
-        'risks': risks,
-        'optimal_risks': optimal_risks
+        "P_rc": P_rc,
+        "aurc": aurc,
+        "coverages": coverages,
+        "risks": risks,
+        "optimal_risks": optimal_risks,
     }
 
 
-def compute_ece_metrics(confidences: np.ndarray, successes: np.ndarray, n_bins: int = 10) -> Dict:
+def compute_ece_metrics(
+    confidences: np.ndarray, successes: np.ndarray, n_bins: int = 10
+) -> Dict:
     """
     Compute P_cal: Calibration Score (paper Definition 3.6).
 
@@ -76,7 +84,7 @@ def compute_ece_metrics(confidences: np.ndarray, successes: np.ndarray, n_bins: 
     successes = successes[valid]
 
     if len(confidences) == 0:
-        return {'P_cal': np.nan, 'ece': np.nan, 'bin_stats': []}
+        return {"P_cal": np.nan, "ece": np.nan, "bin_stats": []}
 
     bin_edges = np.linspace(0, 1, n_bins + 1)
     ece = 0.0
@@ -96,16 +104,18 @@ def compute_ece_metrics(confidences: np.ndarray, successes: np.ndarray, n_bins: 
             weight = n_in_bin / len(confidences)
             ece += weight * abs(avg_acc - avg_conf)
 
-            bin_stats.append({
-                'bin_center': (bin_edges[i] + bin_edges[i + 1]) / 2,
-                'count': n_in_bin,
-                'avg_confidence': avg_conf,
-                'avg_accuracy': avg_acc
-            })
+            bin_stats.append(
+                {
+                    "bin_center": (bin_edges[i] + bin_edges[i + 1]) / 2,
+                    "count": n_in_bin,
+                    "avg_confidence": avg_conf,
+                    "avg_accuracy": avg_acc,
+                }
+            )
 
     P_cal = 1 - ece
 
-    return {'P_cal': P_cal, 'ece': ece, 'bin_stats': bin_stats}
+    return {"P_cal": P_cal, "ece": ece, "bin_stats": bin_stats}
 
 
 def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
@@ -126,14 +136,14 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     successes = successes[valid]
 
     if len(confidences) == 0:
-        return {'P_auroc': np.nan, 'n_positive': 0, 'n_negative': 0}
+        return {"P_auroc": np.nan, "n_positive": 0, "n_negative": 0}
 
     n_positive = np.sum(successes == 1)
     n_negative = np.sum(successes == 0)
 
     # Need at least one of each class
     if n_positive == 0 or n_negative == 0:
-        return {'P_auroc': np.nan, 'n_positive': n_positive, 'n_negative': n_negative}
+        return {"P_auroc": np.nan, "n_positive": n_positive, "n_negative": n_negative}
 
     # Compute AUC-ROC using the Mann-Whitney U statistic formulation
     # AUC = P(conf_pos > conf_neg) + 0.5 * P(conf_pos == conf_neg)
@@ -145,7 +155,7 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     # Count concordant, discordant, and tied pairs
     concordant = 0  # pos > neg
     discordant = 0  # pos < neg
-    tied = 0        # pos == neg
+    tied = 0  # pos == neg
 
     for pos_conf in pos_confidences:
         concordant += np.sum(neg_confidences < pos_conf)
@@ -156,12 +166,12 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     P_auroc = (concordant + 0.5 * tied) / total_pairs
 
     return {
-        'P_auroc': P_auroc,
-        'n_positive': n_positive,
-        'n_negative': n_negative,
-        'concordant_pairs': concordant,
-        'discordant_pairs': discordant,
-        'tied_pairs': tied
+        "P_auroc": P_auroc,
+        "n_positive": n_positive,
+        "n_negative": n_negative,
+        "concordant_pairs": concordant,
+        "discordant_pairs": discordant,
+        "tied_pairs": tied,
     }
 
 
@@ -187,7 +197,7 @@ def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     successes = successes[valid]
 
     if len(confidences) == 0:
-        return {'P_brier': np.nan, 'brier_score': np.nan}
+        return {"P_brier": np.nan, "brier_score": np.nan}
 
     # Brier Score: mean squared error between confidence and outcome
     brier_score = np.mean((confidences - successes) ** 2)
@@ -200,10 +210,10 @@ def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
     brier_baseline = base_rate * (1 - base_rate)  # Brier if always predicting base rate
 
     return {
-        'P_brier': P_brier,
-        'brier_score': brier_score,
-        'brier_baseline': brier_baseline,
-        'base_rate': base_rate
+        "P_brier": P_brier,
+        "brier_score": brier_score,
+        "brier_baseline": brier_baseline,
+        "base_rate": base_rate,
     }
 
 
@@ -213,19 +223,25 @@ def compute_predictability_metrics(runs: List[Dict]) -> Dict:
     all_successes = []
 
     for run in runs:
-        raw_eval = run['raw_eval_results']
+        raw_eval = run["raw_eval_results"]
         for task_eval in raw_eval.values():
             if isinstance(task_eval, dict):
-                conf = task_eval.get('confidence')
+                conf = task_eval.get("confidence")
                 if conf is not None:
                     all_confidences.append(float(conf))
-                    all_successes.append(int(task_eval.get('reward', 0.0)))
+                    all_successes.append(int(task_eval.get("reward", 0.0)))
 
     if not all_confidences:
         return {
-            'P_rc': np.nan, 'P_cal': np.nan, 'P_auroc': np.nan, 'P_brier': np.nan,
-            'mean_confidence': np.nan, 'aurc_data': {}, 'bin_stats': [],
-            'auroc_data': {}, 'brier_data': {}
+            "P_rc": np.nan,
+            "P_cal": np.nan,
+            "P_auroc": np.nan,
+            "P_brier": np.nan,
+            "mean_confidence": np.nan,
+            "aurc_data": {},
+            "bin_stats": [],
+            "auroc_data": {},
+            "brier_data": {},
         }
 
     confidences = np.array(all_confidences)
@@ -244,25 +260,25 @@ def compute_predictability_metrics(runs: List[Dict]) -> Dict:
     for _ in range(n_boot):
         idx = rng.choice(n, size=n, replace=True)
         c_b, s_b = confidences[idx], successes[idx]
-        boot_P_cal.append(compute_ece_metrics(c_b, s_b)['P_cal'])
-        boot_P_auroc.append(compute_auroc_metrics(c_b, s_b)['P_auroc'])
-        boot_P_brier.append(compute_brier_metrics(c_b, s_b)['P_brier'])
+        boot_P_cal.append(compute_ece_metrics(c_b, s_b)["P_cal"])
+        boot_P_auroc.append(compute_auroc_metrics(c_b, s_b)["P_auroc"])
+        boot_P_brier.append(compute_brier_metrics(c_b, s_b)["P_brier"])
 
     def _boot_se(vals):
         valid = [v for v in vals if not np.isnan(v)]
         return np.std(valid) if len(valid) >= 2 else np.nan
 
     return {
-        'P_rc': aurc_result['P_rc'],
-        'P_cal': ece_result['P_cal'],
-        'P_auroc': auroc_result['P_auroc'],
-        'P_brier': brier_result['P_brier'],
-        'P_cal_se': _boot_se(boot_P_cal),
-        'P_auroc_se': _boot_se(boot_P_auroc),
-        'P_brier_se': _boot_se(boot_P_brier),
-        'mean_confidence': np.mean(confidences),
-        'aurc_data': aurc_result,
-        'bin_stats': ece_result['bin_stats'],
-        'auroc_data': auroc_result,
-        'brier_data': brier_result
+        "P_rc": aurc_result["P_rc"],
+        "P_cal": ece_result["P_cal"],
+        "P_auroc": auroc_result["P_auroc"],
+        "P_brier": brier_result["P_brier"],
+        "P_cal_se": _boot_se(boot_P_cal),
+        "P_auroc_se": _boot_se(boot_P_auroc),
+        "P_brier_se": _boot_se(boot_P_brier),
+        "mean_confidence": np.mean(confidences),
+        "aurc_data": aurc_result,
+        "bin_stats": ece_result["bin_stats"],
+        "auroc_data": auroc_result,
+        "brier_data": brier_result,
     }

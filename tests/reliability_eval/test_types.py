@@ -1,6 +1,5 @@
 """Tests for shared dataclasses in reliability_eval/types.py."""
 
-import json
 import math
 import tempfile
 from pathlib import Path
@@ -71,16 +70,24 @@ class TestRunResult:
 
     def test_optional_fields_default_to_none(self):
         r = RunResult(
-            agent="a", benchmark="b", phase="baseline",
-            repetition=0, success=False, timestamp="t",
+            agent="a",
+            benchmark="b",
+            phase="baseline",
+            repetition=0,
+            success=False,
+            timestamp="t",
         )
         assert r.error_message is None
         assert r.run_id is None
 
     def test_duration_defaults_to_zero(self):
         r = RunResult(
-            agent="a", benchmark="b", phase="baseline",
-            repetition=0, success=True, timestamp="t",
+            agent="a",
+            benchmark="b",
+            phase="baseline",
+            repetition=0,
+            success=True,
+            timestamp="t",
         )
         assert r.duration_seconds == 0.0
 
@@ -100,8 +107,12 @@ class TestEvaluationLog:
     def test_add_result_appends_to_results(self):
         log = self._make_log()
         r = RunResult(
-            agent="a", benchmark="b", phase="baseline",
-            repetition=0, success=True, timestamp="t",
+            agent="a",
+            benchmark="b",
+            phase="baseline",
+            repetition=0,
+            success=True,
+            timestamp="t",
         )
         log.add_result(r)
         assert len(log.results) == 1
@@ -110,9 +121,14 @@ class TestEvaluationLog:
     def test_save_and_load_round_trip(self):
         log = self._make_log()
         r = RunResult(
-            agent="agent_y", benchmark="gaia", phase="fault",
-            repetition=1, success=False, timestamp="2026-01-02T00:00:00",
-            error_message="timeout", run_id="abc123",
+            agent="agent_y",
+            benchmark="gaia",
+            phase="fault",
+            repetition=1,
+            success=False,
+            timestamp="2026-01-02T00:00:00",
+            error_message="timeout",
+            run_id="abc123",
         )
         log.add_result(r)
 
@@ -135,18 +151,39 @@ class TestEvaluationLog:
 
     def test_get_failed_runs_filters_by_success_and_run_id(self):
         log = self._make_log()
-        log.add_result(RunResult(
-            agent="a", benchmark="b", phase="baseline",
-            repetition=0, success=True, timestamp="t", run_id="id1",
-        ))
-        log.add_result(RunResult(
-            agent="a", benchmark="b", phase="baseline",
-            repetition=1, success=False, timestamp="t", run_id="id2",
-        ))
-        log.add_result(RunResult(
-            agent="a", benchmark="b", phase="baseline",
-            repetition=2, success=False, timestamp="t", run_id=None,
-        ))
+        log.add_result(
+            RunResult(
+                agent="a",
+                benchmark="b",
+                phase="baseline",
+                repetition=0,
+                success=True,
+                timestamp="t",
+                run_id="id1",
+            )
+        )
+        log.add_result(
+            RunResult(
+                agent="a",
+                benchmark="b",
+                phase="baseline",
+                repetition=1,
+                success=False,
+                timestamp="t",
+                run_id="id2",
+            )
+        )
+        log.add_result(
+            RunResult(
+                agent="a",
+                benchmark="b",
+                phase="baseline",
+                repetition=2,
+                success=False,
+                timestamp="t",
+                run_id=None,
+            )
+        )
         failed = log.get_failed_runs()
         assert len(failed) == 1
         assert failed[0]["run_id"] == "id2"

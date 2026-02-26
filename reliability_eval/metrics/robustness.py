@@ -16,21 +16,23 @@ def compute_accuracy(runs: List[Dict]) -> float:
     """
     successes = []
     for run in runs:
-        for task_eval in run['raw_eval_results'].values():
+        for task_eval in run["raw_eval_results"].values():
             if isinstance(task_eval, dict):
                 # Normal result format
-                successes.append(int(task_eval.get('reward', 0.0)))
+                successes.append(int(task_eval.get("reward", 0.0)))
             elif isinstance(task_eval, list):
                 # Prompt sensitivity format: list of variation results
                 for var_result in task_eval:
                     if isinstance(var_result, dict):
                         # Use 'score' or 'reward' field, treat as binary (>0 = success)
-                        score = var_result.get('score', var_result.get('reward', 0))
+                        score = var_result.get("score", var_result.get("reward", 0))
                         successes.append(int(float(score) > 0))
     return np.mean(successes) if successes else np.nan
 
 
-def compute_robustness_ratio(baseline_runs: List[Dict], perturbed_runs: List[Dict]) -> Tuple[float, float]:
+def compute_robustness_ratio(
+    baseline_runs: List[Dict], perturbed_runs: List[Dict]
+) -> Tuple[float, float]:
     """
     Compute robustness ratio (paper Definitions 3.4, 3.5).
 
@@ -51,13 +53,13 @@ def compute_robustness_ratio(baseline_runs: List[Dict], perturbed_runs: List[Dic
     def _collect_successes(runs):
         successes = []
         for run in runs:
-            for task_eval in run['raw_eval_results'].values():
+            for task_eval in run["raw_eval_results"].values():
                 if isinstance(task_eval, dict):
-                    successes.append(int(task_eval.get('reward', 0.0)))
+                    successes.append(int(task_eval.get("reward", 0.0)))
                 elif isinstance(task_eval, list):
                     for var_result in task_eval:
                         if isinstance(var_result, dict):
-                            score = var_result.get('score', var_result.get('reward', 0))
+                            score = var_result.get("score", var_result.get("reward", 0))
                             successes.append(int(float(score) > 0))
         return np.array(successes)
 

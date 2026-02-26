@@ -5,7 +5,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from reliability_eval.phases.runner import add_baseline_args, build_base_command, run_command
+from reliability_eval.phases.runner import (
+    add_baseline_args,
+    build_base_command,
+    run_command,
+)
 from reliability_eval.types import EvaluationLog, RunResult
 
 
@@ -23,9 +27,9 @@ def run_baseline_phase(
     Run baseline phase: K repetitions with confidence + compliance monitoring.
     Computes: C_out, P_rc/P_cal, S_comp
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("📊 PHASE 1: BASELINE (C_out + P_rc/P_cal + S_comp)")
-    print("="*80)
+    print("=" * 80)
     print(f"   K repetitions: {k_runs}")
     print(f"   Max tasks: {max_tasks if max_tasks is not None else 'all'}")
     print(f"   Combinations: {len(combinations)}")
@@ -39,19 +43,22 @@ def run_baseline_phase(
         for k in range(k_runs):
             run_number += 1
 
-            print(f"\n{'─'*60}")
-            print(f"🔄 Run {run_number}/{total_runs} | Rep {k+1}/{k_runs}")
+            print(f"\n{'─' * 60}")
+            print(f"🔄 Run {run_number}/{total_runs} | Rep {k + 1}/{k_runs}")
             print(f"   Agent: {agent_config['name']}")
             print(f"   Model: {agent_config['model_name']}")
             print(f"   Benchmark: {bench_name}")
-            print(f"{'─'*60}")
+            print(f"{'─' * 60}")
 
             # Generate run_id for this run
-            run_id = f"{bench_name}_{agent_config['name']}_rep{k+1}_{int(time.time())}"
+            run_id = (
+                f"{bench_name}_{agent_config['name']}_rep{k + 1}_{int(time.time())}"
+            )
 
             # Build command
             cmd = build_base_command(
-                agent_config, benchmark_config,
+                agent_config,
+                benchmark_config,
                 agent_name_suffix="",
                 max_tasks=max_tasks,
                 conda_env=conda_env,
@@ -74,7 +81,7 @@ def run_baseline_phase(
 
             # Log result
             result = RunResult(
-                agent=agent_config['name'],
+                agent=agent_config["name"],
                 benchmark=bench_name,
                 phase="baseline",
                 repetition=k + 1,

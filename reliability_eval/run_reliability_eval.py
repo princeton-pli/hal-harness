@@ -30,22 +30,13 @@ Configuration:
     Edit BENCHMARK_CONFIGS to specify which benchmarks to run on.
 """
 
-import subprocess
 import sys
-import json
 import argparse
 from pathlib import Path
 from datetime import datetime
-import os
-import time
-from typing import List, Dict, Any, Optional
 
 # Allow running as a script: ensure repo root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from dataclasses import dataclass, field, asdict
-from enum import Enum
-import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 # =============================================================================
@@ -56,12 +47,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # PHASES — See phases/ subpackage for implementations
 # =============================================================================
 
-from reliability_eval.phases.abstention import detect_abstention, run_abstention_phase  # noqa: E402
+from reliability_eval.phases.abstention import run_abstention_phase  # noqa: E402
 from reliability_eval.phases.baseline import run_baseline_phase  # noqa: E402
 from reliability_eval.phases.fault import run_fault_phase  # noqa: E402
 from reliability_eval.phases.prompt import run_prompt_phase  # noqa: E402
 from reliability_eval.phases.retry import retry_failed_runs  # noqa: E402
+from reliability_eval.config import (  # noqa: E402
+    AGENT_CONFIGS,
+    BENCHMARK_CONFIGS,
+    PHASE_SETTINGS,
+)
 from reliability_eval.phases.runner import (  # noqa: E402
+    add_baseline_args,
     build_base_command,
     check_api_keys,
     get_valid_combinations,
@@ -107,72 +104,105 @@ Phases:
   structural - Perturbations → R_struct
   safety     - LLM analysis of existing traces → S_harm, S_comp
   abstention - Abstention detection on existing traces → abstention rate, calibration
-        """
+        """,
     )
 
     parser.add_argument(
-        "--n", type=int, default=5,
-        help="Number of runs/variations for all multi-run metrics: baseline (k reps), fault (k reps), prompt (variations) (default: 5)"
+        "--n",
+        type=int,
+        default=5,
+        help="Number of runs/variations for all multi-run metrics: baseline (k reps), fault (k reps), prompt (variations) (default: 5)",
     )
     parser.add_argument(
-        "--k", type=int, default=None,
-        help="Override: repetitions for baseline/fault phases (default: use --n)"
+        "--k",
+        type=int,
+        default=None,
+        help="Override: repetitions for baseline/fault phases (default: use --n)",
     )
     parser.add_argument(
-        "--max_tasks", type=int, default=None,
-        help="Maximum tasks per benchmark (default: all tasks)"
+        "--max_tasks",
+        type=int,
+        default=None,
+        help="Maximum tasks per benchmark (default: all tasks)",
     )
     parser.add_argument(
-        "--max_concurrent", type=int, default=5,
-        help="Maximum concurrent tasks per hal-eval run (default: 5)"
+        "--max_concurrent",
+        type=int,
+        default=5,
+        help="Maximum concurrent tasks per hal-eval run (default: 5)",
     )
     parser.add_argument(
-        "--phases", nargs="+",
-        choices=["baseline", "fault", "prompt", "structural", "safety", "abstention", "all"],
+        "--phases",
+        nargs="+",
+        choices=[
+            "baseline",
+            "fault",
+            "prompt",
+            "structural",
+            "safety",
+            "abstention",
+            "all",
+        ],
         default=["all"],
-        help="Which phases to run (default: all)"
+        help="Which phases to run (default: all)",
     )
     parser.add_argument(
-        "--benchmark", type=str, default=None,
-        help="Run only on specific benchmark (default: all configured)"
+        "--benchmark",
+        type=str,
+        default=None,
+        help="Run only on specific benchmark (default: all configured)",
     )
     parser.add_argument(
-        "--conda_env", type=str, default=None,
-        help="Conda environment name (optional)"
+        "--conda_env", type=str, default=None, help="Conda environment name (optional)"
     )
     parser.add_argument(
-        "--fault_rate", type=float, default=0.2,
-        help="Fault injection rate (default: 0.2)"
+        "--fault_rate",
+        type=float,
+        default=0.2,
+        help="Fault injection rate (default: 0.2)",
     )
     parser.add_argument(
-        "--num_variations", type=int, default=None,
-        help="Override: number of prompt variations (default: use --n)"
+        "--num_variations",
+        type=int,
+        default=None,
+        help="Override: number of prompt variations (default: use --n)",
     )
     parser.add_argument(
-        "--variation_strength", type=str, default="naturalistic",
+        "--variation_strength",
+        type=str,
+        default="naturalistic",
         choices=["mild", "medium", "strong", "naturalistic"],
-        help="Prompt variation strength: mild (synonyms/formality), medium (restructuring), strong (conversational rewrites), naturalistic (realistic user typing) (default: naturalistic)"
+        help="Prompt variation strength: mild (synonyms/formality), medium (restructuring), strong (conversational rewrites), naturalistic (realistic user typing) (default: naturalistic)",
     )
     parser.add_argument(
-        "--perturbation_strength", type=str, default="medium",
+        "--perturbation_strength",
+        type=str,
+        default="medium",
         choices=["mild", "medium", "severe"],
-        help="Structural perturbation strength (default: medium)"
+        help="Structural perturbation strength (default: medium)",
     )
     parser.add_argument(
-        "--safety_model", type=str, default="gpt-4o",
-        help="LLM model for safety analysis (default: gpt-4o)"
+        "--safety_model",
+        type=str,
+        default="gpt-4o",
+        help="LLM model for safety analysis (default: gpt-4o)",
     )
     parser.add_argument(
-        "--results_dir", type=str, default="results",
-        help="Base directory for storing and reading results (default: results)"
+        "--results_dir",
+        type=str,
+        default="results",
+        help="Base directory for storing and reading results (default: results)",
     )
     parser.add_argument(
-        "--retry_failed", action="store_true",
-        help="Retry failed runs from the log file using --continue_run"
+        "--retry_failed",
+        action="store_true",
+        help="Retry failed runs from the log file using --continue_run",
     )
     parser.add_argument(
-        "--continue_run_id", type=str, default=None,
-        help="Continue a specific run by its run_id (e.g., taubench_airline_agent_name_1234567890)"
+        "--continue_run_id",
+        type=str,
+        default=None,
+        help="Continue a specific run by its run_id (e.g., taubench_airline_agent_name_1234567890)",
     )
 
     args = parser.parse_args()
@@ -180,17 +210,19 @@ Phases:
     # Handle retry_failed mode
     if args.retry_failed:
         log_path = Path("reliability_eval/reliability_eval_log.json")
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("🔄 RETRY FAILED RUNS MODE")
-        print("="*80)
-        retry_failed_runs(log_path, max_concurrent=args.max_concurrent, results_dir=args.results_dir)
+        print("=" * 80)
+        retry_failed_runs(
+            log_path, max_concurrent=args.max_concurrent, results_dir=args.results_dir
+        )
         return
 
     # Handle continue_run_id mode
     if args.continue_run_id:
-        print("\n" + "="*80)
+        print("\n" + "=" * 80)
         print("🔄 CONTINUE RUN MODE")
-        print("="*80)
+        print("=" * 80)
         print(f"   Run ID: {args.continue_run_id}")
 
         # Find matching agent config from run_id
@@ -199,12 +231,14 @@ Phases:
         bench_name = None
 
         for ac in AGENT_CONFIGS:
-            if ac['name'] in args.continue_run_id:
+            if ac["name"] in args.continue_run_id:
                 agent_config = ac
                 break
 
         if not agent_config:
-            print(f"\n❌ Could not find agent config matching run_id: {args.continue_run_id}")
+            print(
+                f"\n❌ Could not find agent config matching run_id: {args.continue_run_id}"
+            )
             print("   Make sure the agent is enabled in AGENT_CONFIGS")
             exit(1)
 
@@ -215,17 +249,20 @@ Phases:
                 break
 
         if not benchmark_config:
-            print(f"\n❌ Could not find benchmark config matching run_id: {args.continue_run_id}")
+            print(
+                f"\n❌ Could not find benchmark config matching run_id: {args.continue_run_id}"
+            )
             exit(1)
 
         print(f"   Agent: {agent_config['name']}")
         print(f"   Benchmark: {bench_name}")
         print(f"   Max concurrent: {args.max_concurrent}")
-        print("="*80)
+        print("=" * 80)
 
         # Build command with --continue_run
         cmd = build_base_command(
-            agent_config, benchmark_config,
+            agent_config,
+            benchmark_config,
             agent_name_suffix="",
             max_tasks=args.max_tasks,
             conda_env=args.conda_env,
@@ -271,21 +308,35 @@ Phases:
 
     # Determine phases
     if "all" in args.phases:
-        phases_to_run = ["baseline", "fault", "prompt", "structural", "safety", "abstention"]
+        phases_to_run = [
+            "baseline",
+            "fault",
+            "prompt",
+            "structural",
+            "safety",
+            "abstention",
+        ]
     else:
         phases_to_run = args.phases
 
     # Print header
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("🔬 UNIFIED RELIABILITY EVALUATION")
-    print("="*80)
+    print("=" * 80)
     print(f"   Phases: {', '.join(phases_to_run)}")
-    print(f"   Runs per metric (--n): {args.n}" + (f" (k={k_runs}, variations={num_variations})" if k_runs != args.n or num_variations != args.n else ""))
+    print(
+        f"   Runs per metric (--n): {args.n}"
+        + (
+            f" (k={k_runs}, variations={num_variations})"
+            if k_runs != args.n or num_variations != args.n
+            else ""
+        )
+    )
     print(f"   Max tasks: {args.max_tasks if args.max_tasks is not None else 'all'}")
     print(f"   Max concurrent: {args.max_concurrent}")
     print(f"   Benchmark filter: {args.benchmark or 'all'}")
     print(f"   Conda env: {args.conda_env or 'current'}")
-    print("="*80)
+    print("=" * 80)
 
     # Load environment and check keys
     load_environment()
@@ -325,7 +376,12 @@ Phases:
 
     if "baseline" in phases_to_run:
         summary["baseline"] = run_baseline_phase(
-            combinations, k_runs, args.max_tasks, args.conda_env, log, log_path,
+            combinations,
+            k_runs,
+            args.max_tasks,
+            args.conda_env,
+            log,
+            log_path,
             max_concurrent=args.max_concurrent,
             results_dir=args.results_dir,
         )
@@ -337,7 +393,8 @@ Phases:
             args.fault_rate,
             args.max_tasks,
             args.conda_env,
-            log, log_path,
+            log,
+            log_path,
             max_concurrent=args.max_concurrent,
             results_dir=args.results_dir,
         )
@@ -349,7 +406,8 @@ Phases:
             args.variation_strength,
             args.max_tasks,
             args.conda_env,
-            log, log_path,
+            log,
+            log_path,
             max_concurrent=args.max_concurrent,
             results_dir=args.results_dir,
         )
@@ -361,7 +419,8 @@ Phases:
             "all",
             args.max_tasks,
             args.conda_env,
-            log, log_path,
+            log,
+            log_path,
             run_baseline=False,  # Skip baseline if already have baseline runs
             max_concurrent=args.max_concurrent,
             results_dir=args.results_dir,
@@ -375,7 +434,8 @@ Phases:
             Path(args.results_dir),
             args.safety_model,
             PHASE_SETTINGS["safety"]["constraints"],  # Fallback default
-            log, log_path,
+            log,
+            log_path,
             max_reps=k_runs,
             max_concurrent=args.max_concurrent,
         )
@@ -384,23 +444,26 @@ Phases:
         summary["abstention"] = run_abstention_phase(
             combinations,
             Path(args.results_dir),
-            log, log_path,
+            log,
+            log_path,
         )
 
     # Final summary
     log.end_time = datetime.now().isoformat()
     log.save(log_path)
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("✨ RELIABILITY EVALUATION COMPLETE")
-    print("="*80)
+    print("=" * 80)
     print(f"📊 Results logged to: {log_path}")
     print("\n📈 Summary by phase:")
     for phase, count in summary.items():
         print(f"   {phase}: {count} successful runs")
 
     print("\n📝 Next steps - Run analysis:")
-    print("   python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline")
+    print(
+        "   python reliability_eval/analyze_reliability.py --results_dir results/ --benchmark taubench_airline"
+    )
     print()
 
 
