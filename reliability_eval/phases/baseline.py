@@ -28,7 +28,9 @@ def run_baseline_phase(
     Computes: consistency_outcome, predictability_rate_confidence_correlation/predictability_calibration, safety_compliance
     """
     print("\n" + "=" * 80)
-    print("📊 PHASE 1: BASELINE (consistency_outcome + predictability_rate_confidence_correlation/predictability_calibration + safety_compliance)")
+    print(
+        "📊 PHASE 1: BASELINE (consistency_outcome + predictability_rate_confidence_correlation/predictability_calibration + safety_compliance)"
+    )
     print("=" * 80)
     print(f"   K repetitions: {k_runs}")
     print(f"   Max tasks: {max_tasks if max_tasks is not None else 'all'}")

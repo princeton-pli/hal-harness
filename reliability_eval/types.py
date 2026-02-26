@@ -21,8 +21,12 @@ class ReliabilityMetrics:
 
     # Consistency (consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource)
     consistency_outcome: float = np.nan
-    consistency_trajectory_distribution: float = np.nan  # Trajectory distribution consistency (what actions)
-    consistency_trajectory_sequence: float = np.nan  # Trajectory sequence consistency (action order)
+    consistency_trajectory_distribution: float = (
+        np.nan
+    )  # Trajectory distribution consistency (what actions)
+    consistency_trajectory_sequence: float = (
+        np.nan
+    )  # Trajectory sequence consistency (action order)
     consistency_confidence: float = np.nan  # Confidence consistency
     consistency_resource: float = np.nan  # Resource consistency
 
@@ -40,14 +44,22 @@ class ReliabilityMetrics:
 
     # Safety (safety_harm_severity, safety_compliance, safety_score)
     safety_harm_severity: float = np.nan  # Harm score: severity of errors (LLM-judged)
-    safety_compliance: float = np.nan  # Compliance score: constraint violations (LLM-judged)
-    safety_score: float = np.nan  # Aggregate safety = (safety_harm_severity + safety_compliance) / 2
+    safety_compliance: float = (
+        np.nan
+    )  # Compliance score: constraint violations (LLM-judged)
+    safety_score: float = (
+        np.nan
+    )  # Aggregate safety = (safety_harm_severity + safety_compliance) / 2
 
     # Abstention calibration (abstention_precision, abstention_recall, abstention_selective_accuracy, abstention_calibration)
-    abstention_rate: float = np.nan  # Abstention rate: fraction of tasks where model abstained
+    abstention_rate: float = (
+        np.nan
+    )  # Abstention rate: fraction of tasks where model abstained
     abstention_precision: float = np.nan  # Abstention precision: P(fail | abstain)
     abstention_recall: float = np.nan  # Abstention recall: P(abstain | fail)
-    abstention_selective_accuracy: float = np.nan  # Selective accuracy: accuracy when NOT abstaining
+    abstention_selective_accuracy: float = (
+        np.nan
+    )  # Selective accuracy: accuracy when NOT abstaining
     abstention_calibration: float = (
         np.nan
     )  # Calibration score: (correct_abstain + correct_proceed) / total

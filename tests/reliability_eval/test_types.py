@@ -46,7 +46,9 @@ class TestReliabilityMetrics:
         assert m.extra == {}
 
     def test_fields_can_be_set(self):
-        m = ReliabilityMetrics(agent_name="a", accuracy=0.85, consistency_outcome=0.9, num_tasks=10)
+        m = ReliabilityMetrics(
+            agent_name="a", accuracy=0.85, consistency_outcome=0.9, num_tasks=10
+        )
         assert m.accuracy == 0.85
         assert m.consistency_outcome == 0.9
         assert m.num_tasks == 10

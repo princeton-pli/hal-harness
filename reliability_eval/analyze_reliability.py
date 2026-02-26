@@ -44,11 +44,69 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
+from reliability_eval.constants import (
+    TAUBENCH_AIRLINE_CLEAN_TASKS,
+)
+from reliability_eval.loaders.results import load_all_results
+from reliability_eval.metrics.agent import (
+    analyze_all_agents,
+    metrics_to_dataframe,
+)
+
+from reliability_eval.plots.dashboard import (
+    plot_dimension_radar,
+    plot_metric_heatmap,
+    plot_reliability_dashboard,
+)
+
+from reliability_eval.plots.detailed import (
+    plot_abstention_detailed,
+    plot_accuracy_coverage_by_model,
+    plot_calibration_by_model,
+    plot_consistency_detailed,
+    plot_predictability_detailed,
+    plot_robustness_detailed,
+    plot_safety_deep_analysis,
+    plot_safety_detailed,
+    plot_safety_lambda_sensitivity,
+    plot_safety_severity_violations,
+)
+
+from reliability_eval.plots.levels import (
+    plot_action_efficiency_by_level,
+    plot_confidence_difficulty_alignment,
+    plot_level_consistency_patterns,
+    plot_level_reliability_summary,
+    plot_level_stratified_analysis,
+    plot_performance_drop_analysis,
+    plot_provider_level_heatmap,
+)
+
+from reliability_eval.plots.comparison import (
+    plot_calibration,
+    plot_combined_overall_reliability,
+    plot_combined_overall_reliability_large,
+    plot_discrimination,
+    plot_outcome_consistency,
+    plot_prompt_robustness,
+    plot_reasoning_vs_nonreasoning,
+    plot_reliability_by_model_size,
+    plot_reliability_by_provider,
+    plot_reliability_vs_date_and_accuracy,
+    plot_scaffold_comparison,
+    plot_taubench_clean_vs_orig,
+)
+
+from reliability_eval.plots.reports import (
+    generate_full_latex_table,
+    generate_report,
+    save_detailed_json,
+)
+
 warnings.filterwarnings("ignore")
 
-# =============================================================================
 # MATPLOTLIB STYLE FOR ICML PAPER
-# =============================================================================
 # Set up publication-quality defaults (Times font, appropriate sizing)
 sns.set_style("whitegrid")
 sns.set_palette("husl")
@@ -80,85 +138,6 @@ plt.rcParams.update(
         "grid.alpha": 0.3,
     }
 )
-
-from reliability_eval.constants import (  # noqa: E402
-    TAUBENCH_AIRLINE_CLEAN_TASKS,
-)
-from reliability_eval.loaders.results import load_all_results  # noqa: E402
-from reliability_eval.metrics.agent import (  # noqa: E402
-    analyze_all_agents,
-    metrics_to_dataframe,
-)
-
-
-# =============================================================================
-# PLOT HELPERS
-# =============================================================================
-
-
-# =============================================================================
-# VISUALIZATION
-# =============================================================================
-
-from reliability_eval.plots.dashboard import (  # noqa: E402
-    plot_dimension_radar,
-    plot_metric_heatmap,
-    plot_reliability_dashboard,
-)
-
-from reliability_eval.plots.detailed import (  # noqa: E402
-    plot_abstention_detailed,
-    plot_accuracy_coverage_by_model,
-    plot_calibration_by_model,
-    plot_consistency_detailed,
-    plot_predictability_detailed,
-    plot_robustness_detailed,
-    plot_safety_deep_analysis,
-    plot_safety_detailed,
-    plot_safety_lambda_sensitivity,
-    plot_safety_severity_violations,
-)
-
-from reliability_eval.plots.levels import (  # noqa: E402
-    plot_action_efficiency_by_level,
-    plot_confidence_difficulty_alignment,
-    plot_level_consistency_patterns,
-    plot_level_reliability_summary,
-    plot_level_stratified_analysis,
-    plot_performance_drop_analysis,
-    plot_provider_level_heatmap,
-)
-
-from reliability_eval.plots.comparison import (  # noqa: E402
-    plot_calibration,
-    plot_combined_overall_reliability,
-    plot_combined_overall_reliability_large,
-    plot_discrimination,
-    plot_outcome_consistency,
-    plot_prompt_robustness,
-    plot_reasoning_vs_nonreasoning,
-    plot_reliability_by_model_size,
-    plot_reliability_by_provider,
-    plot_reliability_vs_date_and_accuracy,
-    plot_scaffold_comparison,
-    plot_taubench_clean_vs_orig,
-)
-
-
-# =============================================================================
-# REPORT GENERATION
-# =============================================================================
-
-from reliability_eval.plots.reports import (  # noqa: E402
-    generate_full_latex_table,
-    generate_report,
-    save_detailed_json,
-)
-
-
-# =============================================================================
-# MAIN
-# =============================================================================
 
 
 def main():
@@ -466,11 +445,19 @@ def main():
     print("=" * 80)
     print(f"\n📂 Outputs: {output_dir}")
     print("\nMetrics computed:")
-    print("  Consistency:    consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource")
-    print("  Predictability: predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score")
-    print("  Robustness:     robustness_fault_injection, robustness_structural, robustness_prompt_variation")
+    print(
+        "  Consistency:    consistency_outcome, consistency_trajectory_distribution, consistency_trajectory_sequence, consistency_confidence, consistency_resource"
+    )
+    print(
+        "  Predictability: predictability_rate_confidence_correlation, predictability_calibration, predictability_roc_auc, predictability_brier_score"
+    )
+    print(
+        "  Robustness:     robustness_fault_injection, robustness_structural, robustness_prompt_variation"
+    )
     print("  Safety:         safety_harm_severity, safety_compliance, safety_score")
-    print("  Abstention:     abstention_rate, abstention_precision, abstention_recall, abstention_selective_accuracy, abstention_calibration")
+    print(
+        "  Abstention:     abstention_rate, abstention_precision, abstention_recall, abstention_selective_accuracy, abstention_calibration"
+    )
     print("\nGenerated plots:")
     print(
         "  - reliability_dashboard.png         : Comprehensive dashboard with all metrics"

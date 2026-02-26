@@ -96,7 +96,14 @@ class TestMetricsToDataframePipeline:
         assert len(metrics_df) == 1
 
     def test_has_core_columns(self, metrics_df):
-        for col in ("agent", "accuracy", "consistency_outcome", "robustness_fault_injection", "predictability_rate_confidence_correlation", "safety_harm_severity"):
+        for col in (
+            "agent",
+            "accuracy",
+            "consistency_outcome",
+            "robustness_fault_injection",
+            "predictability_rate_confidence_correlation",
+            "safety_harm_severity",
+        ):
             assert col in metrics_df.columns, f"missing column: {col}"
 
     def test_accuracy_value_in_dataframe(self, metrics_df):

@@ -82,7 +82,12 @@ def plot_consistency_detailed(
     # 2. consistency_outcome (Outcome Consistency)
     ax = axes[1]
     bars, yerr = _bar_with_ci(
-        ax, x_pos, df_sorted["consistency_outcome"].fillna(0), bar_colors, df_sorted, "consistency_outcome"
+        ax,
+        x_pos,
+        df_sorted["consistency_outcome"].fillna(0),
+        bar_colors,
+        df_sorted,
+        "consistency_outcome",
     )
     ax.set_ylabel(r"$C_{\mathrm{out}}$", fontsize=14, fontweight="bold")
     ax.set_title("Outcome Consistency", fontsize=14, fontweight="bold")
@@ -96,7 +101,12 @@ def plot_consistency_detailed(
     # 3. consistency_trajectory_distribution (Trajectory Distribution Consistency)
     ax = axes[2]
     bars, yerr = _bar_with_ci(
-        ax, x_pos, df_sorted["consistency_trajectory_distribution"].fillna(0), bar_colors, df_sorted, "consistency_trajectory_distribution"
+        ax,
+        x_pos,
+        df_sorted["consistency_trajectory_distribution"].fillna(0),
+        bar_colors,
+        df_sorted,
+        "consistency_trajectory_distribution",
     )
     ax.set_ylabel(r"$C^{d}_{\mathrm{traj}}$", fontsize=14, fontweight="bold")
     ax.set_title("Trajectory Distribution Consistency", fontsize=14, fontweight="bold")
@@ -110,7 +120,12 @@ def plot_consistency_detailed(
     # 4. consistency_trajectory_sequence (Trajectory Sequence Consistency)
     ax = axes[3]
     bars, yerr = _bar_with_ci(
-        ax, x_pos, df_sorted["consistency_trajectory_sequence"].fillna(0), bar_colors, df_sorted, "consistency_trajectory_sequence"
+        ax,
+        x_pos,
+        df_sorted["consistency_trajectory_sequence"].fillna(0),
+        bar_colors,
+        df_sorted,
+        "consistency_trajectory_sequence",
     )
     ax.set_ylabel(r"$C^{s}_{\mathrm{traj}}$", fontsize=14, fontweight="bold")
     ax.set_title("Trajectory Sequence Consistency", fontsize=14, fontweight="bold")
@@ -124,7 +139,12 @@ def plot_consistency_detailed(
     # 5. consistency_resource (Resource Consistency) - at the bottom with x labels
     ax = axes[4]
     bars, yerr = _bar_with_ci(
-        ax, x_pos, df_sorted["consistency_resource"].fillna(0), bar_colors, df_sorted, "consistency_resource"
+        ax,
+        x_pos,
+        df_sorted["consistency_resource"].fillna(0),
+        bar_colors,
+        df_sorted,
+        "consistency_resource",
     )
     ax.set_ylabel(r"$C_{\mathrm{res}}$", fontsize=14, fontweight="bold")
     ax.set_title("Resource Consistency", fontsize=14, fontweight="bold")
@@ -162,7 +182,9 @@ def plot_predictability_detailed(
     # 1. reliability_predictability (Overall Predictability) = predictability_brier_score
     ax = axes[0]
     reliability_predictability = df_sorted["predictability_brier_score"].fillna(0)
-    yerr_pred = _get_yerr(df_sorted, "predictability_brier_score", values=reliability_predictability)
+    yerr_pred = _get_yerr(
+        df_sorted, "predictability_brier_score", values=reliability_predictability
+    )
     bars = ax.bar(
         x_pos,
         reliability_predictability,
@@ -186,7 +208,12 @@ def plot_predictability_detailed(
     # 2. predictability_calibration (Calibration)
     ax = axes[1]
     bars, yerr = _bar_with_ci(
-        ax, x_pos, df_sorted["predictability_calibration"].fillna(0), bar_colors, df_sorted, "predictability_calibration"
+        ax,
+        x_pos,
+        df_sorted["predictability_calibration"].fillna(0),
+        bar_colors,
+        df_sorted,
+        "predictability_calibration",
     )
     ax.set_ylabel(r"$P_{\mathrm{cal}}$", fontsize=14, fontweight="bold")
     ax.set_title("Calibration", fontsize=14, fontweight="bold")
@@ -204,7 +231,9 @@ def plot_predictability_detailed(
         if "predictability_roc_auc" in df_sorted.columns
         else pd.Series([0] * len(df_sorted))
     )
-    bars, yerr = _bar_with_ci(ax, x_pos, p_auroc_vals, bar_colors, df_sorted, "predictability_roc_auc")
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, p_auroc_vals, bar_colors, df_sorted, "predictability_roc_auc"
+    )
     ax.set_ylabel(r"$P_{\mathrm{AUROC}}$", fontsize=14, fontweight="bold")
     ax.set_title("Discrimination", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
@@ -221,7 +250,9 @@ def plot_predictability_detailed(
         if "predictability_brier_score" in df_sorted.columns
         else pd.Series([0] * len(df_sorted))
     )
-    bars, yerr = _bar_with_ci(ax, x_pos, p_brier_vals, bar_colors, df_sorted, "predictability_brier_score")
+    bars, yerr = _bar_with_ci(
+        ax, x_pos, p_brier_vals, bar_colors, df_sorted, "predictability_brier_score"
+    )
     ax.set_ylabel(r"$P_{\mathrm{Brier}}$", fontsize=14, fontweight="bold")
     ax.set_title("Overall Quality", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
@@ -629,7 +660,11 @@ def plot_calibration_by_model(
                         )
 
                     # ECE annotation at top left
-                    ece = 1 - m.predictability_calibration if not np.isnan(m.predictability_calibration) else np.nan
+                    ece = (
+                        1 - m.predictability_calibration
+                        if not np.isnan(m.predictability_calibration)
+                        else np.nan
+                    )
                     if not np.isnan(ece):
                         ax.annotate(
                             f"ECE={ece:.3f}",
@@ -740,11 +775,15 @@ def plot_robustness_detailed(
     robustness_cols = ["robustness_fault_injection", "robustness_structural"]
     if "robustness_prompt_variation" in df_sorted.columns:
         robustness_cols.append("robustness_prompt_variation")
-    reliability_robustness = df_sorted[robustness_cols].mean(axis=1, skipna=True).fillna(0)
+    reliability_robustness = (
+        df_sorted[robustness_cols].mean(axis=1, skipna=True).fillna(0)
+    )
     rob_se_cols = ["robustness_fault_injection_se", "robustness_structural_se"]
     if "robustness_prompt_variation" in df_sorted.columns:
         rob_se_cols.append("robustness_prompt_variation_se")
-    yerr_agg = _get_aggregate_yerr(df_sorted, rob_se_cols, values=reliability_robustness)
+    yerr_agg = _get_aggregate_yerr(
+        df_sorted, rob_se_cols, values=reliability_robustness
+    )
     bars = ax.bar(
         x_pos,
         reliability_robustness,
@@ -768,7 +807,12 @@ def plot_robustness_detailed(
     # 2. robustness_fault_injection (Fault Robustness)
     ax = axes[1]
     bars, yerr = _bar_with_ci(
-        ax, x_pos, df_sorted["robustness_fault_injection"].fillna(0), bar_colors, df_sorted, "robustness_fault_injection"
+        ax,
+        x_pos,
+        df_sorted["robustness_fault_injection"].fillna(0),
+        bar_colors,
+        df_sorted,
+        "robustness_fault_injection",
     )
     ax.set_ylabel(r"$R_{\mathrm{fault}}$", fontsize=14, fontweight="bold")
     ax.set_title("Fault Robustness", fontsize=14, fontweight="bold")
@@ -782,7 +826,12 @@ def plot_robustness_detailed(
     # 3. robustness_structural (Structural Robustness)
     ax = axes[2]
     bars, yerr = _bar_with_ci(
-        ax, x_pos, df_sorted["robustness_structural"].fillna(0), bar_colors, df_sorted, "robustness_structural"
+        ax,
+        x_pos,
+        df_sorted["robustness_structural"].fillna(0),
+        bar_colors,
+        df_sorted,
+        "robustness_structural",
     )
     ax.set_ylabel(r"$R_{\mathrm{env}}$", fontsize=14, fontweight="bold")
     ax.set_title("Environment Robustness", fontsize=14, fontweight="bold")
@@ -1512,20 +1561,32 @@ def plot_safety_lambda_sensitivity(
         )
 
     # Check that safety_harm_severity and safety_compliance are available
-    if "safety_harm_severity" not in df_sorted.columns or "safety_compliance" not in df_sorted.columns:
-        print("📊 Skipping safety_lambda_sensitivity.pdf (no safety_harm_severity/safety_compliance data)")
+    if (
+        "safety_harm_severity" not in df_sorted.columns
+        or "safety_compliance" not in df_sorted.columns
+    ):
+        print(
+            "📊 Skipping safety_lambda_sensitivity.pdf (no safety_harm_severity/safety_compliance data)"
+        )
         return
 
-    has_data = df_sorted["safety_harm_severity"].notna().any() and df_sorted["safety_compliance"].notna().any()
+    has_data = (
+        df_sorted["safety_harm_severity"].notna().any()
+        and df_sorted["safety_compliance"].notna().any()
+    )
     if not has_data:
-        print("📊 Skipping safety_lambda_sensitivity.pdf (safety_harm_severity/safety_compliance all NaN)")
+        print(
+            "📊 Skipping safety_lambda_sensitivity.pdf (safety_harm_severity/safety_compliance all NaN)"
+        )
         return
 
     # Compute safety_score = max(1 - lambda * P(violation), 0) * safety_harm_severity for each lambda
     P_violation = 1.0 - df_sorted["safety_compliance"]
     for lam in lambda_values:
         col = f"safety_score_lam{lam}"
-        df_sorted[col] = (1.0 - lam * P_violation).clip(lower=0.0) * df_sorted["safety_harm_severity"]
+        df_sorted[col] = (1.0 - lam * P_violation).clip(lower=0.0) * df_sorted[
+            "safety_harm_severity"
+        ]
 
     fig, axes = plt.subplots(1, len(lambda_values), figsize=(4 * len(lambda_values), 4))
     if len(lambda_values) == 1:

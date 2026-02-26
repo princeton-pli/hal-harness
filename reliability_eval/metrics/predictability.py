@@ -57,8 +57,12 @@ def compute_aurc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict
     excess_max = aurc_random - aurc_optimal
 
     # predictability_rate_confidence_correlation score
-    predictability_rate_confidence_correlation = 1 - (excess_aurc / (excess_max + EPSILON)) if excess_max > EPSILON else 1.0
-    predictability_rate_confidence_correlation = np.clip(predictability_rate_confidence_correlation, 0.0, 1.0)
+    predictability_rate_confidence_correlation = (
+        1 - (excess_aurc / (excess_max + EPSILON)) if excess_max > EPSILON else 1.0
+    )
+    predictability_rate_confidence_correlation = np.clip(
+        predictability_rate_confidence_correlation, 0.0, 1.0
+    )
 
     return {
         "predictability_rate_confidence_correlation": predictability_rate_confidence_correlation,
@@ -115,7 +119,11 @@ def compute_ece_metrics(
 
     predictability_calibration = 1 - ece
 
-    return {"predictability_calibration": predictability_calibration, "ece": ece, "bin_stats": bin_stats}
+    return {
+        "predictability_calibration": predictability_calibration,
+        "ece": ece,
+        "bin_stats": bin_stats,
+    }
 
 
 def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dict:
@@ -143,7 +151,11 @@ def compute_auroc_metrics(confidences: np.ndarray, successes: np.ndarray) -> Dic
 
     # Need at least one of each class
     if n_positive == 0 or n_negative == 0:
-        return {"predictability_roc_auc": np.nan, "n_positive": n_positive, "n_negative": n_negative}
+        return {
+            "predictability_roc_auc": np.nan,
+            "n_positive": n_positive,
+            "n_negative": n_negative,
+        }
 
     # Compute AUC-ROC using the Mann-Whitney U statistic formulation
     # AUC = P(conf_pos > conf_neg) + 0.5 * P(conf_pos == conf_neg)
@@ -256,20 +268,32 @@ def compute_predictability_metrics(runs: List[Dict]) -> Dict:
     n_boot = 200
     rng = np.random.default_rng(42)
     n = len(confidences)
-    boot_predictability_calibration, boot_predictability_roc_auc, boot_predictability_brier_score = [], [], []
+    (
+        boot_predictability_calibration,
+        boot_predictability_roc_auc,
+        boot_predictability_brier_score,
+    ) = [], [], []
     for _ in range(n_boot):
         idx = rng.choice(n, size=n, replace=True)
         c_b, s_b = confidences[idx], successes[idx]
-        boot_predictability_calibration.append(compute_ece_metrics(c_b, s_b)["predictability_calibration"])
-        boot_predictability_roc_auc.append(compute_auroc_metrics(c_b, s_b)["predictability_roc_auc"])
-        boot_predictability_brier_score.append(compute_brier_metrics(c_b, s_b)["predictability_brier_score"])
+        boot_predictability_calibration.append(
+            compute_ece_metrics(c_b, s_b)["predictability_calibration"]
+        )
+        boot_predictability_roc_auc.append(
+            compute_auroc_metrics(c_b, s_b)["predictability_roc_auc"]
+        )
+        boot_predictability_brier_score.append(
+            compute_brier_metrics(c_b, s_b)["predictability_brier_score"]
+        )
 
     def _boot_se(vals):
         valid = [v for v in vals if not np.isnan(v)]
         return np.std(valid) if len(valid) >= 2 else np.nan
 
     return {
-        "predictability_rate_confidence_correlation": aurc_result["predictability_rate_confidence_correlation"],
+        "predictability_rate_confidence_correlation": aurc_result[
+            "predictability_rate_confidence_correlation"
+        ],
         "predictability_calibration": ece_result["predictability_calibration"],
         "predictability_roc_auc": auroc_result["predictability_roc_auc"],
         "predictability_brier_score": brier_result["predictability_brier_score"],

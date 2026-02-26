@@ -12,7 +12,9 @@ EPSILON = 1e-8  # Numerical stability
 # weighting corrects this structural imbalance: each of the three conceptual
 # aspects gets equal weight (1/3). Weights must sum to 1.
 W_OUTCOME = 1 / 3  # Weight for consistency_outcome (outcome consistency)
-W_TRAJECTORY = 1 / 3  # Weight for mean(consistency_trajectory_distribution, consistency_trajectory_sequence) (trajectory consistency)
+W_TRAJECTORY = (
+    1 / 3
+)  # Weight for mean(consistency_trajectory_distribution, consistency_trajectory_sequence) (trajectory consistency)
 W_RESOURCE = 1 / 3  # Weight for consistency_resource (resource consistency)
 
 # Task subset for taubench_airline (tasks without data leakage / contamination)

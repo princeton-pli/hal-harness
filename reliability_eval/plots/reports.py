@@ -56,7 +56,9 @@ def generate_report(df: pd.DataFrame, output_dir: Path):
     report.append(
         "*Note: Overall reliability is a uniform average of consistency, predictability, and robustness. Safety (reliability_safety) is reported separately.*\n\n"
     )
-    report.append("| Agent | reliability_consistency | reliability_robustness | reliability_predictability | reliability_safety | Overall |\n")
+    report.append(
+        "| Agent | reliability_consistency | reliability_robustness | reliability_predictability | reliability_safety | Overall |\n"
+    )
     report.append("|-------|-------|-------|--------|-------|--------|\n")
 
     for _, row in df.iterrows():
@@ -67,11 +69,21 @@ def generate_report(df: pd.DataFrame, output_dir: Path):
             row["consistency_resource"],
         )
         reliability_robustness = np.nanmean(
-            [row["robustness_fault_injection"], row["robustness_structural"], row.get("robustness_prompt_variation", np.nan)]
+            [
+                row["robustness_fault_injection"],
+                row["robustness_structural"],
+                row.get("robustness_prompt_variation", np.nan),
+            ]
         )
         reliability_predictability = row.get("predictability_brier_score", np.nan)
         reliability_safety = row["safety_score"]
-        Overall = np.nanmean([reliability_consistency, reliability_robustness, reliability_predictability])
+        Overall = np.nanmean(
+            [
+                reliability_consistency,
+                reliability_robustness,
+                reliability_predictability,
+            ]
+        )
 
         report.append(
             f"| {row['agent'][:15]} | {fmt(reliability_consistency)} | {fmt(reliability_robustness)} | "
@@ -85,7 +97,9 @@ def generate_report(df: pd.DataFrame, output_dir: Path):
     report.append(
         "- **reliability_consistency**: Category-weighted aggregate = (1/3)·consistency_outcome + (1/3)·mean(consistency_trajectory_distribution, consistency_trajectory_sequence) + (1/3)·consistency_resource\n"
     )
-    report.append("- **consistency_outcome**: Outcome consistency = 1 - Var(y)/(p(1-p)+ε)\n")
+    report.append(
+        "- **consistency_outcome**: Outcome consistency = 1 - Var(y)/(p(1-p)+ε)\n"
+    )
     report.append(
         "- **consistency_trajectory_distribution**: Trajectory distribution consistency (1 - JSD of action frequencies)\n"
     )
@@ -95,7 +109,9 @@ def generate_report(df: pd.DataFrame, output_dir: Path):
     report.append(
         "- **consistency_confidence**: Confidence consistency = exp(-CV) of confidence scores\n"
     )
-    report.append("- **consistency_resource**: Resource consistency = exp(-CV) across all runs\n\n")
+    report.append(
+        "- **consistency_resource**: Resource consistency = exp(-CV) across all runs\n\n"
+    )
 
     # Add CV breakdown table if data is available
     cv_cols = [
@@ -122,13 +138,23 @@ def generate_report(df: pd.DataFrame, output_dir: Path):
     report.append(
         "- **reliability_predictability** = predictability_brier_score (Brier score is a proper scoring rule capturing both calibration and discrimination)\n"
     )
-    report.append("- **predictability_brier_score**: 1 - Brier Score (proper scoring rule)\n")
-    report.append("- **predictability_calibration**: Calibration = 1 - ECE (reported separately)\n")
-    report.append("- **predictability_roc_auc**: Discrimination = AUC-ROC (reported separately)\n\n")
+    report.append(
+        "- **predictability_brier_score**: 1 - Brier Score (proper scoring rule)\n"
+    )
+    report.append(
+        "- **predictability_calibration**: Calibration = 1 - ECE (reported separately)\n"
+    )
+    report.append(
+        "- **predictability_roc_auc**: Discrimination = AUC-ROC (reported separately)\n\n"
+    )
 
     report.append("### Robustness (§3.3)\n")
-    report.append("- **robustness_fault_injection**: Acc(fault)/Acc(baseline), clamped to [0,1]\n")
-    report.append("- **robustness_structural**: Acc(perturbed)/Acc(baseline), clamped to [0,1]\n")
+    report.append(
+        "- **robustness_fault_injection**: Acc(fault)/Acc(baseline), clamped to [0,1]\n"
+    )
+    report.append(
+        "- **robustness_structural**: Acc(perturbed)/Acc(baseline), clamped to [0,1]\n"
+    )
     report.append(
         "- **robustness_prompt_variation**: Acc(prompt_variation)/Acc(baseline), clamped to [0,1]\n\n"
     )
@@ -199,7 +225,9 @@ def save_detailed_json(
             "predictability_calibration": _safe(m.predictability_calibration),
             "predictability_roc_auc": _safe(m.predictability_roc_auc),
             "predictability_brier_score": _safe(m.predictability_brier_score),
-            "predictability_rate_confidence_correlation": _safe(m.predictability_rate_confidence_correlation),
+            "predictability_rate_confidence_correlation": _safe(
+                m.predictability_rate_confidence_correlation
+            ),
             "mean_confidence": _safe(m.mean_confidence),
             "calibration_bins": _safe(m.extra.get("calibration_bins", [])),
             "aurc_data": {
@@ -292,7 +320,9 @@ def save_detailed_json(
             "display_name": display,
             "provider": provider,
             "consistency_outcome": _safe(m.consistency_outcome),
-            "consistency_trajectory_distribution": _safe(m.consistency_trajectory_distribution),
+            "consistency_trajectory_distribution": _safe(
+                m.consistency_trajectory_distribution
+            ),
             "consistency_trajectory_sequence": _safe(m.consistency_trajectory_sequence),
             "consistency_confidence": _safe(m.consistency_confidence),
             "consistency_resource": _safe(m.consistency_resource),
@@ -464,28 +494,60 @@ def generate_full_latex_table(benchmark_data: list, output_dir: Path):
         df_s = sort_agents_by_provider_and_date(df)
         if "reliability_consistency" not in df_s.columns:
             df_s["reliability_consistency"] = compute_weighted_r_con(
-                df_s["consistency_outcome"], df_s["consistency_trajectory_distribution"], df_s["consistency_trajectory_sequence"], df_s["consistency_resource"]
+                df_s["consistency_outcome"],
+                df_s["consistency_trajectory_distribution"],
+                df_s["consistency_trajectory_sequence"],
+                df_s["consistency_resource"],
             )
         if "reliability_predictability" not in df_s.columns:
             df_s["reliability_predictability"] = df_s["predictability_brier_score"]
         if "reliability_robustness" not in df_s.columns:
-            df_s["reliability_robustness"] = df_s[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
-                axis=1, skipna=True
-            )
+            df_s["reliability_robustness"] = df_s[
+                [
+                    "robustness_fault_injection",
+                    "robustness_structural",
+                    "robustness_prompt_variation",
+                ]
+            ].mean(axis=1, skipna=True)
         if "reliability_safety" not in df_s.columns:
             df_s["reliability_safety"] = df_s["safety_score"]
         if "reliability_overall" not in df_s.columns:
-            df_s["reliability_overall"] = df_s[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
-                axis=1, skipna=True
-            )
+            df_s["reliability_overall"] = df_s[
+                [
+                    "reliability_consistency",
+                    "reliability_predictability",
+                    "reliability_robustness",
+                ]
+            ].mean(axis=1, skipna=True)
         df_s["display_name"] = df_s["agent"].map(strip_agent_prefix)
         return df_s
 
     # Sub-metric columns in order
-    consistency_cols = ["consistency_outcome", "consistency_trajectory_distribution", "consistency_trajectory_sequence", "consistency_resource", "reliability_consistency"]
-    predictability_cols = ["predictability_calibration", "predictability_roc_auc", "predictability_brier_score", "reliability_predictability"]
-    robustness_cols = ["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation", "reliability_robustness"]
-    safety_cols = ["safety_harm_severity", "safety_compliance", "safety_score", "reliability_safety"]
+    consistency_cols = [
+        "consistency_outcome",
+        "consistency_trajectory_distribution",
+        "consistency_trajectory_sequence",
+        "consistency_resource",
+        "reliability_consistency",
+    ]
+    predictability_cols = [
+        "predictability_calibration",
+        "predictability_roc_auc",
+        "predictability_brier_score",
+        "reliability_predictability",
+    ]
+    robustness_cols = [
+        "robustness_fault_injection",
+        "robustness_structural",
+        "robustness_prompt_variation",
+        "reliability_robustness",
+    ]
+    safety_cols = [
+        "safety_harm_severity",
+        "safety_compliance",
+        "safety_score",
+        "reliability_safety",
+    ]
     all_metric_cols = (
         ["accuracy"]
         + consistency_cols

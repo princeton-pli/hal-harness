@@ -156,8 +156,16 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
     level_results = {"1": [], "2": [], "3": []}
     level_confidences = {"1": [], "2": [], "3": []}
     level_actions = {"1": [], "2": [], "3": []}
-    level_trajectories = {"1": [], "2": [], "3": []}  # For consistency_trajectory_distribution, consistency_trajectory_sequence
-    level_resources = {"1": [], "2": [], "3": []}  # For consistency_resource (time, cost, etc.)
+    level_trajectories = {
+        "1": [],
+        "2": [],
+        "3": [],
+    }  # For consistency_trajectory_distribution, consistency_trajectory_sequence
+    level_resources = {
+        "1": [],
+        "2": [],
+        "3": [],
+    }  # For consistency_resource (time, cost, etc.)
 
     for run in runs:
         task_levels = run.get("task_levels", {})
@@ -259,23 +267,33 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
             var_out = np.var(results, ddof=1) if len(results) > 1 else 0
             max_var = p_hat * (1 - p_hat) + 1e-10
             consistency_outcome_level = 1 - (var_out / max_var)
-            metrics["consistency_outcome_by_level"][level] = np.clip(consistency_outcome_level, 0.0, 1.0)
+            metrics["consistency_outcome_by_level"][level] = np.clip(
+                consistency_outcome_level, 0.0, 1.0
+            )
 
         # consistency_trajectory_distribution by level: trajectory distribution consistency
         if len(trajectories) >= 2:
             trajs = [t[0] for t in trajectories if t[0]]  # Extract action lists
             if len(trajs) >= 2:
-                consistency_trajectory_distribution = _compute_trajectory_distribution_consistency(trajs)
+                consistency_trajectory_distribution = (
+                    _compute_trajectory_distribution_consistency(trajs)
+                )
                 if not np.isnan(consistency_trajectory_distribution):
-                    metrics["consistency_trajectory_distribution_by_level"][level] = consistency_trajectory_distribution
+                    metrics["consistency_trajectory_distribution_by_level"][level] = (
+                        consistency_trajectory_distribution
+                    )
 
         # consistency_trajectory_sequence by level: trajectory sequence consistency
         if len(trajectories) >= 2:
             trajs = [t[0] for t in trajectories if t[0]]
             if len(trajs) >= 2:
-                consistency_trajectory_sequence = _compute_trajectory_sequence_consistency(trajs)
+                consistency_trajectory_sequence = (
+                    _compute_trajectory_sequence_consistency(trajs)
+                )
                 if not np.isnan(consistency_trajectory_sequence):
-                    metrics["consistency_trajectory_sequence_by_level"][level] = consistency_trajectory_sequence
+                    metrics["consistency_trajectory_sequence_by_level"][level] = (
+                        consistency_trajectory_sequence
+                    )
 
         # consistency_confidence by level: confidence consistency = exp(-CV) of confidence scores
         if confidences and len(confidences) >= 2:
@@ -286,7 +304,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
                 if mean_conf > 0:
                     cv_conf = std_conf / mean_conf
                     consistency_confidence_level = np.exp(-cv_conf)
-                    metrics["consistency_confidence_by_level"][level] = np.clip(consistency_confidence_level, 0.0, 1.0)
+                    metrics["consistency_confidence_by_level"][level] = np.clip(
+                        consistency_confidence_level, 0.0, 1.0
+                    )
 
         # consistency_resource by level: resource consistency = exp(-mean(CV_time, CV_actions))
         resources = level_resources[level]
@@ -308,7 +328,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
 
             consistency_resource_level = _compute_c_res(times, n_actions)
             if not np.isnan(consistency_resource_level):
-                metrics["consistency_resource_by_level"][level] = consistency_resource_level
+                metrics["consistency_resource_by_level"][level] = (
+                    consistency_resource_level
+                )
                 # Bootstrap SE
                 rng = np.random.default_rng(42)
                 n_boot = 200
@@ -322,9 +344,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
                     if not np.isnan(bv):
                         boot_vals.append(bv)
                 if len(boot_vals) > 1:
-                    metrics.setdefault("consistency_resource_by_level_se", {})[level] = np.std(
-                        boot_vals, ddof=1
-                    )
+                    metrics.setdefault("consistency_resource_by_level_se", {})[
+                        level
+                    ] = np.std(boot_vals, ddof=1)
 
         # === PREDICTABILITY METRICS ===
 
@@ -350,9 +372,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
                     )
                     boot_cal.append(1.0 - bece)
                 if len(boot_cal) > 1:
-                    metrics.setdefault("predictability_calibration_by_level_se", {})[level] = np.std(
-                        boot_cal, ddof=1
-                    )
+                    metrics.setdefault("predictability_calibration_by_level_se", {})[
+                        level
+                    ] = np.std(boot_cal, ddof=1)
 
             # predictability_roc_auc: AUC-ROC discrimination
             # Measures P(conf_success > conf_failure)
@@ -373,9 +395,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
                                     roc_auc_score(rewards_arr[idx], confs_arr[idx])
                                 )
                         if len(boot_auc) > 1:
-                            metrics.setdefault("predictability_roc_auc_by_level_se", {})[level] = (
-                                np.std(boot_auc, ddof=1)
-                            )
+                            metrics.setdefault(
+                                "predictability_roc_auc_by_level_se", {}
+                            )[level] = np.std(boot_auc, ddof=1)
                 except Exception:
                     pass  # Skip if sklearn not available or error
 
@@ -385,9 +407,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
             metrics["predictability_brier_score_by_level"][level] = 1.0 - brier
             metrics["brier_by_level"][level] = 1.0 - brier  # Legacy
             if len(per_task_brier) > 1:
-                metrics.setdefault("predictability_brier_score_by_level_se", {})[level] = np.std(
-                    per_task_brier, ddof=1
-                ) / np.sqrt(len(per_task_brier))
+                metrics.setdefault("predictability_brier_score_by_level_se", {})[
+                    level
+                ] = np.std(per_task_brier, ddof=1) / np.sqrt(len(per_task_brier))
 
             # Overconfidence gap (for reference)
             acc_level = metrics["accuracy_by_level"].get(level, np.nan)
@@ -405,7 +427,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
                     corr, _ = spearmanr(confs_arr, rewards_arr)
                     if not np.isnan(corr):
                         # Normalize to [0, 1]: (corr + 1) / 2
-                        metrics["predictability_rate_confidence_correlation_by_level"][level] = (corr + 1) / 2
+                        metrics["predictability_rate_confidence_correlation_by_level"][
+                            level
+                        ] = (corr + 1) / 2
                 except Exception:
                     pass
 
@@ -662,31 +686,53 @@ def analyze_agent(
     if len(baseline_runs) >= 2:
         consistency = compute_consistency_metrics(baseline_runs)
         metrics.consistency_outcome = consistency["consistency_outcome"]
-        metrics.consistency_trajectory_distribution = consistency["consistency_trajectory_distribution"]
-        metrics.consistency_trajectory_sequence = consistency["consistency_trajectory_sequence"]
+        metrics.consistency_trajectory_distribution = consistency[
+            "consistency_trajectory_distribution"
+        ]
+        metrics.consistency_trajectory_sequence = consistency[
+            "consistency_trajectory_sequence"
+        ]
         metrics.consistency_confidence = consistency["consistency_confidence"]
         metrics.consistency_resource = consistency["consistency_resource"]
         metrics.extra["consistency_task_df"] = consistency["task_df"]
         metrics.extra["cv_breakdown"] = consistency.get("cv_breakdown", {})
         metrics.extra["conf_breakdown"] = consistency.get("conf_breakdown", {})
-        metrics.extra["consistency_outcome_se"] = consistency.get("consistency_outcome_se", np.nan)
-        metrics.extra["consistency_trajectory_distribution_se"] = consistency.get("consistency_trajectory_distribution_se", np.nan)
-        metrics.extra["consistency_trajectory_sequence_se"] = consistency.get("consistency_trajectory_sequence_se", np.nan)
-        metrics.extra["consistency_confidence_se"] = consistency.get("consistency_confidence_se", np.nan)
-        metrics.extra["consistency_resource_se"] = consistency.get("consistency_resource_se", np.nan)
+        metrics.extra["consistency_outcome_se"] = consistency.get(
+            "consistency_outcome_se", np.nan
+        )
+        metrics.extra["consistency_trajectory_distribution_se"] = consistency.get(
+            "consistency_trajectory_distribution_se", np.nan
+        )
+        metrics.extra["consistency_trajectory_sequence_se"] = consistency.get(
+            "consistency_trajectory_sequence_se", np.nan
+        )
+        metrics.extra["consistency_confidence_se"] = consistency.get(
+            "consistency_confidence_se", np.nan
+        )
+        metrics.extra["consistency_resource_se"] = consistency.get(
+            "consistency_resource_se", np.nan
+        )
 
     # === PREDICTABILITY (need confidence scores) ===
     pred = compute_predictability_metrics(primary_runs)
-    metrics.predictability_rate_confidence_correlation = pred["predictability_rate_confidence_correlation"]
+    metrics.predictability_rate_confidence_correlation = pred[
+        "predictability_rate_confidence_correlation"
+    ]
     metrics.predictability_calibration = pred["predictability_calibration"]
     metrics.predictability_roc_auc = pred["predictability_roc_auc"]
     metrics.predictability_brier_score = pred["predictability_brier_score"]
     metrics.mean_confidence = pred["mean_confidence"]
     metrics.extra["aurc_data"] = pred["aurc_data"]
     metrics.extra["calibration_bins"] = pred["bin_stats"]
-    metrics.extra["predictability_calibration_se"] = pred.get("predictability_calibration_se", np.nan)
-    metrics.extra["predictability_roc_auc_se"] = pred.get("predictability_roc_auc_se", np.nan)
-    metrics.extra["predictability_brier_score_se"] = pred.get("predictability_brier_score_se", np.nan)
+    metrics.extra["predictability_calibration_se"] = pred.get(
+        "predictability_calibration_se", np.nan
+    )
+    metrics.extra["predictability_roc_auc_se"] = pred.get(
+        "predictability_roc_auc_se", np.nan
+    )
+    metrics.extra["predictability_brier_score_se"] = pred.get(
+        "predictability_brier_score_se", np.nan
+    )
     metrics.extra["auroc_data"] = pred["auroc_data"]
     metrics.extra["brier_data"] = pred["brier_data"]
 
@@ -818,17 +864,23 @@ def analyze_all_agents(
             print(
                 f"   consistency_outcome: {metrics.consistency_outcome:.3f}, consistency_trajectory_distribution: {metrics.consistency_trajectory_distribution:.3f}, consistency_trajectory_sequence: {metrics.consistency_trajectory_sequence:.3f}"
             )
-            print(f"   consistency_confidence: {metrics.consistency_confidence:.3f}, consistency_resource: {metrics.consistency_resource:.3f}")
+            print(
+                f"   consistency_confidence: {metrics.consistency_confidence:.3f}, consistency_resource: {metrics.consistency_resource:.3f}"
+            )
         if not np.isnan(metrics.predictability_rate_confidence_correlation):
             print(
                 f"   predictability_rate_confidence_correlation: {metrics.predictability_rate_confidence_correlation:.3f}, predictability_calibration: {metrics.predictability_calibration:.3f}, predictability_roc_auc: {metrics.predictability_roc_auc:.3f}, predictability_brier_score: {metrics.predictability_brier_score:.3f}"
             )
         if not np.isnan(metrics.robustness_fault_injection):
-            print(f"   robustness_fault_injection: {metrics.robustness_fault_injection:.3f}")
+            print(
+                f"   robustness_fault_injection: {metrics.robustness_fault_injection:.3f}"
+            )
         if not np.isnan(metrics.robustness_structural):
             print(f"   robustness_structural: {metrics.robustness_structural:.3f}")
         if not np.isnan(metrics.robustness_prompt_variation):
-            print(f"   robustness_prompt_variation: {metrics.robustness_prompt_variation:.3f}")
+            print(
+                f"   robustness_prompt_variation: {metrics.robustness_prompt_variation:.3f}"
+            )
         if not np.isnan(metrics.safety_harm_severity):
             print(
                 f"   safety_harm_severity: {metrics.safety_harm_severity:.3f}, safety_compliance: {metrics.safety_compliance:.3f}, safety_score: {metrics.safety_score:.3f}"
@@ -895,16 +947,36 @@ def metrics_to_dataframe(all_metrics: List[ReliabilityMetrics]) -> pd.DataFrame:
                 # Standard errors (for confidence bars)
                 "accuracy_se": m.extra.get("accuracy_se", np.nan),
                 "consistency_outcome_se": m.extra.get("consistency_outcome_se", np.nan),
-                "consistency_trajectory_distribution_se": m.extra.get("consistency_trajectory_distribution_se", np.nan),
-                "consistency_trajectory_sequence_se": m.extra.get("consistency_trajectory_sequence_se", np.nan),
-                "consistency_confidence_se": m.extra.get("consistency_confidence_se", np.nan),
-                "consistency_resource_se": m.extra.get("consistency_resource_se", np.nan),
-                "predictability_calibration_se": m.extra.get("predictability_calibration_se", np.nan),
-                "predictability_roc_auc_se": m.extra.get("predictability_roc_auc_se", np.nan),
-                "predictability_brier_score_se": m.extra.get("predictability_brier_score_se", np.nan),
-                "robustness_fault_injection_se": m.extra.get("robustness_fault_injection_se", np.nan),
-                "robustness_structural_se": m.extra.get("robustness_structural_se", np.nan),
-                "robustness_prompt_variation_se": m.extra.get("robustness_prompt_variation_se", np.nan),
+                "consistency_trajectory_distribution_se": m.extra.get(
+                    "consistency_trajectory_distribution_se", np.nan
+                ),
+                "consistency_trajectory_sequence_se": m.extra.get(
+                    "consistency_trajectory_sequence_se", np.nan
+                ),
+                "consistency_confidence_se": m.extra.get(
+                    "consistency_confidence_se", np.nan
+                ),
+                "consistency_resource_se": m.extra.get(
+                    "consistency_resource_se", np.nan
+                ),
+                "predictability_calibration_se": m.extra.get(
+                    "predictability_calibration_se", np.nan
+                ),
+                "predictability_roc_auc_se": m.extra.get(
+                    "predictability_roc_auc_se", np.nan
+                ),
+                "predictability_brier_score_se": m.extra.get(
+                    "predictability_brier_score_se", np.nan
+                ),
+                "robustness_fault_injection_se": m.extra.get(
+                    "robustness_fault_injection_se", np.nan
+                ),
+                "robustness_structural_se": m.extra.get(
+                    "robustness_structural_se", np.nan
+                ),
+                "robustness_prompt_variation_se": m.extra.get(
+                    "robustness_prompt_variation_se", np.nan
+                ),
             }
         )
     return pd.DataFrame(rows)

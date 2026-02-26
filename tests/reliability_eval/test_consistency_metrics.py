@@ -119,7 +119,9 @@ class TestComputeResourceConsistency:
         # CV = 0 → consistency_resource = exp(0) = 1.0
         costs = [1.0, 1.0, 1.0, 1.0]
         times = [10.0, 10.0, 10.0, 10.0]
-        consistency_resource, _ = compute_resource_consistency(costs, times, [1, 1, 1, 1])
+        consistency_resource, _ = compute_resource_consistency(
+            costs, times, [1, 1, 1, 1]
+        )
         assert consistency_resource == pytest.approx(1.0)
 
     def test_high_variance_costs_give_low_consistency(self):
@@ -127,7 +129,9 @@ class TestComputeResourceConsistency:
         # costs (CV ≈ 1.15) determine consistency_resource = exp(-1.15) ≈ 0.32 < 0.5.
         costs = [0.01, 10.0, 0.01, 10.0]
         times = [0.0, 0.0, 0.0, 0.0]
-        consistency_resource, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
+        consistency_resource, _ = compute_resource_consistency(
+            costs, times, [1, 0, 1, 0]
+        )
         assert consistency_resource == pytest.approx(0.3158798230934396)
 
     def test_returns_nan_when_no_valid_data(self):
@@ -145,5 +149,7 @@ class TestComputeResourceConsistency:
     def test_result_bounded_between_zero_and_one(self):
         costs = [1.0, 5.0, 1.0, 5.0]
         times = [2.0, 8.0, 2.0, 8.0]
-        consistency_resource, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
+        consistency_resource, _ = compute_resource_consistency(
+            costs, times, [1, 0, 1, 0]
+        )
         assert 0.0 <= consistency_resource <= 1.0

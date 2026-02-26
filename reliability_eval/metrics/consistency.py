@@ -94,7 +94,9 @@ def compute_trajectory_consistency_conditioned(
         # C_traj = 1 - mean(JSD)
         return 1 - np.mean(js_divs)
 
-    consistency_trajectory_sequenceuccess = compute_jsd_consistency(success_trajectories)
+    consistency_trajectory_sequenceuccess = compute_jsd_consistency(
+        success_trajectories
+    )
     C_traj_failure = compute_jsd_consistency(failure_trajectories)
 
     return consistency_trajectory_sequenceuccess, C_traj_failure
@@ -502,18 +504,26 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
         all_consistency_outcome.append(consistency_outcome)
 
         # consistency_trajectory_distribution: Distribution-based trajectory consistency (what actions)
-        consistency_trajectory_distribution_success, consistency_trajectory_distribution_failure = compute_trajectory_consistency_conditioned(
+        (
+            consistency_trajectory_distribution_success,
+            consistency_trajectory_distribution_failure,
+        ) = compute_trajectory_consistency_conditioned(
             data["trajectories"], data["success"]
         )
         if not np.isnan(consistency_trajectory_distribution_success):
-            all_consistency_trajectory_distribution.append(consistency_trajectory_distribution_success)
+            all_consistency_trajectory_distribution.append(
+                consistency_trajectory_distribution_success
+            )
 
         # consistency_trajectory_sequence: Sequence-based trajectory consistency (action order)
-        consistency_trajectory_sequence_success, consistency_trajectory_sequence_failure = compute_sequence_consistency(
-            data["trajectories"], data["success"]
-        )
+        (
+            consistency_trajectory_sequence_success,
+            consistency_trajectory_sequence_failure,
+        ) = compute_sequence_consistency(data["trajectories"], data["success"])
         if not np.isnan(consistency_trajectory_sequence_success):
-            all_consistency_trajectory_sequence.append(consistency_trajectory_sequence_success)
+            all_consistency_trajectory_sequence.append(
+                consistency_trajectory_sequence_success
+            )
 
         # consistency_confidence: Confidence consistency
         consistency_confidence, conf_breakdown = compute_confidence_consistency(
@@ -597,15 +607,29 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
         return np.std(vals, ddof=1) / np.sqrt(len(vals))
 
     return {
-        "consistency_outcome": np.mean(all_consistency_outcome) if all_consistency_outcome else np.nan,
+        "consistency_outcome": np.mean(all_consistency_outcome)
+        if all_consistency_outcome
+        else np.nan,
         "consistency_outcome_se": _se(all_consistency_outcome),
-        "consistency_trajectory_distribution": np.mean(all_consistency_trajectory_distribution) if all_consistency_trajectory_distribution else np.nan,
-        "consistency_trajectory_distribution_se": _se(all_consistency_trajectory_distribution),
-        "consistency_trajectory_sequence": np.mean(all_consistency_trajectory_sequence) if all_consistency_trajectory_sequence else np.nan,
+        "consistency_trajectory_distribution": np.mean(
+            all_consistency_trajectory_distribution
+        )
+        if all_consistency_trajectory_distribution
+        else np.nan,
+        "consistency_trajectory_distribution_se": _se(
+            all_consistency_trajectory_distribution
+        ),
+        "consistency_trajectory_sequence": np.mean(all_consistency_trajectory_sequence)
+        if all_consistency_trajectory_sequence
+        else np.nan,
         "consistency_trajectory_sequence_se": _se(all_consistency_trajectory_sequence),
-        "consistency_confidence": np.mean(all_consistency_confidence) if all_consistency_confidence else np.nan,
+        "consistency_confidence": np.mean(all_consistency_confidence)
+        if all_consistency_confidence
+        else np.nan,
         "consistency_confidence_se": _se(all_consistency_confidence),
-        "consistency_resource": np.mean(all_consistency_resource) if all_consistency_resource else np.nan,
+        "consistency_resource": np.mean(all_consistency_resource)
+        if all_consistency_resource
+        else np.nan,
         "consistency_resource_se": _se(all_consistency_resource),
         "cv_breakdown": aggregated_cv,
         "conf_breakdown": aggregated_conf,

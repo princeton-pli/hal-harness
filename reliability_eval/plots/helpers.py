@@ -128,14 +128,26 @@ def _get_weighted_r_con_yerr(df, values=None):
     the propagated SE is sqrt(sum(w_i^2 * se_i^2)) where the trajectory SE
     is itself propagated from the two sub-metric SEs.
     """
-    se_out = df["consistency_outcome_se"].values if "consistency_outcome_se" in df.columns else np.zeros(len(df))
+    se_out = (
+        df["consistency_outcome_se"].values
+        if "consistency_outcome_se" in df.columns
+        else np.zeros(len(df))
+    )
     se_traj_d = (
-        df["consistency_trajectory_distribution_se"].values if "consistency_trajectory_distribution_se" in df.columns else np.zeros(len(df))
+        df["consistency_trajectory_distribution_se"].values
+        if "consistency_trajectory_distribution_se" in df.columns
+        else np.zeros(len(df))
     )
     se_traj_s = (
-        df["consistency_trajectory_sequence_se"].values if "consistency_trajectory_sequence_se" in df.columns else np.zeros(len(df))
+        df["consistency_trajectory_sequence_se"].values
+        if "consistency_trajectory_sequence_se" in df.columns
+        else np.zeros(len(df))
     )
-    se_res = df["consistency_resource_se"].values if "consistency_resource_se" in df.columns else np.zeros(len(df))
+    se_res = (
+        df["consistency_resource_se"].values
+        if "consistency_resource_se" in df.columns
+        else np.zeros(len(df))
+    )
 
     se_out = np.where(np.isnan(se_out), 0, se_out)
     se_traj_d = np.where(np.isnan(se_traj_d), 0, se_traj_d)

@@ -55,14 +55,22 @@ def plot_reliability_dashboard(
     df_sorted["reliability_predictability"] = df_sorted[
         "predictability_brier_score"
     ]  # Brier score captures both calibration and discrimination
-    df_sorted["reliability_robustness"] = df_sorted[["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]].mean(
-        axis=1, skipna=True
-    )
+    df_sorted["reliability_robustness"] = df_sorted[
+        [
+            "robustness_fault_injection",
+            "robustness_structural",
+            "robustness_prompt_variation",
+        ]
+    ].mean(axis=1, skipna=True)
     df_sorted["reliability_safety"] = df_sorted["safety_score"]
     # Overall reliability = uniform average of consistency, predictability, robustness
-    df_sorted["reliability_overall"] = df_sorted[["reliability_consistency", "reliability_predictability", "reliability_robustness"]].mean(
-        axis=1, skipna=True
-    )
+    df_sorted["reliability_overall"] = df_sorted[
+        [
+            "reliability_consistency",
+            "reliability_predictability",
+            "reliability_robustness",
+        ]
+    ].mean(axis=1, skipna=True)
 
     # Create figure with GridSpec layout
     # Row 0: 2 plots (bar + radar for overall)
@@ -145,7 +153,11 @@ def plot_reliability_dashboard(
 
     # Spider/Radar chart for dimension-level comparison (spans 3 columns)
     ax = fig.add_subplot(gs[0, 3:6], polar=True)
-    dimensions = ["reliability_consistency", "reliability_predictability", "reliability_robustness"]
+    dimensions = [
+        "reliability_consistency",
+        "reliability_predictability",
+        "reliability_robustness",
+    ]
     dim_labels = ["Consistency", "Predictability", "Robustness"]
 
     num_vars = len(dimensions)
@@ -259,7 +271,11 @@ def plot_reliability_dashboard(
     # predictability_rate_confidence_correlation
     ax = fig.add_subplot(gs[2, 1])
     plot_bar(
-        ax, df_sorted["predictability_rate_confidence_correlation"], r"$P_{\mathrm{rc}}$", "Risk-Coverage\nScore", bar_colors
+        ax,
+        df_sorted["predictability_rate_confidence_correlation"],
+        r"$P_{\mathrm{rc}}$",
+        "Risk-Coverage\nScore",
+        bar_colors,
     )
 
     # predictability_calibration
@@ -389,7 +405,11 @@ def plot_reliability_dashboard(
     # reliability_safety summary
     ax = fig.add_subplot(gs[4, 0])
     plot_bar(
-        ax, df_sorted["reliability_safety"], r"$R_{\mathrm{Saf}}$", "Safety\n(Aggregate)", bar_colors
+        ax,
+        df_sorted["reliability_safety"],
+        r"$R_{\mathrm{Saf}}$",
+        "Safety\n(Aggregate)",
+        bar_colors,
     )
     ax.axhline(y=0.8, color="green", linestyle="--", alpha=0.5, label="Good")
     ax.axhline(y=0.5, color="orange", linestyle="--", alpha=0.5)
@@ -417,7 +437,11 @@ def plot_reliability_dashboard(
     # safety_score
     ax = fig.add_subplot(gs[4, 3])
     plot_bar(
-        ax, df_sorted["safety_score"], r"$S_{\mathrm{safety}}$", "Safety Score", bar_colors
+        ax,
+        df_sorted["safety_score"],
+        r"$S_{\mathrm{safety}}$",
+        "Safety Score",
+        bar_colors,
     )
 
     # Calibration diagram (spans 2 columns)
@@ -589,15 +613,26 @@ def plot_dimension_radar(df: pd.DataFrame, output_dir: Path):
 
     # reliability_consistency = weighted consistency aggregate (outcome & resource weighted > trajectory)
     df_dims["reliability_consistency"] = compute_weighted_r_con(
-        df_dims["consistency_outcome"], df_dims["consistency_trajectory_distribution"], df_dims["consistency_trajectory_sequence"], df_dims["consistency_resource"]
+        df_dims["consistency_outcome"],
+        df_dims["consistency_trajectory_distribution"],
+        df_dims["consistency_trajectory_sequence"],
+        df_dims["consistency_resource"],
     )
 
     # reliability_robustness = mean of all robustness metrics (robustness_fault_injection, robustness_structural, robustness_prompt_variation)
     robustness_cols = [
-        c for c in ["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"] if c in df_dims.columns
+        c
+        for c in [
+            "robustness_fault_injection",
+            "robustness_structural",
+            "robustness_prompt_variation",
+        ]
+        if c in df_dims.columns
     ]
     if robustness_cols:
-        df_dims["reliability_robustness"] = df_dims[robustness_cols].mean(axis=1, skipna=True)
+        df_dims["reliability_robustness"] = df_dims[robustness_cols].mean(
+            axis=1, skipna=True
+        )
     else:
         df_dims["reliability_robustness"] = np.nan
 
@@ -607,7 +642,11 @@ def plot_dimension_radar(df: pd.DataFrame, output_dir: Path):
     # reliability_safety = safety_score (lambda-weighted safety score)
     df_dims["reliability_safety"] = df_dims["safety_score"]
 
-    dimensions = ["reliability_consistency", "reliability_robustness", "reliability_predictability"]
+    dimensions = [
+        "reliability_consistency",
+        "reliability_robustness",
+        "reliability_predictability",
+    ]
     dim_labels = ["Consistency", "Robustness", "Predictability"]
 
     available = [d for d in dimensions if not df_dims[d].isna().all()]
