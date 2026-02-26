@@ -655,53 +655,7 @@ PHASE_SETTINGS = {
 # DATA CLASSES
 # =============================================================================
 
-@dataclass
-class RunResult:
-    agent: str
-    benchmark: str
-    phase: str
-    repetition: int
-    success: bool
-    timestamp: str
-    duration_seconds: float = 0.0
-    error_message: Optional[str] = None
-    run_id: Optional[str] = None  # hal-eval run_id for retry support
-
-
-@dataclass
-class EvaluationLog:
-    start_time: str
-    config: Dict[str, Any]
-    phases_to_run: List[str]
-    results: List[Dict] = field(default_factory=list)
-    end_time: Optional[str] = None
-
-    def add_result(self, result: RunResult):
-        self.results.append(asdict(result))
-
-    def save(self, path: Path):
-        path.parent.mkdir(exist_ok=True)
-        with open(path, 'w') as f:
-            json.dump(asdict(self), f, indent=2)
-
-    @classmethod
-    def load(cls, path: Path) -> Optional['EvaluationLog']:
-        """Load log from file."""
-        if not path.exists():
-            return None
-        with open(path, 'r') as f:
-            data = json.load(f)
-        return cls(
-            start_time=data['start_time'],
-            config=data['config'],
-            phases_to_run=data['phases_to_run'],
-            results=data.get('results', []),
-            end_time=data.get('end_time'),
-        )
-
-    def get_failed_runs(self) -> List[Dict]:
-        """Get all failed runs that have a run_id (can be retried)."""
-        return [r for r in self.results if not r['success'] and r.get('run_id')]
+from reliability_eval.types import EvaluationLog, RunResult  # noqa: E402
 
 
 def retry_failed_runs(log_path: Path, max_concurrent: int = 1, results_dir: str = "results") -> int:
