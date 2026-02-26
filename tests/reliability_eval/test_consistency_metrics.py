@@ -4,13 +4,6 @@ import math
 
 import pytest
 
-pytest.importorskip("pandas", exc_type=ImportError)
-pytest.importorskip("matplotlib", exc_type=ImportError)
-pytest.importorskip("seaborn", exc_type=ImportError)
-pytest.importorskip("scipy", exc_type=ImportError)
-
-import numpy as np
-
 from analyze_reliability import (
     compute_outcome_consistency,
     compute_resource_consistency,
@@ -38,10 +31,14 @@ class TestComputeOutcomeConsistency:
         result = compute_outcome_consistency([1, 0])
         assert 0.0 <= result <= 1.0
 
-    def test_mostly_consistent_is_close_to_one(self):
-        # 4 out of 5 successes — variance is low relative to p*(1-p)
+    def test_any_deviation_clips_to_zero(self):
+        # sigma^2 (ddof=1) = K/(K-1) * p*(1-p) which always exceeds p*(1-p),
+        # so any mixed sequence produces a negative raw C_out that clips to 0.
         result = compute_outcome_consistency([1, 1, 1, 1, 0])
-        assert result > 0.5
+        assert result == pytest.approx(0.0)
+
+    def test_a_specific_sequence(self):
+        assert compute_outcome_consistency([1, 0.9, 0.789, 0.98, 0.83, 0.67]) == pytest.approx(0.8698810638081038)
 
 
 class TestComputeTrajectoryConsistencyConditioned:
@@ -124,8 +121,10 @@ class TestComputeResourceConsistency:
         assert C_res == pytest.approx(1.0)
 
     def test_high_variance_costs_give_low_consistency(self):
+        # Pass zero times so they are filtered out; only the highly variable
+        # costs (CV ≈ 1.15) determine C_res = exp(-1.15) ≈ 0.32 < 0.5.
         costs = [0.01, 10.0, 0.01, 10.0]
-        times = [1.0, 1.0, 1.0, 1.0]
+        times = [0.0, 0.0, 0.0, 0.0]
         C_res, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
         assert C_res < 0.5
 

@@ -2,14 +2,8 @@
 
 import math
 
-import pytest
-
-pytest.importorskip("pandas", exc_type=ImportError)
-pytest.importorskip("matplotlib", exc_type=ImportError)
-pytest.importorskip("seaborn", exc_type=ImportError)
-pytest.importorskip("scipy", exc_type=ImportError)
-
 import numpy as np
+import pytest
 
 from analyze_reliability import (
     compute_auroc_metrics,
