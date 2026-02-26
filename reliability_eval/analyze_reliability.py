@@ -34,6 +34,7 @@ Usage:
 
 import argparse
 import json
+import sys
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -41,6 +42,9 @@ from collections import defaultdict, Counter
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 import warnings
+
+# Allow running as a script: ensure repo root is on sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec

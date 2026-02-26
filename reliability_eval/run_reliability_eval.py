@@ -31,6 +31,7 @@ Configuration:
 """
 
 import subprocess
+import sys
 import json
 import argparse
 from pathlib import Path
@@ -38,6 +39,9 @@ from datetime import datetime
 import os
 import time
 from typing import List, Dict, Any, Optional
+
+# Allow running as a script: ensure repo root is on sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 import re
@@ -57,8 +61,16 @@ from reliability_eval.phases.baseline import run_baseline_phase  # noqa: E402
 from reliability_eval.phases.fault import run_fault_phase  # noqa: E402
 from reliability_eval.phases.prompt import run_prompt_phase  # noqa: E402
 from reliability_eval.phases.retry import retry_failed_runs  # noqa: E402
+from reliability_eval.phases.runner import (  # noqa: E402
+    build_base_command,
+    check_api_keys,
+    get_valid_combinations,
+    load_environment,
+    run_command,
+)
 from reliability_eval.phases.safety import run_safety_phase  # noqa: E402
 from reliability_eval.phases.structural import run_structural_phase  # noqa: E402
+from reliability_eval.types import EvaluationLog  # noqa: E402
 
 
 def main():
