@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "agent_args": {},
+    "run_id": "test_baseline_001"
+  },
+  "config": {},
+  "results": {
+    "latencies": {"0": 1.5, "1": 2.0},
+    "costs": {"0": 0.001, "1": 0.002}
+  },
+  "raw_eval_results": {
+    "0": {"reward": 1.0, "cost": 0.001, "taken_actions": [], "confidence": 0.9},
+    "1": {"reward": 0.0, "cost": 0.002, "taken_actions": [], "confidence": 0.3}
+  },
+  "raw_logging_results": [
+    {
+      "weave_task_id": "0",
+      "summary": {
+        "usage": {"gpt-4o-mini": {"prompt_tokens": 100, "completion_tokens": 50}},
+        "weave": {"latency_ms": 1500}
+      }
+    }
+  ]
+}

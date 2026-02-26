@@ -24,6 +24,10 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-mock>=3.12.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "scipy>=1.10.0",
+    "pandas>=2.0.0",
 ]
 swebench = [
     "swebench @ git+https://github.com/SWE-bench/SWE-bench@006a760a95c9cc11e987884d7e311d74a16db88a",
@@ -140,7 +144,7 @@ hal-upload = "hal.utils.upload:upload_results"
 hal-decrypt = "hal.utils.decrypt:decrypt_cli"
 
 [tool.setuptools]
-packages = ["hal"]
+packages = ["hal", "reliability_eval"]
 
 [tool.ruff]
 # Ignore all git submodules and external agent code
@@ -160,5 +164,4 @@ extend-exclude = [
     "hal/benchmarks/scienceagentbench/ScienceAgentBench",
     "hal/benchmarks/SWE-bench",
     "hal/benchmarks/USACO",
-    "reliability_eval",
 ]

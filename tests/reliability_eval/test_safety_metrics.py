@@ -1,0 +1,101 @@
+"""Tests for compute_safety_metrics."""
+
+import math
+
+import pytest
+
+from reliability_eval.metrics.safety import compute_safety_metrics
+
+
+def _make_run_with_safety(
+    task_violations: list[list[dict]], reward: float = 0.0
+) -> dict:
+    """
+    Build a minimal run dict with llm_safety data.
+
+    Args:
+        task_violations: list of per-task violation lists; one element per task.
+                         Each element is a list of violation dicts with 'severity' and 'constraint'.
+        reward: success indicator for each task.
+    """
+    raw_eval = {}
+    for i, violations in enumerate(task_violations):
+        raw_eval[str(i)] = {
+            "reward": reward,
+            "llm_safety": {
+                "analyzed": True,
+                "model": "gpt-4o",
+                "safety_compliance": 1.0 if not violations else 0.0,
+                "compliance_violations": violations,
+                "num_violations": len(violations),
+                "constraints_checked": ["do_not_cause_harm"],
+                "errors": [],
+                "mean_severity": 0.0,
+                "max_severity": 0.0,
+            },
+        }
+    return {"raw_eval_results": raw_eval}
+
+
+class TestComputeSafetyMetricsNoViolations:
+    def test_s_comp_is_one_when_no_violations(self):
+        run = _make_run_with_safety([[], [], []])
+        result = compute_safety_metrics([run])
+        assert result["safety_compliance"] == pytest.approx(1.0)
+
+    def test_s_harm_is_one_when_no_violations(self):
+        run = _make_run_with_safety([[], [], []])
+        result = compute_safety_metrics([run])
+        assert result["safety_harm_severity"] == pytest.approx(1.0)
+
+    def test_s_safety_is_one_when_no_violations(self):
+        run = _make_run_with_safety([[], [], []])
+        result = compute_safety_metrics([run])
+        assert result["safety_score"] == pytest.approx(1.0)
+
+
+class TestComputeSafetyMetricsWithViolations:
+    def test_s_comp_decreases_with_violation(self):
+        # 1 task with a violation, 1 without — safety_compliance = 0.5
+        violations = [
+            {"severity": "medium", "constraint": "do_not_cause_harm", "evidence": "x"}
+        ]
+        run = _make_run_with_safety([violations, []])
+        result = compute_safety_metrics([run])
+        assert result["safety_compliance"] == pytest.approx(0.5)
+
+    def test_all_violated_s_comp_is_zero(self):
+        violations = [
+            {"severity": "high", "constraint": "do_not_cause_harm", "evidence": "x"}
+        ]
+        run = _make_run_with_safety([violations, violations])
+        result = compute_safety_metrics([run])
+        assert result["safety_compliance"] == pytest.approx(0.0)
+
+    def test_s_harm_decreases_with_high_severity(self):
+        # High severity violation (weight=1.0) → safety_harm_severity = 1 - 1.0 = 0.0
+        violations = [
+            {"severity": "high", "constraint": "do_not_cause_harm", "evidence": "x"}
+        ]
+        run = _make_run_with_safety([violations])
+        result = compute_safety_metrics([run])
+        assert result["safety_harm_severity"] == pytest.approx(0.0)
+
+
+class TestComputeSafetyMetricsExplicitParams:
+    def test_accepts_explicit_safety_lambda(self):
+        """safety_lambda must be accepted as an argument, not read from module globals."""
+        run = _make_run_with_safety([[], []])
+        # Should not raise even when providing non-default value
+        result = compute_safety_metrics([run], safety_lambda=0.3)
+        assert "safety_compliance" in result
+        assert "safety_harm_severity" in result
+        assert "safety_score" in result
+
+    def test_no_llm_data_returns_nan(self):
+        """Tasks without llm_safety data should produce nan metrics."""
+        run = {"raw_eval_results": {"0": {"reward": 0.0}}}
+        result = compute_safety_metrics([run])
+        assert math.isnan(result["safety_compliance"])
+        assert math.isnan(result["safety_harm_severity"])
+        assert math.isnan(result["safety_score"])

@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "agent_args": {"enable_fault_injection": "true"},
+    "run_id": "test_fault_001"
+  },
+  "config": {},
+  "results": {
+    "latencies": {"0": 1.8},
+    "costs": {"0": 0.001}
+  },
+  "raw_eval_results": {
+    "0": {"reward": 0.0, "cost": 0.001, "taken_actions": [], "confidence": 0.1}
+  },
+  "raw_logging_results": []
+}
