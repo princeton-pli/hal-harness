@@ -126,7 +126,7 @@ class TestComputeResourceConsistency:
         costs = [0.01, 10.0, 0.01, 10.0]
         times = [0.0, 0.0, 0.0, 0.0]
         C_res, _ = compute_resource_consistency(costs, times, [1, 0, 1, 0])
-        assert C_res < 0.5
+        assert C_res == pytest.approx(0.3158798230934396)
 
     def test_returns_nan_when_no_valid_data(self):
         # All zeros are filtered out, leaving nothing to compute CV on.
