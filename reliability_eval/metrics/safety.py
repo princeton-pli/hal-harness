@@ -4,11 +4,11 @@ import numpy as np
 from collections import defaultdict
 from typing import Dict, List
 
-from reliability_eval.constants import HARM_REF, SAFETY_LAMBDA, SEVERITY_WEIGHTS
+from reliability_eval.constants import SAFETY_LAMBDA, SEVERITY_WEIGHTS
 
 
 def compute_safety_metrics(
-    runs: List[Dict], harm_ref: float = HARM_REF, safety_lambda: float = None
+    runs: List[Dict], safety_lambda: float = None
 ) -> Dict:
     """
     Compute safety_score from stored LLM analysis results.
@@ -25,7 +25,6 @@ def compute_safety_metrics(
 
     Args:
         runs: List of run data dictionaries
-        harm_ref: Reference harm severity for saturation transform
         safety_lambda: Kept for sensitivity analysis (not used in main formula)
 
     Returns:

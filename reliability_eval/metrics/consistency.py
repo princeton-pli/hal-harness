@@ -41,17 +41,15 @@ def compute_outcome_consistency(
 
 def compute_trajectory_consistency_conditioned(
     trajectories: List[List[str]], successes: List[int]
-) -> Tuple[float, float]:
+) -> float:
     """
     Compute trajectory consistency CONDITIONED on outcome (paper Definition 3.2).
 
-    Returns (consistency_trajectory_sequenceuccess, C_traj_failure)
-    - C_traj^+ : consistency among successful runs
-    - C_traj^- : consistency among failed runs
+    Returns consistency_trajectory_sequence_success (C_traj^+):
+    consistency among successful runs, as a single float.
     """
-    # Separate trajectories by outcome
+    # Separate trajectories by outcome; only success trajectories are used
     success_trajectories = [t for t, s in zip(trajectories, successes) if s == 1 and t]
-    failure_trajectories = [t for t, s in zip(trajectories, successes) if s == 0 and t]
 
     def compute_jsd_consistency(trajs: List[List[str]]) -> float:
         if len(trajs) < 2:
@@ -94,24 +92,19 @@ def compute_trajectory_consistency_conditioned(
         # C_traj = 1 - mean(JSD)
         return 1 - np.mean(js_divs)
 
-    consistency_trajectory_sequenceuccess = compute_jsd_consistency(
-        success_trajectories
-    )
-    C_traj_failure = compute_jsd_consistency(failure_trajectories)
-
-    return consistency_trajectory_sequenceuccess, C_traj_failure
+    return compute_jsd_consistency(success_trajectories)
 
 
 def compute_sequence_consistency(
     trajectories: List[List[str]], successes: List[int]
-) -> Tuple[float, float]:
+) -> float:
     """
     Compute trajectory SEQUENCE consistency using normalized edit distance.
 
     Unlike distribution-based consistency (consistency_trajectory_distribution), this measures whether
     actions occur in the same ORDER across runs.
 
-    Returns (consistency_trajectory_sequence_success, consistency_trajectory_sequence_failure)
+    Returns consistency_trajectory_sequence_success as a single float.
     """
 
     def levenshtein_distance(s1: List[str], s2: List[str]) -> int:
@@ -158,14 +151,10 @@ def compute_sequence_consistency(
 
         return np.mean(similarities) if similarities else np.nan
 
-    # Separate by outcome
+    # Separate by outcome, return only the success score
     success_trajectories = [t for t, s in zip(trajectories, successes) if s == 1]
-    failure_trajectories = [t for t, s in zip(trajectories, successes) if s == 0]
 
-    C_seq_success = compute_seq_consistency(success_trajectories)
-    C_seq_failure = compute_seq_consistency(failure_trajectories)
-
-    return C_seq_success, C_seq_failure
+    return compute_seq_consistency(success_trajectories)
 
 
 def compute_confidence_consistency(
@@ -504,11 +493,10 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
         all_consistency_outcome.append(consistency_outcome)
 
         # consistency_trajectory_distribution: Distribution-based trajectory consistency (what actions)
-        (
-            consistency_trajectory_distribution_success,
-            consistency_trajectory_distribution_failure,
-        ) = compute_trajectory_consistency_conditioned(
-            data["trajectories"], data["success"]
+        consistency_trajectory_distribution_success = (
+            compute_trajectory_consistency_conditioned(
+                data["trajectories"], data["success"]
+            )
         )
         if not np.isnan(consistency_trajectory_distribution_success):
             all_consistency_trajectory_distribution.append(
@@ -516,10 +504,9 @@ def compute_consistency_metrics(baseline_runs: List[Dict]) -> Dict:
             )
 
         # consistency_trajectory_sequence: Sequence-based trajectory consistency (action order)
-        (
-            consistency_trajectory_sequence_success,
-            consistency_trajectory_sequence_failure,
-        ) = compute_sequence_consistency(data["trajectories"], data["success"])
+        consistency_trajectory_sequence_success = compute_sequence_consistency(
+            data["trajectories"], data["success"]
+        )
         if not np.isnan(consistency_trajectory_sequence_success):
             all_consistency_trajectory_sequence.append(
                 consistency_trajectory_sequence_success

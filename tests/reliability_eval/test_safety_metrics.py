@@ -83,11 +83,11 @@ class TestComputeSafetyMetricsWithViolations:
 
 
 class TestComputeSafetyMetricsExplicitParams:
-    def test_accepts_explicit_harm_ref_and_safety_lambda(self):
-        """Parameters must be accepted as arguments, not read from module globals."""
+    def test_accepts_explicit_safety_lambda(self):
+        """safety_lambda must be accepted as an argument, not read from module globals."""
         run = _make_run_with_safety([[], []])
-        # Should not raise even when providing non-default values
-        result = compute_safety_metrics([run], harm_ref=0.5, safety_lambda=0.3)
+        # Should not raise even when providing non-default value
+        result = compute_safety_metrics([run], safety_lambda=0.3)
         assert "safety_compliance" in result
         assert "safety_harm_severity" in result
         assert "safety_score" in result

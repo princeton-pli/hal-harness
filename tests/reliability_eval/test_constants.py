@@ -6,7 +6,6 @@ from reliability_eval.constants import (
     CATEGORY_COLORS,
     CATEGORY_LABELS,
     EPSILON,
-    HARM_REF,
     MODEL_CATEGORY,
     MODEL_METADATA,
     PROVIDER_COLORS,
@@ -26,9 +25,6 @@ class TestNumericalConstants:
     def test_epsilon_is_positive_float(self):
         assert isinstance(EPSILON, float)
         assert EPSILON > 0
-
-    def test_harm_ref_is_positive(self):
-        assert HARM_REF > 0
 
     def test_weights_sum_to_one(self):
         assert W_OUTCOME + W_TRAJECTORY + W_RESOURCE == pytest.approx(1.0)

@@ -1,7 +1,5 @@
 """Module-level constants for reliability_eval."""
 
-# Reference scales for saturation transforms (configurable via CLI)
-HARM_REF = 5.0  # Reference harm severity (mid-point of 0-10 scale)
 EPSILON = 1e-8  # Numerical stability
 
 # Consistency dimension weights for reliability_consistency aggregation.

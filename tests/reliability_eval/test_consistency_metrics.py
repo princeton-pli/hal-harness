@@ -47,31 +47,25 @@ class TestComputeTrajectoryConsistencyConditioned:
     def test_identical_trajectories_give_perfect_distribution_consistency(self):
         trajs = [["a", "b", "c"], ["a", "b", "c"], ["a", "b", "c"]]
         successes = [1, 1, 1]
-        C_success, _ = compute_trajectory_consistency_conditioned(trajs, successes)
+        C_success = compute_trajectory_consistency_conditioned(trajs, successes)
         assert C_success == pytest.approx(1.0, abs=1e-6)
 
     def test_completely_different_trajectories_give_low_consistency(self):
         trajs = [["a", "a", "a"], ["b", "b", "b"], ["c", "c", "c"]]
         successes = [1, 1, 1]
-        C_success, _ = compute_trajectory_consistency_conditioned(trajs, successes)
+        C_success = compute_trajectory_consistency_conditioned(trajs, successes)
         assert C_success == pytest.approx(0.1674453888423023)
 
     def test_returns_nan_when_fewer_than_two_successful_runs(self):
         trajs = [["a", "b"], ["c", "d"]]
         successes = [1, 0]  # only one successful run
-        C_success, _ = compute_trajectory_consistency_conditioned(trajs, successes)
+        C_success = compute_trajectory_consistency_conditioned(trajs, successes)
         assert math.isnan(C_success)
-
-    def test_failure_consistency_computed_separately(self):
-        trajs = [["x", "y"], ["x", "y"], ["a", "b"]]
-        successes = [0, 0, 1]
-        _, C_failure = compute_trajectory_consistency_conditioned(trajs, successes)
-        assert C_failure == pytest.approx(1.0, abs=1e-6)
 
     def test_result_bounded_between_zero_and_one(self):
         trajs = [["a", "b", "c"], ["b", "c", "d"], ["c", "d", "e"]]
         successes = [1, 1, 1]
-        C_success, _ = compute_trajectory_consistency_conditioned(trajs, successes)
+        C_success = compute_trajectory_consistency_conditioned(trajs, successes)
         assert 0.0 <= C_success <= 1.0
 
 
@@ -79,38 +73,32 @@ class TestComputeSequenceConsistency:
     def test_identical_sequences_give_perfect_consistency(self):
         trajs = [["a", "b", "c"], ["a", "b", "c"], ["a", "b", "c"]]
         successes = [1, 1, 1]
-        C_success, _ = compute_sequence_consistency(trajs, successes)
+        C_success = compute_sequence_consistency(trajs, successes)
         assert C_success == pytest.approx(1.0)
 
     def test_completely_different_sequences_give_low_consistency(self):
         trajs = [["a", "b", "c"], ["d", "e", "f"], ["g", "h", "i"]]
         successes = [1, 1, 1]
-        C_success, _ = compute_sequence_consistency(trajs, successes)
+        C_success = compute_sequence_consistency(trajs, successes)
         assert C_success == pytest.approx(0.0)
 
     def test_returns_nan_with_only_one_successful_run(self):
         trajs = [["a", "b"], ["c", "d"]]
         successes = [1, 0]
-        C_success, _ = compute_sequence_consistency(trajs, successes)
+        C_success = compute_sequence_consistency(trajs, successes)
         assert math.isnan(C_success)
-
-    def test_failure_sequence_consistency_computed_separately(self):
-        trajs = [["x", "y", "z"], ["x", "y", "z"], ["a", "b"]]
-        successes = [0, 0, 1]
-        _, C_failure = compute_sequence_consistency(trajs, successes)
-        assert C_failure == pytest.approx(1.0)
 
     def test_partial_overlap_is_between_zero_and_one(self):
         # ["a","b","c"] vs ["a","b","d"]: one substitution out of 3 → similarity 2/3
         trajs = [["a", "b", "c"], ["a", "b", "d"]]
         successes = [1, 1]
-        C_success, _ = compute_sequence_consistency(trajs, successes)
+        C_success = compute_sequence_consistency(trajs, successes)
         assert C_success == pytest.approx(2 / 3, abs=1e-6)
 
     def test_empty_trajectories_are_skipped(self):
         trajs = [[], ["a", "b"], ["a", "b"]]
         successes = [1, 1, 1]
-        C_success, _ = compute_sequence_consistency(trajs, successes)
+        C_success = compute_sequence_consistency(trajs, successes)
         assert C_success == pytest.approx(1.0)
 
 

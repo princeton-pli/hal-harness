@@ -2,121 +2,26 @@
 
 import numpy as np
 import pandas as pd
-from collections import Counter, defaultdict
+from collections import defaultdict
 from typing import Dict, List
 
-from reliability_eval.constants import HARM_REF, SAFETY_LAMBDA
+from reliability_eval.constants import SAFETY_LAMBDA
 from reliability_eval.types import ReliabilityMetrics
 from reliability_eval.metrics.abstention import compute_abstention_metrics
-from reliability_eval.metrics.consistency import compute_consistency_metrics
-from reliability_eval.metrics.predictability import compute_predictability_metrics
+from reliability_eval.metrics.consistency import (
+    compute_consistency_metrics,
+    compute_trajectory_consistency_conditioned,
+    compute_sequence_consistency,
+)
+from reliability_eval.metrics.predictability import (
+    compute_ece_metrics,
+    compute_predictability_metrics,
+)
 from reliability_eval.metrics.robustness import (
     compute_accuracy,
     compute_robustness_ratio,
 )
 from reliability_eval.metrics.safety import compute_safety_metrics
-
-
-def _compute_trajectory_distribution_consistency(
-    trajectories: List[List[str]],
-) -> float:
-    """
-    Compute trajectory distribution consistency (consistency_trajectory_distribution) for a list of trajectories.
-
-    Uses Jensen-Shannon Divergence to measure how similar action distributions are.
-    Returns 1 - mean(JSD), so higher = more consistent.
-    """
-    if len(trajectories) < 2:
-        return np.nan
-
-    # Build action distributions
-    distributions = []
-    all_actions = set()
-
-    for traj in trajectories:
-        if not traj:
-            continue
-        action_counts = Counter(traj)
-        total = len(traj)
-        dist = {a: c / total for a, c in action_counts.items()}
-        distributions.append(dist)
-        all_actions.update(dist.keys())
-
-    if len(distributions) < 2:
-        return np.nan
-
-    all_actions = sorted(list(all_actions))
-
-    # Convert to vectors
-    vectors = []
-    for dist in distributions:
-        vec = np.array([dist.get(a, 0.0) for a in all_actions])
-        vec = vec / (vec.sum() + 1e-10)
-        vectors.append(vec)
-
-    # Compute mean pairwise JS divergence
-    from scipy.spatial.distance import jensenshannon
-
-    js_divs = []
-    for i in range(len(vectors)):
-        for j in range(i + 1, len(vectors)):
-            jsd = jensenshannon(vectors[i], vectors[j]) ** 2  # Square to get divergence
-            js_divs.append(jsd)
-
-    if not js_divs:
-        return np.nan
-
-    mean_jsd = np.mean(js_divs)
-    return 1.0 - mean_jsd  # Convert to consistency score
-
-
-def _compute_trajectory_sequence_consistency(trajectories: List[List[str]]) -> float:
-    """
-    Compute trajectory sequence consistency (consistency_trajectory_sequence) for a list of trajectories.
-
-    Uses normalized Levenshtein (edit) distance to measure sequence similarity.
-    Returns mean pairwise similarity, so higher = more consistent.
-    """
-
-    def levenshtein_distance(s1: List[str], s2: List[str]) -> int:
-        """Compute Levenshtein (edit) distance between two sequences."""
-        if len(s1) < len(s2):
-            s1, s2 = s2, s1
-        if len(s2) == 0:
-            return len(s1)
-
-        prev_row = list(range(len(s2) + 1))
-        for i, c1 in enumerate(s1):
-            curr_row = [i + 1]
-            for j, c2 in enumerate(s2):
-                insertions = prev_row[j + 1] + 1
-                deletions = curr_row[j] + 1
-                substitutions = prev_row[j] + (c1 != c2)
-                curr_row.append(min(insertions, deletions, substitutions))
-            prev_row = curr_row
-        return prev_row[-1]
-
-    def normalized_similarity(s1: List[str], s2: List[str]) -> float:
-        """Compute normalized similarity (1 - normalized_distance)."""
-        if not s1 and not s2:
-            return 1.0
-        max_len = max(len(s1), len(s2))
-        if max_len == 0:
-            return 1.0
-        dist = levenshtein_distance(s1, s2)
-        return 1.0 - (dist / max_len)
-
-    valid_trajs = [t for t in trajectories if t]
-    if len(valid_trajs) < 2:
-        return np.nan
-
-    similarities = []
-    for i in range(len(valid_trajs)):
-        for j in range(i + 1, len(valid_trajs)):
-            sim = normalized_similarity(valid_trajs[i], valid_trajs[j])
-            similarities.append(sim)
-
-    return np.mean(similarities) if similarities else np.nan
 
 
 def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
@@ -205,6 +110,18 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
                     {"time": total_time, "cost": total_cost, "num_actions": num_actions}
                 )
 
+    def _compute_c_res(times_s, actions_s):
+        cvs = []
+        if len(times_s) >= 2:
+            mt = np.mean(times_s)
+            if mt > 0:
+                cvs.append(np.std(times_s, ddof=1) / mt)
+        if len(actions_s) >= 2:
+            ma = np.mean(actions_s)
+            if ma > 0:
+                cvs.append(np.std(actions_s, ddof=1) / ma)
+        return np.clip(np.exp(-np.mean(cvs)), 0.0, 1.0) if cvs else np.nan
+
     # Compute metrics per level
     metrics = {
         # Basic
@@ -275,8 +192,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
         if len(trajectories) >= 2:
             trajs = [t[0] for t in trajectories if t[0]]  # Extract action lists
             if len(trajs) >= 2:
+                # Pass all-ones successes: compute consistency over all trajectories at this level
                 consistency_trajectory_distribution = (
-                    _compute_trajectory_distribution_consistency(trajs)
+                    compute_trajectory_consistency_conditioned(trajs, [1] * len(trajs))
                 )
                 if not np.isnan(consistency_trajectory_distribution):
                     metrics["consistency_trajectory_distribution_by_level"][level] = (
@@ -287,8 +205,9 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
         if len(trajectories) >= 2:
             trajs = [t[0] for t in trajectories if t[0]]
             if len(trajs) >= 2:
-                consistency_trajectory_sequence = (
-                    _compute_trajectory_sequence_consistency(trajs)
+                # Pass all-ones successes: compute consistency over all trajectories at this level
+                consistency_trajectory_sequence = compute_sequence_consistency(
+                    trajs, [1] * len(trajs)
                 )
                 if not np.isnan(consistency_trajectory_sequence):
                     metrics["consistency_trajectory_sequence_by_level"][level] = (
@@ -313,18 +232,6 @@ def compute_level_stratified_metrics(runs: List[Dict]) -> Dict:
         if resources and len(resources) >= 2:
             times = [r["time"] for r in resources if r["time"] > 0]
             n_actions = [r["num_actions"] for r in resources if r["num_actions"] > 0]
-
-            def _compute_c_res(times_s, actions_s):
-                cvs = []
-                if len(times_s) >= 2:
-                    mt = np.mean(times_s)
-                    if mt > 0:
-                        cvs.append(np.std(times_s, ddof=1) / mt)
-                if len(actions_s) >= 2:
-                    ma = np.mean(actions_s)
-                    if ma > 0:
-                        cvs.append(np.std(actions_s, ddof=1) / ma)
-                return np.clip(np.exp(-np.mean(cvs)), 0.0, 1.0) if cvs else np.nan
 
             consistency_resource_level = _compute_c_res(times, n_actions)
             if not np.isnan(consistency_resource_level):
@@ -460,26 +367,11 @@ def compute_ece_for_level(
     """Compute Expected Calibration Error for a subset of tasks."""
     if not confidences:
         return 0.0
-
-    confidences = np.array(confidences)
-    outcomes = np.array(outcomes)
-
-    bin_boundaries = np.linspace(0, 1, n_bins + 1)
-    ece = 0.0
-    total = len(confidences)
-
-    for i in range(n_bins):
-        in_bin = (confidences > bin_boundaries[i]) & (
-            confidences <= bin_boundaries[i + 1]
-        )
-        prop_in_bin = np.sum(in_bin) / total
-
-        if np.sum(in_bin) > 0:
-            avg_conf = np.mean(confidences[in_bin])
-            avg_acc = np.mean(outcomes[in_bin])
-            ece += prop_in_bin * abs(avg_acc - avg_conf)
-
-    return ece
+    result = compute_ece_metrics(
+        np.array(confidences), np.array(outcomes), n_bins=n_bins
+    )
+    ece = result.get("ece")
+    return ece if ece is not None and not np.isnan(ece) else 0.0
 
 
 def compute_consistency_by_level(runs: List[Dict]) -> Dict:
@@ -646,7 +538,6 @@ def compute_robustness_by_level(
 def analyze_agent(
     agent_name: str,
     run_data: Dict[str, List[Dict]],
-    harm_ref: float = HARM_REF,
     safety_lambda: float = SAFETY_LAMBDA,
 ) -> ReliabilityMetrics:
     """Analyze all reliability metrics for a single agent."""
@@ -790,7 +681,7 @@ def analyze_agent(
 
     # === SAFETY ===
     safety = compute_safety_metrics(
-        primary_runs, harm_ref=harm_ref, safety_lambda=safety_lambda
+        primary_runs, safety_lambda=safety_lambda
     )
     metrics.safety_harm_severity = safety["safety_harm_severity"]
     metrics.safety_compliance = safety["safety_compliance"]
@@ -845,7 +736,6 @@ def analyze_agent(
 
 def analyze_all_agents(
     results: Dict[str, Dict],
-    harm_ref: float = HARM_REF,
     safety_lambda: float = SAFETY_LAMBDA,
 ) -> List[ReliabilityMetrics]:
     """Analyze all agents."""
@@ -854,7 +744,7 @@ def analyze_all_agents(
     for agent_name, run_data in results.items():
         print(f"\n📊 Analyzing {agent_name}...")
         metrics = analyze_agent(
-            agent_name, run_data, harm_ref=harm_ref, safety_lambda=safety_lambda
+            agent_name, run_data, safety_lambda=safety_lambda
         )
         all_metrics.append(metrics)
 
