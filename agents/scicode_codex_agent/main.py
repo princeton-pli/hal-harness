@@ -1,75 +1,124 @@
-"""
-SciCode Codex Agent — uses the OpenAI API with iterative self-correction.
-
-Unlike the zero-shot agent, this agent generates code, runs it locally to
-check for errors, and feeds errors back to the model for correction.
-This gives the LLM a chance to fix its own mistakes without needing
-external tools like the Codex CLI.
-"""
+"""SciCode Codex Agent — solves tasks by invoking Codex CLI."""
 
 import os
+import platform
 import subprocess
 import sys
 import tempfile
-from openai import OpenAI
 from pathlib import Path
 from typing import Any, Dict
 
 PYTHON = sys.executable
+AGENT_DIR = Path(__file__).resolve().parent
 
 
 def extract_code(response_text: str) -> str:
-    """Extract Python code from an LLM response, stripping markdown fences."""
+    """Extract Python code from a response, stripping markdown fences."""
     code = response_text.strip()
     if "```python" in code:
         code = code.split("```python", 1)[1]
+    elif code.startswith("```"):
+        code = code.split("```", 1)[1]
     if "```" in code:
         code = code.split("```", 1)[0]
     return code.strip()
 
 
 def test_code(code: str, dependencies: str, timeout: int = 30) -> tuple[bool, str]:
-    """Run generated code in a subprocess to check for syntax/import/runtime errors."""
+    """Run generated code in a subprocess to check for basic errors."""
     test_script = f"{dependencies}\n\n{code}\n\nprint('OK')\n"
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(test_script)
-        f.flush()
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as script_file:
+        script_file.write(test_script)
+        script_file.flush()
         try:
             result = subprocess.run(
-                [PYTHON, f.name],
-                capture_output=True, text=True, timeout=timeout,
+                [PYTHON, script_file.name],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
             )
             if result.returncode == 0:
                 return True, ""
-            return False, result.stderr[-1000:]
+            return False, (result.stderr or result.stdout)[-1000:]
         except subprocess.TimeoutExpired:
             return False, "Execution timed out"
         finally:
-            os.unlink(f.name)
+            os.unlink(script_file.name)
 
 
-def call_llm(client: OpenAI, model: str, messages: list[dict],
-             reasoning_effort: str = None) -> str:
-    """Call the OpenAI API and return the response text."""
-    if "codex" in model:
-        prompt = "\n\n".join(
-            m["content"] for m in messages if m["role"] == "user"
+def run_codex_cli(
+    prompt: str,
+    model_name: str,
+    codex_bin: str,
+    codex_timeout: int,
+    codex_working_dir: Path | None = None,
+) -> str:
+    """Run Codex CLI in non-interactive mode and return the final message."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as out_file:
+        out_path = Path(out_file.name)
+
+    command = [codex_bin, "exec", "--skip-git-repo-check", "-"]
+    if model_name:
+        command.extend(["-m", model_name])
+    if codex_working_dir:
+        command.extend(["-C", str(codex_working_dir)])
+    command.extend(["-o", str(out_path)])
+
+    def _run_cmd(command_prefix: list[str] | None = None) -> subprocess.CompletedProcess:
+        full_command = [*(command_prefix or []), *command]
+        return subprocess.run(
+            full_command,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=codex_timeout,
         )
-        kwargs = {"model": model, "input": prompt}
-        if reasoning_effort:
-            kwargs["reasoning"] = {"effort": reasoning_effort}
-        # Use a separate unpatched client for the Responses API to avoid
-        # weave monkey-patching issues that can cause hangs.
-        raw_client = OpenAI(timeout=120.0)
-        response = raw_client.responses.create(**kwargs)
-        return response.output_text
-    else:
-        kwargs = {"model": model, "messages": messages}
-        if reasoning_effort:
-            kwargs["reasoning_effort"] = reasoning_effort
-        response = client.chat.completions.create(**kwargs)
-        return response.choices[0].message.content
+
+    try:
+        completed = _run_cmd()
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"Codex CLI not found at '{codex_bin}'") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Codex CLI timed out after {codex_timeout}s") from exc
+
+    try:
+        output_text = out_path.read_text(encoding="utf-8").strip() if out_path.exists() else ""
+    finally:
+        if out_path.exists():
+            os.unlink(out_path)
+
+    if completed.returncode != 0:
+        stderr_text = (completed.stderr or completed.stdout or "").strip()
+        # In x86_64 Python on Apple Silicon, Codex can request darwin-x64 optional
+        # deps even when arm64 Codex is installed. Retry explicitly under arm64.
+        if (
+            "Missing optional dependency @openai/codex-darwin-x64" in stderr_text
+            and sys.platform == "darwin"
+            and platform.machine() == "x86_64"
+        ):
+            try:
+                completed = _run_cmd(["arch", "-arm64"])
+            except FileNotFoundError as exc:
+                raise RuntimeError("Could not run Codex with arm64 fallback") from exc
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError(f"Codex CLI timed out after {codex_timeout}s") from exc
+
+            try:
+                output_text = (
+                    out_path.read_text(encoding="utf-8").strip() if out_path.exists() else ""
+                )
+            finally:
+                if out_path.exists():
+                    os.unlink(out_path)
+
+        if completed.returncode != 0:
+            stderr_tail = (completed.stderr or completed.stdout or "").strip()[-1000:]
+            raise RuntimeError(f"Codex CLI failed (exit {completed.returncode}): {stderr_tail}")
+
+    if not output_text:
+        output_text = (completed.stdout or "").strip()
+    return output_text
 
 
 def build_subtask_prompt(task_data: dict, step_index: int,
@@ -92,6 +141,25 @@ def build_subtask_prompt(task_data: dict, step_index: int,
 
     step_desc = f"{description}\n{background}" if with_background else description
 
+    style_instructions = (
+        "Write ONLY the function for this step. No imports, no previous functions, no test code.\n"
+        "The function must match the provided header exactly.\n"
+        "Respond with ```python``` code block.\n\n"
+        "Additional strictness:\n"
+        "- Do not add defensive input-validation branches unless explicitly requested.\n"
+        "- Preserve numerically standard scientific behavior (no silent NaN/inf fallbacks).\n"
+        "- Keep runtime efficient; avoid unnecessary nested loops or extra passes.\n"
+        "- If a standard formula is implied, implement that formula directly."
+    )
+    lowered_step = step_desc.lower()
+    if "lennard-jones" in lowered_step or "minimum image" in lowered_step:
+        style_instructions += (
+            "\n\nPhysics conventions to follow when relevant:\n"
+            "- Minimum image displacement: d -= L * np.rint(d / L)\n"
+            "- LJ force vector: 24*epsilon*(2*(sigma/r)^12 - (sigma/r)^6)/r^2 * r_vec\n"
+            "- Apply cutoff cleanly (typically zero for r >= rc)."
+        )
+
     return f"""You are solving a scientific programming problem step by step.
 
 DEPENDENCIES (already available — do NOT include these imports in your code):
@@ -108,9 +176,7 @@ FUNCTION HEADER:
 
 {return_line}
 
-Write ONLY the function for this step. No imports, no previous functions, no test code.
-The function must match the provided header exactly.
-Respond with ```python``` code block."""
+{style_instructions}"""
 
 
 def build_hard_prompt(task_data: dict, dependencies: str) -> str:
@@ -119,6 +185,16 @@ def build_hard_prompt(task_data: dict, dependencies: str) -> str:
     header = task_data["sub_steps"][last_step - 1]["function_header"]
     return_line = task_data["sub_steps"][last_step - 1]["return_line"]
     problem_desc = task_data["problem_description_main"]
+
+    style_instructions = (
+        "Write the complete solution with all helper functions.\n"
+        "Do NOT include imports — the dependencies above are already available.\n"
+        "Respond with ```python``` code block.\n\n"
+        "Additional strictness:\n"
+        "- Do not add speculative input-validation branches unless requested.\n"
+        "- Prefer standard scientific formulas and stable numerics.\n"
+        "- Keep implementations efficient and avoid avoidable heavy loops."
+    )
 
     return f"""You are solving a scientific programming problem.
 
@@ -133,31 +209,43 @@ FUNCTION HEADER:
 
 {return_line}
 
-Write the complete solution with all helper functions.
-Do NOT include imports — the dependencies above are already available.
-Respond with ```python``` code block."""
+{style_instructions}"""
 
 
-def generate_with_correction(client: OpenAI, model: str, prompt: str,
-                             dependencies: str, max_attempts: int = 3,
-                             reasoning_effort: str = None) -> str:
-    """Generate code, test it, and self-correct if there are errors."""
-    messages = [{"role": "user", "content": prompt}]
+def generate_with_correction(
+    model_name: str,
+    prompt: str,
+    dependencies: str,
+    codex_bin: str,
+    codex_timeout: int,
+    max_attempts: int = 3,
+    codex_working_dir: Path | None = None,
+) -> str:
+    """Generate code via Codex CLI, test it, and self-correct if needed."""
+    current_prompt = prompt
+    last_code = ""
 
     for attempt in range(max_attempts):
-        response_text = call_llm(client, model, messages, reasoning_effort)
+        response_text = run_codex_cli(
+            prompt=current_prompt,
+            model_name=model_name,
+            codex_bin=codex_bin,
+            codex_timeout=codex_timeout,
+            codex_working_dir=codex_working_dir,
+        )
         code = extract_code(response_text)
 
         if not code:
             print(f"    attempt {attempt+1}: empty response, retrying")
-            messages.append({"role": "assistant", "content": response_text})
-            messages.append({
-                "role": "user",
-                "content": "Your response did not contain a Python code block. "
-                           "Please respond with the function inside ```python``` fences.",
-            })
+            current_prompt = (
+                f"{current_prompt}\n\n"
+                f"Previous response:\n{response_text}\n\n"
+                "Your response did not contain Python code. Respond ONLY with a "
+                "```python``` code block."
+            )
             continue
 
+        last_code = code
         success, error_msg = test_code(code, dependencies)
         if success:
             print(f"    attempt {attempt+1}: code passes")
@@ -166,26 +254,30 @@ def generate_with_correction(client: OpenAI, model: str, prompt: str,
         print(f"    attempt {attempt+1}: error — {error_msg[:120]}")
 
         if attempt < max_attempts - 1:
-            messages.append({"role": "assistant", "content": response_text})
-            messages.append({
-                "role": "user",
-                "content": f"The code above produced this error when tested:\n\n"
-                           f"```\n{error_msg}\n```\n\n"
-                           f"Fix the error and respond with the corrected function "
-                           f"inside ```python``` fences. Write ONLY the function, "
-                           f"no imports, no test code.",
-            })
+            current_prompt = (
+                f"{current_prompt}\n\n"
+                f"Previous attempt:\n```python\n{code}\n```\n\n"
+                "This produced the following error during local execution:\n"
+                f"```\n{error_msg}\n```\n\n"
+                "Fix the error and respond ONLY with corrected Python code inside "
+                "```python``` fences. No imports, no tests."
+            )
 
-    return code
+    return last_code
 
 
 def run(input: Dict[str, Any], **kwargs) -> Dict[str, str]:
     assert "model_name" in kwargs, "model_name is required"
 
-    client = OpenAI()
     model_name = kwargs["model_name"]
-    reasoning_effort = kwargs.get("reasoning_effort")
     benchmark_name = kwargs.get("benchmark_name", "scicode")
+    codex_bin = kwargs.get("codex_bin", "codex")
+    codex_timeout = int(kwargs.get("codex_timeout", 300))
+    max_attempts = int(kwargs.get("max_attempts", 3))
+    codex_working_dir_raw = kwargs.get("codex_working_dir")
+    codex_working_dir = (
+        Path(codex_working_dir_raw).resolve() if codex_working_dir_raw else None
+    )
 
     results = {}
 
@@ -193,11 +285,16 @@ def run(input: Dict[str, Any], **kwargs) -> Dict[str, str]:
         for task_id, task in input.items():
             print(f"Generating {task_id} (hard mode)...")
             dependencies = task["required_dependencies"]
-            prompt = build_hard_prompt(task, dependencies)
+            prompt = build_hard_prompt(task_data=task, dependencies=dependencies)
 
             code = generate_with_correction(
-                client, model_name, prompt, dependencies,
-                reasoning_effort=reasoning_effort,
+                model_name=model_name,
+                prompt=prompt,
+                dependencies=dependencies,
+                codex_bin=codex_bin,
+                codex_timeout=codex_timeout,
+                max_attempts=max_attempts,
+                codex_working_dir=codex_working_dir,
             )
             results[task_id] = code
 
@@ -219,7 +316,7 @@ def run(input: Dict[str, Any], **kwargs) -> Dict[str, str]:
                     or (task_id == "62" and i == 0)
                     or (task_id == "76" and i == 2)
                 ):
-                    step_code = Path(f"{task_id}.{i + 1}.txt").read_text(
+                    step_code = (AGENT_DIR / f"{task_id}.{i + 1}.txt").read_text(
                         encoding="utf-8"
                     )
                     previous_code.append(step_code)
@@ -237,17 +334,19 @@ def run(input: Dict[str, Any], **kwargs) -> Dict[str, str]:
 
                 print(f"  step {task_id}.{i+1}:")
                 generated_code = generate_with_correction(
-                    client, model_name, prompt, dependencies,
-                    reasoning_effort=reasoning_effort,
+                    model_name=model_name,
+                    prompt=prompt,
+                    dependencies=dependencies,
+                    codex_bin=codex_bin,
+                    codex_timeout=codex_timeout,
+                    max_attempts=max_attempts,
+                    codex_working_dir=codex_working_dir,
                 )
 
                 previous_code.append(generated_code)
                 full_code += f"\n{generated_code}"
 
-                if easy:
-                    steps_results[f"{task_id}.{i + 1}"] = full_code
-                else:
-                    steps_results[f"{task_id}.{i + 1}"] = dependencies + full_code
+                steps_results[f"{task_id}.{i + 1}"] = dependencies + full_code
 
             results[task_id] = steps_results
 
