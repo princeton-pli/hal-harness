@@ -33,8 +33,8 @@ def supports_stop_parameter(model_id: str) -> bool:
     Not supported with reasoning models openai/o3, openai/o4-mini, and gpt-5 (and their versioned variants).
     """
     model_name = model_id.split("/")[-1]
-    # o3, o4-mini, and gpt-5 (including versioned variants) don't support stop parameter
-    pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5[-\d]*)$"
+    # o3, o4-mini, and gpt-5 (including all variants like gpt-5-mini) don't support stop parameter
+    pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5.*)$"
     return not re.match(pattern, model_name)
 
 
