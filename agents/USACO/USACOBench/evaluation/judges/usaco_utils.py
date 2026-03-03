@@ -1,7 +1,6 @@
 # source: https://github.com/openai/human-eval/blob/master/human_eval/execution.py
 
-from typing import Optional, Callable, Dict
-import ast
+from typing import Optional, Dict
 import contextlib
 import faulthandler
 import io
@@ -279,7 +278,6 @@ def reliability_guard(maximum_memory_bytes: Optional[int] = None):
     os.getcwd = None
     os.chdir = None
 
-    import shutil
     shutil.rmtree = None
     shutil.move = None
     shutil.chown = None

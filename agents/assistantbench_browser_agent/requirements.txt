@@ -1,4 +1,9 @@
 weave
-browser_use
-asynchio
+browser_use==0.1.41
+asyncio
 langchain
+langchain_openai
+langchain_anthropic
+langchain_google_genai
+langchain_together
+playwright 

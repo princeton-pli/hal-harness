@@ -9,19 +9,26 @@ description = "Agent evaluation harness with optional benchmark support"
 requires-python = ">=3.11"
 dependencies = [
     "datasets",
-    "weave==0.51.41",
+    "weave>=0.52.0",
     "gql<4",
     "huggingface-hub",
     "python-dotenv",
     "setuptools>=48.0.0",
-    "inspect_ai @ git+https://github.com/UKGovernmentBEIS/inspect_ai@d3a242f74c8a4f42a86d1219eaca12ab620c3be2",
-    "inspect-evals @ git+https://github.com/benediktstroebl/inspect_evals@15a81e27ac7161a39e28f247157e36036a61ef18",
     "tenacity>=8.2.0",
     "docker>=7.1.0",
     "cryptography>=42.0.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.12.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "scipy>=1.10.0",
+    "pandas>=2.0.0",
+]
 swebench = [
     "swebench @ git+https://github.com/SWE-bench/SWE-bench@006a760a95c9cc11e987884d7e311d74a16db88a",
 ]
@@ -30,7 +37,9 @@ azure = [
     "azure-mgmt-network>=25.1.0",
     "azure-mgmt-resource>=23.0.1",
     "azure-identity>=1.12.0",
+    "azure-monitor-ingestion>=1.0.3",
     "paramiko==3.5.0",
+    "requests>=2.31.0",  # For Azure VM detection via IMDS
 ]
 appworld = [
     "appworld @ git+https://github.com/stonybrooknlp/appworld.git",
@@ -135,4 +144,24 @@ hal-upload = "hal.utils.upload:upload_results"
 hal-decrypt = "hal.utils.decrypt:decrypt_cli"
 
 [tool.setuptools]
-packages = ["hal"]
+packages = ["hal", "reliability_eval"]
+
+[tool.ruff]
+# Ignore all git submodules and external agent code
+extend-exclude = [
+    "agents/Agentless",
+    "agents/auto-code-rover",
+    "agents/Enigma",
+    "agents/open_deep_research",
+    "agents/Moatless",
+    "agents/SWE-agent-v1.0",
+    "agents/SWE-agent",
+    "agents/USACO", # this isn't a submodule but appears to be copy/pasted from
+                    # another git repo: https://github.com/princeton-nlp/USACO/tree/main/USACOBench
+                    # in this commit: https://github.com/princeton-pli/hal-harness/commit/7cc8fe4abc57acbfe665353a3b7ce30861401cdc
+    "agents/usaco_bedrock_models",
+    "hal/benchmarks/SciCode",
+    "hal/benchmarks/scienceagentbench/ScienceAgentBench",
+    "hal/benchmarks/SWE-bench",
+    "hal/benchmarks/USACO",
+]

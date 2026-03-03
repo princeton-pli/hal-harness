@@ -8,7 +8,10 @@ class AppWorldBenchmark(BaseBenchmark):
     """AppWorld benchmark implementation"""
 
     def __init__(
-        self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = "appworld_test_normal"
+        self,
+        agent_dir: str,
+        config: Dict[str, Any],
+        benchmark_name: str = "appworld_test_normal",
     ):
         self.benchmark_name = benchmark_name
         if benchmark_name not in ["appworld_test_normal", "appworld_test_challenge"]:
@@ -55,7 +58,9 @@ class AppWorldBenchmark(BaseBenchmark):
         with open(file_path) as file:
             return [line.strip() for line in file.readlines()]
 
-    def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
+    def evaluate_output(
+        self, agent_output: Dict[str, Any], run_id: str
+    ) -> Dict[str, Any]:
         # NOTE: world.evaluate().to_dict() expected to to be called in the agent code itself.
         return agent_output
 

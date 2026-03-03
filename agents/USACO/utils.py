@@ -1,8 +1,7 @@
-from typing import List, Dict, Any, Tuple, Union, Callable
+from typing import List, Dict, Any, Union
 import pickle
 import json
 from datetime import datetime
-from typing import Dict, List
 from USACOBench.evaluation.metrics import pass_at_k
 from USACOBench.prompts import solve_prompt_fn, retrieval_prompt_fn, reflexion_prompt_fn, RetrievalType
 from rank_bm25 import BM25Okapi

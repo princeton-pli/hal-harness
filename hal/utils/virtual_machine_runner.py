@@ -1,0 +1,310 @@
+import os
+import json
+import asyncio
+import time
+import tempfile
+import shutil
+import uuid
+import logging
+from typing import Dict, Any, Optional
+from .virtual_machine_manager import VirtualMachineManager
+from ..benchmarks.base_benchmark import BaseBenchmark
+import traceback
+
+# Set up loggers
+logger = logging.getLogger(__name__)
+
+
+class VirtualMachineRunner:
+    """Handles running agents on Azure VMs"""
+
+    def __init__(
+        self,
+        log_dir: str,
+        max_concurrent: int = 1,
+        benchmark: Optional[BaseBenchmark] = None,
+    ):
+        self.max_concurrent = max_concurrent
+        self.log_dir = log_dir
+        self.vm_manager = VirtualMachineManager()
+        self._semaphore = asyncio.Semaphore(max_concurrent)
+        self._file_lock = asyncio.Lock()
+        self.benchmark = benchmark
+
+    async def fetch_agent_logs(self, vm_name, ssh_private_key_path, task_id):
+        """Fetch the latest agent trace log from a VM and store it locally."""
+        try:
+            result = await asyncio.to_thread(self.vm_manager.get_agent_trace, vm_name)
+
+            if result:
+                # Log the agent output through logger
+                logger.info(
+                    f"Agent output for task {task_id} on VM {vm_name}:\n{result}"
+                )
+
+                if self.log_dir:
+                    trace_dir = os.path.join(self.log_dir, "agent_logs")
+                    os.makedirs(trace_dir, exist_ok=True)
+
+                    # Write/update the trace file
+                    trace_path = os.path.join(trace_dir, f"{task_id}_log.log")
+                    with open(trace_path, "w") as f:
+                        f.write(result)
+
+                    # Also write to a combined trace file
+                    combined_path = os.path.join(trace_dir, "combined_logs.log")
+                    with open(combined_path, "a") as f:
+                        f.write(
+                            f"\n=== {task_id} @ {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n"
+                        )
+                        f.write(result)
+                        f.write("\n")
+
+        except Exception as e:
+            logger.error(f"Error fetching logs for {task_id}: {e}")
+
+    async def run_agent(
+        self,
+        dataset: Dict[str, Any],
+        agent_function: str,
+        agent_dir: str,
+        agent_args: Dict[str, Any],
+        run_id: str,
+        benchmark: Optional[BaseBenchmark] = None,
+        timeout: int = 7200,  # FIXME: rm
+    ) -> Dict[str, Any]:
+        """Run agent on all tasks using Azure VMs"""
+        self.benchmark = benchmark
+        results = {}
+        vm_names = []
+
+        async def process_task(task_id: str, input_data: Any) -> Optional[Dict]:
+            # Create unique VM name
+            vm_name = (
+                f"agent-{benchmark.benchmark_name}-{uuid.uuid4()}"[:32]
+                .lower()
+                .replace("_", "-")
+            )
+            vm_names.append(vm_name)
+
+            try:
+                # Check if the task requires GPU
+                gpu_required = False
+                if self.benchmark and hasattr(self.benchmark, "benchmark"):
+                    task_benchmark = self.benchmark.benchmark.get(task_id, {})
+                    gpu_required = task_benchmark.get("gpu", False)
+
+                # Create VM based on GPU requirement
+                logger.info(
+                    f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} with GPU={gpu_required}"
+                )
+                await asyncio.to_thread(
+                    self.vm_manager.create_virtual_machine_by_name,
+                    vm_name=vm_name,
+                    has_gpu=gpu_required,
+                )
+
+                # Create temp directory with all necessary files
+                temp_dir = tempfile.mkdtemp()
+                try:
+                    # Create input and args files
+                    input_file = os.path.join(temp_dir, "input.json")
+                    args_file = os.path.join(temp_dir, "agent_args.json")
+
+                    with open(input_file, "w") as f:
+                        json.dump({task_id: input_data}, f)
+                    with open(args_file, "w") as f:
+                        json.dump(agent_args, f)
+
+                    # Copy task-specific files if they exist in input_data
+                    if isinstance(input_data, dict) and "files" in input_data:
+                        for dest_path, src_path in input_data["files"].items():
+                            # Remove 'root' prefix and leading slash if present
+                            dest_path = dest_path.replace("/root/", "").lstrip("/")
+
+                            # Create destination directory structure in temp_dir
+                            dest_full_path = os.path.join(temp_dir, dest_path)
+                            os.makedirs(os.path.dirname(dest_full_path), exist_ok=True)
+
+                            # Copy the file
+                            try:
+                                if os.path.isdir(src_path):
+                                    shutil.copytree(
+                                        src_path, dest_full_path, dirs_exist_ok=True
+                                    )
+                                else:
+                                    shutil.copy2(src_path, dest_full_path)
+                            except Exception as e:
+                                logger.warning(
+                                    f"Task {task_id}: Warning: Failed to copy task file {src_path} to {dest_full_path}: {e}"
+                                )
+
+                    # Copy setup script if it exists
+                    if self.benchmark and self.benchmark.setup_script:
+                        setup_script_src = os.path.join(self.benchmark.setup_script)
+                        if os.path.exists(setup_script_src):
+                            setup_script_dest = os.path.join(
+                                temp_dir, "setup_script.sh"
+                            )
+                            shutil.copy2(setup_script_src, setup_script_dest)
+                            os.chmod(setup_script_dest, 0o755)
+
+                    # Copy all files to VM
+                    logger.info(
+                        f"Task {task_id}: Copying temporary directory files to VM {vm_name}"
+                    )
+                    await asyncio.to_thread(
+                        self.vm_manager.compress_and_copy_files_to_vm,
+                        vm_name,
+                        temp_dir,
+                    )
+                    logger.info(
+                        f"Task {task_id}: Copying agent directory files to VM {vm_name}"
+                    )
+                    await asyncio.to_thread(
+                        self.vm_manager.compress_and_copy_files_to_vm,
+                        vm_name,
+                        agent_dir,
+                    )
+                    logger.info(
+                        f"Task {task_id}: Finished copying all files to VM {vm_name}"
+                    )
+
+                finally:
+                    shutil.rmtree(temp_dir)
+
+                # Run agent on VM
+                await asyncio.to_thread(
+                    self.vm_manager.run_agent_on_virtual_machine,
+                    vm_name,
+                    agent_function,
+                    task_id,
+                    input_data,
+                    agent_args,
+                    run_id,
+                    self.log_dir,
+                    benchmark,
+                )
+
+                # Wait for completion or timeout
+                start_time = time.time()
+                task_is_complete = None
+
+                while time.time() - start_time < timeout:
+                    try:
+                        logger.info(
+                            f"Task {task_id}: Checking task completion on VM {vm_name}"
+                        )
+                        # Fetch and store trace logs
+                        await self.fetch_agent_logs(
+                            vm_name=vm_name,
+                            ssh_private_key_path=os.getenv("SSH_PRIVATE_KEY_PATH"),
+                            task_id=task_id,
+                        )
+
+                        task_is_complete = await asyncio.to_thread(
+                            self.vm_manager.check_task_completion,
+                            vm_name,
+                        )
+                        if task_is_complete is True:
+                            logger.info(
+                                f"Task {task_id}: Task {task_id} completed on VM {vm_name}"
+                            )
+                            break
+                    except Exception as e:
+                        logger.error(
+                            f"Task {task_id}: Error checking task completion on {vm_name}: {e}"
+                        )
+                    await asyncio.sleep(30)  # Check every 30 seconds
+
+                if task_is_complete is None:
+                    logger.warning(f"Task {task_id}: timed out after {timeout} seconds")
+                    return {task_id: f"TIMEOUT after {timeout} seconds"}
+
+                # Copy results back
+                if self.log_dir:
+                    logger.info(
+                        f"Task {task_id}: Copying results from VM {vm_name} to local directory"
+                    )
+                    dest_dir = os.path.join(self.log_dir, f"{task_id}")
+                    os.makedirs(dest_dir, exist_ok=True)
+                    await asyncio.to_thread(
+                        self.vm_manager.copy_files_from_vm,
+                        vm_name,
+                        dest_dir,
+                    )
+
+                    # Read the output.json file from the copied directory
+                    output_file = os.path.join(dest_dir, "output.json")
+                    if os.path.exists(output_file):
+                        with open(output_file, "r") as f:
+                            result = json.load(f)
+                    else:
+                        # FIXME: this seems to show up, need to debug
+                        logger.warning(
+                            f"Task {task_id}: output.json not found in {dest_dir}"
+                        )
+                        result = {
+                            task_id: "ERROR: output.json not found after copying from VM"
+                        }
+                else:
+                    # If no log_dir, we can't copy results, so return an error
+                    logger.error(
+                        f"Task {task_id}: Cannot retrieve results - no log_dir specified"
+                    )
+                    result = {
+                        task_id: "ERROR: Cannot retrieve results - no log_dir specified"
+                    }
+
+                return result
+
+            except Exception as e:
+                logger.error(f"Error processing task {task_id} on VM {vm_name}: {e}")
+                traceback.print_exc()
+                return {task_id: f"ERROR: {str(e)}"}
+
+            finally:
+                # Cleanup VM
+                try:
+                    await asyncio.to_thread(
+                        self.vm_manager.delete_virtual_machine_by_name, vm_name
+                    )
+                except Exception as e:
+                    logger.error(f"Task {task_id}: Error deleting VM {vm_name}: {e}")
+
+        # Run tasks in parallel with semaphore to limit concurrency
+        semaphore = asyncio.Semaphore(self.max_concurrent)
+
+        async def run_with_semaphore(task_id, input_data):
+            async with semaphore:
+                return await process_task(task_id, input_data)
+
+        # Create tasks for all inputs
+        tasks = [
+            run_with_semaphore(task_id, input_data)
+            for task_id, input_data in dataset.items()
+        ]
+
+        # Run all tasks and gather results
+        results = await asyncio.gather(*tasks)
+
+        # Merge results
+        merged_results = {}
+        for result in results:
+            if result:
+                merged_results.update(result)
+
+        # Save raw submissions if log_dir provided
+        if self.log_dir:
+            raw_submissions_path = os.path.join(
+                self.log_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl"
+            )
+            os.makedirs(self.log_dir, exist_ok=True)
+
+            # append to submissions file
+            with open(raw_submissions_path, "a") as f:
+                for task_id, result in merged_results.items():
+                    json.dump({task_id: result}, f)
+                    f.write("\n")
+
+        return merged_results

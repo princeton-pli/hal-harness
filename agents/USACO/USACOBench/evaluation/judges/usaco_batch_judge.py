@@ -1,15 +1,10 @@
 import numpy as np
-import time
 from datetime import datetime
-import random
 from tqdm import tqdm
 from typing import List, Dict, Any, Union
-from abc import ABC, abstractmethod
+from abc import ABC
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-import subprocess
-import os
-import traceback
 
 from USACOBench.evaluation.result_type import ResultType
 from .usaco_utils import check_correctness, get_test_in_out_files

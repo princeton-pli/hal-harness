@@ -5,9 +5,7 @@ import subprocess
 from functools import partial
 import multiprocessing
 from multiprocessing import Queue
-from copy import deepcopy
 
-import threading
 
 # TODO deal with stderr
 

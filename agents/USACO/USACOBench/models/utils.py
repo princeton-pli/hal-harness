@@ -1,4 +1,4 @@
-from typing import Any, List, Dict, Union
+from typing import Any, List, Dict
 
 def is_finished(messages: List[Dict[str, Any]]) -> bool:
     '''

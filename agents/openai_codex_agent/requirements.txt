@@ -1,0 +1,4 @@
+# OpenAI Codex agent - minimal dependencies
+# The heavy lifting is done by the Codex CLI (installed separately)
+# tau-bench is needed for taubench benchmark integration
+tau-bench

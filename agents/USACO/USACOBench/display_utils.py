@@ -4,7 +4,6 @@ import ghdiff
 import json
 from IPython.display import Markdown
 
-from .utils import get_code_from_solution
 
 def find_prev_code(messages) -> str:
     '''
