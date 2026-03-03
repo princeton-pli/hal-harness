@@ -1,0 +1,4 @@
+# OpenClaw agent - minimal dependencies
+# The heavy lifting is done by the OpenClaw CLI (installed separately)
+# tau-bench is needed for taubench benchmark integration
+tau-bench
