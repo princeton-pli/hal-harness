@@ -36,7 +36,6 @@ azure = [
     "azure-mgmt-compute>=29.1.0",
     "azure-mgmt-network>=25.1.0",
     "azure-mgmt-resource>=23.0.1",
-    "azure-mgmt-costmanagement>=4.0.0",
     "azure-identity>=1.12.0",
     "azure-monitor-ingestion>=1.0.3",
     "paramiko==3.5.0",
@@ -143,7 +142,7 @@ open_deep_research = [
 hal-eval = "hal.cli:main"
 hal-upload = "hal.utils.upload:upload_results"
 hal-decrypt = "hal.utils.decrypt:decrypt_cli"
-hal-cost-report = "hal.utils.azure_cost_report:main"
+
 
 [tool.setuptools]
 packages = ["hal", "reliability_eval"]
