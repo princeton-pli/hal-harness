@@ -54,6 +54,7 @@ class VirtualMachineManager:
         self.ssh_private_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
         self.ssh_public_key_path = os.getenv("SSH_PUBLIC_KEY_PATH")
         self.network_security_group_name = os.getenv("NETWORK_SECURITY_GROUP_NAME")
+        self.executed_by = os.getenv("EXECUTED_BY")
 
         # Validate all required environment variables
         missing_vars = []
@@ -69,6 +70,8 @@ class VirtualMachineManager:
             missing_vars.append("SSH_PUBLIC_KEY_PATH")
         if not self.network_security_group_name:
             missing_vars.append("NETWORK_SECURITY_GROUP_NAME")
+        if not self.executed_by:
+            missing_vars.append("EXECUTED_BY")
 
         if missing_vars:
             raise ValueError(
