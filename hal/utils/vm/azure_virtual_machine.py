@@ -28,12 +28,14 @@ class AzureVirtualMachine:
         nsg_id: str,
         ssh_public_key: str,
         gpu: bool,
+        tags: dict[str, str] = None,
     ):
         self.name = name
         self.resource_group = resource_group
         self.location = location
         self.vm_size = "Standard_NC4as_T4_v3" if gpu else "Standard_E2as_v5"
         self.gpu = gpu
+        self.tags = tags or {}
 
         # Azure clients
         credential = DefaultAzureCredential()
@@ -91,6 +93,7 @@ class AzureVirtualMachine:
                 "location": self.location,
                 "address_space": {"address_prefixes": ["10.0.0.0/16"]},
                 "subnets": [{"name": subnet_name, "address_prefix": "10.0.0.0/24"}],
+                "tags": self.tags,
             },
         ).result()
         subnet = vnet.subnets[0]
@@ -104,6 +107,7 @@ class AzureVirtualMachine:
                 "location": self.location,
                 "sku": {"name": "Standard"},
                 "public_ip_allocation_method": "Static",
+                "tags": self.tags,
             },
         ).result()
         self.public_ip = public_ip.ip_address
@@ -123,6 +127,7 @@ class AzureVirtualMachine:
                     }
                 ],
                 "network_security_group": {"id": self.nsg_id},
+                "tags": self.tags,
             },
         ).result()
 
@@ -157,6 +162,7 @@ class AzureVirtualMachine:
 
         vm_params = {
             "location": self.location,
+            "tags": self.tags,
             "storage_profile": {
                 "image_reference": image_reference,
                 "os_disk": {"createOption": "FromImage", "diskSizeGB": 80},

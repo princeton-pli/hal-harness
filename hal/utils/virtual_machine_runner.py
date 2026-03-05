@@ -94,6 +94,15 @@ class VirtualMachineRunner:
                     task_benchmark = self.benchmark.benchmark.get(task_id, {})
                     gpu_required = task_benchmark.get("gpu", False)
 
+                # Build resource tags for cost attribution
+                tags = {
+                    "ExecutedBy": os.getenv("EXECUTED_BY", "unknown"),
+                    "BenchmarkName": benchmark.benchmark_name if benchmark else "unknown",
+                    "RunId": run_id,
+                    "TaskId": task_id,
+                    "ManagedBy": "hal-harness",
+                }
+
                 # Create VM based on GPU requirement
                 logger.info(
                     f"Task {task_id}: Creating Azure virtual machine {vm_name} for task {task_id} with GPU={gpu_required}"
@@ -102,6 +111,7 @@ class VirtualMachineRunner:
                     self.vm_manager.create_virtual_machine_by_name,
                     vm_name=vm_name,
                     has_gpu=gpu_required,
+                    tags=tags,
                 )
 
                 # Create temp directory with all necessary files
