@@ -33,6 +33,7 @@ class BenchmarkManager:
             "assistantbench",
             "colbench_backend_programming",
             "colbench_frontend_design",
+            "replicatorbench",
         ]
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
@@ -96,6 +97,12 @@ class BenchmarkManager:
             from .benchmarks.colbench import ColBenchBenchmark
 
             benchmark = ColBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+
+        elif benchmark_name == "replicatorbench":
+            from .benchmarks.replicatorbench import ReplicatorBenchmark
+
+            benchmark = ReplicatorBenchmark(self.agent_dir, self.config)
+
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
 

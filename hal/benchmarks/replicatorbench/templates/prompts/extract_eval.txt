@@ -1,0 +1,251 @@
+
+You are an information verifier. The task you're concerned with is extracting important information about a main claim in a research paper.
+You are given TWO json objects: one extracted and one reference, your task is to score the information (key, value pair) presented in the extraced JSON object based on the (key, value pair) presented in the reference JSON object.
+
+=== START OF EXPLANATION OF WHAT EACH FIELD IN THE JSON MEAN ===
+{extraction_schema}
+=== END OF EXPLANATION OF WHAT EACH FIELD IN THE JSON MEAN ===
+
+Follow the rubrics below for your evaluation of each component in the JSON. The rubric uses a 0-3 scoring scale for all components, where:
+- 3: Exact Match – The extracted information is identical or nearly identical to the reference in the paper. The meaning is preserved completely, with the same level of detail, including all key elements (e.g., variables, relationships, or numerical values). No omissions or additions of unrelated information. 
+- 2: Mostly Similar – The extracted information conveys the same core meaning as the reference, but with different phrasing or structure. Minor details may be omitted, but the essential information is preserved. If the extracted content is a finding that directly supports a hypothesis, consider it equivalent. 
+- 1: Loosely Related – The extracted information has partial overlap with the reference but includes significant differences, omissions of major details, or additions of unrelated information. The core meaning is somewhat preserved but incomplete or altered.
+- 0: No Match – No relevant overlap with the reference, completely incorrect, or missing entirely. 
+
+For fields where the reference is "not stated" or "NA", assign a score of 3 as long as the extracted information reflect similar meaning: "not available", "not stated", etc.
+
+Component-Specific Evaluation Criteria
+- claim
+- - hypothesis:
+- - - Criteria: Matches the testable hypothesis from the claim, with accurate phrasing and detail.
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “The correlation between Gini index and school-effect is positive.” 
+- - - - Extracted: “The correlation between Gini index and school-effect is positive.”
+
+- - statement:
+- - - Criteria: Matches the main claim statement as provided or extracted verbatim.
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 1): 
+- - - - Human: “Schools matter more in poor and unequal countries.” 
+- - - - Extracted: “Educational factors vary by national income.”
+
+- - study_type:
+- - - Criteria: Correctly classifies the study type (e.g., Observational, Experimental, Meta-Analysis), with brief explanation if needed (e.g., "Observational: uses survey data without intervention").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “Observational.” 
+- - - - Extracted: “Observational.”
+
+
+- data
+- - source:
+- - - Criteria: Accurately describes the data source (e.g., "TIMSS 2003 database"), including any specifics.
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 2): 
+- - - - Human: “Trends in International Mathematics and Science Study (TIMSS) 2003.” 
+- - - Extracted: “TIMSS survey data from 2003.”
+
+- - wave_or_subset:
+- - - Criteria: Correctly identifies specific waves, subsets, or time periods (e.g., "2003 wave, excluding Yemen").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 1): 
+- - - - Human: “2003 wave, 25 countries.” 
+- - - - Extracted: “TIMSS data, various countries.”
+
+- - sample_size:
+- - - Criteria: Matches the reported sample size, including breakdowns if applicable (e.g., "98,988 students across 4,369 schools").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “N = 256 participants” 
+- - - - Extracted: “N = 256 participants.”
+
+- - unit_of_analysis:
+- - - Criteria: Correctly states the unit (e.g., "Individual fourth-grade students nested within schools").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 2): 
+- - - - Human: “Students nested in schools.” 
+- - - - Extracted: “Individual students in multilevel structure.”
+
+- - access_details:
+- - - Criteria: Describes access restrictions or processes (e.g., "Publicly accessible via TIMSS website").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 0): 
+- - - - Human: “Restricted database.” 
+- - - - Extracted: “Public survey.”
+
+- - notes:
+- - - Criteria: Includes relevant caveats (e.g., "Exclusion of Yemen due to data issues").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “Nested structure with missing metadata.” 
+- - - - Extracted: “Nested structure with missing metadata.”
+
+- method
+- - description:
+- - - Criteria: Provides a narrative summary of the study conduct (e.g., "Hierarchical linear modeling on cross-national data").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 2): 
+- - - - Human: “Multilevel multivariate analyses.” 
+- - - - Extracted: “Hierarchical models on survey data.”
+
+- - steps:
+- - - Criteria: Lists ordered procedural steps (e.g., "1. Collect TIMSS data; 2. Run HLM").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 1): 
+- - - - Human: “1. Data collection; 2. Analysis.” 
+- - - - Extracted: “Analysis on collected data.”
+
+- - models:
+- - - Criteria: Matches the statistical approach (e.g., "Hierarchical linear modeling").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “Hierarchical linear modeling.” 
+- - - - Extracted: “Hierarchical linear modeling.”
+
+- - outcome_variable:
+- - - Criteria: Matches the dependent variable (e.g., "Math achievement").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 2): 
+- - - - Human: “Math achievement scores.” 
+- - - - Extracted: “Student math scores.”
+
+- - independent_variables:
+- - - Criteria: Lists primary influencers (e.g., "Gini index").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 1): 
+- - - - Human: “Gini index, national income.” 
+- - - Extracted: “Income inequality.”
+
+- - control_variables:
+- - - Criteria: Lists controlled variables (e.g., "National income").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 0): 
+- - - - Human: “National income.” 
+- - - - Extracted: “Student age.”
+
+- - tools_software:
+- - - Criteria: Matches mentioned tools (e.g., "Statistical software like HLM").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “HLM software.” 
+- - - - Extracted: “HLM software.”
+
+
+- results
+- - summary:
+- - - Criteria: Summarizes main findings (e.g., "Positive correlation in high inequality countries").
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 2): 
+- - - - Human: “Schools matter more in poor countries.” 
+- - - - Extracted: “Educational importance varies by inequality.”
+
+- - numerical_results (Array, score each entry separately):
+- - - outcome_name:
+- - - - Criteria: Matches label (e.g., "Correlation between Gini and intercept variance").
+- - - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 3): 
+- - - - - Human: “Correlation value.” 
+- - - - - Extracted: “Correlation value.”
+
+- - - value:
+- - - - Criteria: Matches numeric result (e.g., "0.63").
+- - - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 1): 
+- - - - - Human: “0.63.” 
+- - - - - Extracted: “0.60.”
+
+- - - unit:
+- - - - Criteria: Matches unit (e.g., "Pearson correlation coefficient").
+- - - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 0): 
+- - - - - Human: “Coefficient.” 
+- - - - - Extracted: “Percentage.”
+
+- - - effect_size:
+- - - - Criteria: Matches if provided (e.g., "not stated").
+- - - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 3): 
+- - - - - Human: “Not stated.” 
+- - - - - Extracted: “Not stated.”
+
+- - - confidence_interval (lower, upper, level):
+- - - - Criteria: Matches bounds/level (e.g., "not stated").
+- - - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 2): 
+- - - - - Human: “Lower: 0.32.” 
+- - - - - Extracted: “Lower bound approximately 0.3.”
+
+- - - p_value:
+- - - - Criteria: Matches p-value (e.g., "p<=.01").
+- - - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 1): 
+- - - - - Human: “p<0.01.” 
+- - - - - Extracted: “Significant at 0.05.”
+
+- - - statistical_significance:
+- - - - Criteria: Correctly indicates (e.g., "True").
+- - - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 3): 
+- - - - - Human: “True.” 
+- - - - - Extracted: “True.”
+
+- - - direction:
+- - - - Criteria: Matches effect direction (e.g., "positive").
+- - - - Rubric Score (0 or 3): As defined in Scoring Criteria. 
+- - - - Example (for a score of 3): 
+- - - - - Human: “Direction = Positive” 
+- - - - - Extracted: “Positive.
+
+
+- metadata
+- - original_paper_id:
+- - - Criteria: Matches DOI or identifier.
+- - - Rubric Score (0 or 3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “10.1101/2020.03.30.20048090.” 
+- - - - Extracted: “10.1101/2020.03.30.20048090.”
+
+- - original_paper_title:
+- - - Criteria: Matches the title.
+- - - Rubric Score (0 or 3): As defined in Scoring Criteria. 
+- - - Example (for a score of 3): 
+- - - - Human: “A Life-Changing Event: First Births and Men's and Women's Attitudes to Mothering and Gender Divisions of Labor” 
+- - - - Extracted: “A Life-Changing Event: First Births and Men's and Women's Attitudes to Mothering and Gender Divisions of Labor”
+
+- - original_paper_code:
+- - - Criteria: Matches the code link if provided; otherwise, "not stated" with justification.
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example (for a score of 1): 
+- - - - Human: “https://osf.io/CODE.” 
+- - - - Extracted: “Code repository at OSF.”
+
+- - original_paper_data:
+- - - Criteria: Matches the data link(s) if provided; otherwise, "not stated" with justification.
+- - - Metric: Exact match.
+- - - Rubric Score (0-3): As defined in Scoring Criteria. 
+- - - Example for 0: 
+- - - - Human: “https://citymapper.com/cmi.” 
+- - - - Extracted: “Public database.”
+
+=== EXTRACTED JSON TO BE EVALUATED START ===
+    {extracted_json}
+=== EXTRACTED JSON TO BE EVALUATED END ===
+    
+=== REFERENCE JSON WITH THE CORRECT INFO ===
+    {expected_json}
+=== REFERENCE JSON WITH THE CORRECT INFO ===
+
+Please return your evaluation as a JSON object where each key is a specific component from the original JSON. For example:
+{{
+    "claim.hypothesis": {{
+    "score": [your scoring according to the instruction],
+    "explanation": [reasoning for your scoring.]
+    }},
+    "results.numerical_results[0].outcome_name": {{
+    "score": [your scoring according to the instruction],
+    "explanation": [reasoning for your scoring.]
+    }},
+    ...
+}}
+Output Requirements:\n- Return a valid JSON object only.\n- Do NOT wrap the output in markdown (no ```json).\n- Do NOT include extra text, commentary, or notes.\n\n Ensure accuracy and completeness.\n- Strictly use provided sources as specified.
