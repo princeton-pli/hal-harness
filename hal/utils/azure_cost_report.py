@@ -1,13 +1,14 @@
 """Daily Azure cost report grouped by ExecutedBy tag, posted to Slack."""
 
 import argparse
-import json
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 import requests
+from azure.core.exceptions import HttpResponseError
 from azure.identity import DefaultAzureCredential
 from azure.mgmt.costmanagement import CostManagementClient
 
@@ -45,7 +46,20 @@ def get_yesterday_costs(subscription_id: str, resource_group: str | None = None)
         },
     }
 
-    result = client.query.usage(scope=scope, parameters=query)
+    # Azure Cost Management allows ~4 calls/min/scope, shared across tenant
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            result = client.query.usage(scope=scope, parameters=query)
+            break
+        except HttpResponseError as e:
+            if e.status_code == 429 and attempt < max_retries - 1:
+                retry_after = int(e.response.headers.get("Retry-After", 0))
+                wait = max(retry_after, 30 * (2 ** attempt))
+                logger.warning(f"Rate limited, retrying in {wait}s (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(wait)
+            else:
+                raise
 
     # Response columns: Cost, TagKey, TagValue, Currency
     rows = []
@@ -126,8 +140,15 @@ def main():
         logger.error("SLACK_WEBHOOK_URL environment variable is required (or use --dry-run)")
         sys.exit(1)
 
-    data = get_yesterday_costs(subscription_id, args.resource_group)
-    message = format_slack_message(data)
+    try:
+        data = get_yesterday_costs(subscription_id, args.resource_group)
+        message = format_slack_message(data)
+    except Exception as e:
+        error_msg = f":x: *Azure Cost Report Failed*\n\n`{type(e).__name__}: {e}`"
+        logger.error(error_msg)
+        if webhook_url and not args.dry_run:
+            post_to_slack(webhook_url, {"text": error_msg})
+        sys.exit(1)
 
     if args.dry_run:
         print(message["text"])
