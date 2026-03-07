@@ -2,7 +2,7 @@
 from info_extractor.file_utils import read_txt, read_csv, read_json, read_pdf, read_docx
 from core.tools import (
     list_files_in_folder,
-    ask_human_input,
+    #ask_human_input,
     read_image,
     read_file,
     edit_file,
@@ -42,7 +42,7 @@ def base_known_actions() -> dict:
         "get_dataset_columns": get_dataset_columns,
          "get_dataset_variable_summary": get_dataset_variable_summary,
 
-        "ask_human_input": ask_human_input,
+        #"ask_human_input": ask_human_input,
         
         # file manipulating 
         "read_file": read_file,
@@ -238,20 +238,20 @@ def get_tool_definitions() -> list:
                 }
             }
         },
-        {
-            "type": "function",
-            "function": {
-                "name": "ask_human_input",
-                "description": "Ask a clarifying question to the user if blocked or needing external info.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "question": {"type": "string", "description": "The question to ask the user."}
-                    },
-                    "required": ["question"]
-                }
-            }
-        },
+        # {
+        #     "type": "function",
+        #     "function": {
+        #         "name": "ask_human_input",
+        #         "description": "Ask a clarifying question to the user if blocked or needing external info.",
+        #         "parameters": {
+        #             "type": "object",
+        #             "properties": {
+        #                 "question": {"type": "string", "description": "The question to ask the user."}
+        #             },
+        #             "required": ["question"]
+        #         }
+        #     }
+        # },
         {
             "type": "function",
             "function": {

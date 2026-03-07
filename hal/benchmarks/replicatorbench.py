@@ -298,7 +298,17 @@ class ReplicatorBenchmark(BaseBenchmark):
           - JSON parses
           - type is dict
         """
-        path = os.path.join(self._canonical_task_dir(task_id), filename)
+        path = None
+        if isinstance(parsed_ptr, dict):
+            for key in self.POINTER_KEYS.get(filename, []):
+                p = parsed_ptr.get(key)
+                if isinstance(p, str) and p.strip() and os.path.exists(p):
+                    path = p
+                    break
+
+        if path is None:
+            path = os.path.join(self._canonical_task_dir(task_id), filename)
+
         info: Dict[str, Any] = {"file": filename, "path": path, "ok": False, "error": None}
 
         if not os.path.exists(path):
@@ -491,23 +501,18 @@ class ReplicatorBenchmark(BaseBenchmark):
         capsule_ref = (GT_REF_OVERRIDE or (task_meta.get("capsule_ref") or "")).strip()
         capsule_subdir = (task_meta.get("capsule_subdir") or "").strip()
 
-        gt_ready = False
         gt_note = None
 
         gt_subdir = None
         if capsule_subdir.endswith("/input"):
             gt_subdir = capsule_subdir[: -len("/input")] + "/gt"
 
-
-        gt_dir = os.path.join(self.TARGET_ROOT, "_replicatorbench_gt", capsule_id)
-        os.makedirs(gt_dir, exist_ok=True)
-
-        gt_post_reg_local = os.path.join(gt_dir, "expected_post_registration.json")
-        gt_prereg_pdf = os.path.join(gt_dir, "human_preregistration.pdf")
-        gt_prereg_docx = os.path.join(gt_dir, "human_preregistration.docx")
-        gt_report_pdf = os.path.join(gt_dir, "human_report.pdf")
-        gt_report_docx = os.path.join(gt_dir, "human_report.docx")
-
+        gt_dir = None
+        gt_post_reg_local = None
+        gt_prereg_pdf = None
+        gt_prereg_docx = None
+        gt_report_pdf = None
+        gt_report_docx = None
         gt_prereg_path = None
         gt_report_path = None
 
@@ -521,6 +526,14 @@ class ReplicatorBenchmark(BaseBenchmark):
         if stage != "interpret":
             gt_note = f"Skipping GT download for stage='{stage}'. GT is fetched only for interpret."
         else:
+            gt_dir = os.path.join(self.TARGET_ROOT, "_replicatorbench_gt", capsule_id)
+            os.makedirs(gt_dir, exist_ok=True)
+
+            gt_post_reg_local = os.path.join(gt_dir, "expected_post_registration.json")
+            gt_prereg_pdf = os.path.join(gt_dir, "human_preregistration.pdf")
+            gt_prereg_docx = os.path.join(gt_dir, "human_preregistration.docx")
+            gt_report_pdf = os.path.join(gt_dir, "human_report.pdf")
+            gt_report_docx = os.path.join(gt_dir, "human_report.docx")
             if repo_slug and capsule_ref and gt_subdir:
                 # expected_post_registration.json
                 if not os.path.exists(gt_post_reg_local):
@@ -641,7 +654,7 @@ class ReplicatorBenchmark(BaseBenchmark):
 
         if gt_note:
             eval_summary["gt_note"] = gt_note
-        else:
+        elif gt_dir is not None:
             eval_summary["gt"] = {
                 "gt_cache_dir": gt_dir,
                 "gt_subdir": gt_subdir,
@@ -681,23 +694,15 @@ class ReplicatorBenchmark(BaseBenchmark):
             solution = agent_output.get(task_id) if isinstance(agent_output, dict) else None
             parsed_ptr = self._parse_agent_obj(solution)
 
-            # docker_runner copies container /workspace/. -> temp_dir -> results/<benchmark>/<run_id>/<task_id>/
-            host_task_root = None
-            if isinstance(agent_output, dict) and task_id in agent_output and isinstance(agent_output[task_id], dict):
-                ptr = agent_output[task_id]
-                # pick any pointer path that exists
-                for v in ptr.values():
-                    if isinstance(v, str) and v.strip() and os.path.isabs(v) and os.path.exists(v):
-                        host_task_root = os.path.dirname(os.path.dirname(v)) 
-                        break
-
-            if host_task_root and os.path.isdir(host_task_root):
-                self.TARGET_ROOT = host_task_root
-
-            # Host-side docker eval: point TARGET_ROOT at the copied container workspace for this task
-            host_task_root = os.path.join(os.getcwd(), "results", self.benchmark_name, run_id, task_id)
-            if os.path.isdir(host_task_root):
-                self.TARGET_ROOT = host_task_root
+            host_task_root = os.path.join(
+                os.getcwd(),
+                "results",
+                self.benchmark_name,
+                run_id,
+                task_id,
+            )
+            os.makedirs(host_task_root, exist_ok=True)
+            self.TARGET_ROOT = host_task_root
 
             ev = self._evaluate_task(task_id, parsed_ptr) or {}
             summary = (ev.get("eval_summary") or {})

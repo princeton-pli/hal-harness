@@ -57,10 +57,14 @@ apt-get update -y
 apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
+  git \
+  git-lfs \
   python3 \
   python3-pip \
   unzip \
   tar
+
+git lfs install --system
 
 python3 -m pip install --upgrade pip
 python3 -m pip install --upgrade gdown
@@ -198,6 +202,48 @@ download_tarball_capsule() {
   tar -xzf "${tgz_path}" -C "${out_dir}" --strip-components=1
 }
 
+download_github_subdir_capsule() {
+  local repo_url="$1"
+  local ref="$2"
+  local subdir="$3"
+  local sha="$4"      # unused for clone-based flow; keep arg for compatibility
+  local out_dir="$5"
+
+  local tmp="/tmp/github_subdir_capsule_$$"
+  rm -rf "${tmp}" "${out_dir}"
+  mkdir -p "${out_dir}"
+
+  echo "[replicatorbench] cloning github_subdir capsule: ${repo_url} @ ${ref}"
+  git clone --depth 1 "${repo_url}" "${tmp}"
+
+  # If ref is not the default branch head, fetch it explicitly and check it out.
+  git -C "${tmp}" fetch --depth 1 origin "${ref}" || true
+  git -C "${tmp}" checkout "${ref}"
+
+  # Make sure git-lfs is available, then pull large files.
+  if ! command -v git-lfs >/dev/null 2>&1; then
+    echo "[replicatorbench] ERROR: git-lfs not installed or not in PATH"
+    rm -rf "${tmp}"
+    return 1
+  fi
+
+  git -C "${tmp}" lfs install --local
+  git -C "${tmp}" lfs pull
+
+  if [[ ! -d "${tmp}/${subdir}" ]]; then
+    echo "[replicatorbench] ERROR: subdir not found after clone: ${subdir}"
+    find "${tmp}" -maxdepth 3 | sed 's/^/[replicatorbench]   /'
+    rm -rf "${tmp}"
+    return 1
+  fi
+
+  shopt -s dotglob
+  cp -R "${tmp}/${subdir}/"* "${out_dir}/"
+  shopt -u dotglob
+
+  rm -rf "${tmp}"
+}
+
 prepare_shared_study_dir() {
   local capsule_id="$1"
   local work_dir="${ROOT}/${capsule_id}"
@@ -208,35 +254,40 @@ prepare_shared_study_dir() {
   echo "${CAPS_DIR}/${capsule_id}" > "${work_dir}/CAPSULE_PATH.txt"
 }
 
-prepare_task_symlink_to_study() {
-  local task_id="$1"
-  local capsule_id="$2"
-
-  # If task_id == capsule_id, no need to symlink
-  if [[ "${task_id}" == "${capsule_id}" ]]; then
-    return 0
-  fi
-
-  local task_dir="${ROOT}/${task_id}"
-  local study_dir="${ROOT}/${capsule_id}"
-
-  rm -rf "${task_dir}"
-  ln -s "${study_dir}" "${task_dir}"
-}
-
 make_capsule_readonly() {
   local capsule_dir="$1"
-  chmod -R a-w "${capsule_dir}" || true
+
+  find "${capsule_dir}" -type d -exec chmod 755 {} \; || true
+
+  find "${capsule_dir}" -type f -exec chmod 444 {} \; || true
 }
 
 declare -A DOWNLOADED=()
 declare -A PREPARED_STUDYDIR=()
 
-# Parse tasks.json and:
-#  1) download capsule once per capsule_id into /capsules/<capsule_id>/
-#  2) create output dir once per capsule_id at /workspace/<capsule_id>/
-while IFS=$'\t' read -r task_id capsule_id capsule_type capsule_url capsule_sha256; do
+CURRENT_TASK_ID="$(python3 - <<'PY'
+import json
+p = "/workspace/input.json"
+try:
+    with open(p, "r") as f:
+        obj = json.load(f)
+    if isinstance(obj, dict):
+        for k in obj.keys():
+            print(k)
+            break
+    else:
+        print("")
+except Exception:
+    print("")
+PY
+)"
+
+while IFS=$'\t' read -r task_id capsule_id capsule_type capsule_url capsule_ref capsule_subdir capsule_sha256; do
   if [[ -z "${task_id}" ]]; then
+    continue
+  fi
+
+  if [[ -n "${CURRENT_TASK_ID}" && "${task_id}" != "${CURRENT_TASK_ID}" ]]; then
     continue
   fi
 
@@ -244,7 +295,6 @@ while IFS=$'\t' read -r task_id capsule_id capsule_type capsule_url capsule_sha2
     capsule_id="${task_id}"
   fi
 
-  # Shared per-study directory
   if [[ -z "${PREPARED_STUDYDIR[${capsule_id}]+x}" ]]; then
     prepare_shared_study_dir "${capsule_id}"
     PREPARED_STUDYDIR["${capsule_id}"]=1
@@ -273,6 +323,16 @@ while IFS=$'\t' read -r task_id capsule_id capsule_type capsule_url capsule_sha2
     elif [[ "${capsule_type}" == "gdrive_folder" ]]; then
       echo "[replicatorbench] ${capsule_id}: downloading folder capsule..."
       download_gdrive_folder "${capsule_url}" "${out_dir}"
+
+    elif [[ "${capsule_type}" == "github_subdir" ]]; then
+      echo "[replicatorbench] ${capsule_id}: downloading github_subdir capsule..."
+      download_github_subdir_capsule \
+        "${capsule_url}" \
+        "${capsule_ref}" \
+        "${capsule_subdir}" \
+        "${capsule_sha256}" \
+        "${out_dir}"
+
 
     else
       echo "[replicatorbench] ${capsule_id}: downloading tarball capsule..."
@@ -317,10 +377,12 @@ for t in tasks:
     capsule_id = str(t.get("capsule_id", "")).strip() or derive_capsule_id(task_id)
     ctype = (t.get("capsule_type") or "").strip()
     url = (t.get("capsule_url") or "").strip()
+    ref = (t.get("capsule_ref") or "").strip()
+    subdir = (t.get("capsule_subdir") or "").strip()
     sha = t.get("capsule_sha256", None)
     sha_s = "" if sha is None else str(sha).strip()
-    print(f"{task_id}\t{capsule_id}\t{ctype}\t{url}\t{sha_s}")
+    print(f"{task_id}\t{capsule_id}\t{ctype}\t{url}\t{ref}\t{subdir}\t{sha_s}")
 PY
 )
 
-echo -e "\n========== [replicatorbench][setup] END container=${CID} time=$(date -Is) ==========\n" >&2
+echo -e "\n========== [replicatorbench][setup] END time=$(date -Is) ==========\n" >&2

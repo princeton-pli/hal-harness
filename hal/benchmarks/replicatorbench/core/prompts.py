@@ -8,7 +8,7 @@ IMPORTANT TOOL CALL RULES:
   (a) use edit_file / read_file for small changes, OR
   (b) represent multi-line content with "\\n" inside the JSON string.
 - Prefer edit_file for modifying existing files. Do NOT overwrite whole files unless explicitly required.
-- Use ask_human_input only if you are truly blocked.
+- If blocked by missing data, missing tools, or environment limits, continue with available files and report the limitation explicitly.
 
 At the end of the loop, you output an Answer in JSON format.
 

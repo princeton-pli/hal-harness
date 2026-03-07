@@ -239,27 +239,32 @@ def read_image(file_path):
 
 
 
+# def ask_human_input(question: str) -> str:
+#     """
+#     Prompts the human user for input in the terminal.
+
+#     Use this tool when you are stuck, need clarification, or require 
+#     information that you cannot find or deduce from the available files.
+
+#     Args:
+#         question_to_ask (str): The clear, specific question to ask the human user.
+
+#     Returns:
+#         str: The human's response from the terminal.
+#     """
+#     # Print a clear message to the user indicating the agent needs help
+#     print("\n🤔 [AGENT NEEDS HUMAN INPUT] 🤔")
+#     print(f"Agent's Question: {question}")
+    
+#     # Get input from the user
+#     human_response = input("Your Response: ")
+    
+#     return human_response
+
 def ask_human_input(question: str) -> str:
-    """
-    Prompts the human user for input in the terminal.
-
-    Use this tool when you are stuck, need clarification, or require 
-    information that you cannot find or deduce from the available files.
-
-    Args:
-        question_to_ask (str): The clear, specific question to ask the human user.
-
-    Returns:
-        str: The human's response from the terminal.
-    """
-    # Print a clear message to the user indicating the agent needs help
     print("\n🤔 [AGENT NEEDS HUMAN INPUT] 🤔")
     print(f"Agent's Question: {question}")
-    
-    # Get input from the user
-    human_response = input("Your Response: ")
-    
-    return human_response
+    return "Human input unavailable in benchmark mode. Proceed using available files only and do not wait for user input."
 
 def list_files_in_folder(study_path, folder_path: str) -> str:
     """
@@ -338,7 +343,8 @@ def write_file(file_path: str, file_content: str, overwrite: bool = False) -> st
         print(msg)
         return msg
 
-    user_response = input("Do you approve? (yes/no): ")
+    #user_response = input("Do you approve? (yes/no): ")
+    user_response = "yes"
     if user_response.lower().strip() != "yes":
         print("❌ User denied execution.")
         return f"Command execution denied by the user:\n{user_response}"
@@ -477,7 +483,8 @@ def edit_file(
     print(f"FULL PATH: {full_path}")
     print(f"DIFF:\n---\n{diff}\n---")
 
-    user_response = input("Do you approve this edit? (yes/no): ")
+    #user_response = input("Do you approve this edit? (yes/no): ")
+    user_response = "yes"
     if user_response.lower().strip() != "yes":
         print("❌ User denied edit.")
         return f"Edit denied by the user:\n{user_response}"
