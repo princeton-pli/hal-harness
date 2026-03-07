@@ -289,8 +289,12 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     # Create a wrapper that adds reasoning parameters and OpenRouter configuration
     def completion_with_reasoning(*args, **completion_kwargs):
-        # Add OpenRouter base URL, API key, and headers for non-OpenAI providers
-        if api_base:
+        # Check if this is a call with our agent's model
+        is_agent_call = "model" in completion_kwargs and completion_kwargs["model"] == model_name
+
+        # Add OpenRouter base URL, API key, and headers only for agent model calls
+        # (not for user simulation calls, which use a different model like gpt-4o)
+        if api_base and is_agent_call:
             completion_kwargs["api_base"] = api_base
             completion_kwargs["api_key"] = api_key
             extra_headers = completion_kwargs.get("extra_headers", {})
@@ -300,8 +304,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             extra_headers["X-Title"] = "HAL Harness"
             completion_kwargs["extra_headers"] = extra_headers
 
-        # Check if this is a call with our agent's model
-        if "model" in completion_kwargs and completion_kwargs["model"] == model_name:
+        if is_agent_call:
             if "reasoning_effort" in kwargs:
                 # Set temperature to 1 for reasoning calls
                 completion_kwargs["temperature"] = 1.0
@@ -367,8 +370,12 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     # Create async wrapper
     async def acompletion_with_reasoning(*args, **completion_kwargs):
-        # Add OpenRouter base URL, API key, and headers for non-OpenAI providers
-        if api_base:
+        # Check if this is a call with our agent's model
+        is_agent_call = "model" in completion_kwargs and completion_kwargs["model"] == model_name
+
+        # Add OpenRouter base URL, API key, and headers only for agent model calls
+        # (not for user simulation calls, which use a different model like gpt-4o)
+        if api_base and is_agent_call:
             completion_kwargs["api_base"] = api_base
             completion_kwargs["api_key"] = api_key
             extra_headers = completion_kwargs.get("extra_headers", {})
@@ -378,8 +385,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             extra_headers["X-Title"] = "HAL Harness"
             completion_kwargs["extra_headers"] = extra_headers
 
-        # Check if this is a call with our agent's model
-        if "model" in completion_kwargs and completion_kwargs["model"] == model_name:
+        if is_agent_call:
             if "reasoning_effort" in kwargs:
                 # Set temperature to 1 for reasoning calls
                 completion_kwargs["temperature"] = 1.0
