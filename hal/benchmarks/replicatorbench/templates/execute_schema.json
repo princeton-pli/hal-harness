@@ -1,0 +1,67 @@
+{
+    "execution_summary": "A narrative overview of the execution process, including key steps followed, overall success, and alignment with the preregistration (e.g., 'The OLS regression was executed on the 1999 ARIS-REDS dataset, testing the hypothesis on low-caste households. No major deviations occurred, but BAC classification required manual coding.').",
+    "code_executed": [
+        {
+            "command": "a command that was approved for executed",
+            "status": "Overall status (Success, Partial Success, Failure).",
+            "logs": "summaries from execution logs, including warnings, errors, or runtime",
+            "environment": "Description of the runtime environment (e.g., 'Python 3.12 with numpy, statsmodels')"
+        },
+        {
+            "command": "another command that was approved for executed",
+            "status": "Overall status (Success, Partial Success, Failure).",
+            "logs": "summaries from execution logs, including warnings, errors, or runtime",
+            "environment": "Description of the runtime environment (e.g., 'Python 3.12 with numpy, statsmodels')"
+        }
+    ],
+    "results": {
+        "hypothesis_tested": "Restatement of the focal hypothesis from the preregistration for context.",
+        "findings_summary": [
+            {
+                "outcome_name": " Name of statistic 1 (e.g., 'Coefficient for low-caste villages').",
+                "value": "The computed value (e.g., 566.5)",
+                "standard_error": "SE (e.g., 209)",
+                "confidence_interval": "CI bounds (e.g., [150, 983])",
+                "p_value": "p-value (e.g., 0.007)",
+                "statistical_significance": "Significance level (e.g., 'p < 0.01').",
+                "direction": "Effect direction (e.g., 'positive')",
+                "effect_size": "Optional measures like Cohen's d or R-squared if applicable"
+            },
+            {
+                "outcome_name": " Name of statistic n (e.g., 'Coefficient for squadratic term of low-caste villages').",
+                "value": "The computed value (e.g., 566.5)",
+                "standard_error": "SE (e.g., 209)",
+                "confidence_interval": "CI bounds (e.g., [150, 983])",
+                "p_value": "p-value (e.g., 0.007)",
+                "statistical_significance": "Significance level (e.g., 'p < 0.01').",
+                "direction": "Effect direction (e.g., 'positive')",
+                "effect_size": "Optional measures like Cohen's d or R-squared if applicable"
+            }
+        ],
+        "tables": [
+            {
+                "table_id": "Reference to original paper (e.g., 'Table 3 Column 1').",
+                "table_description": "Brief narrative.",
+                "table_file": "Path to where table is saved"
+            },
+            {
+                "table_id": "Another table, referenced to original paper (e.g., 'Table 2').",
+                "table_description": "Brief narrative.",
+                "table_file": "Path to where table is saved"
+            }
+        ],
+        "figures": [
+            {
+                "figure_id": "Reference to original figure (e.g., 'Figure 1').",
+                "figure_description": "Brief narrative.",
+                "figure_file": "Path to where figure is saved"
+            },
+            {
+                "figure_id": "Reference to original figure (e.g., 'Figure 2').",
+                "figure_description": "Brief narrative.",
+                "figure_file": "Path to where figure is saved"
+            }
+        ]
+    }
+        
+}
