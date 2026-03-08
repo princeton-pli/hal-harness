@@ -7,6 +7,7 @@ import shutil
 import uuid
 import logging
 from typing import Dict, Any, Optional
+from rich.progress import Progress, TaskID
 from .virtual_machine_manager import VirtualMachineManager
 from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
@@ -23,9 +24,11 @@ class VirtualMachineRunner:
         log_dir: str,
         max_concurrent: int = 1,
         benchmark: Optional[BaseBenchmark] = None,
+        task_timeout: int = 2700,
     ):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
+        self.task_timeout = task_timeout
         self.vm_manager = VirtualMachineManager()
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
@@ -71,7 +74,8 @@ class VirtualMachineRunner:
         agent_args: Dict[str, Any],
         run_id: str,
         benchmark: Optional[BaseBenchmark] = None,
-        timeout: int = 7200,  # FIXME: rm
+        progress: Optional[Progress] = None,
+        task: Optional[TaskID] = None,
     ) -> Dict[str, Any]:
         """Run agent on all tasks using Azure VMs"""
         self.benchmark = benchmark
@@ -102,6 +106,7 @@ class VirtualMachineRunner:
                     self.vm_manager.create_virtual_machine_by_name,
                     vm_name=vm_name,
                     has_gpu=gpu_required,
+                    setup_timeout=self.task_timeout,
                 )
 
                 # Create temp directory with all necessary files
@@ -189,8 +194,9 @@ class VirtualMachineRunner:
                 # Wait for completion or timeout
                 start_time = time.time()
                 task_is_complete = None
+                timeout_secs = self.task_timeout
 
-                while time.time() - start_time < timeout:
+                while time.time() - start_time < timeout_secs:
                     try:
                         logger.info(
                             f"Task {task_id}: Checking task completion on VM {vm_name}"
@@ -218,8 +224,8 @@ class VirtualMachineRunner:
                     await asyncio.sleep(30)  # Check every 30 seconds
 
                 if task_is_complete is None:
-                    logger.warning(f"Task {task_id}: timed out after {timeout} seconds")
-                    return {task_id: f"TIMEOUT after {timeout} seconds"}
+                    logger.warning(f"Task {task_id}: timed out after {timeout_secs} seconds")
+                    return {task_id: f"TIMEOUT after {timeout_secs} seconds"}
 
                 # Copy results back
                 if self.log_dir:
@@ -277,7 +283,10 @@ class VirtualMachineRunner:
 
         async def run_with_semaphore(task_id, input_data):
             async with semaphore:
-                return await process_task(task_id, input_data)
+                result = await process_task(task_id, input_data)
+                if progress and task is not None:
+                    progress.update(task, advance=1)
+                return result
 
         # Create tasks for all inputs
         tasks = [

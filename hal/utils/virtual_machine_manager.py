@@ -140,14 +140,11 @@ class VirtualMachineManager:
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            # Load the SSH private key
-            ssh_private_key = paramiko.RSAKey.from_private_key_file(
-                self.ssh_private_key_path
-            )
-
-            # Connect to the VM using SSH
+            # Connect to the VM using SSH (key_filename lets Paramiko auto-detect RSA/Ed25519/ECDSA)
             ssh_client.connect(
-                hostname=public_ip_address, username="agent", pkey=ssh_private_key
+                hostname=public_ip_address,
+                username="agent",
+                key_filename=self.ssh_private_key_path,
             )
 
             # Create SFTP client
@@ -169,8 +166,15 @@ class VirtualMachineManager:
                 except Exception as e:
                     logger.error(f"Error closing SSH client: {e}")
 
-    def create_virtual_machine_by_name(self, vm_name, has_gpu=False):
-        """Create a standard Azure VM without GPU."""
+    def create_virtual_machine_by_name(self, vm_name, has_gpu=False, setup_timeout: int = 2700):
+        """Create a standard Azure VM without GPU.
+
+        Args:
+            vm_name: Name of the VM.
+            has_gpu: Whether the VM should have a GPU.
+            setup_timeout: Seconds to wait for startup script (passed from
+                VirtualMachineRunner.task_timeout).
+        """
         logger = _get_logger(vm_name)
         if has_gpu:
             logger.info(f"Creating virtual machine {vm_name} with a GPU")
@@ -186,6 +190,7 @@ class VirtualMachineManager:
             nsg_id=self.nsg_id,
             ssh_public_key=self.ssh_public_key,
             gpu=has_gpu,
+            timeout=setup_timeout,
         )
 
         # Store for tracking
