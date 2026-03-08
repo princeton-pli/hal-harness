@@ -63,7 +63,8 @@ class ReplicatorBenchmark(BaseBenchmark):
     TARGET_ROOT = "/workspace"
 
     REQUIRED_OUTPUTS = {
-        "extract": ["post_registration.json", "merged-urls.json"],
+        "extract": ["post_registration.json"],
+        "web_search": ["merged-urls.json"],
         "design": ["replication_info.json"],
         "execute": ["execution_results.json"],
         "interpret": ["interpret_results.json"],
@@ -458,12 +459,16 @@ class ReplicatorBenchmark(BaseBenchmark):
 
         extract_checks = [
             self._stage_check_json(task_id, "extract", "post_registration.json", parsed_ptr, allow_list=False),
-            self._stage_check_json(task_id, "extract", "merged-urls.json", parsed_ptr, allow_list=True),
+        ]
+        web_search_checks = [
+            self._stage_check_json(task_id, "web_search", "merged-urls.json", parsed_ptr, allow_list=True),
         ]
         design_checks = [
             self._stage_check_json(task_id, "design", "replication_info.json", parsed_ptr, allow_list=False),
         ]
-        execute_check = self._stage_check_json(task_id, "execute", "execution_results.json", parsed_ptr, allow_list=False)
+        execute_check = self._stage_check_json(
+            task_id, "execute", "execution_results.json", parsed_ptr, allow_list=False
+        )
         interpret_checks = [
             self._stage_check_json(task_id, "interpret", "interpret_results.json", parsed_ptr, allow_list=False),
         ]
@@ -639,17 +644,21 @@ class ReplicatorBenchmark(BaseBenchmark):
             os.path.join(llm_eval_dir, "interpret_llm_eval.json"),
         ]
 
+        checks_block = {
+            "extract": extract_checks,
+            "web_search": web_search_checks,
+            "design": design_checks,
+            "execute": execute_check,
+            "interpret": interpret_checks,
+        }
+
         if os.path.isdir(llm_eval_dir) and all(os.path.exists(p) for p in expected_eval_files):
             eval_summary = self.summarize_eval_scores(out_dir)
+            eval_summary["checks"] = checks_block
         else:
             eval_summary = {
                 "note": "llm_eval outputs not complete yet; returning presence/type checks only",
-                "checks": {
-                    "extract": extract_checks,
-                    "design": design_checks,
-                    "execute": execute_check,
-                    "interpret": interpret_checks,
-                },
+                "checks": checks_block,
             }
 
         if gt_note:
@@ -707,18 +716,30 @@ class ReplicatorBenchmark(BaseBenchmark):
             ev = self._evaluate_task(task_id, parsed_ptr) or {}
             summary = (ev.get("eval_summary") or {})
 
+            task_stage = ((self._task_meta.get(task_id) or {}).get("stage") or "").strip()
+
             # 1) derive stage_complete (0/1) from presence/type checks if available
-            stage_complete = {"extract": 0.0, "design": 0.0, "execute": 0.0, "interpret": 0.0}
+            stage_complete = {
+                "extract": 0.0,
+                "web_search": 0.0,
+                "design": 0.0,
+                "execute": 0.0,
+                "interpret": 0.0,
+            }
+
             checks = summary.get("checks")
             if isinstance(checks, dict):
                 try:
                     ex = checks.get("extract", [])
+                    ws = checks.get("web_search", [])
                     de = checks.get("design", [])
                     eu = checks.get("execute", {})
                     it = checks.get("interpret", [])
 
                     if isinstance(ex, list) and len(ex) > 0:
                         stage_complete["extract"] = 1.0 if all(c.get("ok") for c in ex) else 0.0
+                    if isinstance(ws, list) and len(ws) > 0:
+                        stage_complete["web_search"] = 1.0 if all(c.get("ok") for c in ws) else 0.0
                     if isinstance(de, list) and len(de) > 0:
                         stage_complete["design"] = 1.0 if all(c.get("ok") for c in de) else 0.0
                     if isinstance(eu, dict) and ("ok" in eu):
@@ -728,20 +749,22 @@ class ReplicatorBenchmark(BaseBenchmark):
                 except Exception:
                     pass
 
-            # 2) if summarize_eval_scores() produced per-stage avg scores, prefer those
+            # 2) if summarize_eval_scores() produced per-stage avg scores, prefer those where available
             stage_scores = dict(stage_complete)
+
             if isinstance(summary.get("stage_scores"), dict):
-                # already provided by team; trust it
-                stage_scores = {
-                    k: float(summary["stage_scores"].get(k) or 0.0)
-                    for k in stage_scores.keys()
-                }
+                for k in stage_scores.keys():
+                    if k in summary["stage_scores"]:
+                        stage_scores[k] = float(summary["stage_scores"].get(k) or 0.0)
             else:
-                # try to map your summarizer output into stage_scores
                 try:
-                    for st in ("extract", "design", "interpret"):
-                        if isinstance(summary.get(st), dict) and summary[st].get("avg_score") is not None:
-                            stage_scores[st] = float(summary[st]["avg_score"])
+                    if isinstance(summary.get("extract"), dict) and summary["extract"].get("avg_score") is not None:
+                        stage_scores["extract"] = float(summary["extract"]["avg_score"])
+                    if isinstance(summary.get("design"), dict) and summary["design"].get("avg_score") is not None:
+                        stage_scores["design"] = float(summary["design"]["avg_score"])
+                    if isinstance(summary.get("interpret"), dict) and summary["interpret"].get("avg_score") is not None:
+                        stage_scores["interpret"] = float(summary["interpret"]["avg_score"])
+
                     exec_parts = []
                     for k in ("execute_design", "execute_execute"):
                         if isinstance(summary.get(k), dict) and summary[k].get("avg_score") is not None:
@@ -751,13 +774,13 @@ class ReplicatorBenchmark(BaseBenchmark):
                 except Exception:
                     pass
 
-                # inject for get_metrics()
-                summary["stage_scores"] = stage_scores
-                ev["eval_summary"] = summary
+            summary["stage_scores"] = stage_scores
+            ev["eval_summary"] = summary
 
-            # 3) add overall_score + correct expected by get_metrics()
-            ev["overall_score"] = float(sum(stage_scores.values()) / 4.0)
-            ev["correct"] = all(v == 1.0 for v in stage_complete.values())
+            # 3) stage-task scoring: score only the stage represented by this task_id
+            ev["task_stage"] = task_stage
+            ev["overall_score"] = float(stage_scores.get(task_stage, 0.0))
+            ev["correct"] = bool(stage_complete.get(task_stage, 0.0) == 1.0)
 
             results[task_id] = ev
 
@@ -778,22 +801,34 @@ class ReplicatorBenchmark(BaseBenchmark):
         failed = [tid for tid in task_ids if not eval_results[tid].get("correct", False)]
 
         avg_overall = 0.0
-        stage_sums = {"extract": 0.0, "design": 0.0, "execute": 0.0, "interpret": 0.0}
+        stage_sums = {
+            "extract": 0.0,
+            "web_search": 0.0,
+            "design": 0.0,
+            "execute": 0.0,
+            "interpret": 0.0,
+        }
+        stage_counts = {k: 0 for k in stage_sums.keys()}
 
         for tid in task_ids:
             ev = eval_results.get(tid, {}) or {}
             avg_overall += float(ev.get("overall_score") or 0.0)
-            summary = (ev.get("eval_summary") or {})
-            stage_scores = (summary.get("stage_scores") or {})
-            for k in stage_sums.keys():
-                stage_sums[k] += float(stage_scores.get(k) or 0.0)
+
+            task_stage = ev.get("task_stage") or ((self._task_meta.get(tid) or {}).get("stage") or "")
+            if task_stage in stage_sums:
+                stage_sums[task_stage] += float(ev.get("overall_score") or 0.0)
+                stage_counts[task_stage] += 1
 
         avg_overall = (avg_overall / total) if total > 0 else 0.0
-        stage_avgs = {k: (v / total if total > 0 else 0.0) for k, v in stage_sums.items()}
+        stage_avgs = {
+            k: (stage_sums[k] / stage_counts[k] if stage_counts[k] > 0 else 0.0)
+            for k in stage_sums.keys()
+        }
         pass_rate = (len(passed) / total) if total > 0 else 0.0
 
         return {
-            "pass_rate_all_stages": pass_rate,
+            "pass_rate_stage_tasks": pass_rate,
+            "pass_rate_all_stages": pass_rate,  # keep for backward compatibility
             "avg_overall_score": avg_overall,
             "avg_stage_scores": stage_avgs,
             "n_tasks": total,
