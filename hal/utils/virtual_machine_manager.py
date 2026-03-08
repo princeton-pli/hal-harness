@@ -7,8 +7,14 @@ import tarfile
 import json
 import logging
 from contextlib import contextmanager
-
+from pathlib import Path
 from .vm.azure_virtual_machine import AzureVirtualMachine
+
+# Mount names for core_agent: created as /data, /code, /results in cloud-init (see vm/cloud_init.yaml).
+VM_AGENT_HOME = "/home/agent"
+VM_ENVIRONMENT_MOUNT_NAMES = ("data", "code", "results")
+
+RUN_AGENT_SCRIPT_PATH = Path(__file__).resolve().parent / "vm" / "run_agent.py"
 
 # Set up base logger
 _base_logger = logging.getLogger(__name__)
@@ -270,6 +276,14 @@ class VirtualMachineManager:
             self.network_client,
             self.resource_group_name,
         ) as (sftp_client, ssh_client):
+            # Sync mount dirs back into home so the tar includes agent output (e.g. core_agent writes to /results)
+            for _name in VM_ENVIRONMENT_MOUNT_NAMES:
+                _, stdout, _ = ssh_client.exec_command(
+                    f"test -d /{_name} && cp -r /{_name}/. {VM_AGENT_HOME}/environment/{_name}/ 2>/dev/null || true"
+                )
+                for _ in stdout:
+                    pass
+
             # Remove ./miniconda3 directory from the VM
             _, stdout, _ = ssh_client.exec_command("rm -rf /home/agent/miniconda3")
             for _ in stdout:
@@ -413,68 +427,22 @@ class VirtualMachineManager:
                 with sftp_client.open("/home/agent/agent_args.json", "w") as f:
                     f.write(json.dumps(agent_args))
 
-                # FIXME: stop using this approach for execution
-                # * All variables should be sent as ENV vars or via files or similar, *not*
-                # * via string interpoloation
+                # Write run-specific env vars for static run_agent.py
+                run_agent_env = f"RUN_ID={run_id}\nAGENT_FUNCTION={agent_function}\nTASK_ID={task_id}\n"
+                with sftp_client.open("/home/agent/run_agent.env", "w") as f:
+                    f.write(run_agent_env)
 
-                # FIXME: Claude -- let's (1) take the variables out here and append them to the .env file and then (2) move this file out into 'run_agent.py' in the vm dir with a comprehensive docstring and pulling the env vars, failing loudly if they're not present, and using doenv to get the env vars out
-
-                # Create Python script for agent execution
-                script_content = f'''#!/usr/bin/env python3
-import os
-import json
-import importlib.util
-import weave
-import traceback
-from dotenv import load_dotenv
-# FIXME: use proper logging here, e.g., Azure logging
-
-try:
-    # Load environment variables from .env file
-    load_dotenv("/home/agent/.env")
-
-    weave.init("{run_id}")
-
-    # Load input data
-    with open("input.json", "r") as f:
-        input_data = json.load(f)
-
-    # Load agent args
-    with open("agent_args.json", "r") as f:
-        agent_args = json.load(f)
-
-    # Load the agent module
-    module_name = "{agent_function.rsplit(".", 1)[0]}"
-    function_name = "{agent_function.rsplit(".", 1)[1]}"
-
-    spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/agent", module_name + ".py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    agent = getattr(module, function_name)
-
-    # Run agent with weave task_id attribute
-    with weave.attributes({{"weave_task_id": "{task_id}"}}):
-        result = agent(input_data, **agent_args)
-
-    # Save result
-    with open("output.json", "w") as f:
-        json.dump(result, f)
-
-except Exception as e:
-    with open("error.log", "w") as f:
-        f.write(f"ERROR: {{str(e)}}\\n")
-        f.write(traceback.format_exc())
-    raise
-'''
-
-                # Write script to VM
                 script_path = "/home/agent/run_agent.py"
-                with sftp_client.open(script_path, "w") as f:
-                    f.write(script_content)
-
-                # Make script executable
                 ssh_client.exec_command(f"chmod +x {script_path}")
+
+                # Populate VM_ENVIRONMENT_MOUNT_NAMES dirs from task payload (same list as in vm/cloud_init.yaml)
+                for _name in VM_ENVIRONMENT_MOUNT_NAMES:
+                    _src = f"{VM_AGENT_HOME}/environment/{_name}"
+                    _dest = f"/{_name}"
+                    _, _so, _se = ssh_client.exec_command(
+                        f"test -d {_src} && cp -r {_src}/. {_dest}/"
+                    )
+                    _so.channel.recv_exit_status()
 
                 # Construct command to run script
                 cmd = f"source /home/agent/miniconda3/etc/profile.d/conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"

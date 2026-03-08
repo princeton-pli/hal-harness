@@ -127,9 +127,9 @@ load_dotenv()
 )
 @click.option(
     "--task_timeout",
-    default=600,
+    default=2700,
     type=int,
-    help="Timeout in seconds for each task (default: 600; 2700 when using --vm). Tasks exceeding this will be killed and marked as ERROR.",
+    help="Timeout in seconds per task (default: 2700). Tasks exceeding this will be killed and marked as ERROR.",
 )
 @click.option(
     "--results_dir",
@@ -172,10 +172,6 @@ def main(
 ):
     """Run agent evaluation on specified benchmark with given model."""
     try:
-        # VM startup (provisioning + startup script) needs longer than default task timeout
-        if vm and task_timeout == 600:
-            task_timeout = 2700
-
         # Parse agent and benchmark args
         logger.info("Parsing configuration...")
         agent_args = parse_cli_args(a)

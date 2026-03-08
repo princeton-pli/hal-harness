@@ -8,7 +8,7 @@ import uuid
 import logging
 from typing import Dict, Any, Optional
 from rich.progress import Progress, TaskID
-from .virtual_machine_manager import VirtualMachineManager
+from .virtual_machine_manager import VirtualMachineManager, RUN_AGENT_SCRIPT_PATH
 from ..benchmarks.base_benchmark import BaseBenchmark
 import traceback
 
@@ -22,9 +22,9 @@ class VirtualMachineRunner:
     def __init__(
         self,
         log_dir: str,
+        task_timeout: int,
         max_concurrent: int = 1,
         benchmark: Optional[BaseBenchmark] = None,
-        task_timeout: int = 2700,
     ):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
@@ -153,6 +153,11 @@ class VirtualMachineRunner:
                             )
                             shutil.copy2(setup_script_src, setup_script_dest)
                             os.chmod(setup_script_dest, 0o755)
+
+                    # Drop harness run_agent.py into payload
+                    run_agent_dest = os.path.join(temp_dir, "run_agent.py")
+                    shutil.copy2(RUN_AGENT_SCRIPT_PATH, run_agent_dest)
+                    os.chmod(run_agent_dest, 0o755)
 
                     # Copy all files to VM
                     logger.info(

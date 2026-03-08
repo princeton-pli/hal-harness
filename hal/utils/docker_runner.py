@@ -25,9 +25,9 @@ class DockerRunner:
     def __init__(
         self,
         log_dir: str,
+        task_timeout: int,
         max_concurrent: int = 1,
         benchmark: Optional[BaseBenchmark] = None,
-        task_timeout: int = 600,
     ):
         self.log_dir = log_dir
         self.max_concurrent = max_concurrent
