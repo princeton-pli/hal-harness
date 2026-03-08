@@ -59,6 +59,8 @@ MODEL_METADATA = {
     "taubench_toolcalling_gpt_o1": {"date": "2024-12-05", "provider": "OpenAI"},
     "taubench_toolcalling_gpt_5_2": {"date": "2025-12-11", "provider": "OpenAI"},
     "taubench_toolcalling_gpt_5_2_xhigh": {"date": "2025-12-11", "provider": "OpenAI"},
+    "taubench_toolcalling_gpt_5_4": {"date": "2026-03-05", "provider": "OpenAI"},
+    "taubench_toolcalling_gpt_5_4_xhigh": {"date": "2026-03-05", "provider": "OpenAI"},
     "taubench_toolcalling_gemini_2_flash": {"date": "2024-12-11", "provider": "Google"},
     "taubench_toolcalling_gemini_2_5_flash": {
         "date": "2025-03-25",
@@ -86,12 +88,16 @@ MODEL_METADATA = {
     "taubench_codex_gpt_5_2": {"date": "2025-12-11", "provider": "OpenAI"},
     "taubench_codex_gpt_5_2_medium": {"date": "2025-12-11", "provider": "OpenAI"},
     "taubench_codex_gpt_5_2_codex_medium": {"date": "2025-12-11", "provider": "OpenAI"},
+    "taubench_codex_gpt_5_4": {"date": "2026-03-05", "provider": "OpenAI"},
+    "taubench_codex_gpt_5_4_medium": {"date": "2026-03-05", "provider": "OpenAI"},
     # Few shot scaffold
     "taubench_fewshot_gpt_4_turbo": {"date": "2024-04-09", "provider": "OpenAI"},
     "taubench_fewshot_gpt_4o_mini": {"date": "2024-07-18", "provider": "OpenAI"},
     "taubench_fewshot_gpt_o1": {"date": "2024-12-05", "provider": "OpenAI"},
     "taubench_fewshot_gpt_5_2": {"date": "2025-12-11", "provider": "OpenAI"},
     "taubench_fewshot_gpt_5_2_xhigh": {"date": "2025-12-11", "provider": "OpenAI"},
+    "taubench_fewshot_gpt_5_4": {"date": "2026-03-05", "provider": "OpenAI"},
+    "taubench_fewshot_gpt_5_4_xhigh": {"date": "2026-03-05", "provider": "OpenAI"},
     "taubench_fewshot_gemini_2_flash": {"date": "2024-12-11", "provider": "Google"},
     "taubench_fewshot_gemini_2_5_flash": {"date": "2025-03-25", "provider": "Google"},
     "taubench_fewshot_gemini_2_5_pro": {"date": "2025-04-17", "provider": "Google"},
@@ -116,6 +122,8 @@ MODEL_METADATA = {
     "gaia_generalist_gpt_5_2": {"date": "2025-12-11", "provider": "OpenAI"},
     "gaia_generalist_gpt_5_2_medium": {"date": "2025-12-11", "provider": "OpenAI"},
     # Note: gpt_5_2_xhigh not run on GAIA (only medium reasoning effort used)
+    "gaia_generalist_gpt_5_4": {"date": "2026-03-05", "provider": "OpenAI"},
+    "gaia_generalist_gpt_5_4_medium": {"date": "2026-03-05", "provider": "OpenAI"},
     "gaia_generalist_gemini_2_flash": {"date": "2024-12-11", "provider": "Google"},
     "gaia_generalist_gemini_2_5_flash": {"date": "2025-03-25", "provider": "Google"},
     "gaia_generalist_gemini_2_5_pro": {"date": "2025-04-17", "provider": "Google"},
@@ -162,6 +170,7 @@ MODEL_CATEGORY = {
     # Large/frontier models
     "gpt_4_turbo": "large",
     "gpt_5_2": "large",
+    "gpt_5_4": "large",
     "claude_sonnet_3_7": "large",
     "claude_sonnet_4_5": "large",
     # Reasoning models (extended thinking / reasoning-enhanced)
@@ -169,6 +178,8 @@ MODEL_CATEGORY = {
     "gpt_5_2_medium": "reasoning",
     "gpt_5_2_xhigh": "reasoning",
     "gpt_5_2_codex_medium": "reasoning",
+    "gpt_5_4_medium": "reasoning",
+    "gpt_5_4_xhigh": "reasoning",
     "gemini_2_5_pro": "reasoning",
     "gemini_3_pro": "reasoning",
     "claude_opus_4_5": "reasoning",
