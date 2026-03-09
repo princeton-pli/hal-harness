@@ -229,7 +229,9 @@ class VirtualMachineRunner:
                     await asyncio.sleep(30)  # Check every 30 seconds
 
                 if task_is_complete is None:
-                    logger.warning(f"Task {task_id}: timed out after {timeout_secs} seconds")
+                    logger.warning(
+                        f"Task {task_id}: timed out after {timeout_secs} seconds"
+                    )
                     return {task_id: f"TIMEOUT after {timeout_secs} seconds"}
 
                 # Copy results back

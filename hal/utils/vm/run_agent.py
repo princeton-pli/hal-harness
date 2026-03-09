@@ -7,6 +7,7 @@ Required env vars: RUN_ID, AGENT_FUNCTION, TASK_ID.
 Input data and agent kwargs are read from input.json and agent_args.json in the
 current working directory (/home/agent).
 """
+
 import os
 import sys
 import json
@@ -42,7 +43,10 @@ def main():
 
     module_name, _, function_name = AGENT_FUNCTION.rpartition(".")
     if not module_name or not function_name:
-        print(f"ERROR: AGENT_FUNCTION must be 'module.function', got: {AGENT_FUNCTION!r}", file=sys.stderr)
+        print(
+            f"ERROR: AGENT_FUNCTION must be 'module.function', got: {AGENT_FUNCTION!r}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     agent_path = os.path.join("/home/agent", f"{module_name}.py")

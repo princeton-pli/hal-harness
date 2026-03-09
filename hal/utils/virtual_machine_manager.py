@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from .vm.azure_virtual_machine import AzureVirtualMachine
 
-# Mount names for core_agent: created as /home/agent/data, /home/agent/code, /home/agent/results in cloud-init (see vm/cloud_init.yaml).
+# Mount names for core_agent: used only under VM_AGENT_HOME/environment/ (e.g. environment/data, environment/code, environment/results from task payload).
 VM_AGENT_HOME = "/home/agent"
 VM_ENVIRONMENT_MOUNT_NAMES = ("data", "code", "results")
 
@@ -172,7 +172,9 @@ class VirtualMachineManager:
                 except Exception as e:
                     logger.error(f"Error closing SSH client: {e}")
 
-    def create_virtual_machine_by_name(self, vm_name, has_gpu: bool = False, setup_timeout: int = 0):
+    def create_virtual_machine_by_name(
+        self, vm_name, has_gpu: bool = False, setup_timeout: int = 0
+    ):
         """Create a standard Azure VM without GPU.
 
         Args:

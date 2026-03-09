@@ -205,7 +205,9 @@ class AzureVirtualMachine:
         start_time = time.time()
         sentinel_file = "/home/agent/startup_complete"
 
-        logger.info(f"Waiting for startup script to complete on {self.name} (timeout: {self.timeout}s)")
+        logger.info(
+            f"Waiting for startup script to complete on {self.name} (timeout: {self.timeout}s)"
+        )
         while time.time() - start_time < self.timeout:
             if self.check_for_file_presence_by_path(sentinel_file):
                 logger.debug(
