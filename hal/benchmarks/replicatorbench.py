@@ -19,7 +19,7 @@ from urllib.error import HTTPError, URLError
 
 GT_REPO_SLUG = os.getenv("REPLICATORBENCH_GT_REPO_SLUG", "").strip()
 GT_REF_OVERRIDE = os.getenv("REPLICATORBENCH_GT_REF", "").strip()
-GT_TOKEN = os.getenv("REPLICATORBENCH_GT_TOKEN", "").strip()  # optional, for private repos
+GT_TOKEN = os.getenv("REPLICATORBENCH_GT_TOKEN", "").strip()  
 
 REPLICATORBENCH_EVAL_MODE = os.getenv("REPLICATORBENCH_EVAL_MODE", "offline").strip().lower()
 
@@ -50,14 +50,8 @@ class ReplicatorBenchmark(BaseBenchmark):
             - interpret_results.json
 
     Agent return to harness:
-      - we accept either:
-          { "<task_id>": { "execution_results_path": "<abs path>", ... } }
+     { "<task_id>": { "execution_results_path": "<abs path>", ... } }
         This evaluator will fall back to the canonical paths under /workspace/<task_id>/.
-
-    Current scoring behavior:
-      - Placeholder "eval_summary-like" scoring for all stages:
-          stage score = 1.0 if required file exists and parses as JSON (dict/list as appropriate), else 0.0
-      - Execute stage can additionally use offline GT compare (met/unmet) if GT exists.
     """
 
     TARGET_ROOT = "/workspace"
@@ -138,7 +132,7 @@ class ReplicatorBenchmark(BaseBenchmark):
             if stage == "web_search":
                 return task_id[: -len("_web_search")]
             if stage in ("extract", "design", "execute", "interpret"):
-                return task_id[: -(len(stage) + 1)]  # strip "_<stage>"
+                return task_id[: -(len(stage) + 1)]  
             return task_id
 
         for t in tasks:
@@ -182,7 +176,7 @@ class ReplicatorBenchmark(BaseBenchmark):
 
             self.benchmark[task_id] = {
                 "prompt": prompt,
-                "files": {},   # capsules are handled by setup.sh; no per-task file mapping needed here
+                "files": {},   
                 "gpu": gpu,
             }
 
@@ -203,7 +197,6 @@ class ReplicatorBenchmark(BaseBenchmark):
                 gt[str(task_id)] = entry
         self._ground_truth = gt
 
-    #  accept dict, JSON string, or Python dict string
     def _parse_agent_obj(self, solution: Any) -> Optional[Dict[str, Any]]:
 
         if solution is None:
@@ -293,12 +286,7 @@ class ReplicatorBenchmark(BaseBenchmark):
         parsed_ptr: Optional[Dict[str, Any]],
         allow_list: bool = False,
     ) -> Dict[str, Any]:
-        """
-        want to check:
-          - file exists
-          - JSON parses
-          - type is dict
-        """
+
         path = None
         if isinstance(parsed_ptr, dict):
             for key in self.POINTER_KEYS.get(filename, []):
@@ -389,7 +377,7 @@ class ReplicatorBenchmark(BaseBenchmark):
             s = x.strip()
             if s.upper() in {"NA", "N/A", ""}:
                 return None
-            return float(s)  # will still raise if it's something else
+            return float(s)  
         return None
 
     def summarize_eval_scores(self, study_path):
@@ -435,15 +423,7 @@ class ReplicatorBenchmark(BaseBenchmark):
     def _evaluate_task(
         self, task_id: str, parsed_ptr: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """
-        Evaluate by looking for outputs in:
-        /workspace/<capsule_id>/
-        and inputs in:
-        /workspace/capsules/<capsule_id>/.
 
-        Ground-truth (GT) is fetched at evaluation time into:
-        /workspace/_replicatorbench_gt/<capsule_id>/
-        """
         import shutil
         from urllib.request import Request, urlopen
         from urllib.error import HTTPError, URLError
@@ -474,7 +454,7 @@ class ReplicatorBenchmark(BaseBenchmark):
         ]
 
         def _repo_slug_from_url(capsule_url: str) -> str:
-            # https://github.com/org/repo(.git) -> org/repo
+            
             s = (capsule_url or "").strip()
             if s.startswith("https://github.com/"):
                 s = s[len("https://github.com/") :]
@@ -633,9 +613,7 @@ class ReplicatorBenchmark(BaseBenchmark):
         except Exception:
             pass
 
-        # -----------------------------
         # Summarize if llm_eval stage files exist (under out_dir)
-        # -----------------------------
         llm_eval_dir = os.path.join(out_dir, "llm_eval")
         expected_eval_files = [
             os.path.join(llm_eval_dir, "extract_llm_eval.json"),
@@ -693,7 +671,6 @@ class ReplicatorBenchmark(BaseBenchmark):
         """
         results: Dict[str, Any] = {}
 
-        # If agent_output is empty, still evaluate all configured tasks
         if isinstance(agent_output, dict) and len(agent_output) > 0:
             task_ids = [str(tid) for tid in agent_output.keys()]
         else:
@@ -718,7 +695,6 @@ class ReplicatorBenchmark(BaseBenchmark):
 
             task_stage = ((self._task_meta.get(task_id) or {}).get("stage") or "").strip()
 
-            # 1) derive stage_complete (0/1) from presence/type checks if available
             stage_complete = {
                 "extract": 0.0,
                 "web_search": 0.0,
@@ -749,7 +725,6 @@ class ReplicatorBenchmark(BaseBenchmark):
                 except Exception:
                     pass
 
-            # 2) if summarize_eval_scores() produced per-stage avg scores, prefer those where available
             stage_scores = dict(stage_complete)
 
             if isinstance(summary.get("stage_scores"), dict):
@@ -777,7 +752,6 @@ class ReplicatorBenchmark(BaseBenchmark):
             summary["stage_scores"] = stage_scores
             ev["eval_summary"] = summary
 
-            # 3) stage-task scoring: score only the stage represented by this task_id
             ev["task_stage"] = task_stage
             ev["overall_score"] = float(stage_scores.get(task_stage, 0.0))
             ev["correct"] = bool(stage_complete.get(task_stage, 0.0) == 1.0)
@@ -828,7 +802,7 @@ class ReplicatorBenchmark(BaseBenchmark):
 
         return {
             "pass_rate_stage_tasks": pass_rate,
-            "pass_rate_all_stages": pass_rate,  # keep for backward compatibility
+            "pass_rate_all_stages": pass_rate,  
             "avg_overall_score": avg_overall,
             "avg_stage_scores": stage_avgs,
             "n_tasks": total,

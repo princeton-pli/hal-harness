@@ -17,7 +17,8 @@ fi
 
 set -euo pipefail
 
-cat > /workspace/weave.py <<'PY'
+if [[ "${STUB_WEAVE:-1}" == "1" ]]; then
+  cat > /workspace/weave.py <<'PY'
 from contextlib import contextmanager
 
 def init(*args, **kwargs):
@@ -27,6 +28,11 @@ def init(*args, **kwargs):
 def attributes(*args, **kwargs):
     yield
 PY
+  echo "[replicatorbench] using weave stub at /workspace/weave.py"
+else
+  rm -f /workspace/weave.py
+  echo "[replicatorbench] weave stub disabled; using real import behavior"
+fi
 
 BENCH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TASKS_JSON="${BENCH_DIR}/tasks.json"
@@ -206,7 +212,7 @@ download_github_subdir_capsule() {
   local repo_url="$1"
   local ref="$2"
   local subdir="$3"
-  local sha="$4"      # unused for clone-based flow; keep arg for compatibility
+  local sha="$4"      
   local out_dir="$5"
 
   local tmp="/tmp/github_subdir_capsule_$$"
@@ -216,11 +222,9 @@ download_github_subdir_capsule() {
   echo "[replicatorbench] cloning github_subdir capsule: ${repo_url} @ ${ref}"
   git clone --depth 1 "${repo_url}" "${tmp}"
 
-  # If ref is not the default branch head, fetch it explicitly and check it out.
   git -C "${tmp}" fetch --depth 1 origin "${ref}" || true
   git -C "${tmp}" checkout "${ref}"
 
-  # Make sure git-lfs is available, then pull large files.
   if ! command -v git-lfs >/dev/null 2>&1; then
     echo "[replicatorbench] ERROR: git-lfs not installed or not in PATH"
     rm -rf "${tmp}"
@@ -349,8 +353,6 @@ while IFS=$'\t' read -r task_id capsule_id capsule_type capsule_url capsule_ref 
     echo "[replicatorbench] ${capsule_id}: capsule ready at ${out_dir}"
   fi
 
-printf "\n===========[replicatorbench][setup] task_id=%s capsule_id=%s\n\n" "${task_id}" "${capsule_id}" >&2
-
 done < <(python3 - "${TASKS_JSON}" <<'PY'
 import json, sys
 
@@ -384,5 +386,3 @@ for t in tasks:
     print(f"{task_id}\t{capsule_id}\t{ctype}\t{url}\t{ref}\t{subdir}\t{sha_s}")
 PY
 )
-
-echo -e "\n========== [replicatorbench][setup] END time=$(date -Is) ==========\n" >&2
