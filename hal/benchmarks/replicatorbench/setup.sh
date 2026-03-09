@@ -17,7 +17,7 @@ fi
 
 set -euo pipefail
 
-if [[ "${STUB_WEAVE:-1}" == "1" ]]; then
+if [[ "${STUB_WEAVE:-0}" == "1" ]]; then
   cat > /workspace/weave.py <<'PY'
 from contextlib import contextmanager
 
