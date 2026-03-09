@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from .vm.azure_virtual_machine import AzureVirtualMachine
 
-# Mount names for core_agent: created as /data, /code, /results in cloud-init (see vm/cloud_init.yaml).
+# Mount names for core_agent: created as /home/agent/data, /home/agent/code, /home/agent/results in cloud-init (see vm/cloud_init.yaml).
 VM_AGENT_HOME = "/home/agent"
 VM_ENVIRONMENT_MOUNT_NAMES = ("data", "code", "results")
 
@@ -276,14 +276,6 @@ class VirtualMachineManager:
             self.network_client,
             self.resource_group_name,
         ) as (sftp_client, ssh_client):
-            # Sync mount dirs back into home so the tar includes agent output (e.g. core_agent writes to /results)
-            for _name in VM_ENVIRONMENT_MOUNT_NAMES:
-                _, stdout, _ = ssh_client.exec_command(
-                    f"test -d /{_name} && cp -r /{_name}/. {VM_AGENT_HOME}/environment/{_name}/ 2>/dev/null || true"
-                )
-                for _ in stdout:
-                    pass
-
             # Remove ./miniconda3 directory from the VM
             _, stdout, _ = ssh_client.exec_command("rm -rf /home/agent/miniconda3")
             for _ in stdout:
@@ -434,15 +426,6 @@ class VirtualMachineManager:
 
                 script_path = "/home/agent/run_agent.py"
                 ssh_client.exec_command(f"chmod +x {script_path}")
-
-                # Populate VM_ENVIRONMENT_MOUNT_NAMES dirs from task payload (same list as in vm/cloud_init.yaml)
-                for _name in VM_ENVIRONMENT_MOUNT_NAMES:
-                    _src = f"{VM_AGENT_HOME}/environment/{_name}"
-                    _dest = f"/{_name}"
-                    _, _so, _se = ssh_client.exec_command(
-                        f"test -d {_src} && cp -r {_src}/. {_dest}/"
-                    )
-                    _so.channel.recv_exit_status()
 
                 # Construct command to run script
                 cmd = f"source /home/agent/miniconda3/etc/profile.d/conda.sh && conda activate agent_env && python {script_path} > agent_trace.log 2>&1"

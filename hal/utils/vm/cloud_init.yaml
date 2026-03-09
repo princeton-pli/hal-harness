@@ -33,9 +33,9 @@ runcmd:
     rm /tmp/miniconda.sh
     chown -R agent:agent /home/agent/miniconda3
 
-    # 5b. Create mount dirs for core_agent (must match VM_ENVIRONMENT_MOUNT_NAMES in virtual_machine_manager.py)
-    for d in data code results; do mkdir -p /$d; done
-    chown -R agent:agent /data /code /results
+    # 5b. Create mount dirs for core_agent under /home/agent (must match VM_ENVIRONMENT_MOUNT_NAMES in virtual_machine_manager.py)
+    for d in data code results; do mkdir -p /home/agent/$d; done
+    chown -R agent:agent /home/agent/data /home/agent/code /home/agent/results
 
     # 6. Create conda environment as agent user
     sudo -u agent bash -c "
