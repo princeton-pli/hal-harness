@@ -172,7 +172,7 @@ class VirtualMachineManager:
                 except Exception as e:
                     logger.error(f"Error closing SSH client: {e}")
 
-    def create_virtual_machine_by_name(self, vm_name, has_gpu=False, setup_timeout: int = 2700):
+    def create_virtual_machine_by_name(self, vm_name, has_gpu: bool = False, setup_timeout: int = 0):
         """Create a standard Azure VM without GPU.
 
         Args:

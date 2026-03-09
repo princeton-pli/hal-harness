@@ -28,7 +28,7 @@ class AzureVirtualMachine:
         nsg_id: str,
         ssh_public_key: str,
         gpu: bool,
-        timeout: int = 2700,
+        timeout: int,
     ):
         self.name = name
         self.resource_group = resource_group
