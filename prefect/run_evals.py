@@ -55,7 +55,7 @@ MODELS = [
 
 def run_eval_locally(
     agent_name: str, benchmark_name: str, task_id: str, model: str
-) -> str:
+) -> dict:
     """Simulate a single benchmark task locally."""
     run_id = (
         f"{agent_name}--{benchmark_name}--{task_id}--{model}--{uuid.uuid4().hex[:8]}"
@@ -64,7 +64,6 @@ def run_eval_locally(
     print(
         f"Running | agent={agent_name} benchmark={benchmark_name} task={task_id} model={model} ({duration:.1f}s)"
     )
-    print("These logs get intercepted by Prefect to be shown in the UI")
     time.sleep(duration)
     if (
         random.random() < 0.3
@@ -73,7 +72,12 @@ def run_eval_locally(
             f"Simulated failure: {agent_name} / {benchmark_name} / {task_id} / {model}"
         )
     print(f"Done | run_id={run_id}")
-    return run_id
+    return {
+        "run_id": run_id,
+        "metadata": {"info": "TODO: complete me"},
+        "agent_response": {"info": "TODO: complete me"},
+        "scoring": {"info": "TODO: complete me"},
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +96,7 @@ def run_eval_task(
     agent_name: str, benchmark_name: str, task_id: str, model: str
 ) -> str:
     """Prefect task: run one (agent, benchmark task, model) evaluation."""
-    run_id = run_eval_locally(agent_name, benchmark_name, task_id, model)
+    result = run_eval_locally(agent_name, benchmark_name, task_id, model)
     create_markdown_artifact(
         key="task-result",
         description=f"{agent_name} / {benchmark_name} / {task_id} / {model}",
@@ -104,11 +108,17 @@ def run_eval_task(
 | Benchmark | `{benchmark_name}` |
 | Task | `{task_id}` |
 | Model | `{model}` |
-| Run ID | `{run_id}` |
+| Run ID | `{result["run_id"]}` |
 | Status | ✅ Passed |
+
+## Agent Response
+{result["agent_response"]}
+
+## Scoring
+{result["scoring"]}
 """,
     )
-    return run_id
+    return result
 
 
 @flow(log_prints=True)
@@ -136,7 +146,7 @@ def evaluation_harness_poc(
     rows = []
     for (agent, benchmark, task_id, model), future in zip(combos, futures):
         try:
-            run_id = future.result()
+            run_id = future.result()["run_id"]
             rows.append(
                 f"| {agent} | {benchmark} | `{task_id}` | {model} | ✅ | `{run_id}` |"
             )
