@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "ruff",
     "pytest>=8.0.0",
     "pytest-mock>=3.12.0",
     "matplotlib>=3.7.0",

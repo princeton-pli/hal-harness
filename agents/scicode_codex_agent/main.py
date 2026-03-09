@@ -28,7 +28,9 @@ def test_code(code: str, dependencies: str, timeout: int = 30) -> tuple[bool, st
     """Run generated code in a subprocess to check for basic errors."""
     test_script = f"{dependencies}\n\n{code}\n\nprint('OK')\n"
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as script_file:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".py", delete=False
+    ) as script_file:
         script_file.write(test_script)
         script_file.flush()
         try:
@@ -65,7 +67,9 @@ def run_codex_cli(
         command.extend(["-C", str(codex_working_dir)])
     command.extend(["-o", str(out_path)])
 
-    def _run_cmd(command_prefix: list[str] | None = None) -> subprocess.CompletedProcess:
+    def _run_cmd(
+        command_prefix: list[str] | None = None,
+    ) -> subprocess.CompletedProcess:
         full_command = [*(command_prefix or []), *command]
         return subprocess.run(
             full_command,
@@ -83,7 +87,9 @@ def run_codex_cli(
         raise RuntimeError(f"Codex CLI timed out after {codex_timeout}s") from exc
 
     try:
-        output_text = out_path.read_text(encoding="utf-8").strip() if out_path.exists() else ""
+        output_text = (
+            out_path.read_text(encoding="utf-8").strip() if out_path.exists() else ""
+        )
     finally:
         if out_path.exists():
             os.unlink(out_path)
@@ -102,11 +108,15 @@ def run_codex_cli(
             except FileNotFoundError as exc:
                 raise RuntimeError("Could not run Codex with arm64 fallback") from exc
             except subprocess.TimeoutExpired as exc:
-                raise RuntimeError(f"Codex CLI timed out after {codex_timeout}s") from exc
+                raise RuntimeError(
+                    f"Codex CLI timed out after {codex_timeout}s"
+                ) from exc
 
             try:
                 output_text = (
-                    out_path.read_text(encoding="utf-8").strip() if out_path.exists() else ""
+                    out_path.read_text(encoding="utf-8").strip()
+                    if out_path.exists()
+                    else ""
                 )
             finally:
                 if out_path.exists():
@@ -114,16 +124,22 @@ def run_codex_cli(
 
         if completed.returncode != 0:
             stderr_tail = (completed.stderr or completed.stdout or "").strip()[-1000:]
-            raise RuntimeError(f"Codex CLI failed (exit {completed.returncode}): {stderr_tail}")
+            raise RuntimeError(
+                f"Codex CLI failed (exit {completed.returncode}): {stderr_tail}"
+            )
 
     if not output_text:
         output_text = (completed.stdout or "").strip()
     return output_text
 
 
-def build_subtask_prompt(task_data: dict, step_index: int,
-                         previous_code: list[str], with_background: bool,
-                         dependencies: str) -> str:
+def build_subtask_prompt(
+    task_data: dict,
+    step_index: int,
+    previous_code: list[str],
+    with_background: bool,
+    dependencies: str,
+) -> str:
     """Build the prompt for a single subtask."""
     step = task_data["sub_steps"][step_index]
     header = step["function_header"]
@@ -135,7 +151,7 @@ def build_subtask_prompt(task_data: dict, step_index: int,
     for i in range(step_index):
         prev_desc = task_data["sub_steps"][i]["step_description_prompt"]
         prev_steps_text += (
-            f"--- Step {i+1} ---\n{prev_desc}\n\n"
+            f"--- Step {i + 1} ---\n{prev_desc}\n\n"
             f"Implementation:\n{previous_code[i]}\n\n"
         )
 
@@ -236,7 +252,7 @@ def generate_with_correction(
         code = extract_code(response_text)
 
         if not code:
-            print(f"    attempt {attempt+1}: empty response, retrying")
+            print(f"    attempt {attempt + 1}: empty response, retrying")
             current_prompt = (
                 f"{current_prompt}\n\n"
                 f"Previous response:\n{response_text}\n\n"
@@ -248,10 +264,10 @@ def generate_with_correction(
         last_code = code
         success, error_msg = test_code(code, dependencies)
         if success:
-            print(f"    attempt {attempt+1}: code passes")
+            print(f"    attempt {attempt + 1}: code passes")
             return code
 
-        print(f"    attempt {attempt+1}: error — {error_msg[:120]}")
+        print(f"    attempt {attempt + 1}: error — {error_msg[:120]}")
 
         if attempt < max_attempts - 1:
             current_prompt = (
@@ -332,7 +348,7 @@ def run(input: Dict[str, Any], **kwargs) -> Dict[str, str]:
                     dependencies=dependencies,
                 )
 
-                print(f"  step {task_id}.{i+1}:")
+                print(f"  step {task_id}.{i + 1}:")
                 generated_code = generate_with_correction(
                     model_name=model_name,
                     prompt=prompt,
