@@ -112,14 +112,18 @@ def run_eval_task(
 
 
 @flow(log_prints=True)
-def evaluation_harness_poc() -> None:
+def evaluation_harness_poc(
+    agents: list[str] = AGENTS,
+    benchmark_tasks: dict[str, list[str]] = BENCHMARK_TASKS,
+    models: list[str] = MODELS,
+) -> None:
     """Submit all (agent × benchmark task × model) combinations concurrently."""
     combos = [
         (agent, benchmark, task_id, model)
-        for agent in AGENTS
-        for benchmark, tasks in BENCHMARK_TASKS.items()
+        for agent in agents
+        for benchmark, tasks in benchmark_tasks.items()
         for task_id in tasks
-        for model in MODELS
+        for model in models
     ]
 
     futures = [
@@ -158,4 +162,4 @@ def evaluation_harness_poc() -> None:
 
 
 if __name__ == "__main__":
-    evaluation_harness_poc()
+    evaluation_harness_poc.serve(name="eval-harness-poc")
