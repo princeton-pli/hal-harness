@@ -111,8 +111,8 @@ This repository provides a standardized evaluation harness for reproducible agen
      - You will need to create a NSG in Azure for your access.
      - Ensure that the NSG has an Inbound security rule that permits your machine to access SSH (port 22).
      - Enter the NSG's name here.
-   - SSH_PUBLIC_KEY_PATH: This is the TK
-   - SSH_PRIVATE_KEY_PATH: This is the TK
+   - SSH_PUBLIC_KEY_PATH: This is your SSH key (on your local machine)
+   - SSH_PRIVATE_KEY_PATH: This is your SSH key (on your local machine)
 
    Then run the following command to install the optional azure dependencies:
 

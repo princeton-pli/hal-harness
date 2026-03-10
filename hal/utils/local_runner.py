@@ -18,11 +18,11 @@ class LocalRunner:
     def __init__(
         self,
         log_dir: str,
+        task_timeout: int,
         max_concurrent: int = 1,
         conda_env: Optional[str] = None,
         benchmark: Optional[BaseBenchmark] = None,
         retry_config: Optional[Dict[str, Any]] = None,
-        task_timeout: int = 600,
     ):
         self.log_dir = log_dir
         self.max_concurrent = max_concurrent

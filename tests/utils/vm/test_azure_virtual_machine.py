@@ -115,6 +115,7 @@ class TestAzureVirtualMachineInit:
             nsg_id="nsg-123",
             ssh_public_key="ssh-rsa AAAAB3...",
             gpu=True,
+            timeout=555,
         )
 
         # Assert
@@ -137,6 +138,7 @@ class TestAzureVirtualMachineInit:
             nsg_id="nsg-456",
             ssh_public_key="ssh-rsa AAAAB3...",
             gpu=False,
+            timeout=555,
         )
 
         # Assert
@@ -159,6 +161,7 @@ class TestAzureVirtualMachineInit:
             nsg_id="nsg-789",
             ssh_public_key="ssh-rsa AAAAB3...",
             gpu=False,
+            timeout=555,
         )
 
         # Assert
@@ -180,6 +183,7 @@ class TestAzureVirtualMachineInit:
             nsg_id="nsg-abc",
             ssh_public_key="ssh-rsa AAAAB3...",
             gpu=True,
+            timeout=555,
         )
 
         # Assert - GPU size should override the provided size
@@ -202,6 +206,7 @@ class TestAzureVirtualMachineInit:
             nsg_id="nsg-xyz",
             ssh_public_key="ssh-rsa AAAAB3NzaC1...",
             gpu=False,
+            timeout=555,
         )
 
         # Assert
@@ -211,5 +216,6 @@ class TestAzureVirtualMachineInit:
         assert vm.gpu is False
         assert vm.nsg_id == "nsg-xyz"
         assert vm.ssh_public_key == "ssh-rsa AAAAB3NzaC1..."
+        assert vm.timeout == 555
         assert vm.public_ip is None  # Not set until _create runs
         mock_create.assert_called_once()

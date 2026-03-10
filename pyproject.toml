@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "ruff==0.15.4",
     "pytest>=8.0.0",
     "pytest-mock>=3.12.0",
     "matplotlib>=3.7.0",
@@ -37,7 +38,6 @@ azure = [
     "azure-mgmt-network>=25.1.0",
     "azure-mgmt-resource>=23.0.1",
     "azure-identity>=1.12.0",
-    "azure-monitor-ingestion>=1.0.3",
     "paramiko==3.5.0",
     "requests>=2.31.0",  # For Azure VM detection via IMDS
 ]
