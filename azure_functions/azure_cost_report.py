@@ -15,7 +15,9 @@ from azure.mgmt.costmanagement import CostManagementClient
 logger = logging.getLogger(__name__)
 
 
-def get_yesterday_costs(subscription_id: str, resource_group: str | None = None) -> dict:
+def get_yesterday_costs(
+    subscription_id: str, resource_group: str | None = None
+) -> dict:
     """Query Azure Cost Management for yesterday's costs grouped by ExecutedBy tag.
 
     Returns:
@@ -26,8 +28,18 @@ def get_yesterday_costs(subscription_id: str, resource_group: str | None = None)
 
     yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
     time_period = {
-        "from": datetime(yesterday.year, yesterday.month, yesterday.day, tzinfo=timezone.utc),
-        "to": datetime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59, tzinfo=timezone.utc),
+        "from": datetime(
+            yesterday.year, yesterday.month, yesterday.day, tzinfo=timezone.utc
+        ),
+        "to": datetime(
+            yesterday.year,
+            yesterday.month,
+            yesterday.day,
+            23,
+            59,
+            59,
+            tzinfo=timezone.utc,
+        ),
     }
 
     if resource_group:
@@ -55,8 +67,10 @@ def get_yesterday_costs(subscription_id: str, resource_group: str | None = None)
         except HttpResponseError as e:
             if e.status_code == 429 and attempt < max_retries - 1:
                 retry_after = int(e.response.headers.get("Retry-After", 0))
-                wait = max(retry_after, 30 * (2 ** attempt))
-                logger.warning(f"Rate limited, retrying in {wait}s (attempt {attempt + 1}/{max_retries})...")
+                wait = max(retry_after, 30 * (2**attempt))
+                logger.warning(
+                    f"Rate limited, retrying in {wait}s (attempt {attempt + 1}/{max_retries})..."
+                )
                 time.sleep(wait)
             else:
                 raise
@@ -117,7 +131,9 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     logging.getLogger("azure").setLevel(logging.WARNING)
 
-    parser = argparse.ArgumentParser(description="Post daily Azure cost report to Slack")
+    parser = argparse.ArgumentParser(
+        description="Post daily Azure cost report to Slack"
+    )
     parser.add_argument(
         "--resource-group",
         default=os.getenv("AZURE_RESOURCE_GROUP_NAME"),
@@ -137,7 +153,9 @@ def main():
 
     webhook_url = os.getenv("SLACK_WEBHOOK_URL")
     if not webhook_url and not args.dry_run:
-        logger.error("SLACK_WEBHOOK_URL environment variable is required (or use --dry-run)")
+        logger.error(
+            "SLACK_WEBHOOK_URL environment variable is required (or use --dry-run)"
+        )
         sys.exit(1)
 
     try:

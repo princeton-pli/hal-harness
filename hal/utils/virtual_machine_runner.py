@@ -97,7 +97,9 @@ class VirtualMachineRunner:
                 # Build resource tags for cost attribution
                 tags = {
                     "ExecutedBy": os.getenv("EXECUTED_BY", "unknown"),
-                    "BenchmarkName": benchmark.benchmark_name if benchmark else "unknown",
+                    "BenchmarkName": benchmark.benchmark_name
+                    if benchmark
+                    else "unknown",
                     "RunId": run_id,
                     "TaskId": task_id,
                     "ManagedBy": "hal-harness",

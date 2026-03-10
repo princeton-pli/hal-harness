@@ -9,6 +9,7 @@ from azure_cost_report import get_yesterday_costs, format_slack_message, post_to
 
 app = func.FunctionApp()
 
+
 # WEBSITE_TIME_ZONE must be set to "America/New_York" in app settings
 # so this fires at 8:00 AM Eastern (auto-adjusts for DST)
 @app.timer_trigger(schedule="0 0 8 * * *", arg_name="timer", run_on_startup=False)
