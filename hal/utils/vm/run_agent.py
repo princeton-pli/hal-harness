@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Static entrypoint for running an agent on a VM.
+Static entrypoint for running an agent on a VM. Gets copied by hal/utils/virtual_machine_manager.py into the VM
 
 Reads configuration from environment variables (loaded from .env and run_agent.env).
 Required env vars: RUN_ID, AGENT_FUNCTION, TASK_ID.
