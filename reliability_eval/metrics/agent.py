@@ -885,19 +885,13 @@ def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
                     _numpy_safe(m.extra.get("calibration_bins", []))
                 ),
                 "_aurc_coverages_json": json.dumps(
-                    _numpy_safe(
-                        m.extra.get("aurc_data", {}).get("coverages", [])
-                    )
+                    _numpy_safe(m.extra.get("aurc_data", {}).get("coverages", []))
                 ),
                 "_aurc_risks_json": json.dumps(
-                    _numpy_safe(
-                        m.extra.get("aurc_data", {}).get("risks", [])
-                    )
+                    _numpy_safe(m.extra.get("aurc_data", {}).get("risks", []))
                 ),
                 "_aurc_optimal_risks_json": json.dumps(
-                    _numpy_safe(
-                        m.extra.get("aurc_data", {}).get("optimal_risks", [])
-                    )
+                    _numpy_safe(m.extra.get("aurc_data", {}).get("optimal_risks", []))
                 ),
                 # Per-outcome confidence distributions (for density plots)
                 "_correct_confidences_json": json.dumps(

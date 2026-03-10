@@ -64,14 +64,24 @@ def _prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             df_sorted["consistency_resource"],
         )
     if "reliability_predictability" not in df_sorted.columns:
-        df_sorted["reliability_predictability"] = df_sorted["predictability_brier_score"]
+        df_sorted["reliability_predictability"] = df_sorted[
+            "predictability_brier_score"
+        ]
     if "reliability_robustness" not in df_sorted.columns:
         df_sorted["reliability_robustness"] = df_sorted[
-            ["robustness_fault_injection", "robustness_structural", "robustness_prompt_variation"]
+            [
+                "robustness_fault_injection",
+                "robustness_structural",
+                "robustness_prompt_variation",
+            ]
         ].mean(axis=1, skipna=True)
     if "reliability_overall" not in df_sorted.columns:
         df_sorted["reliability_overall"] = df_sorted[
-            ["reliability_consistency", "reliability_predictability", "reliability_robustness"]
+            [
+                "reliability_consistency",
+                "reliability_predictability",
+                "reliability_robustness",
+            ]
         ].mean(axis=1, skipna=True)
     if "provider" not in df_sorted.columns:
         df_sorted["provider"] = df_sorted["agent"].map(
@@ -87,15 +97,27 @@ def _draw_panel(ax, labels, values, colors, title, show_xticks=False, xerr=None)
 
     for j in range(n):
         ax.barh(
-            y_pos[j], values[j], height=_BAR_HEIGHT,
-            color=colors[j], edgecolor="black", linewidth=1, zorder=2,
+            y_pos[j],
+            values[j],
+            height=_BAR_HEIGHT,
+            color=colors[j],
+            edgecolor="black",
+            linewidth=1,
+            zorder=2,
         )
 
     # Draw error bars on top
     if xerr is not None:
         ax.errorbar(
-            values, y_pos, xerr=xerr, fmt="none",
-            ecolor="#333333", elinewidth=1.5, capsize=4, capthick=1.5, zorder=3,
+            values,
+            y_pos,
+            xerr=xerr,
+            fmt="none",
+            ecolor="#333333",
+            elinewidth=1.5,
+            capsize=4,
+            capthick=1.5,
+            zorder=3,
         )
 
     ax.set_yticks(y_pos)
@@ -106,7 +128,9 @@ def _draw_panel(ax, labels, values, colors, title, show_xticks=False, xerr=None)
     ax.tick_params(axis="x", length=0, pad=4)
 
     if show_xticks:
-        ax.set_xticklabels(["0%", "25%", "50%", "75%", "100%"], fontsize=10, color=_COLOR_SUBTLE)
+        ax.set_xticklabels(
+            ["0%", "25%", "50%", "75%", "100%"], fontsize=10, color=_COLOR_SUBTLE
+        )
     else:
         ax.set_xticklabels([])
 
@@ -170,7 +194,9 @@ def plot_social_overall_reliability(
             continue
 
         # Sort by reliability (highest at top of chart)
-        df_valid = df_valid.sort_values("reliability_overall", ascending=True).reset_index(drop=True)
+        df_valid = df_valid.sort_values(
+            "reliability_overall", ascending=True
+        ).reset_index(drop=True)
 
         labels = [strip_agent_prefix(a) for a in df_valid["agent"]]
         values = df_valid["reliability_overall"].values
@@ -181,11 +207,21 @@ def plot_social_overall_reliability(
 
         # Propagate SE for reliability_overall = mean(R_con, R_pred, R_rob)
         # SE(mean) = sqrt(se_con^2 + se_pred^2 + se_rob^2) / 3
-        se_con = _get_weighted_r_con_yerr(df_valid) / _CI_Z  # undo CI scaling to get raw SE
+        se_con = (
+            _get_weighted_r_con_yerr(df_valid) / _CI_Z
+        )  # undo CI scaling to get raw SE
         se_pred_col = "predictability_brier_score_se"
-        se_pred = df_valid[se_pred_col].values if se_pred_col in df_valid.columns else np.zeros(len(df_valid))
+        se_pred = (
+            df_valid[se_pred_col].values
+            if se_pred_col in df_valid.columns
+            else np.zeros(len(df_valid))
+        )
         se_pred = np.where(np.isnan(se_pred), 0, se_pred)
-        rob_se_cols = ["robustness_fault_injection_se", "robustness_structural_se", "robustness_prompt_variation_se"]
+        rob_se_cols = [
+            "robustness_fault_injection_se",
+            "robustness_structural_se",
+            "robustness_prompt_variation_se",
+        ]
         rob_existing = [c for c in rob_se_cols if c in df_valid.columns]
         if rob_existing:
             rob_sq = np.zeros(len(df_valid))
@@ -209,24 +245,32 @@ def plot_social_overall_reliability(
     panel_sizes = [len(p[1]) for p in panels]
 
     # Size: ~0.38in per bar row, plus space for title header and footer logos
-    header_height = 1.1   # title + subtitle
-    footer_height = 0.6   # logos
-    panel_gap = 0.6       # gap between panels
+    header_height = 1.1  # title + subtitle
+    footer_height = 0.6  # logos
+    panel_gap = 0.6  # gap between panels
     bar_row_height = 0.38
-    body_height = sum(s * bar_row_height for s in panel_sizes) + panel_gap * (n_panels - 1)
+    body_height = sum(s * bar_row_height for s in panel_sizes) + panel_gap * (
+        n_panels - 1
+    )
     fig_height = header_height + body_height + footer_height + 0.3
     fig_width = 7
 
     fig = plt.figure(figsize=(fig_width, fig_height), facecolor=_BG_COLOR)
 
     # Use gridspec: header row (fixed), one row per panel, footer row (fixed)
-    height_ratios = [header_height] + [s * bar_row_height for s in panel_sizes] + [footer_height]
+    height_ratios = (
+        [header_height] + [s * bar_row_height for s in panel_sizes] + [footer_height]
+    )
     gs = gridspec.GridSpec(
-        n_panels + 2, 1,
+        n_panels + 2,
+        1,
         figure=fig,
         height_ratios=height_ratios,
         hspace=0.35,
-        left=0.28, right=0.97, top=0.97, bottom=0.02,
+        left=0.28,
+        right=0.97,
+        top=0.97,
+        bottom=0.02,
     )
 
     # Header: title + subtitle. We render a dummy panel first to find where
@@ -238,16 +282,24 @@ def plot_social_overall_reliability(
     header_ax.axis("off")
     header_bbox = header_ax.get_position()
     fig.text(
-        _LEFT_MARGIN, header_bbox.y1 - 0.01,
+        _LEFT_MARGIN,
+        header_bbox.y1 - 0.01,
         "More capable models are not more reliable",
-        fontsize=19, fontweight="bold", color=_COLOR_TEXT,
-        va="top", ha="left",
+        fontsize=19,
+        fontweight="bold",
+        color=_COLOR_TEXT,
+        va="top",
+        ha="left",
     )
     fig.text(
-        _LEFT_MARGIN, header_bbox.y0 + header_bbox.height * 0.35,
+        _LEFT_MARGIN,
+        header_bbox.y0 + header_bbox.height * 0.35,
         "Overall Reliability by model, sorted by score.",
-        fontsize=12, color=_COLOR_SUBTLE,
-        va="top", ha="left", wrap=True,
+        fontsize=12,
+        color=_COLOR_SUBTLE,
+        va="top",
+        ha="left",
+        wrap=True,
     )
 
     # Bar panels
@@ -258,9 +310,15 @@ def plot_social_overall_reliability(
         # Rotated benchmark label on the far left
         ax_bbox = ax.get_position()
         fig.text(
-            0.01, ax_bbox.y0 + ax_bbox.height / 2,
-            title, fontsize=14, fontweight="bold", color=_COLOR_TEXT,
-            va="center", ha="center", rotation=90,
+            0.01,
+            ax_bbox.y0 + ax_bbox.height / 2,
+            title,
+            fontsize=14,
+            fontweight="bold",
+            color=_COLOR_TEXT,
+            va="center",
+            ha="center",
+            rotation=90,
         )
 
     # Footer: logos
@@ -277,22 +335,31 @@ def plot_social_overall_reliability(
     logo_y = footer_bbox.y0 + footer_bbox.height * 0.1
     _RIGHT_EDGE = 0.97  # match gridspec right edge
     _place_logo(fig, _HAL_LOGO_PNG, [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
-    _place_logo(fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E")
+    _place_logo(
+        fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E"
+    )
 
     # Centered URL in figure coords
     fig.text(
-        (_LEFT_MARGIN + _RIGHT_EDGE) / 2, footer_bbox.y0 + footer_bbox.height * 0.5,
+        (_LEFT_MARGIN + _RIGHT_EDGE) / 2,
+        footer_bbox.y0 + footer_bbox.height * 0.5,
         "hal.cs.princeton.edu/reliability",
-        fontsize=10, color=_COLOR_SUBTLE, ha="center", va="center",
+        fontsize=10,
+        color=_COLOR_SUBTLE,
+        ha="center",
+        va="center",
     )
 
     social_dir = output_dir / "social"
     social_dir.mkdir(parents=True, exist_ok=True)
     output_path = social_dir / "overall_reliability.pdf"
     fig.savefig(
-        output_path, dpi=300, format="pdf",
+        output_path,
+        dpi=300,
+        format="pdf",
         facecolor=_BG_COLOR,
-        bbox_inches="tight", pad_inches=padding,
+        bbox_inches="tight",
+        pad_inches=padding,
     )
     print(f"  Saved: {output_path}")
     plt.close(fig)
@@ -336,14 +403,13 @@ def plot_social_openai_overall(
         if len(df_valid) == 0:
             continue
 
-        df_valid = df_valid.sort_values("reliability_overall", ascending=True).reset_index(drop=True)
+        df_valid = df_valid.sort_values(
+            "reliability_overall", ascending=True
+        ).reset_index(drop=True)
 
         labels = [strip_agent_prefix(a) for a in df_valid["agent"]]
         values = df_valid["reliability_overall"].values
-        colors = [
-            _OPENAI_GREEN if "5_4" in a else _BG_COLOR
-            for a in df_valid["agent"]
-        ]
+        colors = [_OPENAI_GREEN if "5_4" in a else _BG_COLOR for a in df_valid["agent"]]
 
         xerrs = []
         for _, row in df_valid.iterrows():
@@ -378,16 +444,18 @@ def plot_social_openai_overall(
     fig = plt.figure(figsize=(fig_width, fig_height), facecolor=_BG_COLOR)
 
     height_ratios = (
-        [header_height]
-        + [s * bar_row_height for s in panel_sizes]
-        + [footer_height]
+        [header_height] + [s * bar_row_height for s in panel_sizes] + [footer_height]
     )
     gs = gridspec.GridSpec(
-        n_panels + 2, 1,
+        n_panels + 2,
+        1,
         figure=fig,
         height_ratios=height_ratios,
         hspace=0.35,
-        left=0.28, right=0.97, top=0.97, bottom=0.02,
+        left=0.28,
+        right=0.97,
+        top=0.97,
+        bottom=0.02,
     )
 
     _LEFT_MARGIN = 0.05
@@ -395,16 +463,24 @@ def plot_social_openai_overall(
     header_ax.axis("off")
     header_bbox = header_ax.get_position()
     fig.text(
-        _LEFT_MARGIN, header_bbox.y1 - 0.01,
+        _LEFT_MARGIN,
+        header_bbox.y1 - 0.01,
         "Overall Reliability across OpenAI Models",
-        fontsize=19, fontweight="bold", color=_COLOR_TEXT,
-        va="top", ha="left",
+        fontsize=19,
+        fontweight="bold",
+        color=_COLOR_TEXT,
+        va="top",
+        ha="left",
     )
     fig.text(
-        _LEFT_MARGIN, header_bbox.y0 + header_bbox.height * 0.35,
+        _LEFT_MARGIN,
+        header_bbox.y0 + header_bbox.height * 0.35,
         "All OpenAI models compared across benchmarks. GPT 5.4 highlighted.",
-        fontsize=12, color=_COLOR_SUBTLE,
-        va="top", ha="left", wrap=True,
+        fontsize=12,
+        color=_COLOR_SUBTLE,
+        va="top",
+        ha="left",
+        wrap=True,
     )
 
     for i, (title, labels, values, colors, xerr) in enumerate(panels):
@@ -414,9 +490,15 @@ def plot_social_openai_overall(
         # Rotated benchmark label on the far left
         ax_bbox = ax.get_position()
         fig.text(
-            0.01, ax_bbox.y0 + ax_bbox.height / 2,
-            title, fontsize=14, fontweight="bold", color=_COLOR_TEXT,
-            va="center", ha="center", rotation=90,
+            0.01,
+            ax_bbox.y0 + ax_bbox.height / 2,
+            title,
+            fontsize=14,
+            fontweight="bold",
+            color=_COLOR_TEXT,
+            va="center",
+            ha="center",
+            rotation=90,
         )
 
     # Footer
@@ -431,21 +513,30 @@ def plot_social_openai_overall(
     logo_y = footer_bbox.y0 + footer_bbox.height * 0.1
     _RIGHT_EDGE = 0.97
     _place_logo(fig, _HAL_LOGO_PNG, [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
-    _place_logo(fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E")
+    _place_logo(
+        fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E"
+    )
 
     fig.text(
-        (_LEFT_MARGIN + _RIGHT_EDGE) / 2, footer_bbox.y0 + footer_bbox.height * 0.5,
+        (_LEFT_MARGIN + _RIGHT_EDGE) / 2,
+        footer_bbox.y0 + footer_bbox.height * 0.5,
         "hal.cs.princeton.edu/reliability",
-        fontsize=10, color=_COLOR_SUBTLE, ha="center", va="center",
+        fontsize=10,
+        color=_COLOR_SUBTLE,
+        ha="center",
+        va="center",
     )
 
     social_dir = output_dir / "social"
     social_dir.mkdir(parents=True, exist_ok=True)
     output_path = social_dir / "openai_overall.pdf"
     fig.savefig(
-        output_path, dpi=300, format="pdf",
+        output_path,
+        dpi=300,
+        format="pdf",
         facecolor=_BG_COLOR,
-        bbox_inches="tight", pad_inches=padding,
+        bbox_inches="tight",
+        pad_inches=padding,
     )
     print(f"  Saved: {output_path}")
     plt.close(fig)
@@ -472,17 +563,19 @@ _BENCHMARK_MODELS_52_54 = {
 
 
 _MODEL_COLORS_52_54 = {
-    "gpt_5_2": _BG_COLOR,        # background color (5.2 = "empty" bar)
+    "gpt_5_2": _BG_COLOR,  # background color (5.2 = "empty" bar)
     "gpt_5_2_medium": _BG_COLOR,
     "gpt_5_2_xhigh": _BG_COLOR,
-    "gpt_5_4": "#10A37F",        # solid OpenAI green (5.4)
+    "gpt_5_4": "#10A37F",  # solid OpenAI green (5.4)
     "gpt_5_4_medium": "#10A37F",
     "gpt_5_4_xhigh": "#10A37F",
 }
 
 _REASONING_SUFFIXES_52_54 = {
-    "gpt_5_2_medium", "gpt_5_2_xhigh",
-    "gpt_5_4_medium", "gpt_5_4_xhigh",
+    "gpt_5_2_medium",
+    "gpt_5_2_xhigh",
+    "gpt_5_4_medium",
+    "gpt_5_4_xhigh",
 }
 
 _BM_DISPLAY = {
@@ -501,16 +594,20 @@ def _se_for_metric(row, df_prep, metric):
     """Return the raw SE (not CI-scaled) for a single model row and metric."""
     if metric == "accuracy":
         se_col = "accuracy_se"
-        return 0 if se_col not in df_prep.columns else (
-            0 if np.isnan(row.get(se_col, np.nan)) else row[se_col]
+        return (
+            0
+            if se_col not in df_prep.columns
+            else (0 if np.isnan(row.get(se_col, np.nan)) else row[se_col])
         )
     if metric == "reliability_consistency":
         single = df_prep[df_prep["agent"] == row["agent"]]
         return float(_get_weighted_r_con_yerr(single) / _CI_Z)
     if metric == "reliability_predictability":
         se_col = "predictability_brier_score_se"
-        return 0 if se_col not in df_prep.columns else (
-            0 if np.isnan(row.get(se_col, np.nan)) else row[se_col]
+        return (
+            0
+            if se_col not in df_prep.columns
+            else (0 if np.isnan(row.get(se_col, np.nan)) else row[se_col])
         )
     if metric == "reliability_robustness":
         rob_se_cols = [
@@ -521,10 +618,7 @@ def _se_for_metric(row, df_prep, metric):
         existing = [c for c in rob_se_cols if c in df_prep.columns]
         if not existing:
             return 0
-        sq = sum(
-            (0 if np.isnan(row.get(c, np.nan)) else row[c]) ** 2
-            for c in existing
-        )
+        sq = sum((0 if np.isnan(row.get(c, np.nan)) else row[c]) ** 2 for c in existing)
         return np.sqrt(sq) / len(existing)
     return 0
 
@@ -605,10 +699,10 @@ def plot_social_openai_detailed(
     bar_h = _BAR_HEIGHT
     header_h = 1.2
     footer_h = 0.6
-    row_h = 0.45 * n_models + 0.5   # per-benchmark row height
+    row_h = 0.45 * n_models + 0.5  # per-benchmark row height
     fig_h = header_h + n_rows * row_h + footer_h + 0.4
     col_w = 2.8
-    label_w = 3.0   # extra width for y-tick labels in first column
+    label_w = 3.0  # extra width for y-tick labels in first column
     fig_w = label_w + (n_cols - 1) * col_w + 0.8
 
     fig = plt.figure(figsize=(fig_w, fig_h), facecolor=_BG_COLOR)
@@ -616,11 +710,15 @@ def plot_social_openai_detailed(
     # Outer grid: header | body rows | footer
     outer_height_ratios = [header_h] + [row_h] * n_rows + [footer_h]
     outer_gs = gridspec.GridSpec(
-        n_rows + 2, 1,
+        n_rows + 2,
+        1,
         figure=fig,
         height_ratios=outer_height_ratios,
         hspace=0.55,
-        left=0.15, right=0.98, top=0.97, bottom=0.02,
+        left=0.15,
+        right=0.98,
+        top=0.97,
+        bottom=0.02,
     )
 
     _LEFT_MARGIN = 0.02
@@ -630,22 +728,32 @@ def plot_social_openai_detailed(
     header_ax.axis("off")
     hbox = header_ax.get_position()
     fig.text(
-        _LEFT_MARGIN, hbox.y1 - 0.01,
+        _LEFT_MARGIN,
+        hbox.y1 - 0.01,
         "Reliability Breakdown across OpenAI Models",
-        fontsize=19, fontweight="bold", color=_COLOR_TEXT,
-        va="top", ha="left",
+        fontsize=19,
+        fontweight="bold",
+        color=_COLOR_TEXT,
+        va="top",
+        ha="left",
     )
     fig.text(
-        _LEFT_MARGIN, hbox.y0 + hbox.height * 0.30,
+        _LEFT_MARGIN,
+        hbox.y0 + hbox.height * 0.30,
         "Accuracy and each reliability pillar. GPT 5.4 highlighted.",
-        fontsize=12, color=_COLOR_SUBTLE, va="top", ha="left", wrap=True,
+        fontsize=12,
+        color=_COLOR_SUBTLE,
+        va="top",
+        ha="left",
+        wrap=True,
     )
 
     # ── Body: one sub-grid per benchmark row ──────────────────────────
     for r_idx, (bm_title, entries) in enumerate(panels):
         # Inner grid: 1 row x n_cols, with wider first column for labels
         inner_gs = outer_gs[1 + r_idx].subgridspec(
-            1, n_cols,
+            1,
+            n_cols,
             width_ratios=[label_w] + [col_w] * (n_cols - 1),
             wspace=0.30,
         )
@@ -664,15 +772,26 @@ def plot_social_openai_detailed(
 
             for j in range(len(labels)):
                 ax.barh(
-                    y_pos[j], vals[j], height=bar_h,
+                    y_pos[j],
+                    vals[j],
+                    height=bar_h,
                     color=bar_colors[j],
-                    edgecolor="black", linewidth=1, zorder=2,
+                    edgecolor="black",
+                    linewidth=1,
+                    zorder=2,
                 )
 
             # Draw error bars on top
             ax.errorbar(
-                vals, y_pos, xerr=yerrs, fmt="none",
-                ecolor="#333333", elinewidth=1.5, capsize=4, capthick=1.5, zorder=3,
+                vals,
+                y_pos,
+                xerr=yerrs,
+                fmt="none",
+                ecolor="#333333",
+                elinewidth=1.5,
+                capsize=4,
+                capthick=1.5,
+                zorder=3,
             )
 
             # Shared y-axis: labels only on the first column
@@ -690,7 +809,8 @@ def plot_social_openai_detailed(
             if r_idx == n_rows - 1:
                 ax.set_xticklabels(
                     ["0%", "25%", "50%", "75%", "100%"],
-                    fontsize=9, color=_COLOR_SUBTLE,
+                    fontsize=9,
+                    color=_COLOR_SUBTLE,
                 )
             else:
                 ax.set_xticklabels([])
@@ -707,17 +827,26 @@ def plot_social_openai_detailed(
             # Column title (metric name) above the top row only
             if r_idx == 0:
                 ax.set_title(
-                    metric_title, fontsize=12, fontweight="bold",
-                    color=_COLOR_TEXT, pad=8,
+                    metric_title,
+                    fontsize=12,
+                    fontweight="bold",
+                    color=_COLOR_TEXT,
+                    pad=8,
                 )
 
         # Rotated benchmark label on the far left
         first_ax = fig.axes[-n_cols]  # first axes we just added
         first_bbox = first_ax.get_position()
         fig.text(
-            0.01, first_bbox.y0 + first_bbox.height / 2,
-            bm_title, fontsize=14, fontweight="bold", color=_COLOR_TEXT,
-            va="center", ha="center", rotation=90,
+            0.01,
+            first_bbox.y0 + first_bbox.height / 2,
+            bm_title,
+            fontsize=14,
+            fontweight="bold",
+            color=_COLOR_TEXT,
+            va="center",
+            ha="center",
+            rotation=90,
         )
 
     # ── Footer ────────────────────────────────────────────────────────
@@ -731,20 +860,29 @@ def plot_social_openai_detailed(
     logo_y = fbox.y0 + fbox.height * 0.1
     _RIGHT_EDGE = 0.99
     _place_logo(fig, _HAL_LOGO_PNG, [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
-    _place_logo(fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E")
+    _place_logo(
+        fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E"
+    )
     fig.text(
-        (_LEFT_MARGIN + _RIGHT_EDGE) / 2, fbox.y0 + fbox.height * 0.5,
+        (_LEFT_MARGIN + _RIGHT_EDGE) / 2,
+        fbox.y0 + fbox.height * 0.5,
         "hal.cs.princeton.edu/reliability",
-        fontsize=10, color=_COLOR_SUBTLE, ha="center", va="center",
+        fontsize=10,
+        color=_COLOR_SUBTLE,
+        ha="center",
+        va="center",
     )
 
     social_dir = output_dir / "social"
     social_dir.mkdir(parents=True, exist_ok=True)
     output_path = social_dir / "openai_detailed.pdf"
     fig.savefig(
-        output_path, dpi=300, format="pdf",
+        output_path,
+        dpi=300,
+        format="pdf",
         facecolor=_BG_COLOR,
-        bbox_inches="tight", pad_inches=padding,
+        bbox_inches="tight",
+        pad_inches=padding,
     )
     print(f"  Saved: {output_path}")
     plt.close(fig)
@@ -754,6 +892,7 @@ def plot_social_openai_detailed(
 
 
 # ── JSON column parsers for curve data from CSV ──────────────────────
+
 
 def _parse_calibration_bins(row):
     """Parse calibration bins from a DataFrame row's JSON column."""
@@ -790,8 +929,8 @@ def _parse_aurc_data(row):
 
 # ── Line colors for curve plots ──────────────────────────────────────
 
-_LINE_COLOR_52 = "#888888"   # gray for 5.2
-_LINE_COLOR_54 = "#10A37F"   # OpenAI green for 5.4
+_LINE_COLOR_52 = "#888888"  # gray for 5.2
+_LINE_COLOR_54 = "#10A37F"  # OpenAI green for 5.4
 
 
 def _get_line_color_52_54(suffix: str) -> str:
@@ -801,6 +940,7 @@ def _get_line_color_52_54(suffix: str) -> str:
 
 # ── Panel drawing helpers for curve plots ─────────────────────────────
 
+
 def _style_curve_axes(ax, xlabel=None, ylabel=None, show_xlabel=True):
     """Apply shared styling to a calibration/coverage axes."""
     ax.set_xlim(-0.02, 1.02)
@@ -809,11 +949,13 @@ def _style_curve_axes(ax, xlabel=None, ylabel=None, show_xlabel=True):
     ax.set_yticks([0, 0.25, 0.50, 0.75, 1.0])
     ax.set_xticklabels(
         ["0%", "25%", "50%", "75%", "100%"],
-        fontsize=9, color=_COLOR_SUBTLE,
+        fontsize=9,
+        color=_COLOR_SUBTLE,
     )
     ax.set_yticklabels(
         ["0%", "25%", "50%", "75%", "100%"],
-        fontsize=9, color=_COLOR_SUBTLE,
+        fontsize=9,
+        color=_COLOR_SUBTLE,
     )
     ax.tick_params(axis="both", length=0, pad=4)
     ax.set_aspect("equal")
@@ -838,8 +980,15 @@ def _draw_calibration_panel(ax, model_data):
     of dicts with keys ``avg_confidence``, ``avg_accuracy``, ``count``.
     """
     # Perfect calibration reference line
-    ax.plot([0, 1], [0, 1], color="#cccccc", linewidth=1.5,
-            linestyle="--", zorder=1, label="Perfect")
+    ax.plot(
+        [0, 1],
+        [0, 1],
+        color="#cccccc",
+        linewidth=1.5,
+        linestyle="--",
+        zorder=1,
+        label="Perfect",
+    )
 
     for label, bins, color in model_data:
         valid = [b for b in bins if b.get("count", 0) > 0]
@@ -852,8 +1001,16 @@ def _draw_calibration_panel(ax, model_data):
         sizes = [c / max_count * 200 + 30 for c in counts]
 
         ax.plot(confs, accs, color=color, linewidth=2, alpha=0.7, zorder=2)
-        ax.scatter(confs, accs, s=sizes, color=color, edgecolor="black",
-                   linewidth=0.5, zorder=3, label=label)
+        ax.scatter(
+            confs,
+            accs,
+            s=sizes,
+            color=color,
+            edgecolor="black",
+            linewidth=0.5,
+            zorder=3,
+            label=label,
+        )
 
     ax.legend(fontsize=9, loc="lower right", framealpha=0.8)
 
@@ -869,15 +1026,22 @@ def _draw_accuracy_coverage_panel(ax, model_data):
         accuracies = 1 - np.array(data["risks"])
         optimal = 1 - np.array(data["optimal_risks"])
 
-        ax.plot(coverages, accuracies, color=color, linewidth=2,
-                label=label, zorder=3)
-        ax.plot(coverages, optimal, color=color, linewidth=1,
-                linestyle="--", alpha=0.4, zorder=2)
+        ax.plot(coverages, accuracies, color=color, linewidth=2, label=label, zorder=3)
+        ax.plot(
+            coverages,
+            optimal,
+            color=color,
+            linewidth=1,
+            linestyle="--",
+            alpha=0.4,
+            zorder=2,
+        )
 
     ax.legend(fontsize=9, loc="lower left", framealpha=0.8)
 
 
 # ── Shared layout for 5.2-vs-5.4 curve plots ─────────────────────────
+
 
 def _collect_curve_panels(benchmark_data, extractor_fn):
     """Collect per-benchmark panel data for curve plots.
@@ -910,14 +1074,23 @@ def _collect_curve_panels(benchmark_data, extractor_fn):
                 base_data.append(entry)
 
         if base_data or reasoning_data:
-            panels.append((_BM_DISPLAY.get(bm_name, bm_name),
-                           base_data, reasoning_data))
+            panels.append(
+                (_BM_DISPLAY.get(bm_name, bm_name), base_data, reasoning_data)
+            )
     return panels
 
 
 def _plot_social_52_54_curves(
-    panels, output_dir, draw_fn, title, subtitle, filename,
-    xlabel, ylabel, *, padding=0.5,
+    panels,
+    output_dir,
+    draw_fn,
+    title,
+    subtitle,
+    filename,
+    xlabel,
+    ylabel,
+    *,
+    padding=0.5,
 ):
     """Shared figure layout for 5.2-vs-5.4 curve comparison plots.
 
@@ -942,11 +1115,15 @@ def _plot_social_52_54_curves(
 
     fig = plt.figure(figsize=(fig_w, fig_h), facecolor=_BG_COLOR)
     outer_gs = gridspec.GridSpec(
-        n_rows + 2, 1,
+        n_rows + 2,
+        1,
         figure=fig,
         height_ratios=[header_h] + [row_h] * n_rows + [footer_h],
         hspace=0.4,
-        left=0.12, right=0.95, top=0.97, bottom=0.02,
+        left=0.12,
+        right=0.95,
+        top=0.97,
+        bottom=0.02,
     )
 
     _LEFT_MARGIN = 0.03
@@ -956,15 +1133,24 @@ def _plot_social_52_54_curves(
     header_ax.axis("off")
     hbox = header_ax.get_position()
     fig.text(
-        _LEFT_MARGIN, hbox.y1 - 0.01,
+        _LEFT_MARGIN,
+        hbox.y1 - 0.01,
         title,
-        fontsize=19, fontweight="bold", color=_COLOR_TEXT,
-        va="top", ha="left",
+        fontsize=19,
+        fontweight="bold",
+        color=_COLOR_TEXT,
+        va="top",
+        ha="left",
     )
     fig.text(
-        _LEFT_MARGIN, hbox.y0 + hbox.height * 0.30,
+        _LEFT_MARGIN,
+        hbox.y0 + hbox.height * 0.30,
         subtitle,
-        fontsize=12, color=_COLOR_SUBTLE, va="top", ha="left", wrap=True,
+        fontsize=12,
+        color=_COLOR_SUBTLE,
+        va="top",
+        ha="left",
+        wrap=True,
     )
 
     # Body panels
@@ -975,27 +1161,33 @@ def _plot_social_52_54_curves(
         # Base panel (left)
         ax_base = fig.add_subplot(inner_gs[0, 0])
         draw_fn(ax_base, base_data)
-        _style_curve_axes(ax_base, xlabel=xlabel, ylabel=ylabel,
-                          show_xlabel=is_last)
+        _style_curve_axes(ax_base, xlabel=xlabel, ylabel=ylabel, show_xlabel=is_last)
         if r_idx == 0:
-            ax_base.set_title("Base", fontsize=12, fontweight="bold",
-                              color=_COLOR_TEXT, pad=8)
+            ax_base.set_title(
+                "Base", fontsize=12, fontweight="bold", color=_COLOR_TEXT, pad=8
+            )
 
         # Reasoning panel (right)
         ax_reas = fig.add_subplot(inner_gs[0, 1])
         draw_fn(ax_reas, reasoning_data)
-        _style_curve_axes(ax_reas, xlabel=xlabel, ylabel=None,
-                          show_xlabel=is_last)
+        _style_curve_axes(ax_reas, xlabel=xlabel, ylabel=None, show_xlabel=is_last)
         if r_idx == 0:
-            ax_reas.set_title("Reasoning", fontsize=12, fontweight="bold",
-                              color=_COLOR_TEXT, pad=8)
+            ax_reas.set_title(
+                "Reasoning", fontsize=12, fontweight="bold", color=_COLOR_TEXT, pad=8
+            )
 
         # Rotated benchmark label on the far left
         base_bbox = ax_base.get_position()
         fig.text(
-            0.01, base_bbox.y0 + base_bbox.height / 2,
-            bm_title, fontsize=14, fontweight="bold", color=_COLOR_TEXT,
-            va="center", ha="center", rotation=90,
+            0.01,
+            base_bbox.y0 + base_bbox.height / 2,
+            bm_title,
+            fontsize=14,
+            fontweight="bold",
+            color=_COLOR_TEXT,
+            va="center",
+            ha="center",
+            rotation=90,
         )
 
     # Footer
@@ -1007,23 +1199,30 @@ def _plot_social_52_54_curves(
     logo_h = fbox.height * 0.8
     logo_y = fbox.y0 + fbox.height * 0.1
     _RIGHT_EDGE = 0.97
-    _place_logo(fig, _HAL_LOGO_PNG,
-                [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
-    _place_logo(fig, _PRINCETON_LOGO_PNG,
-                [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E")
+    _place_logo(fig, _HAL_LOGO_PNG, [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
+    _place_logo(
+        fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E"
+    )
     fig.text(
-        (_LEFT_MARGIN + _RIGHT_EDGE) / 2, fbox.y0 + fbox.height * 0.5,
+        (_LEFT_MARGIN + _RIGHT_EDGE) / 2,
+        fbox.y0 + fbox.height * 0.5,
         "hal.cs.princeton.edu/reliability",
-        fontsize=10, color=_COLOR_SUBTLE, ha="center", va="center",
+        fontsize=10,
+        color=_COLOR_SUBTLE,
+        ha="center",
+        va="center",
     )
 
     social_dir = output_dir / "social"
     social_dir.mkdir(parents=True, exist_ok=True)
     output_path = social_dir / filename
     fig.savefig(
-        output_path, dpi=300, format="pdf",
+        output_path,
+        dpi=300,
+        format="pdf",
         facecolor=_BG_COLOR,
-        bbox_inches="tight", pad_inches=padding,
+        bbox_inches="tight",
+        pad_inches=padding,
     )
     print(f"  Saved: {output_path}")
     plt.close(fig)
@@ -1033,6 +1232,7 @@ def _plot_social_52_54_curves(
 
 
 # ── Public entry points for calibration / discrimination ──────────────
+
 
 def plot_social_gpt52_vs_gpt54_calibration(
     benchmark_data: List[Tuple[str, pd.DataFrame]],
@@ -1053,11 +1253,14 @@ def plot_social_gpt52_vs_gpt54_calibration(
         lambda row: _parse_calibration_bins(row) or None,
     )
     _plot_social_52_54_curves(
-        panels, output_dir, _draw_calibration_panel,
+        panels,
+        output_dir,
+        _draw_calibration_panel,
         title="GPT 5.4 Improves Calibration over GPT 5.2",
         subtitle="Calibration measures the alignment of a model's expressed confidence and ground truth accuracy. GPT 5.4 (both the base and reasoning variants) shows improved calibration. For GAIA and 5.4 (medium), we observe a switch from an overconfident model to an underconfident model vs 5.2.",
         filename="gpt52_vs_gpt54_calibration.pdf",
-        xlabel="Confidence", ylabel="Accuracy",
+        xlabel="Confidence",
+        ylabel="Accuracy",
         padding=padding,
     )
 
@@ -1078,11 +1281,14 @@ def plot_social_gpt52_vs_gpt54_discrimination(
     """
     panels = _collect_curve_panels(benchmark_data, _parse_aurc_data)
     _plot_social_52_54_curves(
-        panels, output_dir, _draw_accuracy_coverage_panel,
+        panels,
+        output_dir,
+        _draw_accuracy_coverage_panel,
         title="GPT 5.2 vs GPT 5.4: Discrimination",
         subtitle="Accuracy vs coverage, base and reasoning variants.",
         filename="gpt52_vs_gpt54_discrimination.pdf",
-        xlabel="Coverage", ylabel="Accuracy",
+        xlabel="Coverage",
+        ylabel="Accuracy",
         padding=padding,
     )
 
@@ -1133,7 +1339,7 @@ def _draw_density_panel(ax, label, data, color):
         labels = np.concatenate([np.ones(len(correct)), np.zeros(len(incorrect))])
         auroc = roc_auc_score(labels, scores)
 
-    _CORRECT_COLOR = "#3b82f6"    # blue
+    _CORRECT_COLOR = "#3b82f6"  # blue
     _INCORRECT_COLOR = "#f59e0b"  # orange
 
     if has_correct:
@@ -1146,15 +1352,16 @@ def _draw_density_panel(ax, label, data, color):
         kde_i = gaussian_kde(incorrect, bw_method=0.15)
         ys_i = kde_i(xs)
         ax.fill_between(xs, ys_i, alpha=0.25, color=_INCORRECT_COLOR, zorder=2)
-        ax.plot(xs, ys_i, color=_INCORRECT_COLOR, linewidth=2, label="Incorrect",
-                zorder=3)
-
+        ax.plot(
+            xs, ys_i, color=_INCORRECT_COLOR, linewidth=2, label="Incorrect", zorder=3
+        )
 
     ax.set_xlim(-0.02, 1.02)
     ax.set_ylim(bottom=0)
     ax.set_xticks([0, 0.25, 0.50, 0.75, 1.0])
-    ax.set_xticklabels(["0%", "25%", "50%", "75%", "100%"],
-                       fontsize=9, color=_COLOR_SUBTLE)
+    ax.set_xticklabels(
+        ["0%", "25%", "50%", "75%", "100%"], fontsize=9, color=_COLOR_SUBTLE
+    )
     ax.tick_params(axis="both", length=0, pad=4)
     ax.set_facecolor(_BG_COLOR)
     for spine in ax.spines.values():
@@ -1163,9 +1370,17 @@ def _draw_density_panel(ax, label, data, color):
     ax.legend(fontsize=8, loc="upper left", framealpha=0.8)
 
     if auroc is not None:
-        ax.text(0.03, 0.72, f"AUROC = {auroc:.2f}",
-                transform=ax.transAxes, fontsize=9, fontweight="bold",
-                ha="left", va="top", color=_COLOR_TEXT)
+        ax.text(
+            0.03,
+            0.72,
+            f"AUROC = {auroc:.2f}",
+            transform=ax.transAxes,
+            fontsize=9,
+            fontweight="bold",
+            ha="left",
+            va="top",
+            color=_COLOR_TEXT,
+        )
 
 
 def plot_social_gpt52_vs_gpt54_discrimination_2(
@@ -1228,11 +1443,15 @@ def plot_social_gpt52_vs_gpt54_discrimination_2(
 
     fig = plt.figure(figsize=(fig_w, fig_h), facecolor=_BG_COLOR)
     outer_gs = gridspec.GridSpec(
-        n_rows + 2, 1,
+        n_rows + 2,
+        1,
         figure=fig,
         height_ratios=[header_h] + [row_h] * n_rows + [footer_h],
         hspace=0.8,
-        left=0.06, right=0.97, top=0.97, bottom=0.02,
+        left=0.06,
+        right=0.97,
+        top=0.97,
+        bottom=0.02,
     )
 
     _LEFT_MARGIN = 0.03
@@ -1242,15 +1461,24 @@ def plot_social_gpt52_vs_gpt54_discrimination_2(
     header_ax.axis("off")
     hbox = header_ax.get_position()
     fig.text(
-        _LEFT_MARGIN, hbox.y1 - 0.01,
+        _LEFT_MARGIN,
+        hbox.y1 - 0.01,
         "GPT 5.2 vs GPT 5.4: Score Distributions",
-        fontsize=19, fontweight="bold", color=_COLOR_TEXT,
-        va="top", ha="left",
+        fontsize=19,
+        fontweight="bold",
+        color=_COLOR_TEXT,
+        va="top",
+        ha="left",
     )
     fig.text(
-        _LEFT_MARGIN, hbox.y0 + hbox.height * 0.30,
+        _LEFT_MARGIN,
+        hbox.y0 + hbox.height * 0.30,
         "Confidence densities for correct vs incorrect predictions. ",
-        fontsize=12, color=_COLOR_SUBTLE, va="top", ha="left", wrap=True,
+        fontsize=12,
+        color=_COLOR_SUBTLE,
+        va="top",
+        ha="left",
+        wrap=True,
     )
 
     # Body panels
@@ -1269,15 +1497,26 @@ def plot_social_gpt52_vs_gpt54_discrimination_2(
         for c, ax in enumerate(axes):
             ax.set_xlabel("Confidence", fontsize=10, color=_COLOR_TEXT)
             if col_titles[c]:
-                ax.set_title(col_titles[c], fontsize=11, fontweight="bold",
-                             color=_COLOR_TEXT, pad=8)
+                ax.set_title(
+                    col_titles[c],
+                    fontsize=11,
+                    fontweight="bold",
+                    color=_COLOR_TEXT,
+                    pad=8,
+                )
 
         # Rotated benchmark label on the far left
         base_bbox = axes[0].get_position()
         fig.text(
-            0.01, base_bbox.y0 + base_bbox.height / 2,
-            bm_title, fontsize=14, fontweight="bold", color=_COLOR_TEXT,
-            va="center", ha="center", rotation=90,
+            0.01,
+            base_bbox.y0 + base_bbox.height / 2,
+            bm_title,
+            fontsize=14,
+            fontweight="bold",
+            color=_COLOR_TEXT,
+            va="center",
+            ha="center",
+            rotation=90,
         )
 
     # Footer
@@ -1289,23 +1528,30 @@ def plot_social_gpt52_vs_gpt54_discrimination_2(
     logo_h = fbox.height * 0.8
     logo_y = fbox.y0 + fbox.height * 0.1
     _RIGHT_EDGE = 0.97
-    _place_logo(fig, _HAL_LOGO_PNG,
-                [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
-    _place_logo(fig, _PRINCETON_LOGO_PNG,
-                [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E")
+    _place_logo(fig, _HAL_LOGO_PNG, [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
+    _place_logo(
+        fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E"
+    )
     fig.text(
-        (_LEFT_MARGIN + _RIGHT_EDGE) / 2, fbox.y0 + fbox.height * 0.5,
+        (_LEFT_MARGIN + _RIGHT_EDGE) / 2,
+        fbox.y0 + fbox.height * 0.5,
         "hal.cs.princeton.edu/reliability",
-        fontsize=10, color=_COLOR_SUBTLE, ha="center", va="center",
+        fontsize=10,
+        color=_COLOR_SUBTLE,
+        ha="center",
+        va="center",
     )
 
     social_dir = output_dir / "social"
     social_dir.mkdir(parents=True, exist_ok=True)
     output_path = social_dir / "gpt52_vs_gpt54_discrimination_2.pdf"
     fig.savefig(
-        output_path, dpi=300, format="pdf",
+        output_path,
+        dpi=300,
+        format="pdf",
         facecolor=_BG_COLOR,
-        bbox_inches="tight", pad_inches=padding,
+        bbox_inches="tight",
+        pad_inches=padding,
     )
     print(f"  Saved: {output_path}")
     plt.close(fig)
@@ -1320,9 +1566,9 @@ def plot_social_gpt52_vs_gpt54_discrimination_2(
 _TILE_CMAP = LinearSegmentedColormap.from_list(
     "consistency_tiles",
     [
-        (239 / 255, 68 / 255, 68 / 255),     # red   (sr=0.5)
-        (245 / 255, 158 / 255, 11 / 255),    # orange (sr≈0.75)
-        (16 / 255, 185 / 255, 129 / 255),    # green  (sr=0 or 1)
+        (239 / 255, 68 / 255, 68 / 255),  # red   (sr=0.5)
+        (245 / 255, 158 / 255, 11 / 255),  # orange (sr≈0.75)
+        (16 / 255, 185 / 255, 129 / 255),  # green  (sr=0 or 1)
     ],
 )
 _TILE_CMAP.set_bad(color="#e5e5e5")
@@ -1444,11 +1690,17 @@ def plot_social_openai_consistency_tiles(
                     level_breaks.append(j)
                 prev_level = level
 
-        panels.append((
-            _display.get(bm_name, bm_name),
-            labels, agents_list, matrix, sorted_tasks,
-            task_levels, level_breaks,
-        ))
+        panels.append(
+            (
+                _display.get(bm_name, bm_name),
+                labels,
+                agents_list,
+                matrix,
+                sorted_tasks,
+                task_levels,
+                level_breaks,
+            )
+        )
 
     if not panels:
         print("  No valid panels for consistency tile plot")
@@ -1471,11 +1723,15 @@ def plot_social_openai_consistency_tiles(
 
     fig = plt.figure(figsize=(fig_w, fig_h), facecolor=_BG_COLOR)
     outer_gs = gridspec.GridSpec(
-        n_rows + 3, 1,
+        n_rows + 3,
+        1,
         figure=fig,
         height_ratios=[header_h] + row_heights + [legend_h, footer_h],
         hspace=0.4,
-        left=0.18, right=0.97, top=0.97, bottom=0.02,
+        left=0.18,
+        right=0.97,
+        top=0.97,
+        bottom=0.02,
     )
 
     _LEFT_MARGIN = 0.02
@@ -1485,35 +1741,56 @@ def plot_social_openai_consistency_tiles(
     header_ax.axis("off")
     hbox = header_ax.get_position()
     fig.text(
-        _LEFT_MARGIN, hbox.y1 - 0.01,
+        _LEFT_MARGIN,
+        hbox.y1 - 0.01,
         "Outcome Consistency across OpenAI Models",
-        fontsize=19, fontweight="bold", color=_COLOR_TEXT,
-        va="top", ha="left",
+        fontsize=19,
+        fontweight="bold",
+        color=_COLOR_TEXT,
+        va="top",
+        ha="left",
     )
     fig.text(
-        _LEFT_MARGIN, hbox.y0 + hbox.height * 0.30,
+        _LEFT_MARGIN,
+        hbox.y0 + hbox.height * 0.30,
         "Per-task consistency across repeated runs. "
         "Green = always same outcome, Red = mixed results.",
-        fontsize=12, color=_COLOR_SUBTLE, va="top", ha="left", wrap=True,
+        fontsize=12,
+        color=_COLOR_SUBTLE,
+        va="top",
+        ha="left",
+        wrap=True,
     )
 
     # ── Body panels ──────────────────────────────────────────────────
-    for r_idx, (bm_title, labels, _agents, matrix, sorted_tasks,
-                task_levels, level_breaks) in enumerate(panels):
+    for r_idx, (
+        bm_title,
+        labels,
+        _agents,
+        matrix,
+        sorted_tasks,
+        task_levels,
+        level_breaks,
+    ) in enumerate(panels):
         ax = fig.add_subplot(outer_gs[1 + r_idx])
         n_m, n_t = matrix.shape
 
         # Convert success_rate → normalized consistency [0, 1]
         # consistency = max(sr, 1-sr) ∈ [0.5, 1.0] → (c-0.5)*2 ∈ [0, 1]
         norm_matrix = np.where(
-            np.isnan(matrix), np.nan,
+            np.isnan(matrix),
+            np.nan,
             (np.maximum(matrix, 1 - matrix) - 0.5) * 2,
         )
         norm_masked = np.ma.masked_invalid(norm_matrix)
 
         ax.imshow(
-            norm_masked, cmap=_TILE_CMAP, vmin=0, vmax=1,
-            aspect="auto", interpolation="nearest",
+            norm_masked,
+            cmap=_TILE_CMAP,
+            vmin=0,
+            vmax=1,
+            aspect="auto",
+            interpolation="nearest",
         )
 
         # White grid lines between cells
@@ -1536,9 +1813,14 @@ def plot_social_openai_consistency_tiles(
                 level = task_levels.get(sorted_tasks[start], "")
                 if level and level != "9":
                     ax.text(
-                        center, -0.9, f"Level {level}",
-                        ha="center", va="bottom",
-                        fontsize=9, color=_COLOR_SUBTLE, fontweight="bold",
+                        center,
+                        -0.9,
+                        f"Level {level}",
+                        ha="center",
+                        va="bottom",
+                        fontsize=9,
+                        color=_COLOR_SUBTLE,
+                        fontweight="bold",
                     )
 
         # Y-axis labels
@@ -1553,9 +1835,15 @@ def plot_social_openai_consistency_tiles(
         # Rotated benchmark label on the far left
         ax_bbox = ax.get_position()
         fig.text(
-            0.01, ax_bbox.y0 + ax_bbox.height / 2,
-            bm_title, fontsize=14, fontweight="bold", color=_COLOR_TEXT,
-            va="center", ha="center", rotation=90,
+            0.01,
+            ax_bbox.y0 + ax_bbox.height / 2,
+            bm_title,
+            fontsize=14,
+            fontweight="bold",
+            color=_COLOR_TEXT,
+            va="center",
+            ha="center",
+            rotation=90,
         )
 
     # ── Color legend ──────────────────────────────────────────────────
@@ -1577,14 +1865,22 @@ def plot_social_openai_consistency_tiles(
     for spine in grad_ax.spines.values():
         spine.set_visible(False)
     fig.text(
-        gradient_x - 0.01, gradient_y + gradient_h / 2,
-        "Inconsistent", fontsize=9, color=_COLOR_SUBTLE,
-        va="center", ha="right",
+        gradient_x - 0.01,
+        gradient_y + gradient_h / 2,
+        "Inconsistent",
+        fontsize=9,
+        color=_COLOR_SUBTLE,
+        va="center",
+        ha="right",
     )
     fig.text(
-        gradient_x + gradient_w + 0.01, gradient_y + gradient_h / 2,
-        "Consistent", fontsize=9, color=_COLOR_SUBTLE,
-        va="center", ha="left",
+        gradient_x + gradient_w + 0.01,
+        gradient_y + gradient_h / 2,
+        "Consistent",
+        fontsize=9,
+        color=_COLOR_SUBTLE,
+        va="center",
+        ha="left",
     )
 
     # ── Footer ────────────────────────────────────────────────────────
@@ -1596,23 +1892,30 @@ def plot_social_openai_consistency_tiles(
     logo_h = fbox.height * 0.8
     logo_y = fbox.y0 + fbox.height * 0.1
     _RIGHT_EDGE = 0.97
-    _place_logo(fig, _HAL_LOGO_PNG,
-                [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
-    _place_logo(fig, _PRINCETON_LOGO_PNG,
-                [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E")
+    _place_logo(fig, _HAL_LOGO_PNG, [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
+    _place_logo(
+        fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E"
+    )
     fig.text(
-        (_LEFT_MARGIN + _RIGHT_EDGE) / 2, fbox.y0 + fbox.height * 0.5,
+        (_LEFT_MARGIN + _RIGHT_EDGE) / 2,
+        fbox.y0 + fbox.height * 0.5,
         "hal.cs.princeton.edu/reliability",
-        fontsize=10, color=_COLOR_SUBTLE, ha="center", va="center",
+        fontsize=10,
+        color=_COLOR_SUBTLE,
+        ha="center",
+        va="center",
     )
 
     social_dir = output_dir / "social"
     social_dir.mkdir(parents=True, exist_ok=True)
     output_path = social_dir / "openai_consistency_tiles.pdf"
     fig.savefig(
-        output_path, dpi=300, format="pdf",
+        output_path,
+        dpi=300,
+        format="pdf",
         facecolor=_BG_COLOR,
-        bbox_inches="tight", pad_inches=padding,
+        bbox_inches="tight",
+        pad_inches=padding,
     )
     print(f"  Saved: {output_path}")
     plt.close(fig)
@@ -1622,6 +1925,7 @@ def plot_social_openai_consistency_tiles(
 
 
 # ── All-OpenAI single-metric bar charts ───────────────────────────────
+
 
 def _plot_social_openai_metric(
     benchmark_data: List[Tuple[str, pd.DataFrame]],
@@ -1658,15 +1962,16 @@ def _plot_social_openai_metric(
         if len(df_valid) == 0:
             continue
 
-        df_valid = df_valid.sort_values(metric_col, ascending=True).reset_index(drop=True)
+        df_valid = df_valid.sort_values(metric_col, ascending=True).reset_index(
+            drop=True
+        )
 
         labels = [strip_agent_prefix(a) for a in df_valid["agent"]]
         values = df_valid[metric_col].values
         # Highlight GPT 5.4 models in OpenAI green, others in background
         _OPENAI_GREEN = "#10A37F"
         colors_sorted = [
-            _OPENAI_GREEN if "5_4" in a else _BG_COLOR
-            for a in df_valid["agent"]
+            _OPENAI_GREEN if "5_4" in a else _BG_COLOR for a in df_valid["agent"]
         ]
 
         if se_col and se_col in df_valid.columns:
@@ -1696,13 +2001,19 @@ def _plot_social_openai_metric(
     fig_width = 7
 
     fig = plt.figure(figsize=(fig_width, fig_height), facecolor=_BG_COLOR)
-    height_ratios = [header_height] + [s * bar_row_height for s in panel_sizes] + [footer_height]
+    height_ratios = (
+        [header_height] + [s * bar_row_height for s in panel_sizes] + [footer_height]
+    )
     gs = gridspec.GridSpec(
-        n_panels + 2, 1,
+        n_panels + 2,
+        1,
         figure=fig,
         height_ratios=height_ratios,
         hspace=0.35,
-        left=0.28, right=0.97, top=0.97, bottom=0.02,
+        left=0.28,
+        right=0.97,
+        top=0.97,
+        bottom=0.02,
     )
 
     _LEFT_MARGIN = 0.05
@@ -1710,27 +2021,43 @@ def _plot_social_openai_metric(
     header_ax.axis("off")
     header_bbox = header_ax.get_position()
     fig.text(
-        _LEFT_MARGIN, header_bbox.y1 - 0.01,
+        _LEFT_MARGIN,
+        header_bbox.y1 - 0.01,
         title,
-        fontsize=19, fontweight="bold", color=_COLOR_TEXT,
-        va="top", ha="left",
+        fontsize=19,
+        fontweight="bold",
+        color=_COLOR_TEXT,
+        va="top",
+        ha="left",
     )
     fig.text(
-        _LEFT_MARGIN, header_bbox.y0 + header_bbox.height * 0.35,
+        _LEFT_MARGIN,
+        header_bbox.y0 + header_bbox.height * 0.35,
         subtitle,
-        fontsize=12, color=_COLOR_SUBTLE,
-        va="top", ha="left", wrap=True,
+        fontsize=12,
+        color=_COLOR_SUBTLE,
+        va="top",
+        ha="left",
+        wrap=True,
     )
 
     for i, (bm_title, labels, values, colors, xerr) in enumerate(panels):
         ax = fig.add_subplot(gs[1 + i])
         is_last = i == n_panels - 1
-        _draw_panel(ax, labels, values, colors, bm_title, show_xticks=is_last, xerr=xerr)
+        _draw_panel(
+            ax, labels, values, colors, bm_title, show_xticks=is_last, xerr=xerr
+        )
         ax_bbox = ax.get_position()
         fig.text(
-            0.01, ax_bbox.y0 + ax_bbox.height / 2,
-            bm_title, fontsize=14, fontweight="bold", color=_COLOR_TEXT,
-            va="center", ha="center", rotation=90,
+            0.01,
+            ax_bbox.y0 + ax_bbox.height / 2,
+            bm_title,
+            fontsize=14,
+            fontweight="bold",
+            color=_COLOR_TEXT,
+            va="center",
+            ha="center",
+            rotation=90,
         )
 
     # Footer
@@ -1743,20 +2070,29 @@ def _plot_social_openai_metric(
     logo_y = footer_bbox.y0 + footer_bbox.height * 0.1
     _RIGHT_EDGE = 0.97
     _place_logo(fig, _HAL_LOGO_PNG, [_LEFT_MARGIN, logo_y, 0.25, logo_h], anchor="W")
-    _place_logo(fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E")
+    _place_logo(
+        fig, _PRINCETON_LOGO_PNG, [_RIGHT_EDGE - 0.25, logo_y, 0.25, logo_h], anchor="E"
+    )
     fig.text(
-        (_LEFT_MARGIN + _RIGHT_EDGE) / 2, footer_bbox.y0 + footer_bbox.height * 0.5,
+        (_LEFT_MARGIN + _RIGHT_EDGE) / 2,
+        footer_bbox.y0 + footer_bbox.height * 0.5,
         "hal.cs.princeton.edu/reliability",
-        fontsize=10, color=_COLOR_SUBTLE, ha="center", va="center",
+        fontsize=10,
+        color=_COLOR_SUBTLE,
+        ha="center",
+        va="center",
     )
 
     social_dir = output_dir / "social"
     social_dir.mkdir(parents=True, exist_ok=True)
     output_path = social_dir / filename
     fig.savefig(
-        output_path, dpi=300, format="pdf",
+        output_path,
+        dpi=300,
+        format="pdf",
         facecolor=_BG_COLOR,
-        bbox_inches="tight", pad_inches=padding,
+        bbox_inches="tight",
+        pad_inches=padding,
     )
     print(f"  Saved: {output_path}")
     plt.close(fig)
@@ -1776,7 +2112,8 @@ def plot_social_outcome_consistency(
     Output: social_outcome_consistency.pdf
     """
     _plot_social_openai_metric(
-        benchmark_data, output_dir,
+        benchmark_data,
+        output_dir,
         metric_col="consistency_outcome",
         se_col="consistency_outcome_se",
         title="Outcome Consistency across OpenAI Models",
@@ -1797,7 +2134,8 @@ def plot_social_calibration(
     Output: social_calibration.pdf
     """
     _plot_social_openai_metric(
-        benchmark_data, output_dir,
+        benchmark_data,
+        output_dir,
         metric_col="predictability_calibration",
         se_col="predictability_calibration_se",
         title="Calibration across OpenAI Models",
@@ -1818,7 +2156,8 @@ def plot_social_discrimination(
     Output: social_discrimination.pdf
     """
     _plot_social_openai_metric(
-        benchmark_data, output_dir,
+        benchmark_data,
+        output_dir,
         metric_col="predictability_roc_auc",
         se_col="predictability_roc_auc_se",
         title="Discrimination across OpenAI Models",

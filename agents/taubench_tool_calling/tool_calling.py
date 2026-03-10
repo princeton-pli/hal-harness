@@ -290,7 +290,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # Create a wrapper that adds reasoning parameters and OpenRouter configuration
     def completion_with_reasoning(*args, **completion_kwargs):
         # Check if this is a call with our agent's model
-        is_agent_call = "model" in completion_kwargs and completion_kwargs["model"] == model_name
+        is_agent_call = (
+            "model" in completion_kwargs and completion_kwargs["model"] == model_name
+        )
 
         # Add OpenRouter base URL, API key, and headers only for agent model calls
         # (not for user simulation calls, which use a different model like gpt-4o)
@@ -371,7 +373,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # Create async wrapper
     async def acompletion_with_reasoning(*args, **completion_kwargs):
         # Check if this is a call with our agent's model
-        is_agent_call = "model" in completion_kwargs and completion_kwargs["model"] == model_name
+        is_agent_call = (
+            "model" in completion_kwargs and completion_kwargs["model"] == model_name
+        )
 
         # Add OpenRouter base URL, API key, and headers only for agent model calls
         # (not for user simulation calls, which use a different model like gpt-4o)

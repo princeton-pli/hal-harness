@@ -445,8 +445,12 @@ def main():
             plot_social_openai_overall(benchmark_data, combined_output_dir)
             plot_social_openai_detailed(benchmark_data, combined_output_dir)
             plot_social_gpt52_vs_gpt54_calibration(benchmark_data, combined_output_dir)
-            plot_social_gpt52_vs_gpt54_discrimination(benchmark_data, combined_output_dir)
-            plot_social_gpt52_vs_gpt54_discrimination_2(benchmark_data, combined_output_dir)
+            plot_social_gpt52_vs_gpt54_discrimination(
+                benchmark_data, combined_output_dir
+            )
+            plot_social_gpt52_vs_gpt54_discrimination_2(
+                benchmark_data, combined_output_dir
+            )
             plot_social_openai_consistency_tiles(benchmark_data, combined_output_dir)
             plot_social_outcome_consistency(benchmark_data, combined_output_dir)
             plot_social_calibration(benchmark_data, combined_output_dir)
