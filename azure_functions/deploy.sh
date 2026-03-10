@@ -43,12 +43,10 @@ if ! az functionapp show --name "$FUNC_APP_NAME" --resource-group "$RESOURCE_GRO
         --os-type Linux
 fi
 
-# Set timezone so cron fires at 8 AM Eastern
 az functionapp config appsettings set \
     --name "$FUNC_APP_NAME" \
     --resource-group "$RESOURCE_GROUP" \
     --settings \
-        WEBSITE_TIME_ZONE="America/New_York" \
         AZURE_SUBSCRIPTION_ID="${AZURE_SUBSCRIPTION_ID}" \
         AZURE_RESOURCE_GROUP_NAME="${AZURE_RESOURCE_GROUP_NAME}" \
         SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL}"
