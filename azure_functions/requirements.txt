@@ -1,0 +1,4 @@
+azure-functions
+azure-identity
+azure-mgmt-costmanagement>=4.0.0
+requests
