@@ -19,7 +19,6 @@ from reliability_eval.metrics.consistency import compute_weighted_r_con
 from reliability_eval.plots.helpers import (
     _CI_Z,
     _clip_yerr,
-    _get_aggregate_yerr,
     _get_weighted_r_con_yerr,
     generate_shaded_colors,
 )
@@ -1055,7 +1054,7 @@ def plot_social_gpt52_vs_gpt54_calibration(
     )
     _plot_social_52_54_curves(
         panels, output_dir, _draw_calibration_panel,
-        title="GPT 5.2 vs GPT 5.4: Calibration",
+        title="GPT 5.4 Improves Calibration over GPT 5.2",
         subtitle="Calibration measures the alignment of a model's expressed confidence and ground truth accuracy. GPT 5.4 (both the base and reasoning variants) shows improved calibration. For GAIA and 5.4 (medium), we observe a switch from an overconfident model to an underconfident model vs 5.2.",
         filename="gpt52_vs_gpt54_calibration.pdf",
         xlabel="Confidence", ylabel="Accuracy",
