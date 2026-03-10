@@ -4,6 +4,26 @@ from tau_bench.types import Action
 from openai import OpenAI
 
 
+def _extract_response_text(response) -> str:
+    """Best-effort text extraction for OpenAI Responses API outputs."""
+    if getattr(response, "output_text", None):
+        return response.output_text.strip()
+
+    output_items = getattr(response, "output", []) or []
+    text_chunks: list[str] = []
+    for item in output_items:
+        if getattr(item, "type", None) != "message":
+            continue
+        for content in getattr(item, "content", []) or []:
+            if (
+                getattr(content, "type", None) == "output_text"
+                and getattr(content, "text", None)
+            ):
+                text_chunks.append(content.text)
+
+    return "".join(text_chunks).strip()
+
+
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     assert "model_name" in kwargs, "model_name is required"
     client = OpenAI()
@@ -22,18 +42,22 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     instruction = isolated_env.reset(input[task_id]["task_index"]).observation
 
     ### YOUR AGENT CODE HERE ###
-    response = client.chat.completions.create(
-        model=kwargs["model_name"],
-        messages=[
+    request_kwargs = {
+        "model": kwargs["model_name"],
+        "input": [
             {"role": "user", "content": instruction},
         ],
-        max_tokens=2000,
-        n=1,
-        temperature=1,
-    )
+        "max_output_tokens": 2000,
+        "temperature": 1,
+    }
+    if "reasoning_effort" in kwargs:
+        request_kwargs["reasoning"] = {"effort": kwargs["reasoning_effort"]}
+
+    response = client.responses.create(**request_kwargs)
 
     ### ACTION ###
-    action = Action(name=response.choices[0].message.content, kwargs={})
+    action_text = _extract_response_text(response)
+    action = Action(name=action_text, kwargs={})
     response = isolated_env.step(action)
 
     ### WHEN DONE WE RETURN THE ENV STATE ###
