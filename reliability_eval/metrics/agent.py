@@ -626,6 +626,8 @@ def analyze_agent(
     )
     metrics.extra["auroc_data"] = pred["auroc_data"]
     metrics.extra["brier_data"] = pred["brier_data"]
+    metrics.extra["correct_confidences"] = pred.get("correct_confidences", [])
+    metrics.extra["incorrect_confidences"] = pred.get("incorrect_confidences", [])
 
     # === ABSTENTION CALIBRATION ===
     abstention = compute_abstention_metrics(primary_runs)
@@ -896,6 +898,13 @@ def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
                     _numpy_safe(
                         m.extra.get("aurc_data", {}).get("optimal_risks", [])
                     )
+                ),
+                # Per-outcome confidence distributions (for density plots)
+                "_correct_confidences_json": json.dumps(
+                    _numpy_safe(m.extra.get("correct_confidences", []))
+                ),
+                "_incorrect_confidences_json": json.dumps(
+                    _numpy_safe(m.extra.get("incorrect_confidences", []))
                 ),
                 # Per-task consistency data (for tile heatmap plots)
                 "_consistency_task_outcomes_json": json.dumps(

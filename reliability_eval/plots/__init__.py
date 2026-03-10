@@ -46,12 +46,16 @@ from reliability_eval.plots.levels import (
     plot_provider_level_heatmap as plot_provider_level_heatmap,
 )
 from reliability_eval.plots.social import (
-    plot_social_gpt52_vs_gpt54 as plot_social_gpt52_vs_gpt54,
     plot_social_gpt52_vs_gpt54_calibration as plot_social_gpt52_vs_gpt54_calibration,
-    plot_social_gpt52_vs_gpt54_consistency as plot_social_gpt52_vs_gpt54_consistency,
-    plot_social_gpt52_vs_gpt54_detailed as plot_social_gpt52_vs_gpt54_detailed,
     plot_social_gpt52_vs_gpt54_discrimination as plot_social_gpt52_vs_gpt54_discrimination,
+    plot_social_gpt52_vs_gpt54_discrimination_2 as plot_social_gpt52_vs_gpt54_discrimination_2,
     plot_social_overall_reliability as plot_social_overall_reliability,
+    plot_social_openai_overall as plot_social_openai_overall,
+    plot_social_openai_detailed as plot_social_openai_detailed,
+    plot_social_openai_consistency_tiles as plot_social_openai_consistency_tiles,
+    plot_social_outcome_consistency as plot_social_outcome_consistency,
+    plot_social_calibration as plot_social_calibration,
+    plot_social_discrimination as plot_social_discrimination,
 )
 from reliability_eval.plots.reports import (
     generate_full_latex_table as generate_full_latex_table,

@@ -304,4 +304,6 @@ def compute_predictability_metrics(runs: list[dict]) -> dict:
         "bin_stats": ece_result["bin_stats"],
         "auroc_data": auroc_result,
         "brier_data": brier_result,
+        "correct_confidences": confidences[successes == 1].tolist(),
+        "incorrect_confidences": confidences[successes == 0].tolist(),
     }
