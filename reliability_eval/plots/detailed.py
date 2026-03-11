@@ -279,9 +279,9 @@ def plot_accuracy_coverage_by_model(
     Excludes gpt_5_2_xhigh reasoning model.
     Works with any benchmark by dynamically detecting scaffold prefixes.
     """
-    # Define model order per provider (excluding xhigh)
+    # Define model order per provider (excluding reasoning variants like xhigh)
     provider_models = {
-        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2"],
+        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2", "gpt_5_4"],
         "Google": [
             "gemini_2_flash",
             "gemini_2_5_flash",
@@ -324,6 +324,7 @@ def plot_accuracy_coverage_by_model(
         "gpt_4o_mini": "GPT-4o mini",
         "gpt_o1": "o1",
         "gpt_5_2": "GPT-5.2",
+        "gpt_5_4": "GPT-5.4",
         "gemini_2_flash": "Gemini 2.0 Flash",
         "gemini_2_5_flash": "Gemini 2.5 Flash",
         "gemini_2_5_pro": "Gemini 2.5 Pro",
@@ -334,8 +335,9 @@ def plot_accuracy_coverage_by_model(
         "claude_opus_4_5": "Claude Opus 4.5",
     }
 
-    # Square subplots
-    fig, axes = plt.subplots(3, 4, figsize=(10, 7.5))
+    # Dynamic grid: 3 rows x max_models columns
+    max_models = max(len(models) for models in provider_models.values())
+    fig, axes = plt.subplots(3, max_models, figsize=(2.5 * max_models, 7.5))
 
     # Common ticks for both axes
     axis_ticks = [0, 0.25, 0.5, 0.75, 1.0]
@@ -343,6 +345,10 @@ def plot_accuracy_coverage_by_model(
     for row_idx, provider in enumerate(provider_order):
         models = provider_models[provider]
         provider_color = PROVIDER_COLORS.get(provider, "#999999")
+
+        # Hide unused axes for providers with fewer models
+        for col_idx in range(len(models), max_models):
+            axes[row_idx, col_idx].set_visible(False)
 
         for col_idx, model_key in enumerate(models):
             ax = axes[row_idx, col_idx]
@@ -514,15 +520,15 @@ def plot_calibration_by_model(
     df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
 ):
     """
-    Create calibration/reliability diagram plots for each model in a 3x4 grid (provider x model).
+    Create calibration/reliability diagram plots for each model in a grid (provider x model).
     Rows: OpenAI, Google, Anthropic
-    Cols: 4 models per provider (sorted by release date)
-    Excludes gpt_5_2_xhigh reasoning model.
+    Cols: dynamic based on max models per provider
+    Excludes reasoning variants (xhigh, medium).
     Works with any benchmark by dynamically detecting scaffold prefixes.
     """
-    # Define model order per provider (excluding xhigh)
+    # Define model order per provider (excluding reasoning variants)
     provider_models = {
-        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2"],
+        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2", "gpt_5_4"],
         "Google": [
             "gemini_2_flash",
             "gemini_2_5_flash",
@@ -545,6 +551,7 @@ def plot_calibration_by_model(
         "gpt_4o_mini": "GPT-4o mini",
         "gpt_o1": "o1",
         "gpt_5_2": "GPT-5.2",
+        "gpt_5_4": "GPT-5.4",
         "gemini_2_flash": "Gemini 2.0 Flash",
         "gemini_2_5_flash": "Gemini 2.5 Flash",
         "gemini_2_5_pro": "Gemini 2.5 Pro",
@@ -573,8 +580,9 @@ def plot_calibration_by_model(
         else ["taubench_toolcalling_", "taubench_fewshot_"]
     )
 
-    # Square subplots
-    fig, axes = plt.subplots(3, 4, figsize=(10, 7.5))
+    # Dynamic grid: 3 rows x max_models columns
+    max_models = max(len(models) for models in provider_models.values())
+    fig, axes = plt.subplots(3, max_models, figsize=(2.5 * max_models, 7.5))
 
     # Common ticks for both axes
     axis_ticks = [0, 0.25, 0.5, 0.75, 1.0]
@@ -582,6 +590,10 @@ def plot_calibration_by_model(
     for row_idx, provider in enumerate(provider_order):
         models = provider_models[provider]
         provider_color = PROVIDER_COLORS.get(provider, "#999999")
+
+        # Hide unused axes for providers with fewer models
+        for col_idx in range(len(models), max_models):
+            axes[row_idx, col_idx].set_visible(False)
 
         for col_idx, model_key in enumerate(models):
             ax = axes[row_idx, col_idx]

@@ -35,7 +35,7 @@ def _analyze_task(task_info, constraints, analyzer, safety_model):
             "model": safety_model,
             "timestamp": datetime.now().isoformat(),
             # Compliance results
-            "safety_compliance": compliance_result.safety_compliance,
+            "safety_compliance": compliance_result.S_comp,
             "compliance_violations": [
                 {
                     "constraint": v.constraint,
@@ -74,7 +74,7 @@ def _analyze_task(task_info, constraints, analyzer, safety_model):
             "task_id": task_id,
             "success": True,
             "llm_safety": llm_safety,
-            "safety_compliance": compliance_result.safety_compliance,
+            "safety_compliance": compliance_result.S_comp,
             "num_violations": len(compliance_result.violations),
         }
 

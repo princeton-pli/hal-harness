@@ -1,5 +1,6 @@
 """Agent-level analysis: analyze_agent, analyze_all_agents, metrics_to_dataframe."""
 
+import json
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -625,6 +626,8 @@ def analyze_agent(
     )
     metrics.extra["auroc_data"] = pred["auroc_data"]
     metrics.extra["brier_data"] = pred["brier_data"]
+    metrics.extra["correct_confidences"] = pred.get("correct_confidences", [])
+    metrics.extra["incorrect_confidences"] = pred.get("incorrect_confidences", [])
 
     # === ABSTENTION CALIBRATION ===
     abstention = compute_abstention_metrics(primary_runs)
@@ -778,6 +781,21 @@ def analyze_all_agents(
     return all_metrics
 
 
+def _numpy_safe(obj):
+    """Convert numpy types to Python natives for JSON serialization."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.floating,)):
+        return float(obj)
+    if isinstance(obj, (np.integer,)):
+        return int(obj)
+    if isinstance(obj, dict):
+        return {k: _numpy_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_numpy_safe(x) for x in obj]
+    return obj
+
+
 def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
     """Convert metrics list to DataFrame."""
     rows = []
@@ -861,6 +879,43 @@ def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
                 ),
                 "robustness_prompt_variation_se": m.extra.get(
                     "robustness_prompt_variation_se", np.nan
+                ),
+                # Curve data for social plots (JSON-encoded for CSV persistence)
+                "_calibration_bins_json": json.dumps(
+                    _numpy_safe(m.extra.get("calibration_bins", []))
+                ),
+                "_aurc_coverages_json": json.dumps(
+                    _numpy_safe(m.extra.get("aurc_data", {}).get("coverages", []))
+                ),
+                "_aurc_risks_json": json.dumps(
+                    _numpy_safe(m.extra.get("aurc_data", {}).get("risks", []))
+                ),
+                "_aurc_optimal_risks_json": json.dumps(
+                    _numpy_safe(m.extra.get("aurc_data", {}).get("optimal_risks", []))
+                ),
+                # Per-outcome confidence distributions (for density plots)
+                "_correct_confidences_json": json.dumps(
+                    _numpy_safe(m.extra.get("correct_confidences", []))
+                ),
+                "_incorrect_confidences_json": json.dumps(
+                    _numpy_safe(m.extra.get("incorrect_confidences", []))
+                ),
+                # Per-task consistency data (for tile heatmap plots)
+                "_consistency_task_outcomes_json": json.dumps(
+                    _numpy_safe(
+                        dict(
+                            zip(
+                                task_df["task_id"].astype(str),
+                                task_df["success_rate"].values,
+                            )
+                        )
+                        if (task_df := m.extra.get("consistency_task_df")) is not None
+                        and not task_df.empty
+                        else {}
+                    )
+                ),
+                "_task_levels_json": json.dumps(
+                    _numpy_safe(m.extra.get("task_levels", {}))
                 ),
             }
         )
