@@ -4,9 +4,11 @@ from .logging_utils import create_progress
 from datetime import datetime
 from weave.trace_server.trace_server_interface import CallsFilter, CallsQueryReq
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
+# FIXME: move to new file
 MODEL_PRICES_DICT = {
     "text-embedding-3-small": {"prompt_tokens": 0.02 / 1e6, "completion_tokens": 0},
     "text-embedding-3-large": {"prompt_tokens": 0.13 / 1e6, "completion_tokens": 0},
@@ -23,6 +25,7 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.15 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
+    "gpt-4o-mini": {"prompt_tokens": 0.15 / 1e6, "completion_tokens": 0.6 / 1e6},
     "meta-llama/Meta-Llama-3.1-8B-Instruct": {
         "prompt_tokens": 0.18 / 1e6,
         "completion_tokens": 0.18 / 1e6,
@@ -130,6 +133,7 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.15 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
+    "openai/gpt-4o-mini": {"prompt_tokens": 0.15 / 1e6, "completion_tokens": 0.6 / 1e6},
     "openai/gpt-4.1-2025-04-14": {
         "prompt_tokens": 2 / 1e6,
         "completion_tokens": 8 / 1e6,
@@ -179,6 +183,18 @@ MODEL_PRICES_DICT = {
     "google/gemini-2.5-pro-preview-03-25": {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 10 / 1e6,
+    },
+    "gemini/gemini-1.5-pro": {
+        "prompt_tokens": 1.25 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
+    "gemini/gemini-1.5-flash": {
+        "prompt_tokens": 0.075 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "gemini/gemini-1.5-flash-latest": {
+        "prompt_tokens": 0.075 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
     },
     "together/meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": {
         "prompt_tokens": 3.5 / 1e6,
@@ -256,6 +272,23 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 15 / 1e6,
     },
+    "openrouter/anthropic/claude-3-7-sonnet-20250219": {
+        "prompt_tokens": 3 / 1e6,
+        "completion_tokens": 15 / 1e6,
+    },
+    "claude-3-5-haiku-20241022": {
+        "prompt_tokens": 1 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
+    "anthropic/claude-3-5-haiku-20241022": {
+        "prompt_tokens": 1 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
+    "claude-opus-4-5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4-5": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
     "deepseek-ai/DeepSeek-V3": {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 1.25 / 1e6,
@@ -298,6 +331,16 @@ MODEL_PRICES_DICT = {
         "completion_tokens": 0.4 / 1e6,
     },
     "gemini-2.0-flash": {"prompt_tokens": 0.1 / 1e6, "completion_tokens": 0.4 / 1e6},
+    # Gemini 2.5 Series
+    "gemini/gemini-2.5-pro": {
+        "prompt_tokens": 1.25 / 1e6,
+        "completion_tokens": 10 / 1e6,
+    },
+    "gemini-2.5-pro": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
+    "google/gemini-2.5-pro": {
+        "prompt_tokens": 1.25 / 1e6,
+        "completion_tokens": 10 / 1e6,
+    },
     "gemini/gemini-2.5-pro-preview-03-25": {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 10 / 1e6,
@@ -305,6 +348,40 @@ MODEL_PRICES_DICT = {
     "gemini-2.5-pro-preview-03-25": {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 10 / 1e6,
+    },
+    "gemini/gemini-2.5-flash": {
+        "prompt_tokens": 0.50 / 1e6,
+        "completion_tokens": 2.0 / 1e6,
+    },
+    "gemini-2.5-flash": {"prompt_tokens": 0.50 / 1e6, "completion_tokens": 2.0 / 1e6},
+    "google/gemini-2.5-flash": {
+        "prompt_tokens": 0.50 / 1e6,
+        "completion_tokens": 2.0 / 1e6,
+    },
+    # Gemini 3 Series (Latest)
+    "gemini/gemini-3-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "gemini-3-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "google/gemini-3-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "gemini/gemini-3-flash-preview": {
+        "prompt_tokens": 0.50 / 1e6,
+        "completion_tokens": 3.0 / 1e6,
+    },
+    "gemini-3-flash-preview": {
+        "prompt_tokens": 0.50 / 1e6,
+        "completion_tokens": 3.0 / 1e6,
+    },
+    "google/gemini-3-flash-preview": {
+        "prompt_tokens": 0.50 / 1e6,
+        "completion_tokens": 3.0 / 1e6,
     },
     "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {
         "prompt_tokens": 0.27 / 1e6,
@@ -358,6 +435,18 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 15 / 1e6,
     },
+    "openrouter/anthropic/claude-3-5-haiku": {
+        "prompt_tokens": 1 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
+    "openrouter/anthropic/claude-sonnet-4.5": {
+        "prompt_tokens": 3 / 1e6,
+        "completion_tokens": 15 / 1e6,
+    },
+    "openrouter/anthropic/claude-opus-4.5": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
     "anthropic/claude-3.7-sonnet": {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 15 / 1e6,
@@ -383,12 +472,36 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 15 / 1e6,
         "completion_tokens": 75 / 1e6,
     },
+    # Claude Opus 4.5 (Latest - Nov 2025, cheaper than 4.1)
+    "claude-opus-4.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4.5": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
+    # Claude Haiku models
+    "claude-haiku-3.5": {"prompt_tokens": 1 / 1e6, "completion_tokens": 5 / 1e6},
+    "anthropic/claude-haiku-3.5": {
+        "prompt_tokens": 1 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
     "openai/gpt-5-2025-08-07": {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 10 / 1e6,
     },
     "gpt-5": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
     "gpt-5-2025-08-07": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
+    "gpt-5.2-2025-12-11": {"prompt_tokens": 1.75 / 1e6, "completion_tokens": 14 / 1e6},
+    "openai/gpt-5.2-2025-12-11": {
+        "prompt_tokens": 1.75 / 1e6,
+        "completion_tokens": 14 / 1e6,
+    },
+    "gpt-5.2": {"prompt_tokens": 1.75 / 1e6, "completion_tokens": 14 / 1e6},
+    "openai/gpt-5.2": {"prompt_tokens": 1.75 / 1e6, "completion_tokens": 14 / 1e6},
+    "gpt-5.2-codex": {"prompt_tokens": 1.75 / 1e6, "completion_tokens": 14 / 1e6},
+    "openai/gpt-5.2-codex": {
+        "prompt_tokens": 1.75 / 1e6,
+        "completion_tokens": 14 / 1e6,
+    },
 }
 
 CACHED_PRICE_OVERRIDES = {
@@ -398,6 +511,13 @@ CACHED_PRICE_OVERRIDES = {
     "openai/o3-mini-2025-01-31": 0.55 / 1e6,
     "claude-3-7-sonnet-20250219": 0.30 / 1e6,
     "anthropic/claude-3-7-sonnet-20250219": 0.30 / 1e6,
+    "openrouter/anthropic/claude-3-7-sonnet-20250219": 0.30 / 1e6,
+    "claude-3-5-haiku-20241022": 0.10 / 1e6,
+    "anthropic/claude-3-5-haiku-20241022": 0.10 / 1e6,
+    "claude-sonnet-4-5": 0.30 / 1e6,
+    "anthropic/claude-sonnet-4-5": 0.30 / 1e6,
+    "claude-opus-4-5": 0.50 / 1e6,
+    "anthropic/claude-opus-4-5": 0.50 / 1e6,
     "claude-opus-4-20250514": 1.50 / 1e6,
     "anthropic/claude-opus-4-20250514": 1.50 / 1e6,
     "claude-opus-4.1-20250805": 1.50 / 1e6,
@@ -409,8 +529,27 @@ CACHED_PRICE_OVERRIDES = {
     "gpt-4.1-2025-04-14": 0.50 / 1e6,
     "openai/gpt-4.1-2025-04-14": 0.50 / 1e6,
     "gpt-5-2025-08-07": 0.125 / 1e6,
+    "gpt-5.2-2025-12-11": 0.18 / 1e6,
+    "openai/gpt-5.2-2025-12-11": 0.18 / 1e6,
+    "gpt-5.2": 0.18 / 1e6,
+    "openai/gpt-5.2": 0.18 / 1e6,
+    "gpt-5.2-codex": 0.18 / 1e6,
+    "openai/gpt-5.2-codex": 0.18 / 1e6,
     "o3-2025-04-16": 0.5 / 1e6,
     "openai/o3-2025-04-16": 0.5 / 1e6,
+    # Gemini 3 & 2.5 cached pricing (90% discount)
+    "gemini-3-flash-preview": 0.05 / 1e6,
+    "gemini/gemini-3-flash-preview": 0.05 / 1e6,
+    "google/gemini-3-flash-preview": 0.05 / 1e6,
+    "gemini-3-pro-preview": 0.20 / 1e6,
+    "gemini/gemini-3-pro-preview": 0.20 / 1e6,
+    "google/gemini-3-pro-preview": 0.20 / 1e6,
+    "gemini-2.5-flash": 0.05 / 1e6,
+    "gemini/gemini-2.5-flash": 0.05 / 1e6,
+    "google/gemini-2.5-flash": 0.05 / 1e6,
+    # Claude Opus 4.5 cached pricing (90% discount for cache reads)
+    "claude-opus-4.5": 0.50 / 1e6,
+    "anthropic/claude-opus-4.5": 0.50 / 1e6,
 }
 
 
@@ -448,19 +587,72 @@ def _normalize_usage(cost: Dict[str, Any]) -> Tuple[int, int, int, int]:
     return prompt_tokens, cached_input, cache_creation, completion
 
 
-def fetch_weave_calls(client) -> List[Dict[str, Any]]:
-    """Fetch Weave calls from the API"""
-    calls = list(
-        client.server.calls_query_stream(
-            {
-                "project_id": client._project_id(),
-                "filter": {"trace_roots_only": False},
-                "sort_by": [{"field": "started_at", "direction": "desc"}],
-            }
-        )
-    )
+def _retry_with_backoff(func, max_retries: int = 5, base_delay: float = 2.0):
+    """
+    Retry a function with exponential backoff on transient errors.
 
-    return calls
+    Args:
+        func: Callable to retry
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds (doubles each retry)
+
+    Returns:
+        Result of successful function call
+
+    Raises:
+        Last exception if all retries fail
+    """
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            last_exception = e
+            error_str = str(e).lower()
+            # Check for transient errors (502, 503, 504, connection errors, timeouts)
+            is_transient = any(
+                err in error_str
+                for err in [
+                    "502",
+                    "503",
+                    "504",
+                    "bad gateway",
+                    "service unavailable",
+                    "gateway timeout",
+                    "connection",
+                    "timeout",
+                    "temporarily",
+                ]
+            )
+
+            if not is_transient or attempt == max_retries - 1:
+                raise
+
+            delay = base_delay * (2**attempt)
+            logger.warning(
+                f"Weave API error (attempt {attempt + 1}/{max_retries}): {e}"
+            )
+            logger.warning(f"Retrying in {delay:.1f}s...")
+            time.sleep(delay)
+
+    raise last_exception
+
+
+def fetch_weave_calls(client) -> List[Dict[str, Any]]:
+    """Fetch Weave calls from the API with retry logic"""
+
+    def _fetch():
+        return list(
+            client.server.calls_query_stream(
+                {
+                    "project_id": client._project_id(),
+                    "filter": {"trace_roots_only": False},
+                    "sort_by": [{"field": "started_at", "direction": "desc"}],
+                }
+            )
+        )
+
+    return _retry_with_backoff(_fetch)
 
 
 def get_call_ids(task_id, client):
@@ -496,17 +688,21 @@ def get_total_cost(client):
     total_cost = 0
     token_usage = {}
 
-    # Fetch all the calls in the project
+    # Fetch all the calls in the project with retry logic
     logger.info("Getting token usage data (this can take a while)...")
-    calls = list(
-        client.server.calls_query_stream(
-            CallsQueryReq(
-                project_id=client._project_id(),
-                filter=CallsFilter(trace_roots_only=False),
-                columns=["summary"],
+
+    def _fetch_calls():
+        return list(
+            client.server.calls_query_stream(
+                CallsQueryReq(
+                    project_id=client._project_id(),
+                    filter=CallsFilter(trace_roots_only=False),
+                    columns=["summary"],
+                )
             )
         )
-    )
+
+    calls = _retry_with_backoff(_fetch_calls)
 
     with create_progress() as progress:
         task = progress.add_task("Processing token usage data...", total=len(calls))
@@ -642,6 +838,11 @@ def get_weave_calls(client) -> Tuple[Dict[str, Dict[str, Any]], Dict]:
         task_calls: Dict[str, list] = {}
 
         for call in calls:
+            # Skip calls that don't have weave_task_id (e.g., internal calls for prompt variation generation)
+            if "weave_task_id" not in call.attributes:
+                progress.update(task1, advance=1)
+                continue
+
             task_id = call.attributes["weave_task_id"]
 
             # --- latency tracking (unchanged logic) ---
@@ -739,3 +940,125 @@ def get_weave_calls(client) -> Tuple[Dict[str, Dict[str, Any]], Dict]:
         f"Total Weave traces: {sum(r['call_count'] for r in compact_results.values())}"
     )
     return compact_results, latency_dict
+
+
+def get_task_cost(run_id: str, task_id: str) -> dict:
+    """
+    Calculate the cost for a specific task ID by filtering calls with that task_id.
+
+    Args:
+        run_id: The ID of the run to calculate costs for
+        task_id: The ID of the task to calculate costs for
+
+    Returns:
+        dict: A dictionary containing:
+            - total_cost: The total cost in dollars
+            - token_usage: Token usage breakdown by model
+            - requests: Total number of API requests
+            - num_calls: Number of calls related to this task
+    """
+    total_cost = 0
+    token_usage = {}
+    requests = 0
+
+    client = weave.init(run_id)
+
+    logger.info(f"Getting token usage data for task ID: {task_id}...")
+
+    # Fetch all calls and filter by task_id with retry logic
+    def _fetch_calls():
+        return list(
+            client.server.calls_query_stream(
+                CallsQueryReq(
+                    project_id=client._project_id(),
+                    filter=CallsFilter(trace_roots_only=False),
+                    columns=["summary", "attributes"],
+                )
+            )
+        )
+
+    calls = _retry_with_backoff(_fetch_calls)
+    task_calls = [
+        call
+        for call in calls
+        if (getattr(call, "attributes", {}) or {}).get("weave_task_id") == task_id
+    ]
+
+    for call in task_calls:
+        # If the call has usage data, add it to the token usage
+        summary = getattr(call, "summary", None) or {}
+        usage = summary.get("usage")
+        if not usage:
+            continue
+
+        if isinstance(usage, dict):
+            usage_items = usage.items()
+        elif isinstance(usage, list):
+            usage_items = [
+                (model, model_usage)
+                for entry in usage
+                if isinstance(entry, dict)
+                for model, model_usage in entry.items()
+            ]
+        else:
+            logger.warning(
+                f"Skipping unexpected usage payload of type {type(usage).__name__}"
+            )
+            continue
+
+        if not usage_items:
+            continue
+
+        for k, cost in usage_items:
+            if k not in token_usage:
+                token_usage[k] = {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0,
+                }
+
+            requests += cost.get("requests", 0)
+            prompt_tokens, cached_input, cache_creation, completion = _normalize_usage(
+                cost
+            )
+
+            token_usage[k]["prompt_tokens"] += prompt_tokens
+            token_usage[k]["completion_tokens"] += completion
+            token_usage[k]["cache_creation_input_tokens"] += cache_creation
+            token_usage[k]["cache_read_input_tokens"] += cached_input
+
+    # Calculate total cost from token usage
+    for k, usage in token_usage.items():
+        if k not in MODEL_PRICES_DICT:
+            logger.warning(
+                f"Model '{k}' not found in MODEL_PRICES_DICT. Skipping cost calculation."
+            )
+            continue
+        prices = MODEL_PRICES_DICT[k]
+
+        # Get cached token prices from overrides or fall back to prompt token price
+        cache_create_price = CACHED_PRICE_OVERRIDES.get(
+            k, prices.get("prompt_tokens", 0)
+        )
+        cache_read_price = CACHED_PRICE_OVERRIDES.get(k, prices.get("prompt_tokens", 0))
+
+        # Calculate fresh input tokens when needed for cost calculation
+        fresh_input_tokens = usage["prompt_tokens"] - usage["cache_read_input_tokens"]
+
+        model_cost = (
+            fresh_input_tokens * prices.get("prompt_tokens", 0)
+            + usage["cache_creation_input_tokens"] * cache_create_price
+            + usage["cache_read_input_tokens"] * cache_read_price
+            + usage["completion_tokens"] * prices.get("completion_tokens", 0)
+        )
+        total_cost += model_cost
+    logger.info(
+        f"Cost for task ID: {task_id} is ${total_cost} for {len(task_calls)} calls."
+    )
+    return {
+        "total_cost": total_cost,
+        "token_usage": token_usage,
+        "requests": requests,
+        "num_calls": len(task_calls),
+    }

@@ -19,6 +19,7 @@ class LocalRunner:
     def __init__(
         self,
         log_dir: str,
+        task_timeout: int,
         max_concurrent: int = 1,
         conda_env: Optional[str] = None,
         benchmark: Optional[BaseBenchmark] = None,
@@ -31,7 +32,7 @@ class LocalRunner:
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
         self.benchmark = benchmark
-        self.retry_config = retry_config  # FIXME: remove this
+        self.task_timeout = task_timeout  # Timeout in seconds for each task
 
     async def run_agent(
         self,
@@ -91,6 +92,30 @@ class LocalRunner:
                 except Exception as e:
                     logger.warning(f"Failed to cleanup {temp_dir}: {e}")
 
+    def _is_transient_error(self, error_msg: str) -> bool:
+        """Check if an error is transient and worth retrying."""
+        error_lower = error_msg.lower()
+        transient_patterns = [
+            "timeout",
+            "timed out",
+            "connection",
+            "502",
+            "503",
+            "504",
+            "bad gateway",
+            "service unavailable",
+            "gateway timeout",
+            "temporarily",
+            "rate limit",
+            "too many requests",
+            "429",
+            "reset by peer",
+            "broken pipe",
+            "network",
+            "dns",
+        ]
+        return any(pattern in error_lower for pattern in transient_patterns)
+
     async def _process_task(
         self,
         task_id: str,
@@ -103,21 +128,47 @@ class LocalRunner:
         timings_file: str,
         progress: Optional[Progress] = None,
         task: Optional[TaskID] = None,
+        max_retries: int = 3,
+        base_delay: float = 5.0,
     ) -> Optional[Dict[str, Any]]:
-        """Process a single task with semaphore control"""
+        """Process a single task with semaphore control and automatic retry on transient errors"""
         async with self._semaphore:
             logger.info(
                 f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})"
             )
             start_time = time.time()
-            result = await self._run_single_task(
-                task_id=task_id,
-                input_data=input_data,
-                agent_function=agent_function,
-                agent_dir=agent_dir,
-                agent_args=agent_args,
-                run_id=run_id,
-            )
+            result = None
+            for attempt in range(max_retries):
+                result = await self._run_single_task(
+                    task_id=task_id,
+                    input_data=input_data,
+                    agent_function=agent_function,
+                    agent_dir=agent_dir,
+                    agent_args=agent_args,
+                    run_id=run_id,
+                )
+
+                # Check if task succeeded
+                if result:
+                    task_result = result.get(task_id, "")
+                    if isinstance(task_result, str) and task_result.startswith("ERROR"):
+                        # Check if it's a transient error worth retrying
+                        if (
+                            self._is_transient_error(task_result)
+                            and attempt < max_retries - 1
+                        ):
+                            delay = base_delay * (2**attempt)
+                            logger.warning(
+                                f"Task {task_id} failed with transient error (attempt {attempt + 1}/{max_retries}), "
+                                f"retrying in {delay:.1f}s..."
+                            )
+                            await asyncio.sleep(delay)
+                            continue
+                    # Success or non-transient error - stop retrying
+                    break
+                else:
+                    # No result - stop retrying
+                    break
             wall_clock_time = time.time() - start_time
 
             # Write result to submissions file and timing
@@ -227,8 +278,10 @@ class LocalRunner:
                 # new command to run the agent
                 run_agent_cmd = ["conda", "run", "-n", self.conda_env] + run_agent_cmd
 
-            # Run agent
-            logger.debug(f"Running agent for task {task_id}")
+            # Run agent with timeout
+            logger.debug(
+                f"Running agent for task {task_id} (timeout: {self.task_timeout}s)"
+            )
             process = await asyncio.create_subprocess_exec(
                 *run_agent_cmd,
                 cwd=str(temp_dir),
@@ -236,14 +289,32 @@ class LocalRunner:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            stdout, stderr = await process.communicate()
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=self.task_timeout,
+                )
+            except asyncio.TimeoutError:
+                # Kill the process if it times out
+                logger.debug(
+                    f"Task {task_id} timed out after {self.task_timeout}s, killing process"
+                )
+                try:
+                    process.kill()
+                    await process.wait()
+                except Exception as kill_error:
+                    logger.debug(
+                        f"Error killing timed out process for task {task_id}: {kill_error}"
+                    )
+                return {
+                    task_id: f"ERROR: Task timed out after {self.task_timeout} seconds"
+                }
 
-            # FIXME: consider logging this to a different log group
             # Log agent output
             if stdout:
                 logger.info(f"Agent stdout for task {task_id}:\n{stdout.decode()}")
             if stderr:
-                logger.info(f"Agent stderr for task {task_id}:\n{stderr.decode()}")
+                logger.debug(f"Agent stderr for task {task_id}:\n{stderr.decode()}")
 
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
@@ -293,10 +364,36 @@ import json
 import importlib.util
 import weave
 import traceback
+import time
+
+def init_weave_with_retry(run_id, max_retries=5, base_delay=2.0):
+    """Initialize weave with retry logic for transient connection errors."""
+    last_exception = None
+    for attempt in range(max_retries):
+        try:
+            return weave.init(run_id)
+        except Exception as e:
+            last_exception = e
+            error_str = str(e).lower()
+            # Check for transient errors (connection, timeout, gateway errors)
+            is_transient = any(err in error_str for err in [
+                '502', '503', '504', 'bad gateway', 'service unavailable',
+                'gateway timeout', 'connection', 'timeout', 'temporarily', 'timed out'
+            ])
+
+            if not is_transient or attempt == max_retries - 1:
+                raise
+
+            delay = base_delay * (2 ** attempt)
+            print(f"Weave init failed (attempt {{attempt + 1}}/{{max_retries}}): {{e}}")
+            print(f"Retrying in {{delay:.1f}}s...")
+            time.sleep(delay)
+
+    raise last_exception
 
 try:
-    # Initialize weave
-    weave.init("{run_id}")
+    # Initialize weave with retry logic
+    init_weave_with_retry("{run_id}")
     
     # Load input data
     with open("input.json", "r") as f:

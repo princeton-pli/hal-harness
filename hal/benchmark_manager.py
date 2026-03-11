@@ -15,6 +15,7 @@ class BenchmarkManager:
         self.agent_dir = agent_dir
         self.agent_args = agent_args
         self.benchmarks = [
+            "gaia",
             "scicode",
             "scicode_easy",
             "scicode_hard",
@@ -36,7 +37,11 @@ class BenchmarkManager:
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
-        if benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
+        if benchmark_name == "gaia":
+            from .benchmarks.gaia import GaiaBenchmark
+
+            benchmark = GaiaBenchmark(self.agent_dir, self.config)
+        elif benchmark_name in ["scicode", "scicode_easy", "scicode_hard"]:
             from .benchmarks.scicode import SciCodeBenchmark
 
             benchmark = SciCodeBenchmark(self.agent_dir, self.config, benchmark_name)

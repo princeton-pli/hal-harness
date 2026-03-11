@@ -4,6 +4,7 @@ logs/**
 
 # Env
 .env
+.venv/
 
 # Python
 .eggs/**
@@ -26,3 +27,11 @@ uv.lock
 
 # Claude Code
 .claude/settings.local.json
+.claude/settings.json
+
+# claude-reliability managed
+.claude/bin/
+.claude/*.local.md
+.claude/*.local.json
+.claude/*.local
+.claude-reliability/

@@ -28,12 +28,14 @@ class AzureVirtualMachine:
         nsg_id: str,
         ssh_public_key: str,
         gpu: bool,
+        timeout: int,
     ):
         self.name = name
         self.resource_group = resource_group
         self.location = location
         self.vm_size = "Standard_NC4as_T4_v3" if gpu else "Standard_E2as_v5"
         self.gpu = gpu
+        self.timeout = timeout
 
         # Azure clients
         credential = DefaultAzureCredential()
@@ -195,17 +197,18 @@ class AzureVirtualMachine:
             f"Startup script completed for VM {self.name} in {startup_duration} seconds"
         )
 
-    def _wait_for_setup_to_complete(self, timeout: int = 600) -> None:
+    def _wait_for_setup_to_complete(self) -> None:
         """Wait for startup script to complete by checking for sentinel file.
 
-        Args:
-            timeout: Maximum time to wait in seconds (default 600)
+        Uses self.timeout (passed from VirtualMachineRunner.task_timeout).
         """
         start_time = time.time()
         sentinel_file = "/home/agent/startup_complete"
 
-        logger.info(f"Waiting for startup script to complete on {self.name} (~5 min)")
-        while time.time() - start_time < timeout:
+        logger.info(
+            f"Waiting for startup script to complete on {self.name} (timeout: {self.timeout}s)"
+        )
+        while time.time() - start_time < self.timeout:
             if self.check_for_file_presence_by_path(sentinel_file):
                 logger.debug(
                     f"Startup script completed on {self.name} at {self.public_ip}"
@@ -215,7 +218,7 @@ class AzureVirtualMachine:
             time.sleep(10)
 
         raise TimeoutError(
-            f"Startup script did not complete on {self.name} ({self.public_ip}) within {timeout} seconds"
+            f"Startup script did not complete on {self.name} ({self.public_ip}) within {self.timeout} seconds"
         )
 
     def delete(self) -> None:

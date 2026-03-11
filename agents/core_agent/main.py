@@ -77,6 +77,7 @@ AUTHORIZED_IMPORTS = [
     "datetime",
     "fractions",
     "csv",
+    "sys",
 ]
 
 

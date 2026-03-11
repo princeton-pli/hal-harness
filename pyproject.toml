@@ -17,12 +17,18 @@ dependencies = [
     "tenacity>=8.2.0",
     "docker>=7.1.0",
     "cryptography>=42.0.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "ruff==0.15.4",
     "pytest>=8.0.0",
     "pytest-mock>=3.12.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "scipy>=1.10.0",
+    "pandas>=2.0.0",
 ]
 swebench = [
     "swebench @ git+https://github.com/SWE-bench/SWE-bench@006a760a95c9cc11e987884d7e311d74a16db88a",
@@ -32,7 +38,6 @@ azure = [
     "azure-mgmt-network>=25.1.0",
     "azure-mgmt-resource>=23.0.1",
     "azure-identity>=1.12.0",
-    "azure-monitor-ingestion>=1.0.3",
     "paramiko==3.5.0",
     "requests>=2.31.0",  # For Azure VM detection via IMDS
 ]
@@ -139,7 +144,7 @@ hal-upload = "hal.utils.upload:upload_results"
 hal-decrypt = "hal.utils.decrypt:decrypt_cli"
 
 [tool.setuptools]
-packages = ["hal"]
+packages = ["hal", "reliability_eval"]
 
 [tool.ruff]
 # Ignore all git submodules and external agent code

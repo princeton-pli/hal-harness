@@ -24,6 +24,8 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 load_dotenv()
 
+DEFAULT_TASK_TIMEOUT = 2700
+
 
 @click.command()
 @click.option(
@@ -107,6 +109,50 @@ load_dotenv()
     type=str,
     help="One or more args to pass to inspect eval (e.g. -I token_limit=1000 -I model_args='{'temperature': 0.5}'",
 )
+@click.option(
+    "--prompt_sensitivity",
+    is_flag=True,
+    help="Enable prompt sensitivity evaluation by generating and testing multiple prompt variations",
+)
+@click.option(
+    "--num_variations",
+    default=3,
+    type=int,
+    help="Number of prompt variations to generate for sensitivity testing (default: 3)",
+)
+@click.option(
+    "--variation_strength",
+    default="mild",
+    type=click.Choice(["mild", "medium", "strong", "naturalistic"]),
+    help="Strength of prompt variations: mild (synonyms/formality), medium (restructuring), strong (conversational rewrites), naturalistic (realistic user typing patterns)",
+)
+@click.option(
+    "--variation_index",
+    default=None,
+    type=int,
+    help="Run only a specific variation index (0=original, 1..N=variations). When set, runs single variation instead of all.",
+)
+@click.option(
+    "--task_timeout",
+    default=DEFAULT_TASK_TIMEOUT,
+    type=int,
+    help=(
+        f"Timeout in seconds per task (default: {DEFAULT_TASK_TIMEOUT}). "
+        "Tasks exceeding this will be killed and marked as ERROR."
+    ),
+)
+@click.option(
+    "--results_dir",
+    default="results",
+    type=str,
+    help="Base directory for storing results (default: results)",
+)
+@click.option(
+    "--task_ids",
+    default=None,
+    type=str,
+    help="Comma-separated list of specific task IDs to run (e.g., '0,1,5,12'). Only these tasks will be executed.",
+)
 def main(
     config,
     benchmark,
@@ -126,6 +172,13 @@ def main(
     vm,
     docker,
     max_tasks,
+    prompt_sensitivity,
+    num_variations,
+    variation_strength,
+    variation_index,
+    task_timeout,
+    results_dir,
+    task_ids,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
@@ -154,7 +207,7 @@ def main(
             set_run_id = True
 
         # Setup logging first, before any other operations
-        log_dir = os.path.join("results", benchmark, run_id)
+        log_dir = os.path.join(results_dir, benchmark, run_id)
         os.makedirs(log_dir, exist_ok=True)
         verbose_log_path = os.path.join(log_dir, f"{run_id}_verbose.log")
         setup_logging(log_dir, run_id, use_vm=vm)
@@ -196,6 +249,9 @@ def main(
             docker=docker,
             continue_run=continue_run,
             ignore_errors=ignore_errors,
+            prompt_sensitivity=prompt_sensitivity,
+            num_variations=num_variations,
+            variation_strength=variation_strength,
         )
 
         # get exact command used to run the evaluation from click
@@ -219,6 +275,13 @@ def main(
                 ignore_errors=ignore_errors,
                 max_tasks=max_tasks,
                 agent_version=agent_version,
+                prompt_sensitivity=prompt_sensitivity,
+                num_variations=num_variations,
+                variation_strength=variation_strength,
+                variation_index=variation_index,
+                task_timeout=task_timeout,
+                results_dir=results_dir,
+                task_ids=task_ids,
             )
 
             # Run evaluation

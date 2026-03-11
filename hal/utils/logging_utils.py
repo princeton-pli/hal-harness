@@ -17,12 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
-    """Setup logging configuration with optional Azure Monitor integration.
+    """Setup logging configuration.
 
     Args:
         log_dir: Directory for log files
         run_id: Unique run identifier
-        use_vm: If True, enables Azure Monitor logging (for VM runs)
+        use_vm: Unused; kept for API compatibility.
     """
     # Create absolute path for log directory to avoid path duplication
     log_dir = os.path.abspath(log_dir)
@@ -69,71 +69,6 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     # Add handlers to root logger
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
-
-    # Add Azure Monitor handler for VM runs
-    # IMPORTANT: Only enable Azure logging if actually running INSIDE an Azure VM
-    # The orchestrator machine (e.g., a local laptop) should NOT use Azure logging
-    if use_vm:
-        try:
-            from .azure_logging import AzureMonitorHandler, is_running_in_azure_vm
-
-            # Check if we're actually in an Azure VM
-            if not is_running_in_azure_vm():
-                # Running on orchestrator machine - skip Azure logging
-                logger.info(
-                    "Azure logging skipped: Not running in Azure VM (orchestrator machine)"
-                )
-            else:
-                # We're inside an Azure VM - enable Azure logging
-                # Get Azure Monitor configuration from environment
-                dce_endpoint = os.getenv("AZURE_MONITOR_DATA_COLLECTION_ENDPOINT")
-                dcr_id = os.getenv("AZURE_MONITOR_DATA_COLLECTION_RULE_ID")
-                stream_name = os.getenv(
-                    "AZURE_MONITOR_STREAM_NAME", "Custom-BenchmarkRuns_CL"
-                )
-
-                if not dce_endpoint or not dcr_id:
-                    raise ValueError(
-                        "Azure Monitor logging is enabled (inside Azure VM) but required environment "
-                        "variables are missing. Please set:\n"
-                        "  - AZURE_MONITOR_DATA_COLLECTION_ENDPOINT\n"
-                        "  - AZURE_MONITOR_DATA_COLLECTION_RULE_ID"
-                    )
-
-                # Create and add Azure Monitor handler
-                azure_handler = AzureMonitorHandler(
-                    dce_endpoint=dce_endpoint,
-                    dcr_id=dcr_id,
-                    stream_name=stream_name,
-                )
-                azure_handler.setLevel(logging.INFO)  # Send INFO+ to Azure
-                root_logger.addHandler(azure_handler)
-
-                logger.info("Azure Monitor logging enabled (running in Azure VM)")
-
-        except ImportError as e:
-            # Fail loudly with clear error message
-            error_msg = (
-                "\n" + "=" * 70 + "\n"
-                "ERROR: Azure Monitor logging requires azure-monitor-ingestion package\n"
-                "Install with: pip install 'hal-harness[azure]'\n"
-                "=" * 70
-            )
-            print(error_msg, file=sys.stderr)
-            raise RuntimeError(
-                "Azure Monitor logging requires azure-monitor-ingestion package. "
-                f"Install with: pip install 'hal-harness[azure]'. Details: {e}"
-            )
-        except Exception as e:
-            # Fail loudly with clear error message
-            error_msg = (
-                "\n" + "=" * 70 + "\n"
-                f"ERROR: Failed to initialize Azure Monitor logging: {e}\n"
-                "Check your Azure credentials and permissions.\n"
-                "=" * 70
-            )
-            print(error_msg, file=sys.stderr)
-            raise RuntimeError(f"Failed to initialize Azure Monitor logging: {e}")
 
     # Initial setup logging
     logger.info(f"Logging initialized - {datetime.now().isoformat()}")
@@ -211,6 +146,9 @@ def print_run_config(
     continue_run: bool,
     docker: bool = False,
     ignore_errors: bool = False,
+    prompt_sensitivity: bool = False,
+    num_variations: int = 3,
+    variation_strength: str = "mild",
 ) -> None:
     """Print a formatted table with the run configuration"""
     logger.info("=== Run Configuration ===")
@@ -226,6 +164,10 @@ def print_run_config(
     logger.info(f"  Docker Execution: {'Yes' if docker else 'No'}")
     logger.info(f"  Continue Previous Run: {'Yes' if continue_run else 'No'}")
     logger.info(f"  Ignore Errors: {'Yes' if ignore_errors else 'No'}")
+    logger.info(f"  Prompt Sensitivity: {'Yes' if prompt_sensitivity else 'No'}")
+    if prompt_sensitivity:
+        logger.info(f"  Num Variations: {num_variations}")
+        logger.info(f"  Variation Strength: {variation_strength}")
 
     if conda_env_name:
         logger.info(f"  Conda Environment: {conda_env_name}")

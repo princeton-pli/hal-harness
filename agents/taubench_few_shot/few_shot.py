@@ -78,32 +78,36 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     litellm.completion = completion_with_reasoning
     litellm.acompletion = acompletion_with_reasoning
 
+    # Separate providers for user simulation vs agent
+    # User simulation needs OpenAI-compatible API (for tau-bench internals)
+    env_provider = "openai"  # Default for user simulation
+
     if "openrouter/" in kwargs["model_name"]:
         # OpenRouter support - uses OpenAI-compatible API
         # Check this FIRST before other providers since model names might contain provider names
-        user_provider = "openai"
+        agent_provider = "openai"
         api_base = "https://openrouter.ai/api/v1"
         api_key = os.getenv("OPENROUTER_API_KEY")
         model_name = kwargs["model_name"].replace(
             "openrouter/", ""
         )  # Remove openrouter/ prefix
     elif "together_ai" in kwargs["model_name"]:
-        user_provider = "openai"
+        agent_provider = "openai"
         api_base = "https://api.together.xyz/v1"
         api_key = os.getenv("TOGETHERAI_API_KEY")
         model_name = kwargs["model_name"].replace("together_ai/", "")
     elif "gemini" in kwargs["model_name"]:
-        user_provider = "openai"
+        agent_provider = "openai"
         api_base = "https://generativelanguage.googleapis.com/v1beta/openai/"
         api_key = os.getenv("GEMINI_API_KEY")
         model_name = kwargs["model_name"].replace("gemini/", "")
     elif "claude" in kwargs["model_name"]:
-        user_provider = "openai"
-        api_base = "https://api.anthropic.com/v1/"
+        agent_provider = "anthropic"
+        api_base = None  # litellm handles Anthropic API endpoint automatically
         api_key = os.getenv("ANTHROPIC_API_KEY")
-        model_name = kwargs["model_name"].replace("anthropic/", "")
+        model_name = kwargs["model_name"]  # Use the full model name
     else:
-        user_provider = kwargs["provider"]
+        agent_provider = kwargs["provider"]
         api_base = None
         api_key = None
         model_name = kwargs["model_name"]
@@ -117,7 +121,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         input[task_id]["user_strategy"],
         input[task_id]["user_model"],
         input[task_id]["task_split"],
-        user_provider,
+        env_provider,  # Use env_provider for user simulation (always OpenAI-compatible)
         input[task_id]["task_index"],
     )
 
@@ -134,7 +138,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         wiki=isolated_env.wiki,
         few_shot_displays=few_shot_displays,
         model=model_name,
-        provider=user_provider,
+        provider=agent_provider,  # Use agent_provider for the agent (can be anthropic)
         temperature=kwargs["temperature"] if "temperature" in kwargs else 0.0,
         api_base=api_base,
         api_key=api_key,

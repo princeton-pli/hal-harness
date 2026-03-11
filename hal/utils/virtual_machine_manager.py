@@ -7,8 +7,14 @@ import tarfile
 import json
 import logging
 from contextlib import contextmanager
-
+from pathlib import Path
 from .vm.azure_virtual_machine import AzureVirtualMachine
+
+# Mount names for core_agent: used only under VM_AGENT_HOME/environment/ (e.g. environment/data, environment/code, environment/results from task payload).
+VM_AGENT_HOME = "/home/agent"
+VM_ENVIRONMENT_MOUNT_NAMES = ("data", "code", "results")
+
+RUN_AGENT_SCRIPT_PATH = Path(__file__).resolve().parent / "vm" / "run_agent.py"
 
 # Set up base logger
 _base_logger = logging.getLogger(__name__)
@@ -140,14 +146,11 @@ class VirtualMachineManager:
             ssh_client = paramiko.SSHClient()
             ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-            # Load the SSH private key
-            ssh_private_key = paramiko.RSAKey.from_private_key_file(
-                self.ssh_private_key_path
-            )
-
-            # Connect to the VM using SSH
+            # Connect to the VM using SSH (key_filename lets Paramiko auto-detect RSA/Ed25519/ECDSA)
             ssh_client.connect(
-                hostname=public_ip_address, username="agent", pkey=ssh_private_key
+                hostname=public_ip_address,
+                username="agent",
+                key_filename=self.ssh_private_key_path,
             )
 
             # Create SFTP client
@@ -169,8 +172,17 @@ class VirtualMachineManager:
                 except Exception as e:
                     logger.error(f"Error closing SSH client: {e}")
 
-    def create_virtual_machine_by_name(self, vm_name, has_gpu=False):
-        """Create a standard Azure VM without GPU."""
+    def create_virtual_machine_by_name(
+        self, vm_name, has_gpu: bool = False, setup_timeout: int = 0
+    ):
+        """Create a standard Azure VM without GPU.
+
+        Args:
+            vm_name: Name of the VM.
+            has_gpu: Whether the VM should have a GPU.
+            setup_timeout: Seconds to wait for startup script (passed from
+                VirtualMachineRunner.task_timeout).
+        """
         logger = _get_logger(vm_name)
         if has_gpu:
             logger.info(f"Creating virtual machine {vm_name} with a GPU")
@@ -186,6 +198,7 @@ class VirtualMachineManager:
             nsg_id=self.nsg_id,
             ssh_public_key=self.ssh_public_key,
             gpu=has_gpu,
+            timeout=setup_timeout,
         )
 
         # Store for tracking
@@ -408,67 +421,12 @@ class VirtualMachineManager:
                 with sftp_client.open("/home/agent/agent_args.json", "w") as f:
                     f.write(json.dumps(agent_args))
 
-                # FIXME: stop using this approach for execution
-                # * All variables should be sent as ENV vars or via files or similar, *not*
-                # * via string interpoloation
+                # Write run-specific env vars for static run_agent.py
+                run_agent_env = f"RUN_ID={run_id}\nAGENT_FUNCTION={agent_function}\nTASK_ID={task_id}\n"
+                with sftp_client.open("/home/agent/run_agent.env", "w") as f:
+                    f.write(run_agent_env)
 
-                # FIXME: Claude -- let's (1) take the variables out here and append them to the .env file and then (2) move this file out into 'run_agent.py' in the vm dir with a comprehensive docstring and pulling the env vars, failing loudly if they're not present, and using doenv to get the env vars out
-
-                # Create Python script for agent execution
-                script_content = f'''#!/usr/bin/env python3
-import os
-import json
-import importlib.util
-import weave
-import traceback
-from dotenv import load_dotenv
-# FIXME: use proper logging here, e.g., Azure logging
-
-try:
-    # Load environment variables from .env file
-    load_dotenv("/home/agent/.env")
-
-    weave.init("{run_id}")
-
-    # Load input data
-    with open("input.json", "r") as f:
-        input_data = json.load(f)
-
-    # Load agent args
-    with open("agent_args.json", "r") as f:
-        agent_args = json.load(f)
-
-    # Load the agent module
-    module_name = "{agent_function.rsplit(".", 1)[0]}"
-    function_name = "{agent_function.rsplit(".", 1)[1]}"
-
-    spec = importlib.util.spec_from_file_location(module_name, os.path.join("/home/agent", module_name + ".py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    agent = getattr(module, function_name)
-
-    # Run agent with weave task_id attribute
-    with weave.attributes({{"weave_task_id": "{task_id}"}}):
-        result = agent(input_data, **agent_args)
-
-    # Save result
-    with open("output.json", "w") as f:
-        json.dump(result, f)
-
-except Exception as e:
-    with open("error.log", "w") as f:
-        f.write(f"ERROR: {{str(e)}}\\n")
-        f.write(traceback.format_exc())
-    raise
-'''
-
-                # Write script to VM
                 script_path = "/home/agent/run_agent.py"
-                with sftp_client.open(script_path, "w") as f:
-                    f.write(script_content)
-
-                # Make script executable
                 ssh_client.exec_command(f"chmod +x {script_path}")
 
                 # Construct command to run script
