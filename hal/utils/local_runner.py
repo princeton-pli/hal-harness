@@ -128,7 +128,13 @@ class LocalRunner:
                         json.dump(result, f)
                         f.write("\n")
                     with open(timings_file, "a") as f:
-                        json.dump({"task_id": task_id_key, "wall_clock_time": wall_clock_time}, f)
+                        json.dump(
+                            {
+                                "task_id": task_id_key,
+                                "wall_clock_time": wall_clock_time,
+                            },
+                            f,
+                        )
                         f.write("\n")
 
             # Update progress after task completion

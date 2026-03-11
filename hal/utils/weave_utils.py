@@ -701,20 +701,32 @@ def get_weave_calls(client) -> Tuple[Dict[str, Dict[str, Any]], Dict]:
         call_metadata = []
         for c in sorted(calls_list, key=lambda x: x.get("started_at", "")):
             try:
-                c_started = c["started_at"].isoformat() if hasattr(c["started_at"], "isoformat") else c["started_at"]
+                c_started = (
+                    c["started_at"].isoformat()
+                    if hasattr(c["started_at"], "isoformat")
+                    else c["started_at"]
+                )
             except Exception:
                 c_started = None
             try:
-                c_ended = c["ended_at"].isoformat() if hasattr(c["ended_at"], "isoformat") else c["ended_at"]
+                c_ended = (
+                    c["ended_at"].isoformat()
+                    if hasattr(c["ended_at"], "isoformat")
+                    else c["ended_at"]
+                )
             except Exception:
                 c_ended = None
-            call_metadata.append({
-                "usage": c["output"]["usage"],
-                "started_at": c_started,
-                "ended_at": c_ended,
-            })
+            call_metadata.append(
+                {
+                    "usage": c["output"]["usage"],
+                    "started_at": c_started,
+                    "ended_at": c_ended,
+                }
+            )
 
-        model = max_call["inputs"].get("model") or max_call.get("output", {}).get("model")
+        model = max_call["inputs"].get("model") or max_call.get("output", {}).get(
+            "model"
+        )
 
         compact_results[task_id] = {
             "messages": messages,
@@ -723,5 +735,7 @@ def get_weave_calls(client) -> Tuple[Dict[str, Dict[str, Any]], Dict]:
             "call_count": len(calls_list),
         }
 
-    logger.info(f"Total Weave traces: {sum(r['call_count'] for r in compact_results.values())}")
+    logger.info(
+        f"Total Weave traces: {sum(r['call_count'] for r in compact_results.values())}"
+    )
     return compact_results, latency_dict

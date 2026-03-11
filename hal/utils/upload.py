@@ -110,7 +110,9 @@ def upload_results(benchmark, file, directory):
 
                     # Find sibling RAW_SUBMISSIONS.jsonl
                     run_dir = os.path.dirname(file_path)
-                    run_id_prefix = os.path.basename(file_path).replace("_UPLOAD.json", "")
+                    run_id_prefix = os.path.basename(file_path).replace(
+                        "_UPLOAD.json", ""
+                    )
                     submissions_path = os.path.join(
                         run_dir, f"{run_id_prefix}_RAW_SUBMISSIONS.jsonl"
                     )

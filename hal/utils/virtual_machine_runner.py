@@ -318,7 +318,9 @@ class VirtualMachineRunner:
             # append to timings file
             with open(timings_path, "a") as f:
                 for task_id, wall_clock_time in timings.items():
-                    json.dump({"task_id": task_id, "wall_clock_time": wall_clock_time}, f)
+                    json.dump(
+                        {"task_id": task_id, "wall_clock_time": wall_clock_time}, f
+                    )
                     f.write("\n")
 
         return merged_results
