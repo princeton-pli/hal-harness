@@ -15,9 +15,8 @@ def _extract_response_text(response) -> str:
         if getattr(item, "type", None) != "message":
             continue
         for content in getattr(item, "content", []) or []:
-            if (
-                getattr(content, "type", None) == "output_text"
-                and getattr(content, "text", None)
+            if getattr(content, "type", None) == "output_text" and getattr(
+                content, "text", None
             ):
                 text_chunks.append(content.text)
 
