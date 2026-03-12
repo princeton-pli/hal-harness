@@ -3,17 +3,34 @@ Evaluation Harness PoC
 ======================
 Orchestrates a matrix of (agent × benchmark_task × model) evaluations using Prefect.
 Each individual benchmark task is a first-class Prefect task run.
-Currently runs locally; swap run_eval_locally() for Azure Batch submission when ready.
+
+Execution modes (set RUN_MODE env var):
+  local  — simulate work locally (default, no Azure required)
+  batch  — submit to Azure Batch and poll until completion
 """
 
+import datetime
+import os
 import random
 import time
 import uuid
 
+import azure.batch.models as batch_models
+from azure.batch import BatchServiceClient
+
+# FIXME: swap AzureCliCredential for DefaultAzureCredential in production
+# (requires service principal with AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET)
+from azure.identity import AzureCliCredential
 from prefect import flow, task
 from prefect.artifacts import create_markdown_artifact
 from prefect.futures import wait
 from prefect.tasks import exponential_backoff
+
+# load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
+AZURE_BATCH_ACCOUNT_URL = "https://halharness.eastus.batch.azure.com"
+AZURE_BATCH_POOL_ID = "proof-of-concept"
+AZURE_BATCH_JOB_ID = "proof-of-concept"
 
 # ---------------------------------------------------------------------------
 # Matrix
@@ -47,9 +64,11 @@ MODELS = [
     # "claude-haiku-4-5",
 ]
 
+POLL_INTERVAL_SECONDS = 15  # mirrors PREFECT_WORKER_QUERY_SECONDS default
+
 
 # ---------------------------------------------------------------------------
-# Local simulation (replace with Azure Batch submission when ready)
+# Local simulation
 # ---------------------------------------------------------------------------
 
 
@@ -57,9 +76,7 @@ def run_eval_locally(
     agent_name: str, benchmark_name: str, task_id: str, model: str
 ) -> dict:
     """Simulate a single benchmark task locally."""
-    run_id = (
-        f"{agent_name}--{benchmark_name}--{task_id}--{model}--{uuid.uuid4().hex[:8]}"
-    )
+    run_id = f"{model}-{agent_name}-{benchmark_name}-{task_id}-{uuid.uuid4().hex[:8]}"
     duration = random.uniform(3, 10)
     print(
         f"Running | agent={agent_name} benchmark={benchmark_name} task={task_id} model={model} ({duration:.1f}s)"
@@ -81,8 +98,101 @@ def run_eval_locally(
 
 
 # ---------------------------------------------------------------------------
+# Azure Batch
+# ---------------------------------------------------------------------------
+
+
+def _batch_client() -> BatchServiceClient:
+    """Authenticated BatchServiceClient. Fresh per call — not thread-safe to share."""
+    from msrest.authentication import BasicTokenAuthentication
+
+    token = AzureCliCredential().get_token("https://batch.core.windows.net/.default")
+    return BatchServiceClient(
+        credentials=BasicTokenAuthentication({"access_token": token.token}),
+        batch_url=AZURE_BATCH_ACCOUNT_URL,
+    )
+
+
+def _submit_batch_task(
+    agent_name: str, benchmark_name: str, task_id: str, model: str
+) -> str:
+    """Submit one eval task to Azure Batch. Returns the Azure task ID."""
+    client = _batch_client()
+    job_id = AZURE_BATCH_JOB_ID
+    suffix = uuid.uuid4().hex[:8]
+    azure_task_id = f"{model}-{agent_name}-{benchmark_name}-{task_id}-{suffix}"
+    if len(azure_task_id) > 64:
+        print(
+            f"Warning: task ID truncated from {len(azure_task_id)} chars: {azure_task_id}"
+        )
+        azure_task_id = (
+            azure_task_id[:55] + "-" + suffix
+        )  # suffix stays intact for uniqueness
+
+    python_code = (
+        "import time; "
+        f"print('agent={agent_name} benchmark={benchmark_name} task={task_id} model={model}'); "
+        "time.sleep(5); "
+        "print('done')"
+    )
+    batch_task = batch_models.TaskAddParameter(
+        id=azure_task_id,
+        command_line=f"/bin/bash -c \"python3 -c '{python_code}'\"",
+        constraints=batch_models.TaskConstraints(
+            max_task_retry_count=0,  # Prefect owns retries
+            retention_time=datetime.timedelta(hours=1),
+        ),
+    )
+    client.task.add(job_id=job_id, task=batch_task)
+    return azure_task_id
+
+
+def _poll_batch_task(azure_task_id: str) -> None:
+    """Block until the Azure Batch task completes. Raises on non-zero exit code."""
+    client = _batch_client()
+    job_id = AZURE_BATCH_JOB_ID
+
+    while True:
+        t = client.task.get(job_id, azure_task_id)
+
+        if t.state == batch_models.TaskState.completed:
+            exit_code = t.execution_info.exit_code
+            if exit_code != 0:
+                raise RuntimeError(
+                    f"Azure Batch task {azure_task_id} failed "
+                    f"(exit_code={exit_code}): {t.execution_info.failure_info}"
+                )
+            return
+
+        # active | preparing | running — keep waiting
+        print(f"Polling | azure_task_id={azure_task_id} state={t.state}")
+        time.sleep(POLL_INTERVAL_SECONDS)
+
+
+def run_eval_on_batch(
+    agent_name: str, benchmark_name: str, task_id: str, model: str
+) -> dict:
+    """Submit to Azure Batch and block until completion."""
+    azure_task_id = _submit_batch_task(agent_name, benchmark_name, task_id, model)
+    print(f"Submitted | azure_task_id={azure_task_id}")
+    _poll_batch_task(azure_task_id)
+    print(f"Completed | azure_task_id={azure_task_id}")
+    return {
+        "run_id": azure_task_id,
+        "metadata": {"info": "TODO: complete me"},
+        "agent_response": {"info": "TODO: complete me"},
+        "scoring": {"info": "TODO: complete me"},
+    }
+
+
+# ---------------------------------------------------------------------------
 # Prefect tasks and flow
 # ---------------------------------------------------------------------------
+
+_RUN_BACKENDS = {
+    "local": run_eval_locally,
+    "batch": run_eval_on_batch,
+}
 
 
 @task(
@@ -94,9 +204,17 @@ def run_eval_locally(
 )
 def run_eval_task(
     agent_name: str, benchmark_name: str, task_id: str, model: str
-) -> str:
+) -> dict:
     """Prefect task: run one (agent, benchmark task, model) evaluation."""
-    result = run_eval_locally(agent_name, benchmark_name, task_id, model)
+    run_mode = os.environ.get("RUN_MODE", "batch")
+    print(f"Using run mode {run_mode}")
+    run_fn = _RUN_BACKENDS.get(run_mode)
+    if run_fn is None:
+        raise ValueError(
+            f"Unknown RUN_MODE={run_mode!r}. Choose: {list(_RUN_BACKENDS)}"
+        )
+
+    result = run_fn(agent_name, benchmark_name, task_id, model)
     create_markdown_artifact(
         key="task-result",
         description=f"{agent_name} / {benchmark_name} / {task_id} / {model}",
