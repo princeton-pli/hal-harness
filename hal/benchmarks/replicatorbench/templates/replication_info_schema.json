@@ -1,0 +1,74 @@
+{
+    "original_datasets": [
+        {
+            "name": "Name of the dataset used or referenced in the study.",
+            "filename": "Exact file name (e.g., user_data_2021.csv, dataset_final.rdata).",
+            "type": "original or replication",
+            "file_format": "File format (e.g., csv, rdata, xlsx, json, parquet).",
+            "columns": "List of key variable names or keys, if applicable.",
+            "summary_statistics": {
+                "info": "Structural metadata such as dimensions, column types, memory usage, or equivalent (e.g., output of df.info(), str(), etc.).",
+                "describe": "Descriptive statistics such as mean, std, min, max, etc., where applicable (e.g., df.describe(), summary()). If not available, return null."
+            },
+            "access": {
+                "url": "Download or access URL if available.",
+                "restrictions": "License or usage restrictions (e.g., CC-BY, restricted access, institutional)."
+            },
+            "notes": "Any additional information or caveats (e.g., encoding issues, nested structure, missing metadata, unusual column formats)."
+        }
+    ],
+    "replication_datasets": [
+        {
+            "name": "Name of the dataset used for replication.",
+            "filename": "Exact file name (e.g., user_data_2021.csv, replication_dataset_final.rdata).",
+            "type": "replication",
+            "file_format": "File format (e.g., csv, rdata, xlsx, json, parquet).",
+            "columns": "List of variable names or keys present in the replication dataset.",
+            "summary_statistics": {
+                "info": "Structural metadata such as dimensions, column types, memory usage, or equivalent (e.g., output of df.info(), str(), etc.).",
+                "describe": "Descriptive statistics such as mean, std, min, max, etc., where applicable (e.g., df.describe(), summary()). If not available, return null."
+            },
+            "schema_mapping": {
+                "original": "List of corresponding column names from the original dataset.",
+                "replication": "List of matched columns in the replication dataset."
+            },
+            "access": {
+                "url": "Download or repository URL if available.",
+                "restrictions": "Any access or licensing restrictions (e.g., restricted, CC-BY, institution-only)."
+            },
+            "notes": "Any additional notes about the replication dataset (e.g., imputed values, row filtering, data transformation)."
+        }
+    ],
+    "codebase": {
+        "files": {
+            "file_name": "A detailed description of what this file does and how it relates to the dataset or experiment."
+        },
+        "notes": "Any overall notes on the code design, dependencies, or runtime environment."
+    },
+    "docker_specs": {
+        "base_image": "A proper base Docker image that contains the necessary software to reproduce the original study (e.g., python:3.10, rocker/verse for R, etc.).",
+        "packages": {
+            "python": [
+                "List of required Python packages with version constraints (e.g., numpy==1.23.1, pandas>=1.4.0)"
+            ],
+            "r": [
+                "List of R packages and versions (e.g., dplyr, ggplot2)"
+            ],
+            "other": [
+                "Other necessary software (e.g., git, make, wget)"
+            ]
+        },
+        "hardware": {
+            "gpu_support": "true if GPU is required for model training or inference, false otherwise",
+            "min_gpu_memory_gb": "Minimum GPU memory required in GB (e.g., 12)",
+            "min_ram_gb": "Minimum system RAM required in GB (e.g., 16)"
+        },
+        "volumes": [
+            "Suggested host paths to mount as volumes inside the container (e.g., ./data:/app/data)"
+        ]
+    },
+    "analysis": {
+        "instructions": "Steps or code logic to run the analysis.",
+        "comparison_metrics": "Metrics used to compare original vs replication results."
+    }
+}
