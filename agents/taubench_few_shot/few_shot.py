@@ -11,6 +11,13 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     litellm.drop_params = True
 
+    def _responses_model_name(model: str) -> str:
+        return model if model.startswith("responses/") else f"responses/{model}"
+
+    # Initialize values used by the completion wrappers.
+    model_name = kwargs["model_name"]
+    is_native_openai = False
+
     # Store the original completion functions
     original_completion = litellm.completion
     original_acompletion = litellm.acompletion
@@ -35,6 +42,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     completion_kwargs["extra_body"] = extra_body
                     print(
                         f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}"
+                    )
+                elif is_native_openai:
+                    completion_kwargs["reasoning"] = {
+                        "effort": kwargs["reasoning_effort"]
+                    }
+                    completion_kwargs.pop("reasoning_effort", None)
+                    print(
+                        f"Setting reasoning.effort to {kwargs['reasoning_effort']} for model {model_name}"
                     )
                 else:
                     # For direct Anthropic
@@ -65,6 +80,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     completion_kwargs["extra_body"] = extra_body
                     print(
                         f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}"
+                    )
+                elif is_native_openai:
+                    completion_kwargs["reasoning"] = {
+                        "effort": kwargs["reasoning_effort"]
+                    }
+                    completion_kwargs.pop("reasoning_effort", None)
+                    print(
+                        f"Setting reasoning.effort to {kwargs['reasoning_effort']} for model {model_name}"
                     )
                 else:
                     # For direct Anthropic
@@ -111,6 +134,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         api_base = None
         api_key = None
         model_name = kwargs["model_name"]
+
+    is_native_openai = agent_provider == "openai" and api_base is None
+    if is_native_openai:
+        model_name = _responses_model_name(model_name)
 
     from tau_bench.envs import get_env
     from tau_bench.agents.few_shot_agent import FewShotToolCallingAgent
