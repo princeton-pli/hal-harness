@@ -21,6 +21,7 @@ from config import (
     POLL_INTERVAL_SECONDS,
     EvalSpec,
 )
+from storage import download_task_results
 
 
 def _batch_client() -> BatchServiceClient:
@@ -54,34 +55,49 @@ def terminate_batch_job(job_id: str) -> None:
     print(f"Terminated Azure Batch job | job_id={job_id}")
 
 
+def _wait_for_pool_steady() -> None:
+    """Block until the pool is no longer resizing."""
+    client = _batch_client()
+    while True:
+        pool = client.pool.get(AZURE_BATCH_POOL_ID)
+        if pool.allocation_state == batch_models.AllocationState.steady:
+            return
+        print(f"Waiting for pool | allocation_state={pool.allocation_state}")
+        time.sleep(POLL_INTERVAL_SECONDS)
+
+
 def resize_pool(n_nodes: int) -> None:
-    """Resize the pool to n_nodes low-priority (spot) nodes. Pass 0 to scale down."""
+    """Resize the pool to n_nodes dedicated nodes. Pass 0 to scale down."""
+    _wait_for_pool_steady()
     client = _batch_client()
     client.pool.resize(
         AZURE_BATCH_POOL_ID,
-        # FIXME: switch to dedicated nodes for production (spot nodes can be evicted mid-task)
         batch_models.PoolResizeParameter(
-            target_dedicated_nodes=0,
-            target_low_priority_nodes=n_nodes,
+            target_dedicated_nodes=n_nodes,
+            target_low_priority_nodes=0,
         ),
     )
-    print(f"Pool resize requested | pool={AZURE_BATCH_POOL_ID} low_priority_nodes={n_nodes}")
-
-
-# TODO: replace inline command with Azure Batch resource files for real eval code.
-# Upload a zip of hal-harness to Blob Storage, generate a SAS URL, and pass it as a
-# ResourceFile on TaskAddParameter. Azure Batch will download + unzip it into the node's
-# working directory before the task command runs — no base64 embedding needed.
-# See: https://learn.microsoft.com/azure/batch/resource-files
-def _build_command_line(spec: EvalSpec) -> str:
-    """Build the command line run on the Azure Batch node."""
-    py = (
-        f"import time,random; "
-        f"print('agent={spec.agent} benchmark={spec.benchmark} task={spec.task_id} model={spec.model}'); "
-        f"time.sleep(random.uniform(3,9)); "
-        f"print('done')"
+    print(
+        f"Pool resize requested | pool={AZURE_BATCH_POOL_ID} dedicated_nodes={n_nodes}"
     )
-    return f'/bin/bash -c "python3 -c \\"{py}\\""'
+
+
+def _build_command_line(spec: EvalSpec) -> str:
+    """Build the command line run on the Azure Batch node.
+
+    Azure Batch downloads hal-harness.zip as a ResourceFile, placing it in the
+    task working directory. We unzip it, then delegate to azure_entrypoint.sh.
+    """
+    return (
+        "/bin/bash -c \""
+        "python3 -m zipfile -e hal-harness.zip hal-harness && "
+        "bash hal-harness/azure_entrypoint.sh"
+        f" '{spec.agent}'"
+        f" '{spec.benchmark}'"
+        f" '{spec.task_id}'"
+        f" '{spec.model}'"
+        "\""
+    )
 
 
 def _submit_batch_task(spec: EvalSpec) -> str:
@@ -96,6 +112,38 @@ def _submit_batch_task(spec: EvalSpec) -> str:
     batch_task = batch_models.TaskAddParameter(
         id=azure_task_id,
         command_line=_build_command_line(spec),
+        resource_files=[
+            batch_models.ResourceFile(
+                http_url=spec.code_sas_url,
+                file_path="hal-harness.zip",
+            )
+        ],
+        output_files=[
+            batch_models.OutputFile(
+                file_pattern="results/**/*_UPLOAD.json",
+                destination=batch_models.OutputFileDestination(
+                    container=batch_models.OutputFileBlobContainerDestination(
+                        container_url=spec.result_sas_url,
+                        path=f"{spec.job_id}/results/{azure_task_id}",
+                    )
+                ),
+                upload_options=batch_models.OutputFileUploadOptions(
+                    upload_condition=batch_models.OutputFileUploadCondition.task_success,
+                ),
+            ),
+            batch_models.OutputFile(
+                file_pattern="results/**/*_RAW_SUBMISSIONS.jsonl",
+                destination=batch_models.OutputFileDestination(
+                    container=batch_models.OutputFileBlobContainerDestination(
+                        container_url=spec.result_sas_url,
+                        path=f"{spec.job_id}/results/{azure_task_id}",
+                    )
+                ),
+                upload_options=batch_models.OutputFileUploadOptions(
+                    upload_condition=batch_models.OutputFileUploadCondition.task_success,
+                ),
+            ),
+        ],
         constraints=batch_models.TaskConstraints(
             max_task_retry_count=0,  # Prefect owns retries
             retention_time=datetime.timedelta(days=365),
@@ -146,6 +194,16 @@ def _poll_batch_task(spec: EvalSpec, azure_task_id: str) -> None:
         if t.state == batch_models.TaskState.completed:
             exit_code = t.execution_info.exit_code
             if exit_code != 0:
+                # Drain any remaining stdout then print stderr for diagnosis
+                _read_new_stdout(client, spec.job_id, azure_task_id, bytes_read)
+                try:
+                    stderr = b"".join(
+                        client.file.get_from_task(spec.job_id, azure_task_id, "stderr.txt")
+                    ).decode("utf-8", errors="replace")
+                    if stderr:
+                        print(f"--- stderr ---\n{stderr}--- end stderr ---")
+                except Exception:
+                    pass
                 raise RuntimeError(
                     f"Azure Batch task {azure_task_id} failed "
                     f"(exit_code={exit_code}): {t.execution_info.failure_info}"
@@ -162,9 +220,4 @@ def run_eval_on_batch(spec: EvalSpec) -> dict:
     print(f"Submitted | azure_task_id={azure_task_id}")
     _poll_batch_task(spec, azure_task_id)
     print(f"Completed | azure_task_id={azure_task_id}")
-    return {
-        "run_id": azure_task_id,
-        "metadata": {"info": "TODO: complete me"},
-        "agent_response": {"info": "TODO: complete me"},
-        "scoring": {"info": "TODO: complete me"},
-    }
+    return download_task_results(spec.job_id, azure_task_id)

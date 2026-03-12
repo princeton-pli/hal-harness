@@ -5,6 +5,7 @@ from prefect.runtime import flow_run as current_flow_run
 
 from batch import create_batch_job, resize_pool, terminate_batch_job
 from config import AGENTS, BENCHMARK_TASKS, MODELS, EvalSpec
+from storage import upload_code_zip, result_container_sas
 from tasks import run_eval_task
 
 
@@ -18,6 +19,9 @@ def evaluation_harness(
     job_id = str(current_flow_run.id)
     create_batch_job(job_id)
 
+    code_sas_url = upload_code_zip(job_id)
+    res_sas_url = result_container_sas()
+
     specs = [
         EvalSpec(
             agent=agent,
@@ -25,6 +29,8 @@ def evaluation_harness(
             task_id=task_id,
             model=model,
             job_id=job_id,
+            code_sas_url=code_sas_url,
+            result_sas_url=res_sas_url,
         )
         for agent in agents
         for benchmark, tasks in benchmark_tasks.items()
