@@ -10,8 +10,6 @@ Execution modes (set RUN_MODE env var):
 """
 
 import datetime
-import os
-import random
 import time
 import uuid
 
@@ -24,13 +22,13 @@ from azure.identity import AzureCliCredential
 from prefect import flow, task
 from prefect.artifacts import create_markdown_artifact
 from prefect.futures import wait
+from prefect.runtime import flow_run as current_flow_run
 from prefect.tasks import exponential_backoff
 
 # load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 AZURE_BATCH_ACCOUNT_URL = "https://halharness.eastus.batch.azure.com"
 AZURE_BATCH_POOL_ID = "proof-of-concept"
-AZURE_BATCH_JOB_ID = "proof-of-concept"
 
 # ---------------------------------------------------------------------------
 # Matrix
@@ -44,18 +42,18 @@ AGENTS = [
 # Each benchmark maps to its list of task IDs.
 # In production these would be loaded from the benchmark dataset.
 BENCHMARK_TASKS: dict[str, list[str]] = {
-    "gaia": ["gaia-2023-001", "gaia-2023-002", "gaia-2023-003"],
-    "swe-bench": ["django__django-1234", "astropy__astropy-5678", "sympy__sympy-9012"],
+    # "gaia": ["gaia-2023-001", "gaia-2023-002", "gaia-2023-003"],
+    # "swe-bench": ["django__django-1234", "astropy__astropy-5678", "sympy__sympy-9012"],
     "usaco": [
-        "usaco-2023-jan-bronze-1",
-        "usaco-2023-jan-silver-1",
+        # "usaco-2023-jan-bronze-1",
+        # "usaco-2023-jan-silver-1",
         "usaco-2023-feb-gold-1",
     ],
 }
 
 MODELS = [
     # OpenAI
-    "gpt-4o",
+    # "gpt-4o",
     # "o3",
     # "o4-mini",
     # Anthropic
@@ -65,37 +63,6 @@ MODELS = [
 ]
 
 POLL_INTERVAL_SECONDS = 15  # mirrors PREFECT_WORKER_QUERY_SECONDS default
-
-
-# ---------------------------------------------------------------------------
-# Local simulation
-# ---------------------------------------------------------------------------
-
-
-def run_eval_locally(
-    agent_name: str, benchmark_name: str, task_id: str, model: str
-) -> dict:
-    """Simulate a single benchmark task locally."""
-    run_id = f"{model}-{agent_name}-{benchmark_name}-{task_id}-{uuid.uuid4().hex[:8]}"
-    duration = random.uniform(3, 10)
-    print(
-        f"Running | agent={agent_name} benchmark={benchmark_name} task={task_id} model={model} ({duration:.1f}s)"
-    )
-    time.sleep(duration)
-    if (
-        random.random() < 0.3
-    ):  # 30% chance of failure — remove once wired to Azure Batch
-        raise RuntimeError(
-            f"Simulated failure: {agent_name} / {benchmark_name} / {task_id} / {model}"
-        )
-    print(f"Done | run_id={run_id}")
-    return {
-        "run_id": run_id,
-        "metadata": {"info": "TODO: complete me"},
-        "agent_response": {"info": "TODO: complete me"},
-        "scoring": {"info": "TODO: complete me"},
-    }
-
 
 # ---------------------------------------------------------------------------
 # Azure Batch
@@ -113,12 +80,31 @@ def _batch_client() -> BatchServiceClient:
     )
 
 
+def _terminate_batch_job(job_id: str) -> None:
+    """Terminate the Azure Batch job for this flow run."""
+    client = _batch_client()
+    client.job.terminate(job_id)
+    print(f"Terminated Azure Batch job | job_id={job_id}")
+
+
+def _create_batch_job(job_id: str) -> None:
+    """Create a new Azure Batch job for this flow run."""
+    client = _batch_client()
+    client.job.add(
+        batch_models.JobAddParameter(
+            id=job_id,
+            pool_info=batch_models.PoolInformation(pool_id=AZURE_BATCH_POOL_ID),
+            on_all_tasks_complete=batch_models.OnAllTasksComplete.no_action,
+        )
+    )
+    print(f"Created Azure Batch job | job_id={job_id}")
+
+
 def _submit_batch_task(
-    agent_name: str, benchmark_name: str, task_id: str, model: str
+    agent_name: str, benchmark_name: str, task_id: str, model: str, job_id: str
 ) -> str:
     """Submit one eval task to Azure Batch. Returns the Azure task ID."""
     client = _batch_client()
-    job_id = AZURE_BATCH_JOB_ID
     suffix = uuid.uuid4().hex[:8]
     azure_task_id = f"{model}-{agent_name}-{benchmark_name}-{task_id}-{suffix}"
     if len(azure_task_id) > 64:
@@ -131,7 +117,7 @@ def _submit_batch_task(
 
     batch_task = batch_models.TaskAddParameter(
         id=azure_task_id,
-        command_line=f"/bin/bash -c \"echo agent={agent_name} benchmark={benchmark_name} task={task_id} model={model} && sleep 5 && echo done\"",
+        command_line=f"/bin/bash -c \"python3 -c \\\"import time; print('agent={agent_name} benchmark={benchmark_name} task={task_id} model={model}'); time.sleep(5); print('done')\\\"\"",
         constraints=batch_models.TaskConstraints(
             max_task_retry_count=0,  # Prefect owns retries
             retention_time=datetime.timedelta(days=365),
@@ -141,7 +127,9 @@ def _submit_batch_task(
     return azure_task_id
 
 
-def _read_new_stdout(client: BatchServiceClient, job_id: str, azure_task_id: str, bytes_read: int) -> int:
+def _read_new_stdout(
+    client: BatchServiceClient, job_id: str, azure_task_id: str, bytes_read: int
+) -> int:
     """Fetch any new bytes from stdout.txt since bytes_read. Returns updated bytes_read."""
     try:
         stream = client.file.get_from_task(
@@ -161,11 +149,10 @@ def _read_new_stdout(client: BatchServiceClient, job_id: str, azure_task_id: str
     return bytes_read
 
 
-def _poll_batch_task(azure_task_id: str) -> None:
+def _poll_batch_task(azure_task_id: str, job_id: str) -> None:
     """Block until the Azure Batch task completes, streaming stdout incrementally.
     Raises on non-zero exit code."""
     client = _batch_client()
-    job_id = AZURE_BATCH_JOB_ID
     bytes_read = 0
 
     while True:
@@ -187,12 +174,14 @@ def _poll_batch_task(azure_task_id: str) -> None:
 
 
 def run_eval_on_batch(
-    agent_name: str, benchmark_name: str, task_id: str, model: str
+    agent_name: str, benchmark_name: str, task_id: str, model: str, job_id: str
 ) -> dict:
     """Submit to Azure Batch and block until completion."""
-    azure_task_id = _submit_batch_task(agent_name, benchmark_name, task_id, model)
+    azure_task_id = _submit_batch_task(
+        agent_name, benchmark_name, task_id, model, job_id
+    )
     print(f"Submitted | azure_task_id={azure_task_id}")
-    _poll_batch_task(azure_task_id)
+    _poll_batch_task(azure_task_id, job_id)
     print(f"Completed | azure_task_id={azure_task_id}")
     return {
         "run_id": azure_task_id,
@@ -206,11 +195,6 @@ def run_eval_on_batch(
 # Prefect tasks and flow
 # ---------------------------------------------------------------------------
 
-_RUN_BACKENDS = {
-    "local": run_eval_locally,
-    "batch": run_eval_on_batch,
-}
-
 
 @task(
     task_run_name="{model}/{agent_name}/{benchmark_name}/{task_id}",
@@ -220,18 +204,11 @@ _RUN_BACKENDS = {
     log_prints=True,
 )
 def run_eval_task(
-    agent_name: str, benchmark_name: str, task_id: str, model: str
+    agent_name: str, benchmark_name: str, task_id: str, model: str, job_id: str
 ) -> dict:
     """Prefect task: run one (agent, benchmark task, model) evaluation."""
-    run_mode = os.environ.get("RUN_MODE", "batch")
-    print(f"Using run mode {run_mode}")
-    run_fn = _RUN_BACKENDS.get(run_mode)
-    if run_fn is None:
-        raise ValueError(
-            f"Unknown RUN_MODE={run_mode!r}. Choose: {list(_RUN_BACKENDS)}"
-        )
 
-    result = run_fn(agent_name, benchmark_name, task_id, model)
+    result = run_eval_on_batch(agent_name, benchmark_name, task_id, model, job_id)
     create_markdown_artifact(
         key="task-result",
         description=f"{agent_name} / {benchmark_name} / {task_id} / {model}",
@@ -263,6 +240,9 @@ def evaluation_harness_poc(
     models: list[str] = MODELS,
 ) -> None:
     """Submit all (agent × benchmark task × model) combinations concurrently."""
+    job_id = str(current_flow_run.id)
+    _create_batch_job(job_id)
+
     combos = [
         (agent, benchmark, task_id, model)
         for agent in agents
@@ -272,11 +252,12 @@ def evaluation_harness_poc(
     ]
 
     futures = [
-        run_eval_task.submit(agent, benchmark, task_id, model)
+        run_eval_task.submit(agent, benchmark, task_id, model, job_id)
         for agent, benchmark, task_id, model in combos
     ]
 
     wait(futures)
+    _terminate_batch_job(job_id)
 
     rows = []
     for (agent, benchmark, task_id, model), future in zip(combos, futures):
