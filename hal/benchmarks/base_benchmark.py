@@ -5,7 +5,7 @@ import os
 
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
-from ..utils.utils import make_json_serializable, get_git_info
+from ..utils.utils import make_json_serializable, get_git_info, compute_agent_dir_hash
 import logging
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,18 @@ class BaseBenchmark(ABC):
         os.makedirs(run_dir, exist_ok=True)
         return run_dir
 
+    def get_task_prompts(self) -> Dict[str, str]:
+        """Extract task prompts from the benchmark dataset."""
+        prompt_keys = ["prompt", "problem_statement", "problem_description", "task"]
+        prompts = {}
+        for task_id, task_data in self.benchmark.items():
+            if isinstance(task_data, dict):
+                for key in prompt_keys:
+                    if key in task_data:
+                        prompts[task_id] = str(task_data[key])
+                        break
+        return prompts
+
     def process_results(
         self,
         agent_name: str,
@@ -81,6 +93,8 @@ class BaseBenchmark(ABC):
         weave_client,
         agent_output: Dict[str, Any] = None,
         upload: bool = False,
+        agent_dir: Optional[str] = None,
+        agent_version: Optional[str] = None,
         prompt_sensitivity: bool = False,
     ) -> Dict[str, Any]:
         """Process evaluation results and optionally upload"""
@@ -99,6 +113,12 @@ class BaseBenchmark(ABC):
             for task_id, task_data in agent_output.items():
                 if isinstance(task_data, dict) and "metrics" in task_data:
                     task_metrics[task_id] = task_data["metrics"]
+
+        # Extract step counts from task metrics
+        task_step_counts = {}
+        for task_id, metrics in task_metrics.items():
+            if "step_count" in metrics:
+                task_step_counts[task_id] = metrics["step_count"]
 
         # Get cost and usage metrics
         total_cost, total_usage = get_total_cost(weave_client)
@@ -136,17 +156,35 @@ class BaseBenchmark(ABC):
         else:
             eval_results_for_metrics = eval_results
 
+        # Build config with optional agent scaffold info
+        config = {
+            "agent_name": agent_name,
+            "benchmark_name": self.benchmark_name,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "run_id": run_id,
+            "agent_args": agent_args,
+            "run_command": run_command,
+            "prompt_sensitivity": prompt_sensitivity,
+        }
+        if agent_version:
+            config["agent_version"] = agent_version
+
+        # Compute agent hash
+        agent_hash = compute_agent_dir_hash(agent_dir) if agent_dir else None
+
+        # Read wall-clock times if available
+        wall_clock_times = {}
+        timings_file = os.path.join(run_dir, f"{run_id}_WALL_CLOCK_TIMES.jsonl")
+        if os.path.exists(timings_file):
+            with open(timings_file) as f:
+                for line in f:
+                    if line.strip():
+                        entry = json.loads(line.strip())
+                        wall_clock_times[entry["task_id"]] = entry["wall_clock_time"]
+
         # Prepare results summary
         results_summary = {
-            "config": {
-                "agent_name": agent_name,
-                "benchmark_name": self.benchmark_name,
-                "date": datetime.now().strftime("%Y-%m-%d"),
-                "run_id": run_id,
-                "agent_args": agent_args,
-                "run_command": run_command,
-                "prompt_sensitivity": prompt_sensitivity,
-            },
+            "config": config,
             "results": {
                 **self.get_metrics(eval_results_for_metrics),
                 "total_cost": total_cost,
@@ -154,9 +192,17 @@ class BaseBenchmark(ABC):
             },
             "raw_eval_results": eval_results,
             "raw_logging_results": raw_logging,
+            "task_prompts": {
+                task_id: prompt
+                for task_id, prompt in self.get_task_prompts().items()
+                if task_id in eval_results
+            },
             "total_usage": total_usage,
             "total_cost": total_cost,
             "git_info": get_git_info(),
+            "agent_hash": agent_hash,
+            "wall_clock_times": wall_clock_times,
+            "task_step_counts": task_step_counts,
         }
 
         # Add sensitivity metrics if available

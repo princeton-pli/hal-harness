@@ -34,6 +34,7 @@ class AgentRunner:
         run_command: str = "",
         ignore_errors: bool = False,
         max_tasks: Optional[int] = None,
+        agent_version: Optional[str] = None,
         prompt_sensitivity: bool = False,
         num_variations: int = 3,
         variation_strength: str = "mild",
@@ -148,6 +149,7 @@ class AgentRunner:
         self.continue_run = continue_run
         self.ignore_errors = ignore_errors
         self.max_tasks = max_tasks
+        self.agent_version = agent_version
         self.prompt_sensitivity = prompt_sensitivity
         self.num_variations = num_variations
         self.variation_strength = variation_strength
@@ -528,6 +530,8 @@ class AgentRunner:
             weave_client=weave_client,
             agent_output=agent_output,
             upload=upload,
+            agent_dir=self.agent_dir,
+            agent_version=self.agent_version,
             prompt_sensitivity=self.prompt_sensitivity,
         )
         return results
