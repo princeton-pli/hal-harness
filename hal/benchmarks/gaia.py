@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Dict, Any, List, Optional
 from .base_benchmark import BaseBenchmark
@@ -61,10 +62,38 @@ class GaiaBenchmark(BaseBenchmark):
         for task_id, agent_answer in agent_output.items():
             answer_payload = agent_answer
 
+            # Parse JSON string if agent output is stringified JSON
+            if isinstance(agent_answer, str):
+                try:
+                    agent_answer = json.loads(agent_answer)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
             if isinstance(agent_answer, dict):
+                # Try multiple fields to find the actual answer
                 answer_payload = agent_answer.get(
-                    "answer", agent_answer.get("raw_response")
+                    "answer",
+                    agent_answer.get("raw_response", agent_answer.get("model_answer", ""))
                 )
+
+                # If answer_payload is still a JSON string (nested), parse it
+                if isinstance(answer_payload, str):
+                    try:
+                        nested_json = json.loads(answer_payload)
+                        # Extract answer from OpenClaw-style payloads array
+                        if isinstance(nested_json, dict) and "payloads" in nested_json:
+                            payloads = nested_json.get("payloads", [])
+                            # Concatenate all text payloads as the answer
+                            text_parts = []
+                            for payload in payloads:
+                                if isinstance(payload, dict) and payload.get("text"):
+                                    text_parts.append(payload["text"])
+                            answer_payload = "\n".join(text_parts) if text_parts else str(nested_json)
+                        else:
+                            # Use the nested JSON as fallback
+                            answer_payload = str(nested_json)
+                    except (json.JSONDecodeError, TypeError):
+                        pass
 
             gt_answer = self.benchmark[task_id]["Final answer"]
             score, explanation = question_scorer(str(answer_payload), str(gt_answer))
