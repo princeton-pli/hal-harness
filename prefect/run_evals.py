@@ -148,7 +148,14 @@ def _submit_batch_task(
 
 
 def _poll_batch_task(azure_task_id: str) -> None:
-    """Block until the Azure Batch task completes. Raises on non-zero exit code."""
+    """Block until the Azure Batch task completes. Raises on non-zero exit code.
+
+    TODO: replace polling with incremental stdout.txt reads for near-real-time log streaming.
+    While the task is running, call client.file.get_from_task(..., 'stdout.txt',
+    ocp_range=f"bytes={bytes_read}-") each cycle and print new content. Track bytes_read
+    to avoid re-printing. stdout.txt won't exist until the task starts (active→running),
+    so swallow the file-not-found exception until then.
+    """
     client = _batch_client()
     job_id = AZURE_BATCH_JOB_ID
 
