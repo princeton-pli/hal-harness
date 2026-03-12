@@ -3,7 +3,7 @@ from prefect.artifacts import create_markdown_artifact
 from prefect.futures import wait
 from prefect.runtime import flow_run as current_flow_run
 
-from batch import create_batch_job, terminate_batch_job
+from batch import create_batch_job, resize_pool, terminate_batch_job
 from config import AGENTS, BENCHMARK_TASKS, MODELS, EvalSpec
 from tasks import run_eval_task
 
@@ -32,9 +32,11 @@ def evaluation_harness(
         for model in models
     ]
 
+    resize_pool(len(specs))
     futures = [run_eval_task.submit(spec) for spec in specs]
     wait(futures)
     terminate_batch_job(job_id)
+    resize_pool(0)
 
     rows = []
     for spec, future in zip(specs, futures):

@@ -54,6 +54,25 @@ def terminate_batch_job(job_id: str) -> None:
     print(f"Terminated Azure Batch job | job_id={job_id}")
 
 
+def resize_pool(n_nodes: int) -> None:
+    """Resize the pool to n_nodes low-priority (spot) nodes. Pass 0 to scale down."""
+    client = _batch_client()
+    client.pool.resize(
+        AZURE_BATCH_POOL_ID,
+        # FIXME: switch to dedicated nodes for production (spot nodes can be evicted mid-task)
+        batch_models.PoolResizeParameter(
+            target_dedicated_nodes=0,
+            target_low_priority_nodes=n_nodes,
+        ),
+    )
+    print(f"Pool resize requested | pool={AZURE_BATCH_POOL_ID} low_priority_nodes={n_nodes}")
+
+
+# TODO: replace inline command with Azure Batch resource files for real eval code.
+# Upload a zip of hal-harness to Blob Storage, generate a SAS URL, and pass it as a
+# ResourceFile on TaskAddParameter. Azure Batch will download + unzip it into the node's
+# working directory before the task command runs — no base64 embedding needed.
+# See: https://learn.microsoft.com/azure/batch/resource-files
 def _build_command_line(spec: EvalSpec) -> str:
     """Build the command line run on the Azure Batch node."""
     py = (
