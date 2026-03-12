@@ -1,4 +1,18 @@
-# Evaluation Harness PoC — Prefect
+# Evaluation Harness — Prefect + Azure Batch
+
+Orchestrates a matrix of `(agent × benchmark × model)` evaluations using Prefect.
+Each benchmark task is a first-class Prefect task run submitted to Azure Batch.
+
+## Module structure
+
+| File | Purpose |
+|:-----|:--------|
+| `config.py` | `EvalSpec` dataclass, evaluation matrix constants, Azure connection config |
+| `batch.py` | Azure Batch client, job lifecycle, task submit/poll/stream |
+| `tasks.py` | Prefect `@task` wrapping `batch.run_eval_on_batch` |
+| `flow.py` | Prefect `@flow` + `__main__` entrypoint |
+| `eval_task.py` | **Demo stub** — Python script run on Batch nodes (replace with real eval) |
+| `eval_helper.py` | **Demo stub** — imported by `eval_task.py` (replace with real eval) |
 
 ## Setup
 
@@ -19,90 +33,41 @@ prefect server start
 **Tab 2 — Flow deployment listener:**
 
 ```bash
-python prefect/run_evals.py
+python prefect/flow.py
 ```
 
-The UI is available at http://localhost:4200. Go to **Deployments → eval-harness-poc → Run → Custom run** to trigger a flow run with custom parameters.
+The UI is available at http://localhost:4200. Go to **Deployments → eval-harness → Run → Custom run** to trigger a flow run with custom parameters.
 
----
+## Configuration
 
-## Running on Azure Batch
+The evaluation matrix (`AGENTS`, `BENCHMARK_TASKS`, `MODELS`) is defined in `config.py`
+and can be overridden at flow-run time via Prefect's parameter UI.
 
-Set `RUN_MODE=batch` plus the variables below, then run the same two commands.
+Azure Batch connection values are read from environment variables, with hardcoded defaults
+for the current dev account:
 
-```bash
-export RUN_MODE=batch
-export AZURE_BATCH_ACCOUNT_URL=https://<account>.<region>.batch.azure.com
-export AZURE_BATCH_POOL_ID=<your-pool-id>
-export AZURE_BATCH_JOB_ID=<your-job-id>
-export AZURE_TENANT_ID=...
-export AZURE_CLIENT_ID=...
-export AZURE_CLIENT_SECRET=...
+| Variable | Default | Description |
+|:---------|:--------|:------------|
+| `AZURE_BATCH_ACCOUNT_URL` | `https://halharness.eastus.batch.azure.com` | Batch account endpoint |
+| `AZURE_BATCH_POOL_ID` | `proof-of-concept` | Pool to run tasks on |
+
+For `az login` (local/dev), no additional env vars are needed. For production, switch
+`AzureCliCredential` to `DefaultAzureCredential` with a service principal (see FIXME in
+`batch.py`).
+
+## How a flow run works
+
 ```
-
-### How to get these values
-
-#### 1. Create an Azure Batch account
-
-In the Azure Portal:
-
-1. **Create a resource** → search "Batch account" → Create
-2. Note the **account name** and **location**
-3. After creation, go to the account → **Properties**
-   - Copy the **URL** → this is `AZURE_BATCH_ACCOUNT_URL`
-
-#### 2. Create a pool
-
-Inside your Batch account → **Pools** → **Add**:
-
-- OS: Ubuntu 22.04 LTS
-- Node size: any (Standard_D2s_v3 is fine for testing)
-- Scale: 1–3 dedicated nodes (fixed or autoscale)
-- Note the **Pool ID** → this is `AZURE_BATCH_POOL_ID`
-
-Python 3 is pre-installed on Ubuntu pool nodes. No Docker needed.
-
-#### 3. Create a job
-
-Inside your Batch account → **Jobs** → **Add**:
-
-- Select the pool you just created
-- Note the **Job ID** → this is `AZURE_BATCH_JOB_ID`
-
-The job can stay open indefinitely — tasks will be added to it on each flow run.
-
-#### 4. Auth
-
-**For local/PoC use**, the code currently uses `AzureCliCredential` — just run:
-
-```bash
-az login
-```
-
-No service principal needed. `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` can be left unset.
-
-<!-- FIXME: for production, switch to DefaultAzureCredential with a service principal:
-
-az login
-
-az ad sp create-for-rbac --name "hal-harness-poc" --role contributor \
-  --scopes /subscriptions/<your-subscription-id>
-
-# Outputs:
-# { "appId": "...", "password": "...", "tenant": "..." }
-# Set as AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
-
-az role assignment create \
-  --assignee <AZURE_CLIENT_ID> \
-  --role "Contributor" \
-  --scope /subscriptions/<subscription-id>/resourceGroups/<rg>/providers/Microsoft.Batch/batchAccounts/<account-name>
-
-Requires "Application Administrator" role in Azure AD.
--->
-
-#### 5. Find your subscription ID and resource group
-
-```bash
-az account show --query id -o tsv          # subscription ID
-az batch account list --query "[].{name:name, rg:resourceGroup}" -o table
+evaluation_harness (@flow)
+  │
+  ├─► create_batch_job(job_id)          # one job per Prefect flow run
+  │
+  ├─► run_eval_task.submit(spec) × N    # one Prefect task per (agent × benchmark × model)
+  │     └─► run_eval_on_batch(spec)
+  │           ├─► _submit_batch_task()  # ships eval_task.py to pool node via base64
+  │           └─► _poll_batch_task()    # streams stdout every 15 s until done
+  │
+  ├─► terminate_batch_job(job_id)
+  │
+  └─► create_markdown_artifact()        # summary table in Prefect UI
 ```

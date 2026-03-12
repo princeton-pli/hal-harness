@@ -1,4 +1,4 @@
 prefect>=3.0
 azure-batch
 azure-identity
-python-dotenv
+msrest
