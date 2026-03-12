@@ -129,38 +129,48 @@ def _submit_batch_task(
             azure_task_id[:55] + "-" + suffix
         )  # suffix stays intact for uniqueness
 
-    python_code = (
-        "import time; "
-        f"print('agent={agent_name} benchmark={benchmark_name} task={task_id} model={model}'); "
-        "time.sleep(5); "
-        "print('done')"
-    )
     batch_task = batch_models.TaskAddParameter(
         id=azure_task_id,
-        command_line=f"/bin/bash -c \"python3 -c '{python_code}'\"",
+        command_line=f"/bin/bash -c \"echo agent={agent_name} benchmark={benchmark_name} task={task_id} model={model} && sleep 5 && echo done\"",
         constraints=batch_models.TaskConstraints(
             max_task_retry_count=0,  # Prefect owns retries
-            retention_time=datetime.timedelta(hours=1),
+            retention_time=datetime.timedelta(days=365),
         ),
     )
     client.task.add(job_id=job_id, task=batch_task)
     return azure_task_id
 
 
-def _poll_batch_task(azure_task_id: str) -> None:
-    """Block until the Azure Batch task completes. Raises on non-zero exit code.
+def _read_new_stdout(client: BatchServiceClient, job_id: str, azure_task_id: str, bytes_read: int) -> int:
+    """Fetch any new bytes from stdout.txt since bytes_read. Returns updated bytes_read."""
+    try:
+        stream = client.file.get_from_task(
+            job_id,
+            azure_task_id,
+            "stdout.txt",
+            file_get_from_task_options=batch_models.FileGetFromTaskOptions(
+                ocp_range=f"bytes={bytes_read}-"
+            ),
+        )
+        chunk = b"".join(stream).decode("utf-8", errors="replace")
+        if chunk:
+            print(chunk, end="", flush=True)
+            bytes_read += len(chunk.encode("utf-8"))
+    except Exception:
+        pass  # file doesn't exist yet (task still active/preparing)
+    return bytes_read
 
-    TODO: replace polling with incremental stdout.txt reads for near-real-time log streaming.
-    While the task is running, call client.file.get_from_task(..., 'stdout.txt',
-    ocp_range=f"bytes={bytes_read}-") each cycle and print new content. Track bytes_read
-    to avoid re-printing. stdout.txt won't exist until the task starts (active→running),
-    so swallow the file-not-found exception until then.
-    """
+
+def _poll_batch_task(azure_task_id: str) -> None:
+    """Block until the Azure Batch task completes, streaming stdout incrementally.
+    Raises on non-zero exit code."""
     client = _batch_client()
     job_id = AZURE_BATCH_JOB_ID
+    bytes_read = 0
 
     while True:
         t = client.task.get(job_id, azure_task_id)
+        bytes_read = _read_new_stdout(client, job_id, azure_task_id, bytes_read)
 
         if t.state == batch_models.TaskState.completed:
             exit_code = t.execution_info.exit_code
