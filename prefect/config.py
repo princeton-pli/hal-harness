@@ -35,11 +35,11 @@ AGENTS = [
 # Each benchmark maps to its list of task IDs.
 # In production these would be loaded from the benchmark dataset.
 BENCHMARK_TASKS: dict[str, list[str]] = {
-    # "gaia": ["gaia-2023-001", "gaia-2023-002", "gaia-2023-003"],
-    # "swe-bench": ["django__django-1234", "astropy__astropy-5678", "sympy__sympy-9012"],
+    "gaia": ["gaia-2023-001", "gaia-2023-002", "gaia-2023-003"],
+    "swe-bench": ["django__django-1234", "astropy__astropy-5678", "sympy__sympy-9012"],
     "usaco": [
-        # "usaco-2023-jan-bronze-1",
-        # "usaco-2023-jan-silver-1",
+        "usaco-2023-jan-bronze-1",
+        "usaco-2023-jan-silver-1",
         "usaco-2023-feb-gold-1",
     ],
 }

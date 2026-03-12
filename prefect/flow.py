@@ -19,7 +19,13 @@ def evaluation_harness(
     create_batch_job(job_id)
 
     specs = [
-        EvalSpec(agent=agent, benchmark=benchmark, task_id=task_id, model=model, job_id=job_id)
+        EvalSpec(
+            agent=agent,
+            benchmark=benchmark,
+            task_id=task_id,
+            model=model,
+            job_id=job_id,
+        )
         for agent in agents
         for benchmark, tasks in benchmark_tasks.items()
         for task_id in tasks
@@ -61,4 +67,4 @@ def evaluation_harness(
 
 
 if __name__ == "__main__":
-    evaluation_harness.serve(name="eval-harness")
+    evaluation_harness.serve(name="eval-harness-poc")

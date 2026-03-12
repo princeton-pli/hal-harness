@@ -4,9 +4,7 @@ Azure Batch helpers — submit, poll, and stream stdout for eval tasks.
 All public functions accept an EvalSpec; internals are prefixed with _.
 """
 
-import base64
 import datetime
-import os
 import time
 import uuid
 
@@ -17,7 +15,12 @@ from azure.batch import BatchServiceClient
 # (requires service principal with AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET)
 from azure.identity import AzureCliCredential
 
-from config import AZURE_BATCH_ACCOUNT_URL, AZURE_BATCH_POOL_ID, POLL_INTERVAL_SECONDS, EvalSpec
+from config import (
+    AZURE_BATCH_ACCOUNT_URL,
+    AZURE_BATCH_POOL_ID,
+    POLL_INTERVAL_SECONDS,
+    EvalSpec,
+)
 
 
 def _batch_client() -> BatchServiceClient:
@@ -52,23 +55,14 @@ def terminate_batch_job(job_id: str) -> None:
 
 
 def _build_command_line(spec: EvalSpec) -> str:
-    """Build a command that ships eval_task.py + eval_helper.py to the node via base64."""
-    scripts_dir = os.path.dirname(__file__)
-
-    def _b64(filename: str) -> str:
-        return base64.b64encode(open(os.path.join(scripts_dir, filename), "rb").read()).decode()
-
-    helper_b64 = _b64("eval_helper.py")
-    task_b64 = _b64("eval_task.py")
-
-    bootstrap = (
-        f"import base64,subprocess;"
-        f"open('eval_helper.py','wb').write(base64.b64decode('{helper_b64}'));"
-        f"open('eval_task.py','wb').write(base64.b64decode('{task_b64}'));"
-        f"subprocess.run(['python3','eval_task.py','{spec.agent}','{spec.benchmark}',"
-        f"'{spec.task_id}','{spec.model}'],check=True)"
+    """Build the command line run on the Azure Batch node."""
+    py = (
+        f"import time,random; "
+        f"print('agent={spec.agent} benchmark={spec.benchmark} task={spec.task_id} model={spec.model}'); "
+        f"time.sleep(random.uniform(3,9)); "
+        f"print('done')"
     )
-    return f"/bin/bash -c 'python3 -c \"{bootstrap}\"'"
+    return f'/bin/bash -c "python3 -c \\"{py}\\""'
 
 
 def _submit_batch_task(spec: EvalSpec) -> str:
@@ -110,8 +104,13 @@ def _read_new_stdout(
             print(chunk, end="", flush=True)
             bytes_read += len(chunk.encode("utf-8"))
     except batch_models.BatchErrorException as e:
-        if e.error is None or e.error.code != "FileNotFound":
-            raise  # only swallow "file not ready yet"; propagate all other errors
+        # Swallow expected "not ready" states: file doesn't exist yet, or task is still
+        # queued/preparing and files aren't accessible. Propagate everything else.
+        if e.error is None or e.error.code not in (
+            "FileNotFound",
+            "OperationInvalidForCurrentState",
+        ):
+            raise
     return bytes_read
 
 
