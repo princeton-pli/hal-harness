@@ -5,22 +5,8 @@ from openai import OpenAI
 
 
 def _extract_response_text(response) -> str:
-    """Best-effort text extraction for OpenAI Responses API outputs."""
-    if getattr(response, "output_text", None):
-        return response.output_text.strip()
-
-    output_items = getattr(response, "output", []) or []
-    text_chunks: list[str] = []
-    for item in output_items:
-        if getattr(item, "type", None) != "message":
-            continue
-        for content in getattr(item, "content", []) or []:
-            if getattr(content, "type", None) == "output_text" and getattr(
-                content, "text", None
-            ):
-                text_chunks.append(content.text)
-
-    return "".join(text_chunks).strip()
+    """Extract text from an OpenAI Responses API response."""
+    return response.output_text.strip()
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
