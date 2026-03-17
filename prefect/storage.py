@@ -28,7 +28,19 @@ from config import (
 )
 
 # Directories to exclude from the repo zip (relative to repo root, matched as path prefixes)
-_ZIP_EXCLUDES = {".git", ".venv", "prefect", "results", "__pycache__", ".mypy_cache", "hal/benchmarks"}
+_ZIP_EXCLUDES = {
+    ".git",
+    ".venv",
+    "prefect",
+    "results",
+    "__pycache__",
+    ".mypy_cache",
+    "hal/benchmarks/corebench",
+    "hal/benchmarks/USACO",
+    "hal/benchmarks/appworld",
+    "hal/benchmarks/scienceagentbench",
+    "hal/benchmarks/taubench/taubench_setup.sh",
+}
 
 
 def _storage_client() -> BlobServiceClient:

@@ -19,6 +19,7 @@ from config import (
     AZURE_BATCH_ACCOUNT_URL,
     AZURE_BATCH_POOL_ID,
     POLL_INTERVAL_SECONDS,
+    TASK_ENV_VARS,
     EvalSpec,
 )
 from storage import download_task_results
@@ -93,6 +94,8 @@ def _build_command_line(spec: EvalSpec) -> str:
         "python3 -m zipfile -e hal-harness.zip hal-harness && "
         "bash hal-harness/azure_entrypoint.sh"
         f" '{spec.agent}'"
+        f" '{spec.agent_function}'"
+        f" '{spec.agent_dir}'"
         f" '{spec.benchmark}'"
         f" '{spec.task_id}'"
         f" '{spec.model}'"
@@ -112,6 +115,10 @@ def _submit_batch_task(spec: EvalSpec) -> str:
     batch_task = batch_models.TaskAddParameter(
         id=azure_task_id,
         command_line=_build_command_line(spec),
+        environment_settings=[
+            batch_models.EnvironmentSetting(name=k, value=v)
+            for k, v in TASK_ENV_VARS.items()
+        ],
         resource_files=[
             batch_models.ResourceFile(
                 http_url=spec.code_sas_url,
@@ -120,7 +127,7 @@ def _submit_batch_task(spec: EvalSpec) -> str:
         ],
         output_files=[
             batch_models.OutputFile(
-                file_pattern="results/**/*_UPLOAD.json",
+                file_pattern="hal-harness/results/**/*_UPLOAD.json",
                 destination=batch_models.OutputFileDestination(
                     container=batch_models.OutputFileBlobContainerDestination(
                         container_url=spec.result_sas_url,
@@ -132,7 +139,7 @@ def _submit_batch_task(spec: EvalSpec) -> str:
                 ),
             ),
             batch_models.OutputFile(
-                file_pattern="results/**/*_RAW_SUBMISSIONS.jsonl",
+                file_pattern="hal-harness/results/**/*_RAW_SUBMISSIONS.jsonl",
                 destination=batch_models.OutputFileDestination(
                     container=batch_models.OutputFileBlobContainerDestination(
                         container_url=spec.result_sas_url,

@@ -11,7 +11,7 @@ from tasks import run_eval_task
 
 @flow(log_prints=True)
 def evaluation_harness(
-    agents: list[str] = AGENTS,
+    agents: list[dict] = AGENTS,
     benchmark_tasks: dict[str, list[str]] = BENCHMARK_TASKS,
     models: list[str] = MODELS,
 ) -> None:
@@ -24,7 +24,9 @@ def evaluation_harness(
 
     specs = [
         EvalSpec(
-            agent=agent,
+            agent=agent["name"],
+            agent_function=agent["function"],
+            agent_dir=agent["dir"],
             benchmark=benchmark,
             task_id=task_id,
             model=model,
@@ -42,7 +44,7 @@ def evaluation_harness(
     futures = [run_eval_task.submit(spec) for spec in specs]
     wait(futures)
     terminate_batch_job(job_id)
-    resize_pool(0)
+    # resize_pool(0)  # commented out during active iteration to keep nodes warm
 
     rows = []
     for spec, future in zip(specs, futures):
