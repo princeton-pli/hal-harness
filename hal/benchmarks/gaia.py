@@ -58,11 +58,7 @@ class GaiaBenchmark(BaseBenchmark):
         returned here so that runners cannot leak answers via input.json.
         """
         return {
-            task_id: {
-                k: v
-                for k, v in record.items()
-                if k not in self._REDACTED_FIELDS
-            }
+            task_id: {k: v for k, v in record.items() if k not in self._REDACTED_FIELDS}
             for task_id, record in self.benchmark.items()
         }
 
