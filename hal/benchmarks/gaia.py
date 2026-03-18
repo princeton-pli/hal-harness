@@ -47,6 +47,25 @@ class GaiaBenchmark(BaseBenchmark):
                     record["file_name"]: record.get("file_path", "")
                 }
 
+    # Fields that must never be sent to agents (ground truth / annotator hints).
+    _REDACTED_FIELDS = {"Final answer", "Annotator Metadata"}
+
+    def get_dataset(self) -> Dict[str, Any]:
+        """Return the dataset with ground truth fields stripped.
+
+        The full records (including answers) are retained in self.benchmark for
+        use by evaluate_output / get_metrics.  Only the agent-visible subset is
+        returned here so that runners cannot leak answers via input.json.
+        """
+        return {
+            task_id: {
+                k: v
+                for k, v in record.items()
+                if k not in self._REDACTED_FIELDS
+            }
+            for task_id, record in self.benchmark.items()
+        }
+
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
     ) -> Dict[str, Any]:
