@@ -1,0 +1,70 @@
+# Runs a minimal CoreBench hard VM smoke eval. Requires a GitHub Environment
+# (update `environment.name` below) with the secrets/vars listed in the job `env` block.
+# For Azure, add federated OIDC app registration secrets to the same environment:
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID (see https://github.com/azure/login )
+name: HAL eval CoreBench hard (VM)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  corebench-hard-vm:
+    runs-on: ubuntu-latest
+    # Create this Environment in Repo → Settings → Environments and attach secrets/vars.
+    environment: hal-corebench-vm
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP_NAME: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      NETWORK_SECURITY_GROUP_NAME: ${{ vars.NETWORK_SECURITY_GROUP_NAME }}
+      SSH_PRIVATE_KEY_PATH: ${{ vars.SSH_PRIVATE_KEY_PATH }}
+      SSH_PUBLIC_KEY_PATH: ${{ vars.SSH_PUBLIC_KEY_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev,azure,corebench,coreagent]"
+
+      - name: Generate SSH key pair for VM provisioning
+        run: |
+          set -euo pipefail
+          key="${SSH_PRIVATE_KEY_PATH:?SSH_PRIVATE_KEY_PATH must be set}"
+          pub="${SSH_PUBLIC_KEY_PATH:?SSH_PUBLIC_KEY_PATH must be set}"
+          mkdir -p "$(dirname "$key")"
+          rm -f "$key" "$pub"
+          ssh-keygen -t ed25519 -f "$key" -N "" -q
+          test -f "$pub"
+          chmod 600 "$key"
+          chmod 644 "$pub"
+
+      - name: Run hal-eval (CoreBench hard, VM)
+        run: |
+          hal-eval --benchmark corebench_hard \
+            --agent_dir agents/core_agent \
+            --agent_function main.run \
+            --agent_name "CORE-Agent" \
+            --vm \
+            --max_concurrent 1 \
+            --max_tasks 1 \
+            -A 'model_name=openai/gpt-4.1-2025-04-14'
