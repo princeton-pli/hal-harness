@@ -1690,11 +1690,41 @@ Task:
                 for line in results.split("\n")
                 if not any(d in line for d in _BLOCKED_DOMAINS)
             )
-            return filtered or results
+            return filtered if filtered else "No results found (blocked domain results were filtered)."
+
+        _original_execute_bash = agent.tools["execute_bash"]
+
+        @tool
+        def gaia_execute_bash(command: str) -> str:
+            """Execute a bash command and return its output.
+            Will not execute commands requiring internet access.
+            Common linux and python packages are available via apt and pip.
+
+            Args:
+                command: The bash command to execute
+            """
+            if any(d in command for d in _BLOCKED_DOMAINS):
+                return "Access denied: commands targeting Hugging Face domains are blocked by the benchmark."
+            return _original_execute_bash.forward(command=command)
+
+        _original_python = agent.tools["python_interpreter"]
+
+        @tool
+        def gaia_python_interpreter(code: str) -> str:
+            """Executes Python code and returns the output. The code runs in a stateful Jupyter notebook environment.
+
+            Args:
+                code: The Python code to execute.
+            """
+            if any(d in code for d in _BLOCKED_DOMAINS):
+                return "Access denied: code targeting Hugging Face domains is blocked by the benchmark."
+            return _original_python.forward(code=code)
 
         # Replace tools on the agent
         agent.tools["visit_webpage"] = visit_webpage
         agent.tools["web_search"] = gaia_web_search
+        agent.tools["execute_bash"] = gaia_execute_bash
+        agent.tools["python_interpreter"] = gaia_python_interpreter
 
         # ========== STRUCTURAL PERTURBATION SETUP (OPTIONAL) ==========
         gaia_perturbator = None
