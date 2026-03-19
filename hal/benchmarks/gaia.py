@@ -48,12 +48,11 @@ class GaiaBenchmark(BaseBenchmark):
                 }
 
     def get_dataset(self):
-        import copy
-        dataset = copy.deepcopy(self.benchmark)
-        for task in dataset.values():
-            task.pop("Final answer", None)
-            task.pop("Annotator Metadata", None)
-        return dataset
+        _GROUND_TRUTH_KEYS = {"Final answer", "Annotator Metadata"}
+        return {
+            task_id: {k: v for k, v in task.items() if k not in _GROUND_TRUTH_KEYS}
+            for task_id, task in self.benchmark.items()
+        }
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

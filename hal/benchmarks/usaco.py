@@ -40,13 +40,11 @@ class USACOBenchmark(BaseBenchmark):
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "USACO")
 
     def get_dataset(self):
-        import copy
-        dataset = copy.deepcopy(self.benchmark)
-        for task in dataset.values():
-            task.pop("solution", None)
-            task.pop("solution_python3", None)
-            task.pop("solution_english", None)
-        return dataset
+        _GROUND_TRUTH_KEYS = {"solution", "solution_python3", "solution_english"}
+        return {
+            task_id: {k: v for k, v in task.items() if k not in _GROUND_TRUTH_KEYS}
+            for task_id, task in self.benchmark.items()
+        }
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

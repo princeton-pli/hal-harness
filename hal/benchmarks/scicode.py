@@ -30,12 +30,17 @@ class SciCodeBenchmark(BaseBenchmark):
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "SciCode")
 
     def get_dataset(self):
-        import copy
-        dataset = copy.deepcopy(self.benchmark)
-        for task in dataset.values():
-            for step in task.get("sub_steps", []):
-                step.pop("test_cases", None)
-        return dataset
+        return {
+            task_id: {
+                k: (
+                    [{sk: sv for sk, sv in step.items() if sk != "test_cases"} for step in v]
+                    if k == "sub_steps"
+                    else v
+                )
+                for k, v in task.items()
+            }
+            for task_id, task in self.benchmark.items()
+        }
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

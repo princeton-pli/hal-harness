@@ -62,11 +62,10 @@ class ScienceAgentBench(BaseBenchmark):
         super().__init__(agent_dir, config, setup_script=self.setup_script)
 
     def get_dataset(self):
-        import copy
-        dataset = copy.deepcopy(self.benchmark)
-        for task in dataset.values():
-            task.pop("eval_script_name", None)
-        return dataset
+        return {
+            task_id: {k: v for k, v in task.items() if k != "eval_script_name"}
+            for task_id, task in self.benchmark.items()
+        }
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

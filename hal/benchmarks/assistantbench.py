@@ -26,11 +26,10 @@ class AssistantBenchBenchmark(BaseBenchmark):
         super().__init__(agent_dir, config)
 
     def get_dataset(self):
-        import copy
-        dataset = copy.deepcopy(self.benchmark)
-        for task in dataset.values():
-            task.pop("answer", None)
-        return dataset
+        return {
+            task_id: {k: v for k, v in task.items() if k != "answer"}
+            for task_id, task in self.benchmark.items()
+        }
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
