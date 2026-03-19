@@ -1641,6 +1641,61 @@ Task:
         return {task_id: "Completed"}
 
     elif kwargs["benchmark_name"] == "gaia":
+        # ========== BLOCK HUGGING FACE (prevent answer lookup) ==========
+        _BLOCKED_DOMAINS = {"huggingface.co", "hf.co"}
+
+        def _is_blocked_url(url: str) -> bool:
+            try:
+                from urllib.parse import urlparse
+
+                host = urlparse(url).hostname or ""
+                return any(
+                    host == d or host.endswith("." + d) for d in _BLOCKED_DOMAINS
+                )
+            except Exception:
+                return False
+
+        _original_visit_webpage = VisitWebpageTool()
+
+        @tool
+        def visit_webpage(url: str) -> str:
+            """Visits a webpage at the given URL and returns its content as a markdown string.
+
+            Args:
+                url: The URL of the webpage to visit.
+
+            Returns:
+                The content of the webpage converted to Markdown, or an error message if the request failed.
+            """
+            if _is_blocked_url(url):
+                return "Access denied: this domain is blocked by the benchmark."
+            return _original_visit_webpage.forward(url=url)
+
+        _original_web_search = web_search
+
+        @tool
+        def gaia_web_search(query: str) -> str:
+            """Performs a google web search for your query then returns a string of the top search results.
+
+            Args:
+                query: The search query to perform.
+
+            Returns:
+                A string with the top search results.
+            """
+            results = _original_web_search.forward(query=query)
+            # Strip any lines containing blocked domains
+            filtered = "\n".join(
+                line
+                for line in results.split("\n")
+                if not any(d in line for d in _BLOCKED_DOMAINS)
+            )
+            return filtered or results
+
+        # Replace tools on the agent
+        agent.tools["visit_webpage"] = visit_webpage
+        agent.tools["web_search"] = gaia_web_search
+
         # ========== STRUCTURAL PERTURBATION SETUP (OPTIONAL) ==========
         gaia_perturbator = None
         if GaiaPerturbator is not None and (
