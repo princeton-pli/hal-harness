@@ -47,6 +47,14 @@ class GaiaBenchmark(BaseBenchmark):
                     record["file_name"]: record.get("file_path", "")
                 }
 
+    def get_dataset(self):
+        import copy
+        dataset = copy.deepcopy(self.benchmark)
+        for task in dataset.values():
+            task.pop("Final answer", None)
+            task.pop("Annotator Metadata", None)
+        return dataset
+
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
     ) -> Dict[str, Any]:

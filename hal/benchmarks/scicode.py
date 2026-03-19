@@ -29,6 +29,14 @@ class SciCodeBenchmark(BaseBenchmark):
         # Set benchmark directory.
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "SciCode")
 
+    def get_dataset(self):
+        import copy
+        dataset = copy.deepcopy(self.benchmark)
+        for task in dataset.values():
+            for step in task.get("sub_steps", []):
+                step.pop("test_cases", None)
+        return dataset
+
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
     ) -> Dict[str, Any]:
