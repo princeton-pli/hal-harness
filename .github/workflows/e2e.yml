@@ -1,9 +1,9 @@
 # Runs a minimal CoreBench hard VM smoke eval. Requires a GitHub Environment
 # (update `environment.name` below) with the secrets/vars listed in the job `env` block.
-# Azure auth (pick one): (A) OIDC — keep the Azure login step + secrets AZURE_CLIENT_ID,
-# AZURE_TENANT_ID (see https://github.com/azure/login ); (B) no login step — add to env
-# AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET from secrets instead, and remove
-# the login step and id-token: write (not needed for client-secret auth).
+# Azure auth (pick one): (A) OIDC — Azure login with client-id, tenant-id, subscription-id
+# and id-token: write (see https://github.com/azure/login ); (B) service principal + secret —
+# Azure login with `creds` JSON (clientId, clientSecret, subscriptionId, tenantId) from
+# secrets/vars below; omit id-token: write.
 name: HAL eval CoreBench hard (VM)
 
 on:
@@ -19,7 +19,6 @@ jobs:
     environment: hal-corebench-vm
     permissions:
       contents: read
-      id-token: write
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -33,13 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure login (OIDC)
+      - name: Azure login (service principal)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          auth-type: SERVICE_PRINCIPAL
+          creds: "{\"clientId\":\"${{ secrets.AZURE_CLIENT_ID }}\",\"clientSecret\":\"${{ secrets.AZURE_CLIENT_SECRET }}\",\"subscriptionId\":\"${{ vars.AZURE_SUBSCRIPTION_ID }}\",\"tenantId\":\"${{ secrets.AZURE_TENANT_ID }}\"}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
