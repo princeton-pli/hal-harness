@@ -3,7 +3,8 @@
 # Azure auth (pick one): (A) OIDC — Azure login with client-id, tenant-id, subscription-id
 # and id-token: write (see https://github.com/azure/login ); (B) service principal + secret —
 # Azure login with `creds` JSON (clientId, clientSecret, subscriptionId, tenantId) from
-# secrets/vars below; omit id-token: write.
+# secrets/vars below; omit id-token: write. Build creds with format()+toJSON() so secrets
+# with quotes/special characters stay valid JSON (manual string concat breaks login).
 name: HAL eval CoreBench hard (VM)
 
 on:
@@ -36,7 +37,7 @@ jobs:
         uses: azure/login@v2
         with:
           auth-type: SERVICE_PRINCIPAL
-          creds: "{\"clientId\":\"${{ secrets.AZURE_CLIENT_ID }}\",\"clientSecret\":\"${{ secrets.AZURE_CLIENT_SECRET }}\",\"subscriptionId\":\"${{ vars.AZURE_SUBSCRIPTION_ID }}\",\"tenantId\":\"${{ secrets.AZURE_TENANT_ID }}\"}"
+          creds: ${{ format('{"clientId":{0},"clientSecret":{1},"subscriptionId":{2},"tenantId":{3}}', toJSON(secrets.AZURE_CLIENT_ID), toJSON(secrets.AZURE_CLIENT_SECRET), toJSON(vars.AZURE_SUBSCRIPTION_ID), toJSON(secrets.AZURE_TENANT_ID)) }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
