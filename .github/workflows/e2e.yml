@@ -2,9 +2,8 @@
 # (update `environment.name` below) with the secrets/vars listed in the job `env` block.
 # Azure auth (pick one): (A) OIDC — Azure login with client-id, tenant-id, subscription-id
 # and id-token: write (see https://github.com/azure/login ); (B) service principal + secret —
-# Azure login with `creds` JSON (clientId, clientSecret, subscriptionId, tenantId) from
-# secrets/vars below; omit id-token: write. Build creds with format()+toJSON() so secrets
-# with quotes/special characters stay valid JSON (manual string concat breaks login).
+# Environment secrets `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` plus var
+# `AZURE_SUBSCRIPTION_ID` assembled into azure/login `creds` JSON; omit id-token: write.
 name: HAL eval CoreBench hard (VM)
 
 on:
@@ -17,7 +16,7 @@ jobs:
   corebench-hard-vm:
     runs-on: ubuntu-latest
     # Create this Environment in Repo → Settings → Environments and attach secrets/vars.
-    environment: hal-corebench-vm
+    environment: test-environment
     permissions:
       contents: read
     env:
@@ -33,11 +32,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Assemble Azure creds JSON
+        id: azure_creds
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          for v in AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Required $v is empty (set on GitHub Environment \`test-environment\` secrets or vars)." >&2
+              exit 1
+            fi
+          done
+          CREDS="$(python3 -c 'import json, os; print(json.dumps({"clientId": os.environ["AZURE_CLIENT_ID"], "clientSecret": os.environ["AZURE_CLIENT_SECRET"], "subscriptionId": os.environ["AZURE_SUBSCRIPTION_ID"], "tenantId": os.environ["AZURE_TENANT_ID"]}))')"
+          {
+            echo 'creds<<CREDS_JSON_EOF'
+            echo "$CREDS"
+            echo 'CREDS_JSON_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Azure login (service principal)
         uses: azure/login@v2
         with:
           auth-type: SERVICE_PRINCIPAL
-          creds: ${{ format('{{"clientId":{0},"clientSecret":{1},"subscriptionId":{2},"tenantId":{3}}}', toJSON(secrets.AZURE_CLIENT_ID), toJSON(secrets.AZURE_CLIENT_SECRET), toJSON(vars.AZURE_SUBSCRIPTION_ID), toJSON(secrets.AZURE_TENANT_ID)) }}
+          creds: ${{ steps.azure_creds.outputs.creds }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
