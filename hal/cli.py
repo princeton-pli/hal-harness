@@ -275,6 +275,7 @@ def main(
                 task_timeout=task_timeout,
                 results_dir=results_dir,
                 task_ids=task_ids,
+                benchmark_args=benchmark_args,
             )
 
             # Run evaluation

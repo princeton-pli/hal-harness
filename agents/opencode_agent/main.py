@@ -3,14 +3,17 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from typing import Any, Dict, List, Optional
 
 from opencode_setup import (
     find_opencode_binary,
     install_opencode_cli,
     install_system_deps,
+    setup_global_config,
     setup_opencode_config,
 )
+from prompts import build_corebench_prompts
 
 
 # ============================================================
@@ -37,9 +40,142 @@ def ensure_opencode_cli() -> str:
 
 
 def _setup_opencode_config(cwd="/workspace"):
-    """Write OpenCode config for permissive mode."""
+    """Write OpenCode project and global configs."""
     config_file = setup_opencode_config(cwd)
-    print(f"OpenCode config written to {config_file}")
+    print(f"OpenCode project config written to {config_file}")
+    global_config_file = setup_global_config()
+    print(f"OpenCode global config written to {global_config_file}")
+
+
+def _save_opencode_logs():
+    """Zip ~/.local/share/opencode/ (excluding bin/) and copy opencode_exec.log to ~/."""
+    import tarfile
+    src = os.path.expanduser("~/.local/share/opencode")
+    if os.path.isdir(src):
+        dest = os.path.expanduser("~/opencode_logs.tar.gz")
+        try:
+            with tarfile.open(dest, "w:gz") as tar:
+                tar.add(src, arcname="opencode", filter=lambda t: None if "/bin/" in t.name else t)
+        except Exception as e:
+            print(f"Warning: failed to zip OpenCode logs: {e}", flush=True)
+
+    exec_log = "/workspace/opencode_exec.log"
+    if os.path.isfile(exec_log):
+        shutil.copy2(exec_log, os.path.expanduser("~/opencode_exec.log"))
+
+
+def _format_opencode_line(line):
+    """Parse a JSON line from OpenCode CLI and return a human-readable summary.
+
+    Produces detailed, multi-line output so the log is self-contained and easy
+    to follow without having to cross-reference the raw JSON.
+    """
+    try:
+        data = json.loads(line.strip())
+    except (json.JSONDecodeError, ValueError):
+        return line.rstrip()
+
+    msg_type = data.get("type", "")
+    part = data.get("part", {})
+
+    if msg_type == "step_start":
+        return "--- step start ---"
+
+    if msg_type == "step_finish":
+        reason = part.get("reason", "")
+        cost = part.get("cost", 0)
+        tokens = part.get("tokens", {})
+        total_tok = tokens.get("total", 0)
+        cache = tokens.get("cache", {})
+        cache_read = cache.get("read", 0)
+        cache_write = cache.get("write", 0)
+        return (
+            f"--- step finish | reason={reason} | cost=${cost:.4f} "
+            f"| tokens={total_tok} (cache r={cache_read} w={cache_write}) ---"
+        )
+
+    if msg_type == "text":
+        text = part.get("text", "").strip()
+        if text:
+            return f"[text] {text}"
+        return None
+
+    if msg_type == "tool_use":
+        tool = part.get("tool", "?")
+        state = part.get("state", {})
+        status = state.get("status", "?")
+        inp = state.get("input", {})
+        output = state.get("output", "")
+
+        lines_out = [f"[tool:{tool}] status={status}"]
+
+        if tool == "bash":
+            cmd = inp.get("command", "")
+            desc = inp.get("description", "")
+            if desc:
+                lines_out.append(f"  desc   : {desc}")
+            lines_out.append(f"  cmd    : {cmd}")
+            meta = state.get("metadata", {})
+            exit_code = meta.get("exit", "")
+            if exit_code != "":
+                lines_out.append(f"  exit   : {exit_code}")
+            out_text = meta.get("output", output) or ""
+            if out_text:
+                if len(out_text) > 800:
+                    out_text = out_text[:400] + "\n  ... (truncated) ...\n" + out_text[-400:]
+                lines_out.append(f"  output :\n{_indent(out_text, 4)}")
+
+        elif tool == "read":
+            fp = inp.get("filePath", "")
+            lines_out.append(f"  path   : {fp}")
+            if output and isinstance(output, str):
+                preview = output
+                if len(preview) > 600:
+                    preview = preview[:300] + "\n  ... (truncated) ...\n" + preview[-300:]
+                lines_out.append(f"  content:\n{_indent(preview, 4)}")
+
+        elif tool in ("glob", "grep"):
+            pattern = inp.get("pattern", inp.get("query", ""))
+            path = inp.get("path", "")
+            lines_out.append(f"  pattern: {pattern}  path: {path}")
+            if output and isinstance(output, str):
+                preview = output
+                if len(preview) > 600:
+                    preview = preview[:300] + "\n  ... (truncated) ...\n" + preview[-300:]
+                lines_out.append(f"  result :\n{_indent(preview, 4)}")
+
+        elif tool == "edit":
+            fp = inp.get("filePath", "")
+            lines_out.append(f"  path   : {fp}")
+
+        elif tool == "todowrite":
+            todos = inp.get("todos", [])
+            for t in todos:
+                lines_out.append(f"  [{t.get('status', '?')}] {t.get('content', '')}")
+
+        else:
+            if inp:
+                inp_str = json.dumps(inp, ensure_ascii=False)
+                if len(inp_str) > 300:
+                    inp_str = inp_str[:300] + "..."
+                lines_out.append(f"  input  : {inp_str}")
+            if output and isinstance(output, str) and len(output) < 400:
+                lines_out.append(f"  output : {output}")
+
+        if status == "error":
+            err = state.get("error", "")
+            if err:
+                lines_out.append(f"  ERROR  : {err}")
+
+        return "\n".join(lines_out)
+
+    return None
+
+
+def _indent(text, spaces):
+    """Indent every line of text by *spaces* spaces."""
+    prefix = " " * spaces
+    return "\n".join(prefix + l for l in text.splitlines())
 
 
 def _run_opencode_cli(opencode_bin, model_name, prompt, cwd="/workspace", timeout=3600):
@@ -52,17 +188,36 @@ def _run_opencode_cli(opencode_bin, model_name, prompt, cwd="/workspace", timeou
     log_path = os.path.join(cwd, "opencode_exec.log")
     cmd = [opencode_bin, "run", "--model", model_name, "--format", "json", prompt]
 
-    with open(log_path, "w") as log_f:
-        subprocess.run(
+    print(f"Running opencode CLI: {opencode_bin} run --model {model_name} ...", flush=True)
+    print(f"--- PROMPT START ---\n{prompt}\n--- PROMPT END ---", flush=True)
+    log_f = open(log_path, "w")
+    step_num = 0
+    try:
+        proc = subprocess.Popen(
             cmd,
-            stdout=log_f,
+            stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             env=env,
             text=True,
-            timeout=timeout,
-            check=False,
             cwd=cwd,
         )
+        for line in proc.stdout:
+            log_f.write(line)
+            log_f.flush()
+            formatted = _format_opencode_line(line)
+            if formatted is not None:
+                if formatted.startswith("--- step start"):
+                    step_num += 1
+                    formatted = f"--- step {step_num} start ---"
+                sys.stdout.write(formatted + "\n")
+                sys.stdout.flush()
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        print("OpenCode CLI timed out", flush=True)
+    finally:
+        log_f.close()
+    print(f"OpenCode CLI exit code: {proc.returncode}", flush=True)
     return log_path
 
 
@@ -91,69 +246,131 @@ def _remove_file(path):
 # ============================================================
 
 
+def _copy_environment_to_workspace():
+    """Copy ~/environment into /workspace/environment so all files are under the project root.
+
+    Using a physical copy (not symlink) avoids OpenCode's external_directory
+    permission rejections that occur when symlinks resolve outside /workspace/.
+    """
+    workspace_env = "/workspace/environment"
+    if os.path.exists(workspace_env):
+        print(f"Environment already at {workspace_env}", flush=True)
+    else:
+        candidates = [
+            os.path.expanduser("~/environment"),
+            "/home/agent/environment",
+        ]
+        for src in candidates:
+            if os.path.isdir(src):
+                try:
+                    shutil.copytree(src, workspace_env, symlinks=True)
+                    print(f"Copied {src} -> {workspace_env}", flush=True)
+                except Exception as e:
+                    print(f"copytree failed ({e}), trying cp -a", flush=True)
+                    subprocess.run(
+                        ["cp", "-a", src, workspace_env],
+                        check=True,
+                    )
+                    print(f"cp -a {src} -> {workspace_env}", flush=True)
+                break
+        else:
+            print("WARNING: environment directory not found at any candidate path", flush=True)
+
+    # Create top-level symlinks so scripts using absolute paths like /data, /code,
+    # /results work without external_directory permission issues.
+    for name in ("data", "code", "results"):
+        link_path = f"/{name}"
+        target = f"{workspace_env}/{name}"
+        # Ensure the target directory exists even if the capsule didn't ship one
+        os.makedirs(target, exist_ok=True)
+        if not os.path.exists(link_path):
+            try:
+                os.symlink(target, link_path)
+                print(f"Symlinked {link_path} -> {target}", flush=True)
+            except OSError:
+                subprocess.run(["sudo", "ln", "-sfn", target, link_path], check=False)
+                print(f"Symlinked (sudo) {link_path} -> {target}", flush=True)
+
+
 def _run_corebench(task_id, task_data, model_name, kwargs):
     """Handle CORE-bench tasks (easy/medium/hard)."""
-    opencode_bin = ensure_opencode_cli()
-    _setup_opencode_config()
+    benchmark_name = kwargs.get("benchmark_name", "corebench_hard")
+
+    print("=" * 60, flush=True)
+    print(f"CORE-BENCH TASK", flush=True)
+    print(f"  task_id     : {task_id}", flush=True)
+    print(f"  benchmark   : {benchmark_name}", flush=True)
+    print(f"  model       : {model_name}", flush=True)
+    print("=" * 60, flush=True)
 
     prompt = task_data.get("prompt", "")
-    notes = """
-Important Instructions:
-1. Your final answer MUST be a valid JSON object with the exact keys specified in the task.
-2. The JSON keys must be the EXACT string from the task, including any prefix like "fig " - do not modify or omit any part of the key!
-3. For numeric values, you MUST use the EXACT value from the output - DO NOT round or truncate. If the answer is a percentage, omit the % and report the float.
-4. Write your final answer to ./answer.json at the TOP LEVEL (not inside environment/ or any subdirectory).
-Return only the JSON object content in answer.json; do not include markdown fences.
-"""
-    initial_prompt = f"""You are solving a CORE-bench task. The task files are in ./environment/.
-Your goal is to answer the task prompt and write the JSON answer to /workspace/answer.json.
+    print(f"\nTASK PROMPT:\n{prompt}\n", flush=True)
 
-Task prompt:
-{prompt}
+    # Extract the expected answer keys from the prompt's dict_keys([...]) pattern
+    expected_keys = []
+    dk_match = re.search(r"dict_keys\(\[(.*?)\]\)", prompt, re.DOTALL)
+    if dk_match:
+        raw_keys = dk_match.group(1)
+        expected_keys = [k.strip().strip("'\"") for k in re.findall(r"'[^']*'|\"[^\"]*\"", raw_keys)]
+    print(f"  Expected answer keys: {expected_keys}", flush=True)
 
-{notes}
-"""
+    print("-- Setup --", flush=True)
+    opencode_bin = ensure_opencode_cli()
+    _setup_opencode_config()
+    config_path = "/workspace/.opencode/config.json"
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            print(f"  OpenCode config ({config_path}):\n{f.read()}", flush=True)
 
-    continue_prompt = f"""Previous attempt did not produce a valid /workspace/answer.json.
-Retry the CORE-bench task now and fix any issues.
+    # Pre-clean lock files that block R and apt package installs
+    subprocess.run("sudo rm -rf /usr/local/lib/R/site-library/00LOCK-* 2>/dev/null", shell=True, check=False)
+    subprocess.run("sudo rm -f /var/lib/apt/lists/lock /var/lib/dpkg/lock* /var/cache/apt/archives/lock 2>/dev/null", shell=True, check=False)
 
-Task prompt:
-{prompt}
+    _copy_environment_to_workspace()
 
-{notes}
-"""
+    env_dir = "/workspace/environment"
+    dirs_present = os.listdir(env_dir) if os.path.isdir(env_dir) else []
+    print(f"  /workspace/environment contents: {dirs_present}", flush=True)
+    print("-- Setup complete --\n", flush=True)
+
+    initial_prompt, retry_no_file, retry_bad_json_tpl = build_corebench_prompts(prompt, expected_keys)
 
     answer_file = "/workspace/answer.json"
     max_attempts = 3
+    current_prompt = initial_prompt
 
     try:
         for attempt in range(max_attempts):
-            prompt_to_use = initial_prompt if attempt == 0 else continue_prompt
-            _run_opencode_cli(opencode_bin, model_name, prompt_to_use)
+            print(f"\n{'=' * 40}", flush=True)
+            print(f"ATTEMPT {attempt + 1} of {max_attempts}", flush=True)
+            print(f"{'=' * 40}\n", flush=True)
+
+            _run_opencode_cli(opencode_bin, model_name, current_prompt)
 
             if os.path.exists(answer_file):
                 try:
                     with open(answer_file, "r") as f:
                         answer = json.load(f)
+                    print(f"\nanswer.json loaded successfully: {json.dumps(answer, indent=2)}", flush=True)
                     return {task_id: answer}
                 except json.JSONDecodeError as e:
+                    print(f"\nanswer.json has invalid JSON: {e}", flush=True)
                     os.remove(answer_file)
-                    continue_prompt = (
-                        f"Your last reply wrote invalid JSON ({e}). Please rewrite "
-                        f"/workspace/answer.json with valid JSON only, respecting the task keys and notes."
-                    )
+                    current_prompt = retry_bad_json_tpl.format(error=e)
                     continue
+            else:
+                print(f"\nanswer.json NOT found after attempt {attempt + 1}", flush=True)
 
-            continue_prompt = (
-                "Previous run ended without creating /workspace/answer.json. "
-                "Try again and ensure you write the JSON file at the repo root."
-            )
+            current_prompt = retry_no_file
 
+        print(f"\nFAILED: answer.json not produced after {max_attempts} attempts", flush=True)
         return {task_id: "ERROR: answer.json not produced after retries"}
 
     except subprocess.TimeoutExpired:
+        print(f"\nFAILED: Timeout", flush=True)
         return {task_id: "ERROR: Timeout"}
     except Exception as e:
+        print(f"\nFAILED: {e}", flush=True)
         return {task_id: f"ERROR: {str(e)}"}
 
 
@@ -1105,21 +1322,24 @@ def run(input: Dict[str, Dict], **kwargs) -> Dict[str, Any]:
     model_name: str = kwargs["model_name"]
     task_id, task_data = list(input.items())[0]
 
-    if benchmark_name.startswith("corebench"):
-        return _run_corebench(task_id, task_data, model_name, kwargs)
-    elif benchmark_name == "gaia":
-        return _run_gaia(task_id, task_data, model_name, kwargs)
-    elif benchmark_name == "usaco":
-        return _run_usaco(task_id, task_data, model_name, kwargs)
-    elif benchmark_name == "scienceagentbench":
-        return _run_scienceagentbench(task_id, task_data, model_name, kwargs)
-    elif benchmark_name in ("swebench_verified", "swebench_verified_mini"):
-        return _run_swebench(task_id, task_data, model_name, kwargs)
-    elif benchmark_name.startswith("taubench"):
-        return _run_taubench(task_id, task_data, model_name, kwargs)
-    elif benchmark_name in ("scicode", "scicode_easy", "scicode_hard"):
-        return _run_scicode(task_id, task_data, model_name, kwargs)
-    elif benchmark_name == "assistantbench":
-        return _run_assistantbench(task_id, task_data, model_name, kwargs)
-    else:
-        return {task_id: f"ERROR: Unsupported benchmark: {benchmark_name}"}
+    try:
+        if benchmark_name.startswith("corebench"):
+            return _run_corebench(task_id, task_data, model_name, kwargs)
+        elif benchmark_name == "gaia":
+            return _run_gaia(task_id, task_data, model_name, kwargs)
+        elif benchmark_name == "usaco":
+            return _run_usaco(task_id, task_data, model_name, kwargs)
+        elif benchmark_name == "scienceagentbench":
+            return _run_scienceagentbench(task_id, task_data, model_name, kwargs)
+        elif benchmark_name in ("swebench_verified", "swebench_verified_mini"):
+            return _run_swebench(task_id, task_data, model_name, kwargs)
+        elif benchmark_name.startswith("taubench"):
+            return _run_taubench(task_id, task_data, model_name, kwargs)
+        elif benchmark_name in ("scicode", "scicode_easy", "scicode_hard"):
+            return _run_scicode(task_id, task_data, model_name, kwargs)
+        elif benchmark_name == "assistantbench":
+            return _run_assistantbench(task_id, task_data, model_name, kwargs)
+        else:
+            return {task_id: f"ERROR: Unsupported benchmark: {benchmark_name}"}
+    finally:
+        _save_opencode_logs()

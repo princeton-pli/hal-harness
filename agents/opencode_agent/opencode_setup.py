@@ -22,6 +22,7 @@ KNOWN_BINARY_LOCATIONS = [
 
 OPENCODE_CONFIG = {
     "$schema": "https://opencode.ai/config.json",
+    "logLevel": "DEBUG",
     "permission": {
         "*": "allow",
         "external_directory": "allow",
@@ -67,11 +68,11 @@ def find_opencode_binary() -> Optional[str]:
 def install_system_deps() -> None:
     """Install system dependencies (git, curl, procps) via apt-get."""
     subprocess.run(
-        "rm -f /etc/apt/sources.list.d/cuda.list /etc/apt/sources.list.d/nvidia-ml.list 2>/dev/null || true",
+        "sudo rm -f /etc/apt/sources.list.d/cuda.list /etc/apt/sources.list.d/nvidia-ml.list 2>/dev/null || true",
         shell=True,
     )
-    subprocess.run(["apt-get", "update"], check=True)
-    subprocess.run(["apt-get", "install", "-y", "git", "curl", "procps"], check=True)
+    subprocess.run(["sudo", "apt-get", "update"], check=True)
+    subprocess.run(["sudo", "apt-get", "install", "-y", "git", "curl", "procps"], check=True)
 
 
 def install_opencode_cli() -> None:
@@ -93,7 +94,7 @@ def setup_opencode_config(cwd: str = "/workspace") -> str:
 
 
 def setup_global_config() -> str:
-    """Write global OpenCode config (~/.config/opencode/config.json).
+    """Write global OpenCode config (~/.config/opencode/opencode.json).
 
     Returns the path to the written config file.
     """
@@ -101,12 +102,13 @@ def setup_global_config() -> str:
     os.makedirs(global_config_dir, exist_ok=True)
     global_config = {
         "$schema": "https://opencode.ai/config.json",
+        "logLevel": "DEBUG",
         "provider": {
             "anthropic": {},
             "openai": {},
         },
     }
-    global_config_path = os.path.join(global_config_dir, "config.json")
+    global_config_path = os.path.join(global_config_dir, "opencode.json")
     with open(global_config_path, "w") as f:
         json.dump(global_config, f, indent=2)
     return global_config_path
