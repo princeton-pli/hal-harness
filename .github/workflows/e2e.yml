@@ -1,7 +1,9 @@
 # Runs a minimal CoreBench hard VM smoke eval. Requires a GitHub Environment
 # (update `environment.name` below) with the secrets/vars listed in the job `env` block.
-# For Azure, add federated OIDC app registration secrets to the same environment:
-#   AZURE_CLIENT_ID, AZURE_TENANT_ID (see https://github.com/azure/login )
+# Azure auth (pick one): (A) OIDC — keep the Azure login step + secrets AZURE_CLIENT_ID,
+# AZURE_TENANT_ID (see https://github.com/azure/login ); (B) no login step — add to env
+# AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_CLIENT_SECRET from secrets instead, and remove
+# the login step and id-token: write (not needed for client-secret auth).
 name: HAL eval CoreBench hard (VM)
 
 on:
@@ -35,6 +37,7 @@ jobs:
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
