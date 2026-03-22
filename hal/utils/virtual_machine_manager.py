@@ -8,6 +8,7 @@ import json
 import logging
 from contextlib import contextmanager
 from pathlib import Path
+from dotenv import dotenv_values
 from .vm.azure_virtual_machine import AzureVirtualMachine
 
 # Mount names for core_agent: used only under VM_AGENT_HOME/environment/ (e.g. environment/data, environment/code, environment/results from task payload).
@@ -15,6 +16,21 @@ VM_AGENT_HOME = "/home/agent"
 VM_ENVIRONMENT_MOUNT_NAMES = ("data", "code", "results")
 
 RUN_AGENT_SCRIPT_PATH = Path(__file__).resolve().parent / "vm" / "run_agent.py"
+
+
+def _wandb_api_key_for_vm_payload() -> str | None:
+    """Resolve WANDB_API_KEY for the remote VM (weave.init requires non-interactive login)."""
+    key = os.environ.get("WANDB_API_KEY", "").strip()
+    if key:
+        return key
+    env_file = Path.cwd() / ".env"
+    if env_file.is_file():
+        raw = dotenv_values(env_file).get("WANDB_API_KEY")
+        if raw:
+            s = str(raw).strip()
+            if s:
+                return s
+    return None
 
 # Set up base logger
 _base_logger = logging.getLogger(__name__)
@@ -423,6 +439,9 @@ class VirtualMachineManager:
 
                 # Write run-specific env vars for static run_agent.py
                 run_agent_env = f"RUN_ID={run_id}\nAGENT_FUNCTION={agent_function}\nTASK_ID={task_id}\n"
+                wandb_key = _wandb_api_key_for_vm_payload()
+                if wandb_key:
+                    run_agent_env += f"WANDB_API_KEY={wandb_key}\n"
                 with sftp_client.open("/home/agent/run_agent.env", "w") as f:
                     f.write(run_agent_env)
 
