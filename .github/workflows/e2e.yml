@@ -83,6 +83,15 @@ jobs:
           chmod 600 "$key"
           chmod 644 "$pub"
 
+      # core_test.json is gitignored; benchmark loads decrypted JSON (see README / hal/benchmarks/corebench.py).
+      - name: Decrypt CoreBench test set
+        run: |
+          set -euo pipefail
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase 'reproducibility' \
+            --output hal/benchmarks/corebench/core_test.json \
+            --decrypt hal/benchmarks/corebench/core_test.json.gpg
+
       - name: Run hal-eval (CoreBench hard, VM)
         run: |
           set -euo pipefail
