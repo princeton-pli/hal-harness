@@ -108,6 +108,10 @@ jobs:
       - name: Run hal-eval (CoreBench hard, one test, VM)
         run: |
           set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "::error::OPENAI_API_KEY is empty — add repository or environment secret \`OPENAI_API_KEY\` on GitHub Environment \`test-environment\`." >&2
+            exit 1
+          fi
           log="$(mktemp)"
           set +e
           set -o pipefail

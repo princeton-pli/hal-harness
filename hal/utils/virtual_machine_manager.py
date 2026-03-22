@@ -18,19 +18,31 @@ VM_ENVIRONMENT_MOUNT_NAMES = ("data", "code", "results")
 RUN_AGENT_SCRIPT_PATH = Path(__file__).resolve().parent / "vm" / "run_agent.py"
 
 
-def _wandb_api_key_for_vm_payload() -> str | None:
-    """Resolve WANDB_API_KEY for the remote VM (weave.init requires non-interactive login)."""
-    key = os.environ.get("WANDB_API_KEY", "").strip()
-    if key:
-        return key
+def _vm_env_var_from_host(name: str) -> str | None:
+    """Resolve a secret from the host process env or local .env (for VM payload files)."""
+    v = os.environ.get(name, "").strip()
+    if v:
+        return v
     env_file = Path.cwd() / ".env"
     if env_file.is_file():
-        raw = dotenv_values(env_file).get("WANDB_API_KEY")
+        raw = dotenv_values(env_file).get(name)
         if raw:
             s = str(raw).strip()
             if s:
                 return s
     return None
+
+
+# Injected into run_agent.env so the remote agent sees keys when the host has no .env file
+# to copy to the VM (e.g. CI: secrets exist only on the runner environment).
+_VM_RUN_AGENT_SECRET_NAMES = (
+    "WANDB_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GEMINI_API_KEY",
+    "TOGETHERAI_API_KEY",
+    "OPENROUTER_API_KEY",
+)
 
 # Set up base logger
 _base_logger = logging.getLogger(__name__)
@@ -439,9 +451,10 @@ class VirtualMachineManager:
 
                 # Write run-specific env vars for static run_agent.py
                 run_agent_env = f"RUN_ID={run_id}\nAGENT_FUNCTION={agent_function}\nTASK_ID={task_id}\n"
-                wandb_key = _wandb_api_key_for_vm_payload()
-                if wandb_key:
-                    run_agent_env += f"WANDB_API_KEY={wandb_key}\n"
+                for name in _VM_RUN_AGENT_SECRET_NAMES:
+                    val = _vm_env_var_from_host(name)
+                    if val:
+                        run_agent_env += f"{name}={val}\n"
                 with sftp_client.open("/home/agent/run_agent.env", "w") as f:
                     f.write(run_agent_env)
 

@@ -246,6 +246,8 @@ def main(
             prompt_sensitivity=prompt_sensitivity,
             num_variations=num_variations,
             variation_strength=variation_strength,
+            max_tasks=max_tasks,
+            task_ids=task_ids,
         )
 
         # get exact command used to run the evaluation from click

@@ -252,11 +252,18 @@ class AgentRunner:
                 logger.error("No valid task IDs found. Exiting.")
                 return {}
 
-        # Limit the number of tasks if max_tasks is specified
-        if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
-            logger.info(f"Limiting to the first {self.max_tasks} tasks as requested")
-            task_ids = list(dataset.keys())[: self.max_tasks]
-            dataset = {task_id: dataset[task_id] for task_id in task_ids}
+        # Cap tasks (--max_tasks). Always apply here when set, not only when max_tasks < len(dataset),
+        # so execution cannot exceed N even if a benchmark constructor omits pre-slicing.
+        if self.max_tasks is not None and self.max_tasks > 0:
+            before = len(dataset)
+            selected = list(dataset.keys())[: self.max_tasks]
+            dataset = {k: dataset[k] for k in selected}
+            if len(dataset) < before:
+                logger.info(
+                    "Limiting run to %s of %s tasks (--max_tasks)",
+                    len(dataset),
+                    before,
+                )
 
         # Handle prompt sensitivity if enabled
         prompt_variations_map = None

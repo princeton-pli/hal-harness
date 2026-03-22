@@ -22,7 +22,6 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     Args:
         log_dir: Directory for log files
         run_id: Unique run identifier
-        use_vm: Unused; kept for API compatibility.
     """
     # Create absolute path for log directory to avoid path duplication
     log_dir = os.path.abspath(log_dir)
@@ -149,6 +148,8 @@ def print_run_config(
     prompt_sensitivity: bool = False,
     num_variations: int = 3,
     variation_strength: str = "mild",
+    max_tasks: Optional[int] = None,
+    task_ids: Optional[str] = None,
 ) -> None:
     """Print a formatted table with the run configuration"""
     logger.info("=== Run Configuration ===")
@@ -159,6 +160,11 @@ def print_run_config(
     logger.info(f"  Agent Directory: {agent_dir}")
     logger.info(f"  Log Directory: {log_dir}")
     logger.info(f"  Max Concurrent: {max_concurrent}")
+    logger.info(
+        f"  Max Tasks: {max_tasks if max_tasks is not None else 'all'}",
+    )
+    if task_ids:
+        logger.info(f"  Task IDs: {task_ids}")
     logger.info(f"  Upload Results: {'Yes' if upload else 'No'}")
     logger.info(f"  VM Execution: {'Yes' if vm else 'No'}")
     logger.info(f"  Docker Execution: {'Yes' if docker else 'No'}")
