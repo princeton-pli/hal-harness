@@ -39,12 +39,14 @@ class USACOBenchmark(BaseBenchmark):
         # Set benchmark directory
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "USACO")
 
-    def get_dataset(self):
-        _GROUND_TRUTH_KEYS = {"solution", "solution_python3", "solution_english"}
-        return {
-            task_id: {k: v for k, v in task.items() if k not in _GROUND_TRUTH_KEYS}
-            for task_id, task in self.benchmark.items()
+        _GT_KEYS = {"solution", "solution_python3", "solution_english"}
+        self._dataset = {
+            tid: {k: v for k, v in task.items() if k not in _GT_KEYS}
+            for tid, task in self.benchmark.items()
         }
+
+    def get_dataset(self):
+        return self._dataset
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

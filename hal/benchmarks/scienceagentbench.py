@@ -59,13 +59,14 @@ class ScienceAgentBench(BaseBenchmark):
         self.requires_sandbox = False
         # Optional: Path to VM setup script
         self.setup_script = "hal/benchmarks/scienceagentbench/setup.sh"
+        self._dataset = {
+            tid: {k: v for k, v in task.items() if k != "eval_script_name"}
+            for tid, task in self.benchmark.items()
+        }
         super().__init__(agent_dir, config, setup_script=self.setup_script)
 
     def get_dataset(self):
-        return {
-            task_id: {k: v for k, v in task.items() if k != "eval_script_name"}
-            for task_id, task in self.benchmark.items()
-        }
+        return self._dataset
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

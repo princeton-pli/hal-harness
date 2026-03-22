@@ -29,9 +29,8 @@ class SciCodeBenchmark(BaseBenchmark):
         # Set benchmark directory.
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "SciCode")
 
-    def get_dataset(self):
-        return {
-            task_id: {
+        self._dataset = {
+            tid: {
                 k: (
                     [{sk: sv for sk, sv in step.items() if sk != "test_cases"} for step in v]
                     if k == "sub_steps"
@@ -39,8 +38,11 @@ class SciCodeBenchmark(BaseBenchmark):
                 )
                 for k, v in task.items()
             }
-            for task_id, task in self.benchmark.items()
+            for tid, task in self.benchmark.items()
         }
+
+    def get_dataset(self):
+        return self._dataset
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
