@@ -54,13 +54,7 @@ Below are descriptions of the contents within the folder:
 
 ## HAL Harness Setup
 
-The episodic and semantic retrieval agents (`run_usaco_episodic_semantic_retrieval`, `run_usaco_episodic_semantic_retrieval_reflexion`) require the full USACO problem dataset for building the BM25 retrieval corpus.
-
-Download the data from [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link) and extract it so that the following file exists:
-
-    agents/USACO/data/datasets/usaco_subset307_dict.json
-
-The zero-shot agent (`run_usaco_zeroshot`) does not require this file.
+The episodic and semantic retrieval agents (`run_usaco_episodic_semantic_retrieval`, `run_usaco_episodic_semantic_retrieval_reflexion`) need a retrieval corpus for BM25. The benchmark automatically generates a per-task corpus file at `data/datasets/retrieval_corpus.json` that contains all problems with solutions *except* the current task, preventing ground truth leakage.
 
 ## USACO eval
 

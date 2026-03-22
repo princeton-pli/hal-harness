@@ -5,24 +5,18 @@ To utilize open models, create your own callable model function in models.py, an
 from functools import partial
 from models import gpts, claude, get_token_usage, reset_token_usage
 from USACOBench.prompts import RetrievalType
-from USACOBench.data_utils import load_problem_dict
 from dotenv import load_dotenv
 from utils import run_solve, run_retrieval, run_reflexion, calculate_final_rs
+import json
 import os
 import time
-import warnings
 from typing import Dict, Any, List
 
 load_dotenv()
 
-_DATASET_PATH = os.path.join(os.path.dirname(__file__), 'data', 'datasets', 'usaco_subset307_dict.json')
-
-if not os.path.exists(_DATASET_PATH):
-    warnings.warn(
-        "USACO dataset not found at data/datasets/usaco_subset307_dict.json. "
-        "Episodic retrieval requires the full problem dict. "
-        "See agents/USACO/README.md for download instructions."
-    )
+_RETRIEVAL_CORPUS_PATH = os.path.join(
+    os.path.dirname(__file__), 'data', 'datasets', 'retrieval_corpus.json'
+)
 
 def collect_task_metrics(problem_id: str, stages: List[str], start_time: float, 
                         retrieval_data: Dict = None, reflexion_data: List = None,
@@ -121,10 +115,10 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
     start_time = time.time()
     reset_token_usage()  # Reset tokens for per-task tracking
 
-    if not os.path.exists(_DATASET_PATH):
+    if not os.path.exists(_RETRIEVAL_CORPUS_PATH):
         raise FileNotFoundError(
-            "USACO full problem dict not found. Episodic/semantic retrieval requires "
-            "data/datasets/usaco_subset307_dict.json. See README.md for download instructions."
+            "Retrieval corpus not found at data/datasets/retrieval_corpus.json. "
+            "This file is provided by the benchmark via the files mechanism."
         )
 
     assert "model_name" in kwargs, "model_name must be provided in agent kwargs"
@@ -151,8 +145,8 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
 
     model_fn = partial(model_fn, model=model_name)
 
-    # Full problem dict provides the BM25 retrieval corpus
-    full_problem_dict = load_problem_dict('usaco_subset307')
+    with open(_RETRIEVAL_CORPUS_PATH) as f:
+        retrieval_corpus = json.load(f)
 
     # Step 1: Initial solve
     solve_start = time.time()
@@ -161,7 +155,7 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
 
     # Step 2: Retrieval
     retrieval_start = time.time()
-    results, ss, retrieval_queries = run_retrieval(model_fn, model_name, full_problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, return_retrieval_data=True)
+    results, ss, retrieval_queries = run_retrieval(model_fn, model_name, retrieval_corpus, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, task_dict=problem_dict, return_retrieval_data=True)
     retrieval_time = time.time() - retrieval_start
     
     # add result to the dict for each key in the problem_dict
@@ -204,10 +198,10 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
     start_time = time.time()
     reset_token_usage()  # Reset tokens for per-task tracking
 
-    if not os.path.exists(_DATASET_PATH):
+    if not os.path.exists(_RETRIEVAL_CORPUS_PATH):
         raise FileNotFoundError(
-            "USACO full problem dict not found. Episodic/semantic retrieval requires "
-            "data/datasets/usaco_subset307_dict.json. See README.md for download instructions."
+            "Retrieval corpus not found at data/datasets/retrieval_corpus.json. "
+            "This file is provided by the benchmark via the files mechanism."
         )
 
     assert "model_name" in kwargs, "model_name must be provided in agent kwargs"
@@ -232,8 +226,8 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
 
     model_fn = partial(model_fn, model=model_name)
 
-    # Full problem dict provides the BM25 retrieval corpus
-    full_problem_dict = load_problem_dict('usaco_subset307')
+    with open(_RETRIEVAL_CORPUS_PATH) as f:
+        retrieval_corpus = json.load(f)
 
     # Step 1: Initial solve
     solve_start = time.time()
@@ -242,7 +236,7 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
 
     # Step 2: Retrieval
     retrieval_start = time.time()
-    rdict, sdict, rs, ss, retrieval_queries = run_retrieval(model_fn, model_name, full_problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, reflexion=True, return_retrieval_data=True)
+    rdict, sdict, rs, ss, retrieval_queries = run_retrieval(model_fn, model_name, retrieval_corpus, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, task_dict=problem_dict, reflexion=True, return_retrieval_data=True)
     retrieval_time = time.time() - retrieval_start
 
     # Step 3: Reflexion iterations
@@ -263,7 +257,7 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
         })
     
     for i in range(num_reflexion):
-        rdict, sdict, rs, ss, query_dict = run_reflexion(model_fn, model_name, full_problem_dict, attempts, rdict, sdict, query_dict, i, return_queries=True, retrieval=True)
+        rdict, sdict, rs, ss, query_dict = run_reflexion(model_fn, model_name, problem_dict, attempts, rdict, sdict, query_dict, i, return_queries=True, retrieval=True)
         reflexions.append(rdict)
         
         # Extract reflexion iteration results
