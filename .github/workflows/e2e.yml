@@ -105,7 +105,7 @@ jobs:
             --output hal/benchmarks/corebench/core_test.json \
             --decrypt hal/benchmarks/corebench/core_test.json.gpg
 
-      - name: Run hal-eval (CoreBench hard, VM)
+      - name: Run hal-eval (CoreBench hard, one test, VM)
         run: |
           set -euo pipefail
           log="$(mktemp)"
