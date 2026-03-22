@@ -150,6 +150,7 @@ def print_run_config(
     variation_strength: str = "mild",
     max_tasks: Optional[int] = None,
     task_ids: Optional[str] = None,
+    no_download_environment: bool = False,
 ) -> None:
     """Print a formatted table with the run configuration"""
     logger.info("=== Run Configuration ===")
@@ -167,6 +168,10 @@ def print_run_config(
         logger.info(f"  Task IDs: {task_ids}")
     logger.info(f"  Upload Results: {'Yes' if upload else 'No'}")
     logger.info(f"  VM Execution: {'Yes' if vm else 'No'}")
+    if vm:
+        logger.info(
+            f"  VM Download Environment: {'No (skip environment/)' if no_download_environment else 'Yes'}"
+        )
     logger.info(f"  Docker Execution: {'Yes' if docker else 'No'}")
     logger.info(f"  Continue Previous Run: {'Yes' if continue_run else 'No'}")
     logger.info(f"  Ignore Errors: {'Yes' if ignore_errors else 'No'}")

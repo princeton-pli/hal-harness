@@ -84,6 +84,15 @@ DEFAULT_TASK_TIMEOUT = 2700
 )
 @click.option("--vm", is_flag=True, help="Run the agent on azure VMs")
 @click.option(
+    "--no-download-environment",
+    is_flag=True,
+    help=(
+        "With --vm only: when copying results from the VM, omit the environment/ "
+        "directory (task data/code/results) from the archive to speed up download. "
+        "output.json and other files under /home/agent are still retrieved."
+    ),
+)
+@click.option(
     "--docker",
     is_flag=True,
     help="Run the agent in Docker containers for isolation. Requires Docker to be installed on the system. Resources are limited to 4GB memory and 2 CPU cores per container.",
@@ -173,6 +182,7 @@ def main(
     task_timeout,
     results_dir,
     task_ids,
+    no_download_environment,
     **kwargs,
 ):
     """Run agent evaluation on specified benchmark with given model."""
@@ -222,6 +232,11 @@ def main(
             )
             sys.exit(1)
 
+        if no_download_environment and not vm:
+            logger.warning(
+                "--no-download-environment only applies to --vm runs; ignoring."
+            )
+
         if continue_run and not set_run_id:
             raise ValueError("continue_run flag requires run_id to be set")
 
@@ -248,6 +263,7 @@ def main(
             variation_strength=variation_strength,
             max_tasks=max_tasks,
             task_ids=task_ids,
+            no_download_environment=no_download_environment and vm,
         )
 
         # get exact command used to run the evaluation from click
@@ -277,6 +293,7 @@ def main(
                 task_timeout=task_timeout,
                 results_dir=results_dir,
                 task_ids=task_ids,
+                download_environment=not (no_download_environment and vm),
             )
 
             # Run evaluation

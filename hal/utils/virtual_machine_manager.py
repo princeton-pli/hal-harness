@@ -3,6 +3,7 @@ from azure.mgmt.network import NetworkManagementClient
 from azure.identity import DefaultAzureCredential
 import paramiko
 import os
+import shlex
 import tarfile
 import json
 import logging
@@ -299,8 +300,20 @@ class VirtualMachineManager:
             logger.error(f"Error copying files: {e}")
             raise
 
-    def copy_files_from_vm(self, vm_name, destination_directory):
-        """Copy files from the VM to local directory."""
+    def copy_files_from_vm(
+        self,
+        vm_name,
+        destination_directory,
+        *,
+        download_environment: bool = True,
+    ):
+        """Copy files from the VM to local directory.
+
+        When download_environment is False, omits ``/home/agent/environment`` from
+        the archive (task data/code/results) to speed up SFTP; ``output.json`` and
+        other home-directory files are still included.
+        """
+        logger = _get_logger(vm_name)
         with self._get_sftp_client(
             vm_name,
             self.network_client,
@@ -316,8 +329,15 @@ class VirtualMachineManager:
                 f"/home/agent/{os.path.basename(destination_directory)}_back.tar.gz"
             )
             remote_home_directory = "/home/agent"
+            exclude = ""
+            if not download_environment:
+                logger.info(
+                    "Excluding environment/ from VM results archive (faster download)"
+                )
+                exclude = "--exclude=environment "
+            quoted_tar = shlex.quote(remote_tar_file_path)
             _, stdout, _ = ssh_client.exec_command(
-                f"tar -czf {remote_tar_file_path} -C {remote_home_directory} ."
+                f"tar {exclude}-czf {quoted_tar} -C {remote_home_directory} ."
             )
             for _ in stdout:
                 pass  # Block until the tar command completes

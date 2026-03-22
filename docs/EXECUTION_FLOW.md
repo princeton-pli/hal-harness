@@ -97,7 +97,7 @@ hal-eval  (console script from pyproject.toml)
 7. **Poll until done or timeout** (`task_timeout` seconds):
    - Every 30s: `fetch_agent_logs(vm_name, ...)` (pull `agent_trace.log`), then `vm_manager.check_task_completion(vm_name)` (checks for `/home/agent/output.json`).
    - If `output.json` appears → task complete; break.
-8. **Copy results**: `vm_manager.copy_files_from_vm(vm_name, dest_dir)` (e.g. `log_dir/{task_id}/`); read `output.json` from dest_dir → **result**.
+8. **Copy results**: `vm_manager.copy_files_from_vm(vm_name, dest_dir, download_environment=...)` (e.g. `log_dir/{task_id}/`); read `output.json` from dest_dir → **result**. With `hal-eval --no-download-environment` (requires `--vm`), the archive omits `environment/` (task payload) for a faster download; `output.json` and other files under `/home/agent` are still copied.
 9. **Cleanup**: `vm_manager.delete_virtual_machine_by_name(vm_name)`.
 10. Return `{task_id: result}` (or error/timeout dict).
 
@@ -138,9 +138,9 @@ hal-eval  (console script from pyproject.toml)
 
 - SFTP read `/home/agent/agent_trace.log` → returned as string (used by **fetch_agent_logs** in runner).
 
-### 5.6 `copy_files_from_vm(vm_name, destination_directory)`
+### 5.6 `copy_files_from_vm(vm_name, destination_directory, *, download_environment=True)`
 
-- SSH: `rm -rf /home/agent/miniconda3`; tar home dir on VM; SFTP get tar; extract locally to `destination_directory`.
+- SSH: `rm -rf /home/agent/miniconda3`; tar home dir on VM (with `tar --exclude=environment` when `download_environment=False`); SFTP get tar; extract locally to `destination_directory`.
 
 ### 5.7 `delete_virtual_machine_by_name(vm_name)`
 

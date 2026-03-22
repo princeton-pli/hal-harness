@@ -25,10 +25,12 @@ class VirtualMachineRunner:
         task_timeout: int,
         max_concurrent: int = 1,
         benchmark: Optional[BaseBenchmark] = None,
+        download_environment: bool = True,
     ):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
         self.task_timeout = task_timeout
+        self.download_environment = download_environment
         self.vm_manager = VirtualMachineManager()
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
@@ -245,6 +247,7 @@ class VirtualMachineRunner:
                         self.vm_manager.copy_files_from_vm,
                         vm_name,
                         dest_dir,
+                        download_environment=self.download_environment,
                     )
 
                     # Read the output.json file from the copied directory

@@ -40,6 +40,7 @@ class AgentRunner:
         variation_index: Optional[int] = None,
         results_dir: str = "results",
         task_ids: Optional[str] = None,
+        download_environment: bool = True,
     ):
         # Validate agent_function format
         if not isinstance(agent_function, str) or "." not in agent_function:
@@ -124,6 +125,7 @@ class AgentRunner:
                 log_dir=self.benchmark.get_run_dir(self.run_id),
                 benchmark=self.benchmark,
                 task_timeout=task_timeout,
+                download_environment=download_environment,
             )
         elif use_docker:
             self.runner = DockerRunner(
