@@ -5,12 +5,24 @@ To utilize open models, create your own callable model function in models.py, an
 from functools import partial
 from models import gpts, claude, get_token_usage, reset_token_usage
 from USACOBench.prompts import RetrievalType
+from USACOBench.data_utils import load_problem_dict
 from dotenv import load_dotenv
 from utils import run_solve, run_retrieval, run_reflexion, calculate_final_rs
+import os
 import time
+import warnings
 from typing import Dict, Any, List
 
 load_dotenv()
+
+_DATASET_PATH = os.path.join(os.path.dirname(__file__), 'data', 'datasets', 'usaco_subset307_dict.json')
+
+if not os.path.exists(_DATASET_PATH):
+    warnings.warn(
+        "USACO dataset not found at data/datasets/usaco_subset307_dict.json. "
+        "Episodic retrieval requires the full problem dict. "
+        "See agents/USACO/README.md for download instructions."
+    )
 
 def collect_task_metrics(problem_id: str, stages: List[str], start_time: float, 
                         retrieval_data: Dict = None, reflexion_data: List = None,
@@ -108,10 +120,16 @@ def run_usaco_zeroshot(problem_dict, episodic_retrieval=False, semantic_retrieva
 def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True, semantic_retrieval=True, reflexion=False, attempts=1, num_reflexion=2, num_retrieved=2 , **kwargs):
     start_time = time.time()
     reset_token_usage()  # Reset tokens for per-task tracking
-    
+
+    if not os.path.exists(_DATASET_PATH):
+        raise FileNotFoundError(
+            "USACO full problem dict not found. Episodic/semantic retrieval requires "
+            "data/datasets/usaco_subset307_dict.json. See README.md for download instructions."
+        )
+
     assert "model_name" in kwargs, "model_name must be provided in agent kwargs"
     model_name = kwargs.get('model_name', None)
-    
+
     if 'gpt' in model_name:
         model_fn = gpts
         model_fn = partial(model_fn, model=model_name, temperature=kwargs['temperature'] if 'temperature' in kwargs else None, reasoning_effort=kwargs['reasoning_effort'] if 'reasoning_effort' in kwargs else None)
@@ -127,20 +145,23 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
     elif 'deepseek' in model_name:
         model_fn = gpts
         model_fn = partial(model_fn, model=model_name, temperature=kwargs['temperature'] if 'temperature' in kwargs else None, max_tokens=32768)
-    else: 
+    else:
         model_fn = gpts
         model_fn = partial(model_fn, model=model_name, temperature=kwargs['temperature'] if 'temperature' in kwargs else None, reasoning_effort=kwargs['reasoning_effort'] if 'reasoning_effort' in kwargs else None)
 
     model_fn = partial(model_fn, model=model_name)
-    
+
+    # Full problem dict provides the BM25 retrieval corpus
+    full_problem_dict = load_problem_dict('usaco_subset307')
+
     # Step 1: Initial solve
     solve_start = time.time()
     results, ss = run_solve(model_fn, model_name, problem_dict, attempts)
     solve_time = time.time() - solve_start
-    
+
     # Step 2: Retrieval
     retrieval_start = time.time()
-    results, ss, retrieval_queries = run_retrieval(model_fn, model_name, problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, return_retrieval_data=True)
+    results, ss, retrieval_queries = run_retrieval(model_fn, model_name, full_problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, return_retrieval_data=True)
     retrieval_time = time.time() - retrieval_start
     
     # add result to the dict for each key in the problem_dict
@@ -182,7 +203,13 @@ def run_usaco_episodic_semantic_retrieval(problem_dict, episodic_retrieval=True,
 def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retrieval=True, semantic_retrieval=True, reflexion=False, attempts=1, num_reflexion=2, num_retrieved=2 , **kwargs):
     start_time = time.time()
     reset_token_usage()  # Reset tokens for per-task tracking
-    
+
+    if not os.path.exists(_DATASET_PATH):
+        raise FileNotFoundError(
+            "USACO full problem dict not found. Episodic/semantic retrieval requires "
+            "data/datasets/usaco_subset307_dict.json. See README.md for download instructions."
+        )
+
     assert "model_name" in kwargs, "model_name must be provided in agent kwargs"
     model_name = kwargs.get('model_name', None)
     if 'gpt' in model_name:
@@ -200,27 +227,30 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
     elif 'deepseek' in model_name:
         model_fn = gpts
         model_fn = partial(model_fn, model=model_name, temperature=kwargs['temperature'] if 'temperature' in kwargs else None, max_tokens=32768)
-    else: 
+    else:
         raise Exception("Model name not one of gpt or claude. Please modify code to add model support.")
 
     model_fn = partial(model_fn, model=model_name)
-    
+
+    # Full problem dict provides the BM25 retrieval corpus
+    full_problem_dict = load_problem_dict('usaco_subset307')
+
     # Step 1: Initial solve
     solve_start = time.time()
     results, ss = run_solve(model_fn, model_name, problem_dict, attempts)
     solve_time = time.time() - solve_start
-    
+
     # Step 2: Retrieval
     retrieval_start = time.time()
-    rdict, sdict, rs, ss, retrieval_queries = run_retrieval(model_fn, model_name, problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, reflexion=True, return_retrieval_data=True)
+    rdict, sdict, rs, ss, retrieval_queries = run_retrieval(model_fn, model_name, full_problem_dict, attempts, ss, num_retrieved, RetrievalType.EPISODIC_SEMANTIC, reflexion=True, return_retrieval_data=True)
     retrieval_time = time.time() - retrieval_start
-    
+
     # Step 3: Reflexion iterations
     reflexion_start = time.time()
     reflexions = [rdict]
     reflexion_data = []
     query_dict = None
-    
+
     # Extract initial test results
     problem_id = list(problem_dict.keys())[0]
     if problem_id in rdict and rdict[problem_id]:
@@ -233,7 +263,7 @@ def run_usaco_episodic_semantic_retrieval_reflexion(problem_dict, episodic_retri
         })
     
     for i in range(num_reflexion):
-        rdict, sdict, rs, ss, query_dict = run_reflexion(model_fn, model_name, problem_dict, attempts, rdict, sdict, query_dict, i, return_queries=True, retrieval=True)
+        rdict, sdict, rs, ss, query_dict = run_reflexion(model_fn, model_name, full_problem_dict, attempts, rdict, sdict, query_dict, i, return_queries=True, retrieval=True)
         reflexions.append(rdict)
         
         # Extract reflexion iteration results

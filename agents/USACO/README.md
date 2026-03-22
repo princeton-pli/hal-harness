@@ -52,6 +52,16 @@ Below are descriptions of the contents within the folder:
     * `usaco307`: 307 USACO problems with python solutions, set utilized in paper
 
 
+## HAL Harness Setup
+
+The episodic and semantic retrieval agents (`run_usaco_episodic_semantic_retrieval`, `run_usaco_episodic_semantic_retrieval_reflexion`) require the full USACO problem dataset for building the BM25 retrieval corpus.
+
+Download the data from [here](https://drive.google.com/file/d/1z5ODOJMqyer1QxzYtEUZ2hbAx-7nU8Vi/view?usp=share_link) and extract it so that the following file exists:
+
+    agents/USACO/data/datasets/usaco_subset307_dict.json
+
+The zero-shot agent (`run_usaco_zeroshot`) does not require this file.
+
 ## USACO eval
 
 We evaluate Python locally using `exec`; the execution code is adapted from OpenAI's [HumanEval](https://github.com/openai/human-eval/blob/master/human_eval/execution.py) task -- note that it is important to **take care when running unverified model-generated code**.

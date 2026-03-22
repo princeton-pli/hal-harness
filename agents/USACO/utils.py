@@ -148,10 +148,6 @@ def generate_episodic_retrieval_queries(p, problem_dict, solution_sets):
         duplicated = corpus[:]
         duplicated.remove(curr_description)
         tokenized_corpus = [doc.split(' ') for doc in duplicated]
-        # if only one document, bm25 will throw an error
-        if len(tokenized_corpus) == 0:
-            duplicated.append(curr_description)
-            tokenized_corpus.append(curr_description.split(' '))
         bm25 = BM25Okapi(tokenized_corpus)
 
         curr_query = query_texts[i]
