@@ -12,6 +12,11 @@ on:
   pull_request:
     branches: [main]
 
+# New run on the same branch/PR cancels the previous in-progress run (saves VM/API cost).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   corebench-hard-vm:
     runs-on: ubuntu-latest

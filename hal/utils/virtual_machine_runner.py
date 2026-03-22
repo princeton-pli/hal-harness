@@ -274,7 +274,12 @@ class VirtualMachineRunner:
             except Exception as e:
                 logger.error(f"Error processing task {task_id} on VM {vm_name}: {e}")
                 traceback.print_exc()
-                return {task_id: f"ERROR: {str(e)}"}
+                # Re-raise so the eval run fails hard; `finally` below still deletes the VM (or
+                # whatever resources exist for this name). Swallowing here made hal-eval continue
+                # and report success despite Azure / provisioning failures.
+                raise RuntimeError(
+                    f"VM run failed for task {task_id} (VM {vm_name}): {e}"
+                ) from e
 
             finally:
                 # Cleanup VM
