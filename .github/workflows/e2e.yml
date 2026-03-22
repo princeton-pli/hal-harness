@@ -134,3 +134,8 @@ jobs:
             echo "::error::hal-eval output must contain: hal.cli: Evaluation completed successfully" >&2
             exit 1
           fi
+
+      - name: Verify CoreBench hard result layout and upload JSON
+        run: |
+          set -euo pipefail
+          bash tests/gh_actions/verify_corebench_hard_e2e.sh
