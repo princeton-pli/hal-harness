@@ -10,7 +10,8 @@ requires-python = ">=3.11"
 dependencies = [
     "datasets",
     "weave>=0.52.0",
-    "gql<4",
+    # weave imports TransportConnectionFailed (gql 4+ only); gql<4 breaks hal-eval import chain
+    "gql[httpx]>=4.0,<5",
     "huggingface-hub",
     "python-dotenv",
     "setuptools>=48.0.0",

@@ -65,7 +65,11 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -e ".[dev,azure,corebench,coreagent]"
+        run: |
+          set -euo pipefail
+          pip install -e ".[dev,azure,corebench,coreagent]"
+          # Ensure gql 4+ (weave needs TransportConnectionFailed); extras can pull gql 3.x.
+          pip install "gql[httpx]>=4.0,<5"
 
       - name: Generate SSH key pair for VM provisioning
         run: |
@@ -81,6 +85,10 @@ jobs:
 
       - name: Run hal-eval (CoreBench hard, VM)
         run: |
+          set -euo pipefail
+          log="$(mktemp)"
+          set +e
+          set -o pipefail
           hal-eval --benchmark corebench_hard \
             --agent_dir agents/core_agent \
             --agent_function main.run \
@@ -88,4 +96,15 @@ jobs:
             --vm \
             --max_concurrent 1 \
             --max_tasks 1 \
-            -A 'model_name=openai/gpt-4.1-2025-04-14'
+            -A 'model_name=openai/gpt-4.1-2025-04-14' \
+            2>&1 | tee "$log"
+          eval_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$eval_status" -ne 0 ]; then
+            echo "::error::hal-eval exited with status $eval_status" >&2
+            exit "$eval_status"
+          fi
+          if ! grep -Fq 'hal.cli: Evaluation completed successfully' "$log"; then
+            echo "::error::hal-eval output must contain: hal.cli: Evaluation completed successfully" >&2
+            exit 1
+          fi
