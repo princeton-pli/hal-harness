@@ -32,6 +32,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Warm capsules avoid re-downloading from corebench.cs.princeton.edu every run.
+      # - uses: actions/cache@v4
+      #   with:
+      #     path: hal/benchmarks/corebench/capsules
+      #     key: corebench-capsules-${{ hashFiles('hal/benchmarks/corebench/core_test.json.gpg') }}
+      #     restore-keys: |
+      #       corebench-capsules-
+
       - name: Assemble Azure creds JSON
         id: azure_creds
         env:

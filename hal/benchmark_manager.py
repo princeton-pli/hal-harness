@@ -35,7 +35,11 @@ class BenchmarkManager:
             "colbench_frontend_design",
         ]
 
-    def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
+    def get_benchmark(
+        self,
+        benchmark_name: str,
+        max_tasks: Optional[int] = None,
+    ) -> BaseBenchmark:
         """Get benchmark instance for given name"""
         if benchmark_name == "gaia":
             from .benchmarks.gaia import GaiaBenchmark
@@ -71,15 +75,21 @@ class BenchmarkManager:
         elif benchmark_name == "corebench_easy":
             from .benchmarks.corebench import CoreBenchEasy
 
-            benchmark = CoreBenchEasy(self.agent_dir, self.config)
+            benchmark = CoreBenchEasy(
+                self.agent_dir, self.config, max_tasks=max_tasks
+            )
         elif benchmark_name == "corebench_medium":
             from .benchmarks.corebench import CoreBenchMedium
 
-            benchmark = CoreBenchMedium(self.agent_dir, self.config)
+            benchmark = CoreBenchMedium(
+                self.agent_dir, self.config, max_tasks=max_tasks
+            )
         elif benchmark_name == "corebench_hard":
             from .benchmarks.corebench import CoreBenchHard
 
-            benchmark = CoreBenchHard(self.agent_dir, self.config)
+            benchmark = CoreBenchHard(
+                self.agent_dir, self.config, max_tasks=max_tasks
+            )
         elif benchmark_name == "scienceagentbench":
             from .benchmarks.scienceagentbench import ScienceAgentBench
 

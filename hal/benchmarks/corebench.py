@@ -3,7 +3,7 @@ import os
 import urllib.request
 import tarfile
 import time
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 import numpy as np
 from scipy.stats import t
 import math
@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 class CoreBench(BaseBenchmark):
     """Base class for CoreBench benchmarks of different difficulty levels"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(
+        self,
+        agent_dir: str,
+        config: Dict[str, Any],
+        max_tasks: Optional[int] = None,
+    ):
         # Set benchmark_name in subclasses
 
         # Load tasks from core_test.json
@@ -40,6 +45,18 @@ class CoreBench(BaseBenchmark):
 
         with open(core_test_path, "r") as f:
             dataset = json.load(f)
+
+        if not isinstance(dataset, list):
+            raise TypeError("core_test.json must contain a JSON array of tasks")
+
+        # Match hal-eval --max_tasks: only download/load capsules we will run (saves CI time).
+        if max_tasks is not None and max_tasks > 0 and max_tasks < len(dataset):
+            logger.info(
+                "CoreBench: loading %s of %s tasks (max_tasks); skipping other capsule downloads",
+                max_tasks,
+                len(dataset),
+            )
+            dataset = dataset[:max_tasks]
 
         self.benchmark = {}
         self.benchmark_answers = {}
@@ -110,9 +127,6 @@ class CoreBench(BaseBenchmark):
         backoff_factor=1,
     ):
         """Downloads and extracts a capsule archive from the CoreBench repository."""
-        # FIXME: this doesn't respect the --max_tasks flag
-        # Expected: --max_tasks 2 only downloads 2 capsules
-        # Actual: --max_tasks 2 downloads all capsules, then runs only 2
         capsule_dir = os.path.join(capsules_dir, capsule_id)
         capsule_url = f"https://corebench.cs.princeton.edu/capsules/{capsule_id}.tar.gz"
         tar_path = os.path.join(capsules_dir, f"{capsule_id}.tar.gz")
@@ -438,9 +452,14 @@ class CoreBench(BaseBenchmark):
 class CoreBenchEasy(CoreBench):
     """CoreBench benchmark with easy difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(
+        self,
+        agent_dir: str,
+        config: Dict[str, Any],
+        max_tasks: Optional[int] = None,
+    ):
         self.benchmark_name = "corebench_easy"
-        super().__init__(agent_dir, config)
+        super().__init__(agent_dir, config, max_tasks=max_tasks)
 
     def _construct_prompt(self, task):
         """
@@ -473,9 +492,14 @@ class CoreBenchEasy(CoreBench):
 class CoreBenchMedium(CoreBench):
     """CoreBench benchmark with medium difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(
+        self,
+        agent_dir: str,
+        config: Dict[str, Any],
+        max_tasks: Optional[int] = None,
+    ):
         self.benchmark_name = "corebench_medium"
-        super().__init__(agent_dir, config)
+        super().__init__(agent_dir, config, max_tasks=max_tasks)
 
     def _construct_prompt(self, task):
         """
@@ -524,9 +548,14 @@ class CoreBenchMedium(CoreBench):
 class CoreBenchHard(CoreBench):
     """CoreBench benchmark with hard difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(
+        self,
+        agent_dir: str,
+        config: Dict[str, Any],
+        max_tasks: Optional[int] = None,
+    ):
         self.benchmark_name = "corebench_hard"
-        super().__init__(agent_dir, config)
+        super().__init__(agent_dir, config, max_tasks=max_tasks)
 
     def _construct_prompt(self, task):
         """

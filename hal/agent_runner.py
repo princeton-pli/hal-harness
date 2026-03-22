@@ -71,9 +71,13 @@ class AgentRunner:
                 "Only one of conda_env, use_vm, or use_docker can be set at a time."
             )
 
-        # Initialize benchmark first
+        # Initialize benchmark first (--max_tasks limits CoreBench capsule downloads; full load if
+        # --task_ids is used so those IDs are present in the benchmark dict).
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
-        self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
+        capsule_preload_limit = None if task_ids else max_tasks
+        self.benchmark = self.benchmark_manager.get_benchmark(
+            benchmark_name, max_tasks=capsule_preload_limit
+        )
         self.benchmark.agent_args = agent_args
 
         # Override results directory if non-default
