@@ -52,6 +52,10 @@ Below are descriptions of the contents within the folder:
     * `usaco307`: 307 USACO problems with python solutions, set utilized in paper
 
 
+## HAL Harness Setup
+
+The episodic and semantic retrieval agents (`run_usaco_episodic_semantic_retrieval`, `run_usaco_episodic_semantic_retrieval_reflexion`) need a retrieval corpus for BM25. The benchmark automatically generates a per-task corpus file at `data/datasets/retrieval_corpus.json` that contains all problems with solutions *except* the current task, preventing ground truth leakage.
+
 ## USACO eval
 
 We evaluate Python locally using `exec`; the execution code is adapted from OpenAI's [HumanEval](https://github.com/openai/human-eval/blob/master/human_eval/execution.py) task -- note that it is important to **take care when running unverified model-generated code**.

@@ -23,7 +23,14 @@ class AssistantBenchBenchmark(BaseBenchmark):
             load_dataset("AssistantBench/AssistantBench", split="validation")
         )
         self.benchmark = {task["id"]: task for task in self.dataset}
+        self._dataset = {
+            tid: {k: v for k, v in task.items() if k != "answer"}
+            for tid, task in self.benchmark.items()
+        }
         super().__init__(agent_dir, config)
+
+    def get_dataset(self):
+        return self._dataset
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

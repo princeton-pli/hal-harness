@@ -130,49 +130,41 @@ def get_difficulty_performances(full_results, problem_dict, k=1):
 ####################################################################################################
 
 # p is the number of problems retrieved
-def generate_episodic_retrieval_queries(p, problem_dict, solution_sets):
-    corpus = [problem_dict[problem_id]['description'] + '\nSolution: \n' + problem_dict[problem_id]['solution_english'] + '\nSolution Code: \n' + problem_dict[problem_id]['solution_python3'] for problem_id in problem_dict.keys()]
+def generate_episodic_retrieval_queries(p, retrieval_corpus, solution_sets, task_dict):
+    corpus = [retrieval_corpus[problem_id]['description'] + '\nSolution: \n' + retrieval_corpus[problem_id]['solution_english'] + '\nSolution Code: \n' + retrieval_corpus[problem_id]['solution_python3'] for problem_id in retrieval_corpus.keys()]
     solutions = solution_sets
     query_texts = []
     problem_ids = []
     for solution in solutions:
         solution_text = solution[0]['solution']
         problem_id = solution[0]['problem_id']
-        if problem_id in problem_dict.keys():
-            query_texts.append(problem_dict[problem_id]['description'] + '\n' + solution_text)
-            problem_ids.append(problem_id)
+        query_texts.append(task_dict[problem_id]['description'] + '\n' + solution_text)
+        problem_ids.append(problem_id)
 
     sim_prob_queries_new_code = []
     for i, problem_id in enumerate(problem_ids):
-        curr_description = problem_dict[problem_id]['description'] + '\nSolution: \n' + problem_dict[problem_id]['solution_english'] + '\nSolution Code: \n' + problem_dict[problem_id]['solution_python3']
-        duplicated = corpus[:]
-        duplicated.remove(curr_description)
-        tokenized_corpus = [doc.split(' ') for doc in duplicated]
-        # if only one document, bm25 will throw an error
-        if len(tokenized_corpus) == 0:
-            duplicated.append(curr_description)
-            tokenized_corpus.append(curr_description.split(' '))
+        tokenized_corpus = [doc.split(' ') for doc in corpus]
         bm25 = BM25Okapi(tokenized_corpus)
 
         curr_query = query_texts[i]
         tokenized_query = curr_query.split(" ")
-        similar_problem_texts = bm25.get_top_n(tokenized_query, duplicated, n=p)
+        similar_problem_texts = bm25.get_top_n(tokenized_query, corpus, n=p)
         similar_problem_text = ""
         words = ["First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh"]
         similar_problem_ids = []
         for i, text in enumerate(similar_problem_texts):
-            similar_problem_text += f"\n\n {words[i]} problem and solution \n\n" + text 
-            similar_problem_ids.append(search(text, corpus, list(problem_dict.keys())))
+            similar_problem_text += f"\n\n {words[i]} problem and solution \n\n" + text
+            similar_problem_ids.append(search(text, corpus, list(retrieval_corpus.keys())))
 
         for val in similar_problem_ids:
             if val == None:
                 print(similar_problem_texts)
                 assert 1 == 2
-        sim_prob_queries_new_code.append({'problem_id': problem_id, 'retrieval_text': '[BEGIN SIMILAR PROBLEMS]\n' + similar_problem_text + '\n[END SIMILAR PROBLEMS]\n', 'retrieval_problem_ids': similar_problem_ids, 'problem_description': problem_dict[problem_id]['description']})
+        sim_prob_queries_new_code.append({'problem_id': problem_id, 'retrieval_text': '[BEGIN SIMILAR PROBLEMS]\n' + similar_problem_text + '\n[END SIMILAR PROBLEMS]\n', 'retrieval_problem_ids': similar_problem_ids, 'problem_description': task_dict[problem_id]['description']})
     save_json(sim_prob_queries_new_code, f'queries_firstsolve_{p}problem_episodic')
     return sim_prob_queries_new_code
 
-def generate_semantic_retrieval_queries(problem_dict, solution_sets, model_name):
+def generate_semantic_retrieval_queries(solution_sets, model_name, task_dict):
     # Fetching the corpus to pass in: The corpus being textbook chapters
     textbook = load_json('data/corpuses/cpbook_v2')
     textbook_corpus = [article['full_article'] for article in textbook]
@@ -186,9 +178,8 @@ def generate_semantic_retrieval_queries(problem_dict, solution_sets, model_name)
     for solution in solutions:
         solution_text = solution[0]['solution']
         problem_id = solution[0]['problem_id']
-        if problem_id in problem_dict.keys():
-            query_texts.append(problem_dict[problem_id]['description'] + '\n' + solution_text)
-            problem_ids.append(problem_id)
+        query_texts.append(task_dict[problem_id]['description'] + '\n' + solution_text)
+        problem_ids.append(problem_id)
 
     textbook_queries_new_code = []
     for i, problem_id in enumerate(problem_ids):
@@ -198,13 +189,13 @@ def generate_semantic_retrieval_queries(problem_dict, solution_sets, model_name)
             textbook_text = bm25.get_top_n(tokenized_query, textbook_corpus, n=1)[0][:7000]
         else:
             textbook_text = bm25.get_top_n(tokenized_query, textbook_corpus, n=1)[0]
-        textbook_queries_new_code.append({'problem_id': problem_id, 'retrieval_text': '[BEGIN TEXTBOOK EXCERPT]\n' + textbook_text  + '\n[END TEXTBOOK EXCERPT]\n', 'problem_description': problem_dict[problem_id]['description']})
+        textbook_queries_new_code.append({'problem_id': problem_id, 'retrieval_text': '[BEGIN TEXTBOOK EXCERPT]\n' + textbook_text  + '\n[END TEXTBOOK EXCERPT]\n', 'problem_description': task_dict[problem_id]['description']})
     save_json(textbook_queries_new_code, 'queries_firstsolve_semantic')
     return textbook_queries_new_code
 
-def generate_episodic_semantic_retrieval_queries(num_problems_fetched, problem_dict, solution_sets, model_name):
-    textbook_queries = generate_semantic_retrieval_queries(problem_dict, solution_sets, model_name)
-    episodic_queries = generate_episodic_retrieval_queries(num_problems_fetched, problem_dict, solution_sets)
+def generate_episodic_semantic_retrieval_queries(num_problems_fetched, retrieval_corpus, solution_sets, model_name, task_dict):
+    textbook_queries = generate_semantic_retrieval_queries(solution_sets, model_name, task_dict)
+    episodic_queries = generate_episodic_retrieval_queries(num_problems_fetched, retrieval_corpus, solution_sets, task_dict)
     textbook_queries_dict = dict()
     episodic_queries_dict = dict()
 
@@ -224,18 +215,18 @@ def generate_episodic_semantic_retrieval_queries(num_problems_fetched, problem_d
     save_json(final_queries, 'queries_firstsolve_episodic_semantic')
     return final_queries
 
-def generate_reflexion_queries(rdict, sdict, problem_dict, model_name, iteration, prev_queries_dict=None, retrieval=False, retrieval_queries=None):
+def generate_reflexion_queries(rdict, sdict, task_dict, model_name, iteration, prev_queries_dict=None, retrieval=False, retrieval_queries=None):
     reflection_queries_dict = dict()
 
     for problem_id in sdict.keys():
-        if problem_id in problem_dict.keys():
+        if problem_id in task_dict.keys():
             for solution in sdict[problem_id][:1]:
                 prev_buffer = ''
                 if prev_queries_dict:
                     prev_buffer = prev_queries_dict[problem_id]['reflection_buffer']
                 current_response = solution['solution']
                 current_execution_output = rdict[solution['problem_id']][0]['result_list']
-                num_samples = problem_dict[problem_id]['description'].count("SAMPLE INPUT")
+                num_samples = task_dict[problem_id]['description'].count("SAMPLE INPUT")
                 execution_output = ""
                 if current_execution_output:
                     current_execution_output = current_execution_output[:num_samples]
@@ -250,13 +241,13 @@ def generate_reflexion_queries(rdict, sdict, problem_dict, model_name, iteration
 
                     retrieval_text = problem_query_dict['retrieval_text']
                     retrieval_problem_ids = problem_query_dict['retrieval_problem_ids']
-                    reflection_queries_dict[problem_id] = {'problem_id': problem_id, 'reflection_buffer': prev_buffer + f'\n Reflection Response Number {iteration+1}: \n' + current_response + f'\n Reflection Response Execution Output Number {iteration+1}:\n' + execution_output, 'retrieval_text': retrieval_text, 'retrieval_problem_ids': retrieval_problem_ids, 'problem_description': problem_dict[problem_id]['description']}
+                    reflection_queries_dict[problem_id] = {'problem_id': problem_id, 'reflection_buffer': prev_buffer + f'\n Reflection Response Number {iteration+1}: \n' + current_response + f'\n Reflection Response Execution Output Number {iteration+1}:\n' + execution_output, 'retrieval_text': retrieval_text, 'retrieval_problem_ids': retrieval_problem_ids, 'problem_description': task_dict[problem_id]['description']}
                 elif retrieval:
                     retrieval_text = prev_queries_dict[problem_id]['retrieval_text']
                     retrieval_problem_ids = prev_queries_dict[problem_id]['retrieval_problem_ids']
-                    reflection_queries_dict[problem_id] = {'problem_id': problem_id, 'reflection_buffer': prev_buffer + f'\n Reflection Response Number {iteration+1}: \n' + current_response + f'\n Reflection Response Execution Output Number {iteration+1}:\n' + execution_output, 'retrieval_text': retrieval_text, 'retrieval_problem_ids': retrieval_problem_ids, 'problem_description': problem_dict[problem_id]['description']}
+                    reflection_queries_dict[problem_id] = {'problem_id': problem_id, 'reflection_buffer': prev_buffer + f'\n Reflection Response Number {iteration+1}: \n' + current_response + f'\n Reflection Response Execution Output Number {iteration+1}:\n' + execution_output, 'retrieval_text': retrieval_text, 'retrieval_problem_ids': retrieval_problem_ids, 'problem_description': task_dict[problem_id]['description']}
                 else:
-                    reflection_queries_dict[problem_id] = {'problem_id': problem_id, 'reflection_buffer': prev_buffer + f'\n Reflection Response Number {iteration+1} \n' + current_response + f'\n Reflection Response Execution Output Number {iteration+1}:\n' + execution_output, 'problem_description': problem_dict[problem_id]['description']}
+                    reflection_queries_dict[problem_id] = {'problem_id': problem_id, 'reflection_buffer': prev_buffer + f'\n Reflection Response Number {iteration+1} \n' + current_response + f'\n Reflection Response Execution Output Number {iteration+1}:\n' + execution_output, 'problem_description': task_dict[problem_id]['description']}
     if retrieval:
         name = f"queries_dict_{model_name.replace('.','_').replace('/','__')}_retrieval_reflexion"
     else:
@@ -309,32 +300,30 @@ def run_solve(model_fn, model_name, problem_dict, attempts, return_queries=False
     # save_json([rdict, sdict, rs, ss], f'results/results_{model_name}_solve_{attempts}attempts')
     
 
-def run_retrieval(model_fn, model_name, problem_dict, attempts, solution_sets, num_retrieved, retrieval_type, return_queries=False, reflexion=False, return_retrieval_data=False):
+def run_retrieval(model_fn, model_name, retrieval_corpus, attempts, solution_sets, num_retrieved, retrieval_type, task_dict, return_queries=False, reflexion=False, return_retrieval_data=False):
     if retrieval_type == RetrievalType.EPISODIC:
-        queries = generate_episodic_retrieval_queries(num_retrieved, problem_dict, solution_sets)
+        queries = generate_episodic_retrieval_queries(num_retrieved, retrieval_corpus, solution_sets, task_dict)
     elif retrieval_type == RetrievalType.SEMANTIC:
-        queries = generate_semantic_retrieval_queries(problem_dict, solution_sets, model_name)
+        queries = generate_semantic_retrieval_queries(solution_sets, model_name, task_dict)
     else:
-        queries = generate_episodic_semantic_retrieval_queries(num_retrieved, problem_dict, solution_sets, model_name)
+        queries = generate_episodic_semantic_retrieval_queries(num_retrieved, retrieval_corpus, solution_sets, model_name, task_dict)
 
     r_prompt_fn = partial(retrieval_prompt_fn, retrieval_type=retrieval_type)
-    
+    problem_ids = list(task_dict.keys())
+
     if not reflexion:
-        results, ss = evaluate_model(model_fn, r_prompt_fn, queries=queries, verbose=True, attempts=attempts, problem_ids=list(problem_dict.keys()))
+        results, ss = evaluate_model(model_fn, r_prompt_fn, queries=queries, verbose=True, attempts=attempts, problem_ids=problem_ids)
         if return_retrieval_data:
             return results, ss, queries
         return results, ss
     else:
-        rdict, sdict, rs, ss = evaluate_model(model_fn, r_prompt_fn, queries=queries, verbose=True, attempts=attempts, problem_ids=list(problem_dict.keys()), reflexion=reflexion)
+        rdict, sdict, rs, ss = evaluate_model(model_fn, r_prompt_fn, queries=queries, verbose=True, attempts=attempts, problem_ids=problem_ids, reflexion=reflexion)
         if return_queries or return_retrieval_data:
             return (rdict, sdict, rs, ss, queries)
         return (rdict, sdict, rs, ss)
-    # save_json([rdict, sdict, rs, ss], f'results/results_{model_name}_episodic_retrieval_{attempts}attempts')
 
-    
-
-def run_reflexion(model_fn, model_name, problem_dict, attempts, prev_result_dict, prev_solution_dict, prev_queries_dict, iteration, return_queries=True, retrieval=False, retrieval_queries=None):
-    new_reflexion_queries_dict = generate_reflexion_queries(prev_result_dict, prev_solution_dict, problem_dict, model_name, iteration, prev_queries_dict=prev_queries_dict, retrieval=retrieval, retrieval_queries=retrieval_queries)
+def run_reflexion(model_fn, model_name, task_dict, attempts, prev_result_dict, prev_solution_dict, prev_queries_dict, iteration, return_queries=True, retrieval=False, retrieval_queries=None):
+    new_reflexion_queries_dict = generate_reflexion_queries(prev_result_dict, prev_solution_dict, task_dict, model_name, iteration, prev_queries_dict=prev_queries_dict, retrieval=retrieval, retrieval_queries=retrieval_queries)
     rdict, sdict, rs, ss = evaluate_model(model_fn, reflexion_prompt_fn, queries=list(new_reflexion_queries_dict.values()), verbose=True, attempts=attempts, reflexion=True, problem_ids=list(new_reflexion_queries_dict.keys()))
     # save_json([rdict, sdict, rs, ss], f'results_{model_name}_reflexion_{str(iteration)}iteration')
 
