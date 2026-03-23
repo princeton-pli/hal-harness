@@ -44,7 +44,7 @@ def evaluation_harness(
     futures = [run_eval_task.submit(spec) for spec in specs]
     wait(futures)
     terminate_batch_job(job_id)
-    # resize_pool(0)  # commented out during active iteration to keep nodes warm
+    # resize_pool(0)  # FIXME: commented out during active iteration to keep nodes warm
 
     rows = []
     for spec, future in zip(specs, futures):

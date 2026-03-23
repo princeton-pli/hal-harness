@@ -5,6 +5,7 @@ All public functions accept an EvalSpec; internals are prefixed with _.
 """
 
 import datetime
+import re
 import time
 import uuid
 
@@ -107,7 +108,9 @@ def _submit_batch_task(spec: EvalSpec) -> str:
     """Submit one eval task to Azure Batch. Returns the Azure task ID."""
     client = _batch_client()
     suffix = uuid.uuid4().hex[:8]
-    prefix = f"{spec.model}-{spec.agent}-{spec.benchmark}-{spec.task_id}"
+    raw_prefix = f"{spec.model}-{spec.agent}-{spec.benchmark}-{spec.task_id}"
+    # Azure Batch task IDs allow only [a-zA-Z0-9-_]; replace other chars with '-'
+    prefix = re.sub(r"[^a-zA-Z0-9\-_]", "-", raw_prefix)
     if len(prefix) + 1 + len(suffix) > 64:
         prefix = prefix[: 64 - 1 - len(suffix)]
     azure_task_id = f"{prefix}-{suffix}"
@@ -221,10 +224,23 @@ def _poll_batch_task(spec: EvalSpec, azure_task_id: str) -> None:
         time.sleep(POLL_INTERVAL_SECONDS)
 
 
+def _fetch_full_stdout(job_id: str, azure_task_id: str) -> str:
+    """Fetch the complete stdout.txt for a finished task."""
+    try:
+        client = _batch_client()
+        return b"".join(
+            client.file.get_from_task(job_id, azure_task_id, "stdout.txt")
+        ).decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+
 def run_eval_on_batch(spec: EvalSpec) -> dict:
     """Submit to Azure Batch and block until completion."""
     azure_task_id = _submit_batch_task(spec)
     print(f"Submitted | azure_task_id={azure_task_id}")
     _poll_batch_task(spec, azure_task_id)
     print(f"Completed | azure_task_id={azure_task_id}")
-    return download_task_results(spec.job_id, azure_task_id)
+    result = download_task_results(spec.job_id, azure_task_id)
+    result["_stdout"] = _fetch_full_stdout(spec.job_id, azure_task_id)
+    return result

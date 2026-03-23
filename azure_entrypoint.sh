@@ -27,6 +27,16 @@ echo "python=$(python3 --version)"
 echo "Installing packages..."
 python3 -m pip install --quiet --break-system-packages -e ".[dev]"
 
+if [ -f "$AGENT_DIR/requirements.txt" ]; then
+  echo "Installing agent requirements from $AGENT_DIR/requirements.txt..."
+  python3 -m pip install --quiet --break-system-packages -r "$AGENT_DIR/requirements.txt"
+fi
+
+# Ensure `python` resolves to python3 (not present by default on Ubuntu 24.04)
+mkdir -p ~/.local/bin
+ln -sf "$(which python3)" ~/.local/bin/python
+export PATH="$HOME/.local/bin:$PATH"
+
 echo "Running hal.cli..."
 python3 -m hal.cli \
   --agent_name "$AGENT_NAME" \
