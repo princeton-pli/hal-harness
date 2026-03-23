@@ -1,3 +1,16 @@
+# NOTE NOTE NOTE NOTE
+# NOTE NOTE NOTE NOTE
+
+# This has been renamed from .yml to .LMY to prevent GitHub from seeing it
+# it's currently always failing, which makes all CI runs fail.
+
+# Once we can debug this to add value and be green in CI, let's re-enable
+# the functionality
+
+# AS - March 23, 2026
+
+# NOTE NOTE NOTE NOTE
+# NOTE NOTE NOTE NOTE
 name: Claude Code Review
 
 on:
@@ -37,9 +50,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+          prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-
