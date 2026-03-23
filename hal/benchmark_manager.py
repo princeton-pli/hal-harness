@@ -75,9 +75,7 @@ class BenchmarkManager:
         elif benchmark_name == "corebench_easy":
             from .benchmarks.corebench import CoreBenchEasy
 
-            benchmark = CoreBenchEasy(
-                self.agent_dir, self.config, max_tasks=max_tasks
-            )
+            benchmark = CoreBenchEasy(self.agent_dir, self.config, max_tasks=max_tasks)
         elif benchmark_name == "corebench_medium":
             from .benchmarks.corebench import CoreBenchMedium
 
@@ -87,9 +85,7 @@ class BenchmarkManager:
         elif benchmark_name == "corebench_hard":
             from .benchmarks.corebench import CoreBenchHard
 
-            benchmark = CoreBenchHard(
-                self.agent_dir, self.config, max_tasks=max_tasks
-            )
+            benchmark = CoreBenchHard(self.agent_dir, self.config, max_tasks=max_tasks)
         elif benchmark_name == "scienceagentbench":
             from .benchmarks.scienceagentbench import ScienceAgentBench
 
