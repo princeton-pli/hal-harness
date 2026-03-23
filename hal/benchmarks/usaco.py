@@ -10,8 +10,6 @@ from .base_benchmark import BaseBenchmark
 
 logger = logging.getLogger(__name__)
 
-_GT_KEYS = {"solution", "solution_python3", "solution_english"}
-
 
 class USACOBenchmark(BaseBenchmark):
     """USACO benchmark implementation"""
@@ -32,32 +30,14 @@ class USACOBenchmark(BaseBenchmark):
         with open(dataset_path) as f:
             self.benchmark = json.load(f)
 
+        # For testing, limit to 1 task
+        # self.benchmark = {
+        #     k: v for k, v in self.benchmark.items()
+        #     if k in list(self.benchmark.keys())[:1]
+        # }
+
         # Set benchmark directory
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "USACO")
-
-        # Write per-task retrieval corpus files. Each file contains all problems
-        # WITH solutions except the current task, so episodic retrieval can use
-        # other problems as few-shot examples without leaking the current answer.
-        self._corpus_dir = tempfile.mkdtemp(prefix="usaco_retrieval_")
-        self._dataset = {}
-        for tid, task in self.benchmark.items():
-            task_data = {k: v for k, v in task.items() if k not in _GT_KEYS}
-
-            corpus = {
-                pid: problem for pid, problem in self.benchmark.items() if pid != tid
-            }
-            corpus_path = os.path.join(self._corpus_dir, f"{tid}.json")
-            with open(corpus_path, "w") as f:
-                json.dump(corpus, f)
-
-            task_data.setdefault("files", {})["data/datasets/retrieval_corpus.json"] = (
-                corpus_path
-            )
-
-            self._dataset[tid] = task_data
-
-    def get_dataset(self):
-        return self._dataset
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
