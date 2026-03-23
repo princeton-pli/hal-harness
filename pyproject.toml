@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "datasets",
     "weave>=0.52.0",
+    "wandb==0.23.0",
     "gql<4",
     "huggingface-hub",
     "python-dotenv",
@@ -47,6 +48,9 @@ appworld = [
 ]
 taubench = [
     "tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21",
+]
+terminal_bench = [
+    "harbor @ git+https://github.com/harbor-framework/harbor.git@main",
 ]
 scicode = [
   "scicode @ git+https://github.com/peterkirgis/SciCode"

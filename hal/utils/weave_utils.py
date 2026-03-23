@@ -289,6 +289,11 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 5 / 1e6,
         "completion_tokens": 25 / 1e6,
     },
+    "claude-opus-4-6": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4-6": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
     "deepseek-ai/DeepSeek-V3": {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 1.25 / 1e6,
@@ -522,6 +527,8 @@ CACHED_PRICE_OVERRIDES = {
     "anthropic/claude-sonnet-4-5": 0.30 / 1e6,
     "claude-opus-4-5": 0.50 / 1e6,
     "anthropic/claude-opus-4-5": 0.50 / 1e6,
+    "claude-opus-4-6": 0.50 / 1e6,
+    "anthropic/claude-opus-4-6": 0.50 / 1e6,
     "claude-opus-4-20250514": 1.50 / 1e6,
     "anthropic/claude-opus-4-20250514": 1.50 / 1e6,
     "claude-opus-4.1-20250805": 1.50 / 1e6,

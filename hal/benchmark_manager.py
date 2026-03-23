@@ -5,6 +5,8 @@ from .benchmarks.base_benchmark import BaseBenchmark
 
 
 class BenchmarkManager:
+    EXTERNAL_BENCHMARKS = {"terminal_bench"}
+
     def __init__(
         self,
         agent_dir: str = "agent/",
@@ -33,7 +35,12 @@ class BenchmarkManager:
             "assistantbench",
             "colbench_backend_programming",
             "colbench_frontend_design",
+            "terminal_bench",
         ]
+
+    @classmethod
+    def is_external_benchmark(cls, benchmark_name: str) -> bool:
+        return benchmark_name in cls.EXTERNAL_BENCHMARKS
 
     def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
         """Get benchmark instance for given name"""
@@ -96,6 +103,10 @@ class BenchmarkManager:
             from .benchmarks.colbench import ColBenchBenchmark
 
             benchmark = ColBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+        elif benchmark_name == "terminal_bench":
+            from .benchmarks.terminal_bench import TerminalBenchBenchmark
+
+            benchmark = TerminalBenchBenchmark(self.agent_dir, self.config)
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
 

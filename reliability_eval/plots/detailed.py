@@ -765,6 +765,7 @@ def plot_calibration_by_model(
     plt.close()
 
 
+
 def plot_robustness_detailed(
     df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
 ):
