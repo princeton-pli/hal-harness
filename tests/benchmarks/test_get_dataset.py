@@ -92,9 +92,7 @@ class TestUSACOBenchmarkGetDataset:
 
 
 class TestGaiaGetDataset:
-    @patch(
-        "hal.benchmarks.base_benchmark.BaseBenchmark.__init__", return_value=None
-    )
+    @patch("hal.benchmarks.base_benchmark.BaseBenchmark.__init__", return_value=None)
     @patch("hal.benchmarks.gaia.GaiaBenchmark._load_gaia_dataset")
     def test_gt_keys_absent_from_every_task(self, mock_load, _mock_base_init):
         mock_load.return_value = [
@@ -128,9 +126,7 @@ class TestGaiaGetDataset:
 
 
 class TestAssistantBenchGetDataset:
-    @patch(
-        "hal.benchmarks.base_benchmark.BaseBenchmark.__init__", return_value=None
-    )
+    @patch("hal.benchmarks.base_benchmark.BaseBenchmark.__init__", return_value=None)
     @patch("hal.benchmarks.assistantbench.load_dataset")
     def test_answer_absent_from_every_task(self, mock_load_dataset, _mock_base_init):
         mock_load_dataset.return_value = [
@@ -148,13 +144,9 @@ class TestAssistantBenchGetDataset:
 
 
 class TestSciCodeGetDataset:
-    @patch(
-        "hal.benchmarks.base_benchmark.BaseBenchmark.__init__", return_value=None
-    )
+    @patch("hal.benchmarks.base_benchmark.BaseBenchmark.__init__", return_value=None)
     @patch("hal.benchmarks.scicode.load_dataset")
-    def test_test_cases_absent_from_sub_steps(
-        self, mock_load_dataset, _mock_base_init
-    ):
+    def test_test_cases_absent_from_sub_steps(self, mock_load_dataset, _mock_base_init):
         mock_load_dataset.return_value = [
             {
                 "problem_id": "p1",

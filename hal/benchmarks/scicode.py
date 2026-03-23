@@ -31,12 +31,15 @@ class SciCodeBenchmark(BaseBenchmark):
 
         self._dataset = {
             tid: {
-                k: (
-                    [{sk: sv for sk, sv in step.items() if sk != "test_cases"} for step in v]
-                    if k == "sub_steps"
-                    else v
+                field: (
+                    [
+                        {k: v for k, v in step.items() if k != "test_cases"}
+                        for step in value
+                    ]
+                    if field == "sub_steps"
+                    else value
                 )
-                for k, v in task.items()
+                for field, value in task.items()
             }
             for tid, task in self.benchmark.items()
         }

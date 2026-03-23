@@ -44,17 +44,15 @@ class USACOBenchmark(BaseBenchmark):
             task_data = {k: v for k, v in task.items() if k not in _GT_KEYS}
 
             corpus = {
-                pid: problem
-                for pid, problem in self.benchmark.items()
-                if pid != tid
+                pid: problem for pid, problem in self.benchmark.items() if pid != tid
             }
             corpus_path = os.path.join(self._corpus_dir, f"{tid}.json")
             with open(corpus_path, "w") as f:
                 json.dump(corpus, f)
 
-            task_data.setdefault("files", {})[
-                "data/datasets/retrieval_corpus.json"
-            ] = corpus_path
+            task_data.setdefault("files", {})["data/datasets/retrieval_corpus.json"] = (
+                corpus_path
+            )
 
             self._dataset[tid] = task_data
 
