@@ -32,7 +32,10 @@ class SciCodeBenchmark(BaseBenchmark):
     def _strip_ground_truth(self, task):
         return {
             k: (
-                [{sk: sv for sk, sv in step.items() if sk != "test_cases"} for step in v]
+                [
+                    {sk: sv for sk, sv in step.items() if sk != "test_cases"}
+                    for step in v
+                ]
                 if k == "sub_steps"
                 else v
             )
