@@ -29,6 +29,16 @@ class SciCodeBenchmark(BaseBenchmark):
         # Set benchmark directory.
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "SciCode")
 
+    def _strip_ground_truth(self, task):
+        return {
+            k: (
+                [{sk: sv for sk, sv in step.items() if sk != "test_cases"} for step in v]
+                if k == "sub_steps"
+                else v
+            )
+            for k, v in task.items()
+        }
+
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
     ) -> Dict[str, Any]:

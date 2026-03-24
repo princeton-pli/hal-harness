@@ -33,6 +33,9 @@ from calculate_metrics import evaluate_best_run  # noqa: E402
 
 
 class ScienceAgentBench(BaseBenchmark):
+
+    _ground_truth_keys = {"eval_script_name"}
+
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         self.benchmark_name = "scienceagentbench"
 
