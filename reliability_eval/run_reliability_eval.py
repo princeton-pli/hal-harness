@@ -345,9 +345,8 @@ Phases:
     print(f"   Conda env: {args.conda_env or 'current'}")
     print("=" * 80)
 
-    # Load environment and check keys
+    # Load environment
     load_environment()
-    check_api_keys()
 
     # Get valid combinations
     combinations = get_valid_combinations(args.benchmark)
@@ -355,6 +354,21 @@ Phases:
         print("\n❌ No valid agent-benchmark combinations found!")
         print("   Check AGENT_CONFIGS and BENCHMARK_CONFIGS")
         exit(1)
+
+    # Check only the API keys needed for the requested combinations
+    combo_agent_configs = []
+    seen_agent_names = set()
+    for agent_config, _, _ in combinations:
+        agent_name = agent_config["name"]
+        if agent_name in seen_agent_names:
+            continue
+        combo_agent_configs.append(agent_config)
+        seen_agent_names.add(agent_name)
+    require_wandb = any(
+        not benchmark_config.get("external_runner")
+        for _, benchmark_config, _ in combinations
+    )
+    check_api_keys(combo_agent_configs, require_wandb=require_wandb)
 
     print(f"\n📋 Found {len(combinations)} agent-benchmark combinations:")
     for agent, _, bench_name in combinations:

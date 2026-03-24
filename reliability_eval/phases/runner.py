@@ -2,7 +2,9 @@
 
 import os
 import re
+import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -42,14 +44,17 @@ def load_environment():
         print(f"⚠️  No .env file found at {env_file.absolute()}")
 
 
-def check_api_keys():
+def check_api_keys(
+    agent_configs: list[dict] | None = None, require_wandb: bool = True
+):
     """Check that required API keys are available for configured models."""
-    # Always required
-    required_vars = ["WANDB_API_KEY"]
+    required_vars = ["WANDB_API_KEY"] if require_wandb else []
+
+    configs = agent_configs if agent_configs is not None else AGENT_CONFIGS
 
     # Check which providers are in use
-    providers_in_use = {cfg.get("provider", "openai") for cfg in AGENT_CONFIGS}
-    models_in_use = {cfg["model_name"] for cfg in AGENT_CONFIGS}
+    providers_in_use = {cfg.get("provider", "openai") for cfg in configs}
+    models_in_use = {cfg["model_name"] for cfg in configs}
 
     # Add provider-specific keys
     if "openai" in providers_in_use or any(
@@ -89,6 +94,14 @@ def check_api_keys():
 _AGENT_FUNCTION_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
+def _resolve_hal_eval_command() -> list[str]:
+    """Use the installed CLI when available, otherwise the current interpreter."""
+    hal_eval_bin = shutil.which("hal-eval")
+    if hal_eval_bin:
+        return [hal_eval_bin]
+    return [sys.executable, "-m", "hal.cli"]
+
+
 def _validate_agent_config(agent_config: dict) -> None:
     """Validate agent_function and agent_dir before use in subprocess commands."""
     agent_function = agent_config.get("agent_function", "")
@@ -115,18 +128,16 @@ def build_base_command(
     results_dir: str | None = None,
 ) -> list[str]:
     """Build the base hal-eval command."""
-    _validate_agent_config(agent_config)
+    requires_agent_entrypoint = not benchmark_config.get("external_runner")
+    if requires_agent_entrypoint:
+        _validate_agent_config(agent_config)
     benchmark_name = benchmark_config["benchmark_name"]
     agent_name = f"{agent_config['name']}{agent_name_suffix}"
 
     cmd = [
-        "hal-eval",
+        *_resolve_hal_eval_command(),
         "--benchmark",
         benchmark_name,
-        "--agent_dir",
-        agent_config["agent_dir"],
-        "--agent_function",
-        agent_config["agent_function"],
         "--agent_name",
         agent_name,
         "-A",
@@ -141,9 +152,20 @@ def build_base_command(
         str(max_concurrent or benchmark_config.get("max_concurrent", 1)),
     ]
 
+    if requires_agent_entrypoint:
+        cmd[3:3] = [
+            "--agent_dir",
+            agent_config["agent_dir"],
+            "--agent_function",
+            agent_config["agent_function"],
+        ]
+
     # Only add --max_tasks if explicitly set (None means run all tasks)
     if max_tasks is not None:
         cmd.extend(["--max_tasks", str(max_tasks)])
+
+    for key, value in (agent_config.get("extra_agent_args") or {}).items():
+        cmd.extend(["-A", f"{key}={value}"])
 
     # Pass reasoning_effort if specified (for models like GPT-5.2, Gemini 2.5, Claude with thinking)
     if agent_config.get("reasoning_effort"):

@@ -180,6 +180,15 @@ AGENT_CONFIGS = [
     #     "provider": "anthropic",
     #     "benchmarks": ["gaia"],
     # },
+    {
+        "name": "claude_code_opus_4_6",
+        "model_name": "anthropic/claude-opus-4-6",
+        "provider": "anthropic",
+        "benchmarks": ["terminal_bench"],
+        "extra_agent_args": {
+            "harbor_agent_name": "claude-code",
+        },
+    },
     # -------------------------------------------------------------------------
     # OpenAI Codex (OpenAI CLI agent)
     # Install: npm install -g @openai/codex
@@ -433,6 +442,14 @@ AGENT_CONFIGS = [
 # =============================================================================
 
 BENCHMARK_CONFIGS = {
+    "terminal_bench": {
+        "benchmark_name": "terminal_bench",
+        "requires_docker": False,
+        "requires_vm": False,
+        "max_concurrent": 5,
+        "external_runner": "terminal_bench_harbor",
+        "compliance_constraints": [],
+    },
     "taubench_airline": {
         "benchmark_name": "taubench_airline",
         "requires_docker": False,

@@ -71,6 +71,20 @@ class BaseBenchmark(ABC):
         os.makedirs(run_dir, exist_ok=True)
         return run_dir
 
+    def uses_external_runner(self) -> bool:
+        """Whether this benchmark delegates execution outside AgentRunner."""
+        return False
+
+    def requires_agent_entrypoint(self) -> bool:
+        """Whether hal-eval must receive --agent_dir and --agent_function."""
+        return not self.uses_external_runner()
+
+    def run_external_evaluation(self, **kwargs) -> Dict[str, Any]:
+        """Run evaluation without AgentRunner."""
+        raise NotImplementedError(
+            f"Benchmark {self.benchmark_name} does not implement an external runner."
+        )
+
     def process_results(
         self,
         agent_name: str,

@@ -8,6 +8,7 @@ import time
 import importlib
 from inspect import get_annotations
 from .agent_runner import AgentRunner
+from .benchmark_manager import BenchmarkManager
 from dotenv import load_dotenv
 import sys
 import logging
@@ -250,6 +251,39 @@ def main(
 
         # get exact command used to run the evaluation from click
         run_command = " ".join(["hal-eval"] + sys.argv[1:])
+
+        if BenchmarkManager.is_external_benchmark(benchmark):
+            benchmark_manager = BenchmarkManager(agent_dir or "", config)
+            benchmark_impl = benchmark_manager.get_benchmark(benchmark)
+            if results_dir != "results":
+                benchmark_impl.base_results_dir = results_dir
+                benchmark_impl.benchmark_results_dir = os.path.join(
+                    results_dir, benchmark_impl.benchmark_name
+                )
+            results = benchmark_impl.run_external_evaluation(
+                agent_name=agent_name,
+                run_id=run_id,
+                agent_args=agent_args,
+                benchmark_args=benchmark_args,
+                max_concurrent=max_concurrent,
+                max_tasks=max_tasks,
+                continue_run=continue_run,
+                results_dir=results_dir,
+                task_ids=task_ids,
+                run_command=run_command,
+                prompt_sensitivity=prompt_sensitivity,
+                variation_strength=variation_strength,
+                variation_index=variation_index,
+                vm=vm,
+                docker=docker,
+                conda_env_name=conda_env_name,
+                upload=upload or False,
+            )
+            logger.info("Evaluation completed successfully")
+            log_results(results)
+            log_run_summary(run_id, benchmark_impl.get_run_dir(run_id))
+            return
+
         # Initialize agent runner
         logger.info("Initializing agent runner...")
         try:
