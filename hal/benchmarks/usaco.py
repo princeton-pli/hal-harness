@@ -10,11 +10,11 @@ from .base_benchmark import BaseBenchmark
 
 logger = logging.getLogger(__name__)
 
-_GT_KEYS = {"solution", "solution_python3", "solution_english"}
-
 
 class USACOBenchmark(BaseBenchmark):
     """USACO benchmark implementation"""
+
+    _ground_truth_keys = {"solution", "solution_python3", "solution_english"}
 
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         assert os.path.exists(os.path.join(os.path.dirname(__file__), "USACO/data")), (
@@ -41,7 +41,7 @@ class USACOBenchmark(BaseBenchmark):
         self._corpus_dir = tempfile.mkdtemp(prefix="usaco_retrieval_")
         self._dataset = {}
         for tid, task in self.benchmark.items():
-            task_data = {k: v for k, v in task.items() if k not in _GT_KEYS}
+            task_data = {k: v for k, v in task.items() if k not in self._ground_truth_keys}
 
             corpus = {
                 pid: problem for pid, problem in self.benchmark.items() if pid != tid

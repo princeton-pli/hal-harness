@@ -33,6 +33,9 @@ from calculate_metrics import evaluate_best_run  # noqa: E402
 
 
 class ScienceAgentBench(BaseBenchmark):
+
+    _ground_truth_keys = {"eval_script_name"}
+
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         self.benchmark_name = "scienceagentbench"
 
@@ -59,14 +62,7 @@ class ScienceAgentBench(BaseBenchmark):
         self.requires_sandbox = False
         # Optional: Path to VM setup script
         self.setup_script = "hal/benchmarks/scienceagentbench/setup.sh"
-        self._dataset = {
-            tid: {k: v for k, v in task.items() if k != "eval_script_name"}
-            for tid, task in self.benchmark.items()
-        }
         super().__init__(agent_dir, config, setup_script=self.setup_script)
-
-    def get_dataset(self):
-        return self._dataset
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

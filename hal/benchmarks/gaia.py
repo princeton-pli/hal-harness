@@ -21,6 +21,8 @@ GAIA_LEVELS = {
 class GaiaBenchmark(BaseBenchmark):
     """Gaia benchmark implementation"""
 
+    _ground_truth_keys = {"Final answer", "Annotator Metadata"}
+
     def __init__(
         self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = "gaia"
     ):
@@ -46,15 +48,6 @@ class GaiaBenchmark(BaseBenchmark):
                 self.benchmark[task_id]["files"] = {
                     record["file_name"]: record.get("file_path", "")
                 }
-
-        _GT_KEYS = {"Final answer", "Annotator Metadata"}
-        self._dataset = {
-            tid: {k: v for k, v in task.items() if k not in _GT_KEYS}
-            for tid, task in self.benchmark.items()
-        }
-
-    def get_dataset(self):
-        return self._dataset
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
