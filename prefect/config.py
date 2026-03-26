@@ -110,13 +110,17 @@ BENCHMARK_TASKS: dict[str, list[str]] = {
     # "5cfb274c-0207-4aa7-9575-6ac0bd95d9b2",
     # ],
     # taubench task IDs are integer indices as strings
-    "taubench_airline": ["0", "1"],
+    "taubench_airline": ["0", "1", "2", "3", "4", "5", "6"],
 }
 
 MODELS = [
     # "claude-opus-4-6",
     # "claude-sonnet-4-6",
-    # "claude-haiku-4-5",
-    "anthropic/claude-3-5-haiku-20241022",
+    "anthropic/claude-sonnet-4-5-20250929",
+    "anthropic/claude-3-7-sonnet-20250219",
+    "anthropic/claude-3-5-sonnet-20241022",
+    "anthropic/claude-opus-4-5",
+    "anthropic/claude-sonnet-4-20250514",
+    "anthropic/claude-opus-4-20250514",
     "gpt-4o",
 ]

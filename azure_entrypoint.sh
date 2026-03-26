@@ -38,10 +38,16 @@ ln -sf "$(which python3)" ~/.local/bin/python
 export PATH="$HOME/.local/bin:$PATH"
 
 echo "Running hal.cli..."
+# Build a unique run_id so concurrent tasks don't collide in Weave.
+# Sanitize model name: lowercase, replace non-alphanumeric with underscores.
+SANITIZED_MODEL=$(echo "$MODEL" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g')
+RUN_ID="${BENCHMARK}_${AGENT_NAME}_${SANITIZED_MODEL}_task${TASK_ID}_$(date +%s)"
+
 python3 -m hal.cli \
   --agent_name "$AGENT_NAME" \
   --agent_function "$AGENT_FUNCTION" \
   --agent_dir "$AGENT_DIR" \
   --benchmark "$BENCHMARK" \
   --task_ids "$TASK_ID" \
+  --run_id "$RUN_ID" \
   -A "model_name=$MODEL"
