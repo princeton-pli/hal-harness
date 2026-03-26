@@ -146,6 +146,27 @@ def result_container_sas() -> str:
     return f"{AZURE_STORAGE_ACCOUNT_URL}/{AZURE_STORAGE_CONTAINER_NAME}?{sas_token}"
 
 
+def upload_task_metadata(spec, azure_task_id: str, submitted_at: str) -> None:
+    """Upload metadata.json for a task to {job_id}/logs/{azure_task_id}/metadata.json."""
+    import dataclasses
+
+    metadata = {
+        **dataclasses.asdict(spec),
+        "azure_task_id": azure_task_id,
+        "submitted_at": submitted_at,
+    }
+    # SAS URLs are long and not useful in metadata
+    metadata.pop("code_sas_url", None)
+    metadata.pop("result_sas_url", None)
+
+    client = _storage_client()
+    blob = client.get_blob_client(
+        container=AZURE_STORAGE_CONTAINER_NAME,
+        blob=f"{spec.job_id}/logs/{azure_task_id}/metadata.json",
+    )
+    blob.upload_blob(json.dumps(metadata, indent=2).encode(), overwrite=True)
+
+
 def download_task_results(job_id: str, azure_task_id: str) -> dict:
     """
     Download and parse {job_id}/results/{azure_task_id}/*_UPLOAD.json.

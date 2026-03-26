@@ -23,7 +23,7 @@ from config import (
     TASK_ENV_VARS,
     EvalSpec,
 )
-from storage import download_task_results
+from storage import download_task_results, upload_task_metadata
 
 
 def _batch_client() -> BatchServiceClient:
@@ -250,6 +250,8 @@ def _fetch_full_stdout(job_id: str, azure_task_id: str) -> str:
 def run_eval_on_batch(spec: EvalSpec) -> dict:
     """Submit to Azure Batch and block until completion."""
     azure_task_id = _submit_batch_task(spec)
+    submitted_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    upload_task_metadata(spec, azure_task_id, submitted_at)
     print(f"Submitted | azure_task_id={azure_task_id}")
     _poll_batch_task(spec, azure_task_id)
     print(f"Completed | azure_task_id={azure_task_id}")
