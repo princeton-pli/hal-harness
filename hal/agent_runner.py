@@ -5,8 +5,8 @@ import time
 import logging
 from typing import Dict, Any, Optional
 from .benchmark_manager import BenchmarkManager
-from .utils.local_runner import LocalRunner
-from .utils.docker_runner import DockerRunner
+from .utils.runner import Runner
+from .utils.environment import Environment
 from .utils.logging_utils import create_progress
 from .utils.weave_utils import delete_calls
 from .utils.fault_injection import FaultInjector
@@ -25,8 +25,6 @@ class AgentRunner:
         benchmark_name: str,
         config: Dict[str, Any],
         run_id: Optional[str] = None,
-        use_vm: bool = False,
-        use_docker: bool = False,
         max_concurrent: int = 1,
         conda_env: Optional[str] = None,
         continue_run: bool = False,
@@ -55,25 +53,14 @@ class AgentRunner:
 
         # Check for requirements.txt
         requirements_path = os.path.join(agent_dir, "requirements.txt")
-        if (
-            not os.path.exists(requirements_path)
-            and not conda_env
-            and not use_docker
-            and not use_vm
-        ):
+        if not os.path.exists(requirements_path) and not conda_env:
             raise ValueError(
                 f"No requirements.txt found in agent directory: {agent_dir}"
             )
 
-        # Validate runner options
-        if sum([bool(conda_env), use_vm, use_docker]) > 1:
-            raise ValueError(
-                "Only one of conda_env, use_vm, or use_docker can be set at a time."
-            )
-
-        # Initialize benchmark first
-        self.benchmark_manager = BenchmarkManager(agent_dir, config)
-        self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
+        # Initialize benchmark
+        self.benchmark_manager = BenchmarkManager()
+        self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name, agent_dir, config)
         self.benchmark.agent_args = agent_args
 
         # Override results directory if non-default
@@ -93,49 +80,30 @@ class AgentRunner:
                     has_gpu_task = True
                     break
 
-        # Print warning if GPU tasks are present but not running on VM
-        if has_gpu_task and not use_vm:
+        if has_gpu_task:
             logger.warning(
-                "Warning: This benchmark contains tasks that require GPU, but is not being run on a VM. "
-                "GPU tasks may not work correctly without VM execution. Use the --vm flag to run on a VM."
+                "Warning: This benchmark contains tasks that require GPU. "
+                "GPU tasks may not work correctly without dedicated GPU hardware."
             )
 
         self.run_command = run_command
 
-        # Check if benchmark requires sandbox
-        if self.benchmark.requires_sandbox and not use_vm and not use_docker:
-            raise ValueError(
-                f"Benchmark {benchmark_name} requires sandbox execution. Please use --vm or --docker flag."
-            )
-
         # Set run ID
         self.run_id = run_id or f"{benchmark_name}_{int(time.time())}"
 
-        # Initialize appropriate runner with benchmark
-        if use_vm:
-            from .utils.virtual_machine_runner import VirtualMachineRunner
+        # Environment config
+        self.environment = Environment(
+            task_timeout=task_timeout,
+            max_concurrent=max_concurrent,
+        )
 
-            self.runner = VirtualMachineRunner(
-                max_concurrent=max_concurrent,
-                log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark,
-                task_timeout=task_timeout,
-            )
-        elif use_docker:
-            self.runner = DockerRunner(
-                max_concurrent=max_concurrent,
-                log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark,
-                task_timeout=task_timeout,
-            )
-        else:
-            self.runner = LocalRunner(
-                max_concurrent=max_concurrent,
-                conda_env=conda_env,
-                log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark,
-                task_timeout=task_timeout,
-            )
+        # Initialize runner
+        self.runner = Runner(
+            max_concurrent=max_concurrent,
+            conda_env=conda_env,
+            log_dir=self.benchmark.get_run_dir(self.run_id),
+            task_timeout=task_timeout,
+        )
 
         self.agent_function = agent_function
         self.agent_dir = agent_dir
@@ -143,8 +111,6 @@ class AgentRunner:
         self.config = config
         self.max_concurrent = max_concurrent
         self.conda_env = conda_env
-        self.use_vm = use_vm
-        self.use_docker = use_docker
         self.continue_run = continue_run
         self.ignore_errors = ignore_errors
         self.max_tasks = max_tasks
@@ -169,8 +135,6 @@ class AgentRunner:
 
     def get_remaining_tasks(self, dataset: Dict[str, Any]) -> Dict[str, Any]:
         """Get tasks that haven't been completed in previous runs"""
-
-        # Check for raw submissions file
         run_dir = self.benchmark.get_run_dir(self.run_id)
         submissions_file = os.path.join(run_dir, f"{self.run_id}_RAW_SUBMISSIONS.jsonl")
 
@@ -179,7 +143,6 @@ class AgentRunner:
             return dataset
 
         try:
-            # Load completed tasks from submissions file
             completed_tasks = set()
             previous_output = {}
             with open(submissions_file) as f:
@@ -188,10 +151,7 @@ class AgentRunner:
                         submission = json.loads(line.strip())
                         task_id = list(submission.keys())[0]
                         result = submission[task_id]
-                        # Only count as completed if not an error
-                        if not isinstance(result, str) or not result.startswith(
-                            "ERROR"
-                        ):
+                        if not isinstance(result, str) or not result.startswith("ERROR"):
                             completed_tasks.add(task_id)
                         previous_output.update(submission)
                     except json.JSONDecodeError as e:
@@ -200,34 +160,64 @@ class AgentRunner:
                         )
                         continue
 
-            # Filter out completed tasks
-            remaining_tasks = {
+            return {
                 task_id: data
                 for task_id, data in dataset.items()
                 if task_id not in completed_tasks
             }
 
-            return remaining_tasks
-
         except Exception as e:
             logger.error(f"Error loading previous submissions: {e}")
             return dataset
 
+    def _load_submissions(self, path: str) -> Dict[str, Any]:
+        """Load all submissions from a JSONL file. Returns empty dict if file absent."""
+        results: Dict[str, Any] = {}
+        if not os.path.exists(path):
+            return results
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    results.update(json.loads(line))
+                except json.JSONDecodeError as e:
+                    logger.warning("Skipping malformed submission line: %.80s (%s)", line, e)
+        return results
+
+    async def _run_one_variation(
+        self,
+        dataset: Dict[str, Any],
+        progress_label: str = "Running agents...",
+    ) -> Dict[str, Any]:
+        """Run one agent pass over a dataset."""
+        with create_progress() as progress:
+            task = progress.add_task(progress_label, total=len(dataset))
+            return await self.runner.run_agent(
+                dataset=dataset,
+                agent_function=self.agent_function,
+                agent_dir=self.agent_dir,
+                agent_args=self.agent_args,
+                run_id=self.run_id,
+                benchmark=self.benchmark,
+                task=task,
+                progress=progress,
+            )
+
     async def run(self, agent_name: str, upload: bool = False) -> Dict[str, Any]:
         """Run the full agent evaluation pipeline"""
+        self.environment.validate()
 
-        # Initialize logging for main run
         logger.info("Initializing logging with W&B Weave...")
         weave_client = weave.init(self.run_id)
 
-        # Get dataset and filter for remaining tasks if continuing
         dataset = self.benchmark.get_dataset()
         if self.continue_run and not self.ignore_errors:
             dataset = self.get_remaining_tasks(dataset)
         elif self.continue_run and self.ignore_errors:
             dataset = {}
 
-        # Filter to specific task IDs if provided
         if self.task_ids:
             requested_ids = set(tid.strip() for tid in self.task_ids.split(","))
             available_ids = set(dataset.keys())
@@ -248,11 +238,10 @@ class AgentRunner:
                 logger.error("No valid task IDs found. Exiting.")
                 return {}
 
-        # Limit the number of tasks if max_tasks is specified
         if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
             logger.info(f"Limiting to the first {self.max_tasks} tasks as requested")
-            task_ids = list(dataset.keys())[: self.max_tasks]
-            dataset = {task_id: dataset[task_id] for task_id in task_ids}
+            task_ids_list = list(dataset.keys())[: self.max_tasks]
+            dataset = {task_id: dataset[task_id] for task_id in task_ids_list}
 
         # Handle prompt sensitivity if enabled
         prompt_variations_map = None
@@ -269,7 +258,6 @@ class AgentRunner:
             )
 
             if self.variation_index is not None:
-                # Single variation mode: only generate the specific variation needed
                 logger.info(
                     f"Generating {self.variation_strength} variation {self.variation_index} for sensitivity testing..."
                 )
@@ -282,7 +270,6 @@ class AgentRunner:
                     f"Generated variation {self.variation_index} for {len(single_variation_dataset)} tasks"
                 )
             else:
-                # Multi-variation mode: generate all variations upfront
                 logger.info(
                     f"Generating {self.num_variations} {self.variation_strength} prompt variations for sensitivity testing..."
                 )
@@ -293,18 +280,14 @@ class AgentRunner:
                     f"Generated {self.variation_strength} prompt variations for {len(prompt_variations_map)} tasks"
                 )
 
-        # delete previous calls from previous run if continuing for remaining tasks
         if self.continue_run and not self.ignore_errors and dataset:
             logger.info("Cleaning up calls from previous run...")
-            # Fetch all calls once instead of once per task (O(1) vs O(N) API calls)
             all_calls = weave_client.get_calls()
-            # Group calls by task_id for tasks that need cleanup
             calls_to_delete = {}
             for call in all_calls:
                 task_id = call.attributes.get("weave_task_id")
                 if task_id in dataset:
                     calls_to_delete.setdefault(task_id, []).append(call.id)
-            # Delete calls for each task
             for task_id, call_ids in calls_to_delete.items():
                 if call_ids:
                     delete_calls(call_ids, weave_client)
@@ -312,7 +295,6 @@ class AgentRunner:
 
         if not dataset:
             logger.warning("No remaining tasks to run")
-            # Load and return previous results
             results_path = os.path.join(
                 self.benchmark.get_run_dir(self.run_id), f"{self.run_id}_UPLOAD.json"
             )
@@ -325,85 +307,46 @@ class AgentRunner:
                 logger.info(
                     "No previous results found. Running evaluation harness on previous raw submissions..."
                 )
-                # If continuing run, merge with previous results
-                agent_output = {}
-                results_path = os.path.join(
+                submissions_path = os.path.join(
                     self.benchmark.get_run_dir(self.run_id),
                     f"{self.run_id}_RAW_SUBMISSIONS.jsonl",
                 )
-                if os.path.exists(results_path):
-                    previous_output = {}
-                    with open(results_path) as f:
-                        for line in f:
-                            submission = json.loads(line.strip())
-                            previous_output.update(submission)
-                    agent_output.update(previous_output)
+                agent_output = self._load_submissions(submissions_path)
 
         else:
-            # Handle prompt sensitivity mode vs normal mode
-            if self.prompt_sensitivity and self.variation_index is not None:
-                # Single variation mode: run only the specified variation index
-                # The dataset was already generated with only this variation
+            # Determine execution mode without mutating self.prompt_sensitivity
+            running_single_variation = (
+                self.prompt_sensitivity and self.variation_index is not None
+            )
+            running_multi_variation = (
+                self.prompt_sensitivity and self.variation_index is None
+            )
+
+            if running_single_variation:
                 var_idx = self.variation_index
                 logger.info(
                     f"Running variation {var_idx} ({self.variation_strength}) on {len(single_variation_dataset)} tasks..."
                 )
+                agent_output = await self._run_one_variation(
+                    single_variation_dataset,
+                    progress_label=f"Running agents on variation {var_idx}...",
+                )
 
-                # Run agent on this single variation (like normal mode)
-                with create_progress() as progress:
-                    task = progress.add_task(
-                        f"Running agents on variation {var_idx}...",
-                        total=len(single_variation_dataset),
-                    )
-                    agent_output = await self.runner.run_agent(
-                        dataset=single_variation_dataset,
-                        agent_function=self.agent_function,
-                        agent_dir=self.agent_dir,
-                        agent_args=self.agent_args,
-                        run_id=self.run_id,
-                        benchmark=self.benchmark,
-                        task=task,
-                        progress=progress,
-                    )
-
-                # Treat as normal run from here on (not prompt_sensitivity multi-variation mode)
-                # by setting flag to False for evaluation/processing
-                self.prompt_sensitivity = False
-
-            elif self.prompt_sensitivity:
-                # Multi-variation mode: run all variations in a single run (original behavior)
+            elif running_multi_variation:
                 all_variations_output = {}
-
-                # Determine number of variations to run
                 num_vars = self.num_variations + 1  # +1 for original
 
                 for var_idx in range(num_vars):
                     logger.info(f"Running variation {var_idx + 1}/{num_vars}...")
-
-                    # Create dataset for this variation
-                    var_dataset = {}
-                    for task_id, variations_list in prompt_variations_map.items():
-                        if var_idx < len(variations_list):
-                            var_dataset[task_id] = variations_list[var_idx]
-
-                    # Run agent on this variation
-                    with create_progress() as progress:
-                        task = progress.add_task(
-                            f"Running agents on variation {var_idx + 1}...",
-                            total=len(var_dataset),
-                        )
-                        var_output = await self.runner.run_agent(
-                            dataset=var_dataset,
-                            agent_function=self.agent_function,
-                            agent_dir=self.agent_dir,
-                            agent_args=self.agent_args,
-                            run_id=self.run_id,
-                            benchmark=self.benchmark,
-                            task=task,
-                            progress=progress,
-                        )
-
-                    # Store outputs with variation index
+                    var_dataset = {
+                        task_id: variations_list[var_idx]
+                        for task_id, variations_list in prompt_variations_map.items()
+                        if var_idx < len(variations_list)
+                    }
+                    var_output = await self._run_one_variation(
+                        var_dataset,
+                        progress_label=f"Running agents on variation {var_idx + 1}...",
+                    )
                     for task_id, output in var_output.items():
                         if task_id not in all_variations_output:
                             all_variations_output[task_id] = []
@@ -412,110 +355,66 @@ class AgentRunner:
                         )
 
                 agent_output = all_variations_output
-            else:
-                # Normal mode: Run agent on all tasks once
-                with create_progress() as progress:
-                    task = progress.add_task(
-                        "Running agents... (check logs in results directory for more details)",
-                        total=len(dataset),
-                    )
-                    agent_output = await self.runner.run_agent(
-                        dataset=dataset,
-                        agent_function=self.agent_function,
-                        agent_dir=self.agent_dir,
-                        agent_args=self.agent_args,
-                        run_id=self.run_id,
-                        benchmark=self.benchmark,
-                        task=task,
-                        progress=progress,
-                    )
 
-                # If continuing run, merge with previous results
+            else:
+                # Normal mode
+                agent_output = await self._run_one_variation(
+                    dataset,
+                    progress_label="Running agents... (check logs in results directory for more details)",
+                )
+
                 if self.continue_run:
-                    results_path = os.path.join(
+                    submissions_path = os.path.join(
                         self.benchmark.get_run_dir(self.run_id),
                         f"{self.run_id}_RAW_SUBMISSIONS.jsonl",
                     )
-                    if os.path.exists(results_path):
-                        previous_output = {}
-                        with open(results_path) as f:
-                            for line in f:
-                                try:
-                                    submission = json.loads(line.strip())
-                                    previous_output.update(submission)
-                                except json.JSONDecodeError as e:
-                                    logger.warning(
-                                        f"Skipping malformed line in submissions file: {e}"
-                                    )
-                                    continue
-                        agent_output.update(previous_output)
+                    previous_output = self._load_submissions(submissions_path)
+                    agent_output.update(previous_output)
 
         logger.info("Evaluating results...")
 
-        # Handle evaluation differently for prompt sensitivity mode
-        if self.prompt_sensitivity:
-            # stop weave logging before harness is run to avoid lm as judge to produce additional cost
+        # Use local variable to track which evaluation path we're in
+        # (avoids mutating self.prompt_sensitivity mid-run)
+        is_multi_variation_eval = self.prompt_sensitivity and self.variation_index is None
+
+        if is_multi_variation_eval:
             weave.finish()
-
-            # Evaluate each variation separately
             eval_results = {}
-
             for task_id, variations in agent_output.items():
                 eval_results[task_id] = []
-
                 for var_data in variations:
                     var_id = var_data["variation_id"]
                     var_output = var_data["output"]
-
-                    # Create single-task output for evaluation
                     single_output = {task_id: var_output}
-
-                    # Evaluate this variation
-                    var_eval = self.benchmark.evaluate_output(
-                        single_output, self.run_id
-                    )
-
-                    # Store result with variation id
+                    var_eval = self.benchmark.evaluate_output(single_output, self.run_id)
                     if task_id in var_eval:
-                        # Extract numeric score from evaluation result
                         eval_result = var_eval[task_id]
                         if isinstance(eval_result, dict):
-                            # Try common score field names
                             score = eval_result.get(
                                 "score",
-                                eval_result.get(
-                                    "reward", eval_result.get("accuracy", 0)
-                                ),
+                                eval_result.get("reward", eval_result.get("accuracy", 0)),
                             )
-                            # Handle cases where score is still a dict (shouldn't happen, but be defensive)
                             if isinstance(score, dict):
-                                # Last resort: try to find any numeric value in the dict
                                 for v in eval_result.values():
                                     if isinstance(v, (int, float)):
                                         score = v
                                         break
                                 else:
-                                    score = 0  # Fallback
+                                    score = 0
                         else:
                             score = eval_result
-
                         eval_results[task_id].append(
                             {"variation_id": var_id, "score": float(score)}
                         )
         else:
-            # Normal mode: Check for remaining tasks
             remaining = self.get_remaining_tasks(dataset)
             if len(remaining) > 0:
-                # Create a more informative error message
                 logger.warning(f"Warning - {len(remaining)} tasks are incomplete")
                 logger.info(
                     "Use --continue-run flag to retry the remaining tasks. Exiting..."
                 )
-                # sys.exit(1)
 
-            # stop weave logging before harness is run to avoid lm as judge to produce additional cost
             weave.finish()
-
             eval_results = self.benchmark.evaluate_output(agent_output, self.run_id)
 
         logger.info("Processing results...")

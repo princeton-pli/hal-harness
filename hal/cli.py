@@ -80,12 +80,6 @@ load_dotenv()
     default=os.path.join(os.path.dirname(__file__), "config.yaml"),
     help="Path to configuration file. (currently not used)",
 )
-@click.option("--vm", is_flag=True, help="Run the agent on azure VMs")
-@click.option(
-    "--docker",
-    is_flag=True,
-    help="Run the agent in Docker containers for isolation. Requires Docker to be installed on the system. Resources are limited to 4GB memory and 2 CPU cores per container.",
-)
 @click.option(
     "--continue_run",
     is_flag=True,
@@ -158,8 +152,6 @@ def main(
     a,
     b,
     i,
-    vm,
-    docker,
     max_tasks,
     prompt_sensitivity,
     num_variations,
@@ -199,7 +191,7 @@ def main(
         log_dir = os.path.join(results_dir, benchmark, run_id)
         os.makedirs(log_dir, exist_ok=True)
         verbose_log_path = os.path.join(log_dir, f"{run_id}_verbose.log")
-        setup_logging(log_dir, run_id, use_vm=vm)
+        setup_logging(log_dir, run_id)
 
         logger.info("HAL Harness")
 
@@ -209,13 +201,6 @@ def main(
         # Validate model pricing if model_name is provided in agent_args
         if "model_name" in agent_args:
             validate_model_pricing(agent_args["model_name"])
-
-        # Validate runner options
-        if sum([bool(conda_env_name), vm, docker]) > 1:
-            logger.error(
-                "Only one of --conda_env_name, --vm, or --docker can be specified. Exiting..."
-            )
-            sys.exit(1)
 
         if continue_run and not set_run_id:
             raise ValueError("continue_run flag requires run_id to be set")
@@ -234,8 +219,6 @@ def main(
             max_concurrent=max_concurrent,
             conda_env_name=conda_env_name,
             log_dir=log_dir,
-            vm=vm,
-            docker=docker,
             continue_run=continue_run,
             ignore_errors=ignore_errors,
             prompt_sensitivity=prompt_sensitivity,
@@ -254,9 +237,7 @@ def main(
                 agent_args=agent_args,
                 benchmark_name=benchmark,
                 config=config,
-                run_id=run_id,  # Now guaranteed to have a value
-                use_vm=vm,
-                use_docker=docker,
+                run_id=run_id,
                 max_concurrent=max_concurrent,
                 conda_env=conda_env_name,
                 continue_run=continue_run,
@@ -372,17 +353,17 @@ def is_inspect_solver(agent_function: str, agent_dir: str) -> bool:
 
 
 def validate_model_pricing(model_name: str) -> None:
-    """Validate that model pricing information exists"""
+    """Validate that model pricing information exists."""
     from .utils.weave_utils import MODEL_PRICES_DICT
 
     # together_ai is not part of weave model name
     model_name = model_name.replace("together_ai/", "")
 
     if model_name not in MODEL_PRICES_DICT:
-        logger.error(
-            f"Model '{model_name}' not found in pricing dictionary. Please add pricing information to MODEL_PRICES_DICT in weave_utils.py. Exiting..."
+        raise ValueError(
+            f"Model '{model_name}' not found in pricing dictionary. "
+            "Please add pricing information to MODEL_PRICES_DICT in weave_utils.py."
         )
-        sys.exit(1)
 
 
 if __name__ == "__main__":

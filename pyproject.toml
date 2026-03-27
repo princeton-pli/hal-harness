@@ -15,7 +15,6 @@ dependencies = [
     "python-dotenv",
     "setuptools>=48.0.0",
     "tenacity>=8.2.0",
-    "docker>=7.1.0",
     "cryptography>=42.0.0",
     "numpy>=1.24.0",
 ]
