@@ -83,6 +83,8 @@ evaluation_harness (@flow)
   └─► create_markdown_artifact()            # summary table in Prefect UI
 ```
 
+On success, each task's result dict is written locally to `.prefect_results/{job_id}/{azure_task_id}/result.json` (gitignored) in addition to Azure Blob Storage.
+
 Each Batch node runs `azure_entrypoint.sh`, which:
 1. Bootstraps pip if needed
 2. `pip install -e ".[dev]"` from the unzipped repo

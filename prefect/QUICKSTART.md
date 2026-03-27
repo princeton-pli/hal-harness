@@ -47,4 +47,5 @@ cd prefect && python flow.py
 ```
 
 - Prefect UI at http://localhost:4200.
-- Results and logs land in Azure Blob Storage under `{job_id}/results/` and `{job_id}/logs/`.
+- On completion, each task's result is written locally to `.prefect_results/{job_id}/{azure_task_id}/result.json`.
+- Results and logs are also uploaded to Azure Blob Storage under `{job_id}/results/` and `{job_id}/logs/`.

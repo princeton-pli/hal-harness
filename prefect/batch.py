@@ -23,7 +23,7 @@ from config import (
     TASK_ENV_VARS,
     EvalSpec,
 )
-from storage import download_task_results, upload_task_metadata
+from storage import download_task_results, save_task_results, upload_task_metadata
 
 
 def _batch_client() -> BatchServiceClient:
@@ -259,4 +259,6 @@ def run_eval_on_batch(spec: EvalSpec) -> dict:
     print(f"Completed | azure_task_id={azure_task_id}")
     result = download_task_results(spec.job_id, azure_task_id)
     result["_stdout"] = _fetch_full_stdout(spec.job_id, azure_task_id)
+    out = save_task_results(spec.job_id, azure_task_id, result)
+    print(f"Results saved locally | path={out}")
     return result

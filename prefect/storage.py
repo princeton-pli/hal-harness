@@ -171,6 +171,17 @@ def upload_task_metadata(spec, azure_task_id: str, submitted_at: str) -> None:
     blob.upload_blob(json.dumps(metadata, indent=2).encode(), overwrite=True)
 
 
+_RESULTS_DIR = Path(__file__).resolve().parent.parent / ".prefect_results"
+
+
+def save_task_results(job_id: str, azure_task_id: str, result: dict) -> Path:
+    """Write result dict to .prefect_results/{job_id}/{azure_task_id}/result.json."""
+    out = _RESULTS_DIR / job_id / azure_task_id / "result.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(result, indent=2))
+    return out
+
+
 def download_task_results(job_id: str, azure_task_id: str) -> dict:
     """
     Download and parse {job_id}/results/{azure_task_id}/*_UPLOAD.json.
