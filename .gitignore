@@ -4,6 +4,7 @@ logs/**
 
 # Env
 .env
+.venv/
 
 # Python
 .eggs/**
@@ -11,6 +12,7 @@ logs/**
 
 # Results
 results/**
+.prefect_results/
 hal.egg-info/**
 
 # Benchmarks
@@ -26,6 +28,7 @@ uv.lock
 
 # Claude Code
 .claude/settings.local.json
+.claude/settings.json
 
 # claude-reliability managed
 .claude/bin/

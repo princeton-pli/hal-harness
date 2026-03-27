@@ -405,7 +405,7 @@ class LLMLogAnalyzer:
     def _get_cache_key(self, analysis_type: str, content: str) -> str:
         """Generate a cache key for the analysis."""
         combined = f"{analysis_type}:{self.model}:{content}"
-        return hashlib.md5(combined.encode()).hexdigest()
+        return hashlib.sha256(combined.encode()).hexdigest()
 
     def _call_llm(
         self,

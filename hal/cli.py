@@ -24,6 +24,8 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 load_dotenv()
 
+DEFAULT_TASK_TIMEOUT = 2700
+
 
 @click.command()
 @click.option(
@@ -121,9 +123,12 @@ load_dotenv()
 )
 @click.option(
     "--task_timeout",
-    default=600,
+    default=DEFAULT_TASK_TIMEOUT,
     type=int,
-    help="Timeout in seconds for each task (default: 600 = 10 minutes). Tasks exceeding this will be killed and marked as ERROR.",
+    help=(
+        f"Timeout in seconds per task (default: {DEFAULT_TASK_TIMEOUT}). "
+        "Tasks exceeding this will be killed and marked as ERROR."
+    ),
 )
 @click.option(
     "--results_dir",

@@ -24,6 +24,7 @@ class AgentRunner:
         agent_args: Dict[str, Any],
         benchmark_name: str,
         config: Dict[str, Any],
+        task_timeout: int,
         run_id: Optional[str] = None,
         max_concurrent: int = 1,
         conda_env: Optional[str] = None,
@@ -35,7 +36,6 @@ class AgentRunner:
         num_variations: int = 3,
         variation_strength: str = "mild",
         variation_index: Optional[int] = None,
-        task_timeout: int = 600,
         results_dir: str = "results",
         task_ids: Optional[str] = None,
     ):
