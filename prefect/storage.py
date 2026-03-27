@@ -45,7 +45,9 @@ _ZIP_EXCLUDES = {
 
 def _storage_client() -> BlobServiceClient:
     """BlobServiceClient authenticated via account key (preferred) or AzureCliCredential."""
-    credential = AZURE_STORAGE_ACCOUNT_KEY if AZURE_STORAGE_ACCOUNT_KEY else AzureCliCredential()
+    credential = (
+        AZURE_STORAGE_ACCOUNT_KEY if AZURE_STORAGE_ACCOUNT_KEY else AzureCliCredential()
+    )
     return BlobServiceClient(
         account_url=AZURE_STORAGE_ACCOUNT_URL,
         credential=credential,
@@ -96,7 +98,9 @@ def upload_code_zip(job_id: str) -> str:
         p.stat().st_size
         for p in repo_root.rglob("*")
         if p.is_file()
-        and not any(str(p.relative_to(repo_root)).startswith(ex) for ex in _ZIP_EXCLUDES)
+        and not any(
+            str(p.relative_to(repo_root)).startswith(ex) for ex in _ZIP_EXCLUDES
+        )
     )
     print(f"Repo size before zip: {raw_bytes / 1024 / 1024:.1f} MB")
 

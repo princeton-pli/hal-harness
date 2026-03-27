@@ -91,7 +91,7 @@ def _build_command_line(spec: EvalSpec) -> str:
     task working directory. We unzip it, then delegate to azure_entrypoint.sh.
     """
     return (
-        "/bin/bash -c \""
+        '/bin/bash -c "'
         "python3 -m zipfile -e hal-harness.zip hal-harness && "
         "bash hal-harness/azure_entrypoint.sh"
         f" '{spec.agent}'"
@@ -100,7 +100,7 @@ def _build_command_line(spec: EvalSpec) -> str:
         f" '{spec.benchmark}'"
         f" '{spec.task_id}'"
         f" '{spec.model}'"
-        "\""
+        '"'
     )
 
 
@@ -220,7 +220,9 @@ def _poll_batch_task(spec: EvalSpec, azure_task_id: str) -> None:
                 _read_new_stdout(client, spec.job_id, azure_task_id, bytes_read)
                 try:
                     stderr = b"".join(
-                        client.file.get_from_task(spec.job_id, azure_task_id, "stderr.txt")
+                        client.file.get_from_task(
+                            spec.job_id, azure_task_id, "stderr.txt"
+                        )
                     ).decode("utf-8", errors="replace")
                     if stderr:
                         print(f"--- stderr ---\n{stderr}--- end stderr ---")
