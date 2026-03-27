@@ -30,7 +30,6 @@ class TestBenchmarkConfigs:
         required = {
             "benchmark_name",
             "requires_docker",
-            "requires_vm",
             "max_concurrent",
         }
         for name, cfg in BENCHMARK_CONFIGS.items():

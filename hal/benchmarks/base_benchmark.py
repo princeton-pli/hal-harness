@@ -34,7 +34,7 @@ class BaseBenchmark(ABC):
         )
         self.agent_args: Dict[str, Any] = {}  # Store agent args
         self.requires_sandbox = (
-            requires_sandbox  # Whether benchmark requires VM execution
+            requires_sandbox  # Whether benchmark requires sandbox execution
         )
 
     def _normalize_agent_output(self, agent_output: Dict[str, Any]) -> Dict[str, Any]:

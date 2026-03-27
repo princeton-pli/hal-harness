@@ -32,9 +32,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
 ## General Requirements
 
-1. **Dependencies**: List all dependencies in `requirements.txt`. These will be installed:
-   - On VMs if `--vm` flag is used
-   - If you run evaluations locally, you must install the dependencies yourself. Then specify the conda environment name with `--conda_env_name` or run evaluations from the conda environment.
+1. **Dependencies**: List all dependencies in `requirements.txt`. These will be installed when running in Docker. If you run evaluations locally, install the dependencies yourself and specify the conda environment name with `--conda_env_name` or run from the conda environment.
 
 2. **Arguments**: Your agent can receive additional arguments via `-A` flags:
 
@@ -172,7 +170,6 @@ def run(input: dict, **kwargs):
 
 **Requirements**:
 
-- Must be run with `--vm` flag
 - **Important:** set `remote_environment_url` to `http://0.0.0.0:8000` and `experiment_name` to `output`. An example is below and in `agents/appworld_example_agent/main.py`.
 
 **Example Agent**:

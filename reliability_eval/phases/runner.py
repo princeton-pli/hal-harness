@@ -167,9 +167,6 @@ def build_base_command(
     if benchmark_config.get("requires_docker", False):
         cmd.append("--docker")
 
-    if benchmark_config.get("requires_vm", False):
-        cmd.append("--vm")
-
     if results_dir and results_dir != "results":
         cmd.extend(["--results_dir", results_dir])
 

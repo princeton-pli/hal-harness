@@ -21,7 +21,6 @@ AGENT_CONFIG = {
 BENCHMARK_CONFIG = {
     "benchmark_name": "taubench_airline",
     "requires_docker": False,
-    "requires_vm": False,
     "max_concurrent": 5,
     "compliance_constraints": ["pii_handling_customer_service"],
 }
