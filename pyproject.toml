@@ -32,6 +32,14 @@ dev = [
 swebench = [
     "swebench @ git+https://github.com/SWE-bench/SWE-bench@006a760a95c9cc11e987884d7e311d74a16db88a",
 ]
+azure = [
+    "azure-mgmt-compute>=29.1.0",
+    "azure-mgmt-network>=25.1.0",
+    "azure-mgmt-resource>=23.0.1",
+    "azure-identity>=1.12.0",
+    "paramiko==3.5.0",
+    "requests>=2.31.0",  # For Azure VM detection via IMDS
+]
 appworld = [
     "appworld @ git+https://github.com/stonybrooknlp/appworld.git",
     "appworld-experiments[simplified,smolagents] @ git+https://github.com/stonybrooknlp/appworld.git@main#egg=appworld-experiments&subdirectory=experiments",
