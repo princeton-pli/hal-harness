@@ -1,5 +1,4 @@
 import subprocess
-import docker
 import json
 import os
 import tempfile
@@ -14,14 +13,12 @@ logger = logging.getLogger(__name__)
 class USACOBenchmark(BaseBenchmark):
     """USACO benchmark implementation"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]):
         assert os.path.exists(os.path.join(os.path.dirname(__file__), "USACO/data")), (
             "data folder in USACO benchmark directory (hal/benchmarks/USACO) not found. Please download and extract the USACO dataset as described in the README."
         )
 
-        self.benchmark_name = "usaco"
-        self.requires_sandbox = False
-        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
+        super().__init__(benchmark_name, agent_dir, config)
 
         # Load benchmark dataset
         dataset_path = os.path.join(
@@ -57,7 +54,8 @@ class USACOBenchmark(BaseBenchmark):
 
             temp_file_path = None
 
-            # Create docker client
+            # Create docker client (lazy import — docker is an optional dep)
+            import docker  # noqa: PLC0415
             client = docker.from_env()
 
             # Create and run container

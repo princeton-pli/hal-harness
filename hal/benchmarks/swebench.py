@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 from typing import Dict, Any
 from .base_benchmark import BaseBenchmark
 from datasets import load_dataset
@@ -12,14 +13,13 @@ logger = logging.getLogger(__name__)
 class SWEBenchBenchmark(BaseBenchmark):
     """SWEBench benchmark implementation"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any], mini: bool = False):
-        self.benchmark_name = "swebench_verified_mini" if mini else "swebench_verified"
-        self.requires_sandbox = False
-        self.mini = mini
-        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
+    def __init__(self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]):
+        self.mini = benchmark_name == "swebench_verified_mini"
+        super().__init__(benchmark_name, agent_dir, config)
 
         # Read mini instance ids
-        with open("hal/benchmarks/swebench_verified_mini_task_ids.txt", "r") as f:
+        _here = Path(__file__).parent
+        with open(_here / "swebench_verified_mini_task_ids.txt", "r") as f:
             self.mini_instance_ids = [line.strip() for line in f.readlines()]
 
         # download swebench verified from huggingface
@@ -27,7 +27,7 @@ class SWEBenchBenchmark(BaseBenchmark):
         self.benchmark = {}
 
         # Load benchmark dataset
-        if mini:
+        if self.mini:
             for task in ds:
                 if task["instance_id"] in self.mini_instance_ids:
                     self.benchmark[task["instance_id"]] = {

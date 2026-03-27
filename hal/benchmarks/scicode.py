@@ -4,7 +4,6 @@ import shutil
 from pathlib import Path
 from typing import Dict, Any
 from datasets import load_dataset
-import docker
 import logging
 
 from .base_benchmark import BaseBenchmark
@@ -16,11 +15,9 @@ class SciCodeBenchmark(BaseBenchmark):
     """SciCode benchmark implementation"""
 
     def __init__(
-        self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = "scicode"
+        self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]
     ):
-        self.benchmark_name = benchmark_name
-        self.requires_sandbox = False
-        super().__init__(agent_dir, config, requires_sandbox=self.requires_sandbox)
+        super().__init__(benchmark_name, agent_dir, config)
 
         # Load the dataset.
         self.dataset = list(load_dataset("SciCode1/SciCode", split="test"))
@@ -93,6 +90,7 @@ class SciCodeBenchmark(BaseBenchmark):
                                 f.write(line + "\n")
 
         # Launch a Docker container that mounts self.benchmark_dir at /app and host_tmp_dir at /app/tmp_eval.
+        import docker  # noqa: PLC0415
         client = docker.from_env()
         container = client.containers.run(
             "python:3.11",

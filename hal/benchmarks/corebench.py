@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 class CoreBench(BaseBenchmark):
     """Base class for CoreBench benchmarks of different difficulty levels"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        # Set benchmark_name in subclasses
+    def __init__(self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]):
 
         # Load tasks from core_test.json
         core_test_path = os.path.join(
@@ -71,7 +70,7 @@ class CoreBench(BaseBenchmark):
             # Store results
             self.benchmark_answers[capsule_id] = task["results"]
 
-        super().__init__(agent_dir, config)
+        super().__init__(benchmark_name, agent_dir, config)
 
     def _get_capsule_files_dict(self, capsule_dir: str) -> Dict[str, str]:
         """
@@ -438,9 +437,8 @@ class CoreBench(BaseBenchmark):
 class CoreBenchEasy(CoreBench):
     """CoreBench benchmark with easy difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        self.benchmark_name = "corebench_easy"
-        super().__init__(agent_dir, config)
+    def __init__(self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]):
+        super().__init__(benchmark_name, agent_dir, config)
 
     def _construct_prompt(self, task):
         """
@@ -473,9 +471,8 @@ class CoreBenchEasy(CoreBench):
 class CoreBenchMedium(CoreBench):
     """CoreBench benchmark with medium difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        self.benchmark_name = "corebench_medium"
-        super().__init__(agent_dir, config)
+    def __init__(self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]):
+        super().__init__(benchmark_name, agent_dir, config)
 
     def _construct_prompt(self, task):
         """
@@ -524,9 +521,8 @@ class CoreBenchMedium(CoreBench):
 class CoreBenchHard(CoreBench):
     """CoreBench benchmark with hard difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        self.benchmark_name = "corebench_hard"
-        super().__init__(agent_dir, config)
+    def __init__(self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]):
+        super().__init__(benchmark_name, agent_dir, config)
 
     def _construct_prompt(self, task):
         """

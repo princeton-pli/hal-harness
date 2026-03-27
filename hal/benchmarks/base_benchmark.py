@@ -16,26 +16,21 @@ class BaseBenchmark(ABC):
 
     def __init__(
         self,
+        benchmark_name: str,
         agent_dir: str,
         config: Dict[str, Any],
-        requires_sandbox: bool = False,
         setup_script: Optional[str] = None,
         base_results_dir: str = "results",
     ):
+        self.benchmark_name = benchmark_name
         self.agent_dir = agent_dir
         self.config = config
-        self.benchmark_name: str
-        self.setup_script = (
-            setup_script  # Path to setup script relative to benchmark dir
-        )
+        self.setup_script = setup_script
         self.base_results_dir = base_results_dir
         self.benchmark_results_dir = os.path.join(
             self.base_results_dir, self.benchmark_name
         )
-        self.agent_args: Dict[str, Any] = {}  # Store agent args
-        self.requires_sandbox = (
-            requires_sandbox  # Whether benchmark requires VM execution
-        )
+        self.agent_args: Dict[str, Any] = {}
 
     def _normalize_agent_output(self, agent_output: Dict[str, Any]) -> Dict[str, Any]:
         """

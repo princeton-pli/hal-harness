@@ -13,17 +13,15 @@ class AssistantBenchBenchmark(BaseBenchmark):
 
     def __init__(
         self,
+        benchmark_name: str,
         agent_dir: str,
         config: Dict[str, Any],
-        benchmark_name: str = "assistantbench",
     ):
-        self.benchmark_name = benchmark_name
-
         self.dataset = list(
             load_dataset("AssistantBench/AssistantBench", split="validation")
         )
         self.benchmark = {task["id"]: task for task in self.dataset}
-        super().__init__(agent_dir, config)
+        super().__init__(benchmark_name, agent_dir, config)
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

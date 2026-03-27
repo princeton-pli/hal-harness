@@ -33,9 +33,7 @@ from calculate_metrics import evaluate_best_run  # noqa: E402
 
 
 class ScienceAgentBench(BaseBenchmark):
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
-        self.benchmark_name = "scienceagentbench"
-
+    def __init__(self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]):
         ds = load_dataset("osunlp/ScienceAgentBench", split="validation")
         self.benchmark = {}
 
@@ -55,11 +53,12 @@ class ScienceAgentBench(BaseBenchmark):
                 dataset_path: src_dataset_path,
             }
 
-        # Optional: Set if benchmark requires VM execution
-        self.requires_sandbox = False
-        # Optional: Path to VM setup script
-        self.setup_script = "hal/benchmarks/scienceagentbench/setup.sh"
-        super().__init__(agent_dir, config, setup_script=self.setup_script)
+        super().__init__(
+            benchmark_name,
+            agent_dir,
+            config,
+            setup_script="hal/benchmarks/scienceagentbench/setup.sh",
+        )
 
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str

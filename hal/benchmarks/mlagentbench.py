@@ -11,9 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class MLAgentBenchBenchmark(BaseBenchmark):
-    def __init__(self, agent_dir, config):
-        super().__init__(agent_dir, config)
-        self.benchmark_name = "mlagentbench"
+    def __init__(self, benchmark_name: str, agent_dir, config):
+        super().__init__(benchmark_name, agent_dir, config)
         self.benchmark_dir = os.path.join(os.path.dirname(__file__), "MLAgentBench")
         self.tasks = [
             # "llama-inference",

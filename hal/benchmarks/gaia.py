@@ -22,17 +22,9 @@ class GaiaBenchmark(BaseBenchmark):
     """Gaia benchmark implementation"""
 
     def __init__(
-        self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = "gaia"
+        self, benchmark_name: str, agent_dir: str, config: Dict[str, Any]
     ):
-        self.benchmark_name = benchmark_name
-        self.setup_script = None
-        self.requires_sandbox = False
-        super().__init__(
-            agent_dir,
-            config,
-            requires_sandbox=self.requires_sandbox,
-            setup_script=self.setup_script,
-        )
+        super().__init__(benchmark_name, agent_dir, config)
 
         dataset = self._load_gaia_dataset(
             config_split=GAIA_DEFAULT_CONFIG, split="validation"

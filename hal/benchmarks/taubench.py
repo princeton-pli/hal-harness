@@ -16,19 +16,16 @@ class TauBenchBenchmark(BaseBenchmark):
 
     def __init__(
         self,
+        benchmark_name: str,
         agent_dir: str,
         config: Dict[str, Any],
-        benchmark_name: str = "taubench_retail",
     ):
-        self.benchmark_name = benchmark_name
         self.split = "retail" if benchmark_name == "taubench_retail" else "airline"
-        self.setup_script = "hal/benchmarks/taubench/taubench_setup.sh"
-        self.requires_sandbox = False
         super().__init__(
+            benchmark_name,
             agent_dir,
             config,
-            requires_sandbox=self.requires_sandbox,
-            setup_script=self.setup_script,
+            setup_script="hal/benchmarks/taubench/taubench_setup.sh",
         )
 
         # Load actual tasks from tau-bench to get instructions

@@ -9,26 +9,19 @@ class AppWorldBenchmark(BaseBenchmark):
 
     def __init__(
         self,
+        benchmark_name: str,
         agent_dir: str,
         config: Dict[str, Any],
-        benchmark_name: str = "appworld_test_normal",
     ):
-        self.benchmark_name = benchmark_name
         if benchmark_name not in ["appworld_test_normal", "appworld_test_challenge"]:
             raise ValueError(
                 "Invalid benchmark name. Use 'appworld_test_normal' or 'appworld_test_challenge'."
             )
         self.split = benchmark_name.removeprefix("appworld_")
-        self.setup_script = os.path.join(
+        setup_script = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "appworld", "setup.sh"
         )
-        self.requires_sandbox = False
-        super().__init__(
-            agent_dir,
-            config,
-            requires_sandbox=self.requires_sandbox,
-            setup_script=self.setup_script,
-        )
+        super().__init__(benchmark_name, agent_dir, config, setup_script=setup_script)
         # Load dataset splits
         self.splits = {
             "train": self._read_task_ids("train.txt"),
