@@ -1,7 +1,5 @@
 import logging
 
-from tau_bench.envs import get_env
-
 logger = logging.getLogger(__name__)
 
 
@@ -72,6 +70,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     litellm.acompletion = acompletion_with_reasoning
 
     from tau_bench.agents.chat_react_agent import ChatReActAgent
+    from tau_bench.envs import get_env
 
     ### ENV SETUP (usually this should be untouched) ###
     isolated_env = get_env(
