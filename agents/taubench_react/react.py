@@ -1,4 +1,32 @@
+import logging
+
 from tau_bench.envs import get_env
+
+logger = logging.getLogger(__name__)
+
+
+def _inject_reasoning_kwargs(
+    completion_kwargs: dict,
+    *,
+    model_name: str,
+    reasoning_effort: str | None,
+) -> None:
+    """Inject reasoning parameters into litellm completion kwargs in-place.
+
+    Only modifies kwargs when the call targets our agent model and a
+    reasoning_effort was requested.
+    """
+    if reasoning_effort is None:
+        return
+    if completion_kwargs.get("model") != model_name:
+        return
+
+    completion_kwargs["temperature"] = 1.0
+    completion_kwargs["reasoning"] = {"effort": reasoning_effort}
+    completion_kwargs.pop("reasoning_effort", None)
+    logger.warning(
+        "Injecting reasoning.effort=%s for model %s", reasoning_effort, model_name
+    )
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
@@ -10,35 +38,34 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     litellm.drop_params = True
 
-    original_completion = litellm.completion
-    original_acompletion = litellm.acompletion
-
     model_name = kwargs["model_name"]
     is_proxy_model = model_name.startswith(("openrouter/", "together_ai/", "gemini/"))
     is_native_openai = kwargs["provider"] == "openai" and not is_proxy_model
     if is_native_openai and not model_name.startswith("responses/"):
         model_name = f"responses/{model_name}"
 
+    reasoning_effort = kwargs.get("reasoning_effort") if is_native_openai else None
+
+    # Monkey-patch litellm completion functions to inject reasoning parameters.
+    # This is necessary because tau-bench calls litellm internally and its agent
+    # API provides no way to pass reasoning params through.
+    original_completion = litellm.completion
+    original_acompletion = litellm.acompletion
+
     def completion_with_reasoning(*args, **completion_kwargs):
-        if (
-            completion_kwargs.get("model") == model_name
-            and is_native_openai
-            and "reasoning_effort" in kwargs
-        ):
-            completion_kwargs["temperature"] = 1.0
-            completion_kwargs["reasoning"] = {"effort": kwargs["reasoning_effort"]}
-            completion_kwargs.pop("reasoning_effort", None)
+        _inject_reasoning_kwargs(
+            completion_kwargs,
+            model_name=model_name,
+            reasoning_effort=reasoning_effort,
+        )
         return original_completion(*args, **completion_kwargs)
 
     async def acompletion_with_reasoning(*args, **completion_kwargs):
-        if (
-            completion_kwargs.get("model") == model_name
-            and is_native_openai
-            and "reasoning_effort" in kwargs
-        ):
-            completion_kwargs["temperature"] = 1.0
-            completion_kwargs["reasoning"] = {"effort": kwargs["reasoning_effort"]}
-            completion_kwargs.pop("reasoning_effort", None)
+        _inject_reasoning_kwargs(
+            completion_kwargs,
+            model_name=model_name,
+            reasoning_effort=reasoning_effort,
+        )
         return await original_acompletion(*args, **completion_kwargs)
 
     litellm.completion = completion_with_reasoning
