@@ -25,7 +25,6 @@ class TestBenchmarkConfigs:
 
     def test_has_expected_benchmarks(self):
         assert "taubench_airline" in BENCHMARK_CONFIGS
-        assert "gaia" in BENCHMARK_CONFIGS
 
     def test_each_entry_has_required_keys(self):
         required = {

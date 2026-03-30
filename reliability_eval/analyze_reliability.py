@@ -104,6 +104,19 @@ from reliability_eval.plots.reports import (
     save_detailed_json,
 )
 
+from reliability_eval.plots.social import (
+    plot_social_gpt52_vs_gpt54_calibration,
+    plot_social_gpt52_vs_gpt54_discrimination,
+    plot_social_gpt52_vs_gpt54_discrimination_2,
+    plot_social_overall_reliability,
+    plot_social_openai_overall,
+    plot_social_openai_detailed,
+    plot_social_openai_consistency_tiles,
+    plot_social_outcome_consistency,
+    plot_social_calibration,
+    plot_social_discrimination,
+)
+
 warnings.filterwarnings("ignore")
 
 # MATPLOTLIB STYLE FOR ICML PAPER
@@ -428,6 +441,20 @@ def main():
             plot_reasoning_vs_nonreasoning(benchmark_data, combined_output_dir)
             plot_taubench_clean_vs_orig(benchmark_data, combined_output_dir)
             generate_full_latex_table(benchmark_data, combined_output_dir)
+            plot_social_overall_reliability(benchmark_data, combined_output_dir)
+            plot_social_openai_overall(benchmark_data, combined_output_dir)
+            plot_social_openai_detailed(benchmark_data, combined_output_dir)
+            plot_social_gpt52_vs_gpt54_calibration(benchmark_data, combined_output_dir)
+            plot_social_gpt52_vs_gpt54_discrimination(
+                benchmark_data, combined_output_dir
+            )
+            plot_social_gpt52_vs_gpt54_discrimination_2(
+                benchmark_data, combined_output_dir
+            )
+            plot_social_openai_consistency_tiles(benchmark_data, combined_output_dir)
+            plot_social_outcome_consistency(benchmark_data, combined_output_dir)
+            plot_social_calibration(benchmark_data, combined_output_dir)
+            plot_social_discrimination(benchmark_data, combined_output_dir)
         else:
             print("  ⚠️  Not enough benchmark data for combined plot")
 

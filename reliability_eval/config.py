@@ -55,6 +55,23 @@ AGENT_CONFIGS = [
     #     "reasoning_effort": "xhigh",
     #     "benchmarks": ["taubench_airline"],
     # },
+    # {
+    #     "name": "taubench_toolcalling_gpt_5_4",
+    #     "agent_dir": "agents/taubench_tool_calling",
+    #     "agent_function": "tool_calling.run",
+    #     "model_name": "gpt-5.4",
+    #     "provider": "openai",
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "taubench_toolcalling_gpt_5_4_xhigh",
+    #     "agent_dir": "agents/taubench_tool_calling",
+    #     "agent_function": "tool_calling.run",
+    #     "model_name": "gpt-5.4",
+    #     "provider": "openai",
+    #     "reasoning_effort": "xhigh",
+    #     "benchmarks": ["taubench_airline"],
+    # },
     # -------------------------------------------------------------------------
     # Anthropic Models
     # -------------------------------------------------------------------------
@@ -104,14 +121,14 @@ AGENT_CONFIGS = [
     #     "provider": "google",
     #     "benchmarks": ["taubench_airline"],
     # },
-    # {
-    #     "name": "taubench_toolcalling_gemini_2_5_flash",
-    #     "agent_dir": "agents/taubench_tool_calling",
-    #     "agent_function": "tool_calling.run",
-    #     "model_name": "gemini/gemini-2.5-flash",
-    #     "provider": "google",
-    #     "benchmarks": ["taubench_airline"],
-    # },
+    {
+        "name": "taubench_toolcalling_gemini_2_5_flash",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "gemini/gemini-2.5-flash",
+        "provider": "google",
+        "benchmarks": ["taubench_airline"],
+    },
     # {
     #     "name": "taubench_toolcalling_gemini_2_5_pro",
     #     "agent_dir": "agents/taubench_tool_calling",
@@ -191,49 +208,68 @@ AGENT_CONFIGS = [
     #     "provider": "openai",
     #     "benchmarks": ["gaia"],
     # },
-    {
-        "name": "taubench_codex_gpt_5_2",
-        "agent_dir": "agents/openai_codex_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-5.2-2025-12-11",
-        "provider": "openai",
-        "task_timeout": 1800,  # 30 min — xhigh reasoning + multi-turn CLI needs more time
-        "benchmarks": ["taubench_airline"],
-    },
-    {
-        "name": "taubench_codex_gpt_5_2_medium",
-        "agent_dir": "agents/openai_codex_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-5.2-2025-12-11",
-        "provider": "openai",
-        "reasoning_effort": "medium",
-        "task_timeout": 1800,  # 30 min — xhigh reasoning + multi-turn CLI needs more time
-        "benchmarks": ["taubench_airline"],
-    },
-    {
-        "name": "taubench_codex_gpt_5_2_codex_medium",
-        "agent_dir": "agents/openai_codex_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-5.2-codex",
-        "provider": "openai",
-        "reasoning_effort": "medium",
-        "task_timeout": 1800,
-        "benchmarks": ["taubench_airline"],
-    },
+    # {
+    #     "name": "taubench_codex_gpt_5_2",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.2-2025-12-11",
+    #     "provider": "openai",
+    #     "task_timeout": 1800,  # 30 min — xhigh reasoning + multi-turn CLI needs more time
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "taubench_codex_gpt_5_2_medium",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.2-2025-12-11",
+    #     "provider": "openai",
+    #     "reasoning_effort": "medium",
+    #     "task_timeout": 1800,  # 30 min — xhigh reasoning + multi-turn CLI needs more time
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "taubench_codex_gpt_5_2_codex_medium",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.2-codex",
+    #     "provider": "openai",
+    #     "reasoning_effort": "medium",
+    #     "task_timeout": 1800,
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "taubench_codex_gpt_5_4",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.4",
+    #     "provider": "openai",
+    #     "task_timeout": 1800,
+    #     "benchmarks": ["taubench_airline"],
+    # },
+    # {
+    #     "name": "taubench_codex_gpt_5_4_medium",
+    #     "agent_dir": "agents/openai_codex_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.4",
+    #     "provider": "openai",
+    #     "reasoning_effort": "medium",
+    #     "task_timeout": 1800,
+    #     "benchmarks": ["taubench_airline"],
+    # },
     # =========================================================================
     # GAIA Benchmark Agents (using hal_generalist_agent)
     # =========================================================================
     # -------------------------------------------------------------------------
     # OpenAI Models (GAIA)
     # -------------------------------------------------------------------------
-    {
-        "name": "gaia_generalist_gpt_4o_mini",
-        "agent_dir": "agents/hal_generalist_agent",
-        "agent_function": "main.run",
-        "model_name": "gpt-4o-mini-2024-07-18",
-        "benchmarks": ["gaia"],
-        "extra_agent_args": {"temperature": 0.0},
-    },
+    # {
+    #     "name": "gaia_generalist_gpt_4o_mini",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-4o-mini-2024-07-18",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {"temperature": 0.0},
+    # },
     # {
     #     "name": "gaia_generalist_gpt_4_turbo",
     #     "agent_dir": "agents/hal_generalist_agent",
@@ -269,6 +305,27 @@ AGENT_CONFIGS = [
     #     "agent_dir": "agents/hal_generalist_agent",
     #     "agent_function": "main.run",
     #     "model_name": "gpt-5.2-2025-12-11",
+    #     "reasoning_effort": "medium",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gpt_5_4",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.4",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gpt_5_4_medium",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.4",
     #     "reasoning_effort": "medium",
     #     "benchmarks": ["gaia"],
     #     "extra_agent_args": {
@@ -407,16 +464,16 @@ BENCHMARK_CONFIGS = {
     #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
     #     ],
     # },
-    "gaia": {
-        "benchmark_name": "gaia",
-        "requires_docker": False,
-        "requires_vm": False,
-        "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
-        "compliance_constraints": [
-            "pii_handling_gaia",  # Q&A context - providing requested info is expected
-            "no_destructive_ops",
-            "safe_code_execution",  # Check for harmful code patterns
-            "no_unauthorized_access",  # Check for unauthorized resource access
-        ],
-    },
+    # "gaia": {
+    #     "benchmark_name": "gaia",
+    #     "requires_docker": False,
+    #     "requires_vm": False,
+    #     "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
+    #     "compliance_constraints": [
+    #         "pii_handling_gaia",  # Q&A context - providing requested info is expected
+    #         "no_destructive_ops",
+    #         "safe_code_execution",  # Check for harmful code patterns
+    #         "no_unauthorized_access",  # Check for unauthorized resource access
+    #     ],
+    # },
 }
