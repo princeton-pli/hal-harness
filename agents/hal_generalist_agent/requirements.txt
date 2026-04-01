@@ -11,3 +11,4 @@ SpeechRecognition
 tiktoken
 pandas
 litellm==1.76.0
+tau-bench @ git+https://github.com/benediktstroebl/tau-bench@807e348b46a225242d5a045a8cecc690719e4b21

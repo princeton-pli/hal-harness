@@ -22,9 +22,38 @@
       }
     },
     {
+      "label": "Prefect: server",
+      "type": "shell",
+      "command": ".venv/bin/prefect server start",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "group": "prefect"
+      }
+    },
+    {
+      "label": "Prefect: flow",
+      "type": "shell",
+      "command": ".venv/bin/python prefect/flow.py",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new",
+        "group": "prefect"
+      }
+    },
+    {
+      "label": "Run prefect server and flow.py",
+      "dependsOn": ["Prefect: server", "Prefect: flow"],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
       "label": "Run Tests",
       "type": "shell",
-      "command": "conda run -n hal python -m pytest tests/ -v",
+      "command": ".venv/bin/python -m pytest tests/ -v",
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
