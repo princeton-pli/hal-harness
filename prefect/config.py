@@ -19,6 +19,11 @@ class EvalSpec:
     job_id: str
     code_sas_url: str  # read SAS for hal-harness.zip
     result_sas_url: str  # container-level write SAS for result uploads
+    extra_output_files: tuple[tuple[str, str], ...] = ()
+    # Per-agent extra files to upload from the VM after task completion.
+    # Each entry is (file_pattern, dest_subpath). file_pattern is matched relative
+    # to the task working directory unless it is an absolute path. dest_subpath is
+    # appended to {job_id}/logs/{azure_task_id}/ in the result container.
 
 
 # ---------------------------------------------------------------------------

@@ -33,6 +33,7 @@ def evaluation_harness(
             job_id=job_id,
             code_sas_url=code_sas_url,
             result_sas_url=res_sas_url,
+            extra_output_files=tuple(agent.get("extra_output_files", ())),
         )
         for agent in agents
         for benchmark, tasks in benchmark_tasks.items()

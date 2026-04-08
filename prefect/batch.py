@@ -153,6 +153,21 @@ def _submit_batch_task(spec: EvalSpec) -> str:
                     upload_condition=batch_models.OutputFileUploadCondition.task_success,
                 ),
             ),
+            *[
+                batch_models.OutputFile(
+                    file_pattern=pattern,
+                    destination=batch_models.OutputFileDestination(
+                        container=batch_models.OutputFileBlobContainerDestination(
+                            container_url=spec.result_sas_url,
+                            path=f"{spec.job_id}/logs/{azure_task_id}/{subpath}",
+                        )
+                    ),
+                    upload_options=batch_models.OutputFileUploadOptions(
+                        upload_condition=batch_models.OutputFileUploadCondition.task_completion,
+                    ),
+                )
+                for pattern, subpath in spec.extra_output_files
+            ],
             batch_models.OutputFile(
                 file_pattern="../std*.txt",
                 destination=batch_models.OutputFileDestination(
