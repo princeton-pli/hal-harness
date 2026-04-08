@@ -10,10 +10,12 @@ class BenchmarkManager:
         agent_dir: str = "agent/",
         config: Optional[Dict[str, Any]] = {},
         agent_args: Optional[Dict[str, Any]] = {},
+        benchmark_args: Optional[Dict[str, Any]] = {},
     ):
         self.config = config
         self.agent_dir = agent_dir
         self.agent_args = agent_args
+        self.benchmark_args = benchmark_args or {}
         self.benchmarks = [
             "gaia",
             "scicode",
@@ -71,15 +73,18 @@ class BenchmarkManager:
         elif benchmark_name == "corebench_easy":
             from .benchmarks.corebench import CoreBenchEasy
 
-            benchmark = CoreBenchEasy(self.agent_dir, self.config)
+            use_updated = str(self.benchmark_args.get('use_updated', '')).lower() in ('true', '1', 'yes')
+            benchmark = CoreBenchEasy(self.agent_dir, self.config, use_updated=use_updated)
         elif benchmark_name == "corebench_medium":
             from .benchmarks.corebench import CoreBenchMedium
 
-            benchmark = CoreBenchMedium(self.agent_dir, self.config)
+            use_updated = str(self.benchmark_args.get('use_updated', '')).lower() in ('true', '1', 'yes')
+            benchmark = CoreBenchMedium(self.agent_dir, self.config, use_updated=use_updated)
         elif benchmark_name == "corebench_hard":
             from .benchmarks.corebench import CoreBenchHard
 
-            benchmark = CoreBenchHard(self.agent_dir, self.config)
+            use_updated = str(self.benchmark_args.get('use_updated', '')).lower() in ('true', '1', 'yes')
+            benchmark = CoreBenchHard(self.agent_dir, self.config, use_updated=use_updated)
         elif benchmark_name == "scienceagentbench":
             from .benchmarks.scienceagentbench import ScienceAgentBench
 

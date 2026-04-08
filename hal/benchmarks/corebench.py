@@ -18,15 +18,24 @@ logger = logging.getLogger(__name__)
 class CoreBench(BaseBenchmark):
     """Base class for CoreBench benchmarks of different difficulty levels"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], use_updated: bool = False):
         # Set benchmark_name in subclasses
 
-        # Load tasks from core_test.json
-        core_test_path = os.path.join(
-            os.path.dirname(__file__), "corebench", "core_test.json"
-        )
+        # Choose dataset file based on use_updated flag
+        if use_updated:
+            core_test_path = os.path.join(
+                os.path.dirname(__file__), "corebench", "core_test_updated.json"
+            )
+            if not os.path.exists(core_test_path):
+                raise FileNotFoundError(
+                    f"Updated dataset not found at {core_test_path}"
+                )
+        else:
+            core_test_path = os.path.join(
+                os.path.dirname(__file__), "corebench", "core_test.json"
+            )
 
-        # Check if core_test.json exists, if not, throw an error with instructions to decrypt
+        # Check if the dataset file exists, if not, throw an error with instructions to decrypt
         if not os.path.exists(core_test_path):
             encrypted_file = os.path.join(
                 os.path.dirname(__file__), "corebench", "core_test.json.gpg"
@@ -38,6 +47,7 @@ class CoreBench(BaseBenchmark):
                 f'Have you decrypted core_test.json.gpg? Use the following command:\n{decrypt_command}. The password is "reproducibility".'
             )
 
+        logger.info(f"Loading CoreBench dataset from {core_test_path} (use_updated={use_updated})")
         with open(core_test_path, "r") as f:
             dataset = json.load(f)
 
@@ -438,9 +448,9 @@ class CoreBench(BaseBenchmark):
 class CoreBenchEasy(CoreBench):
     """CoreBench benchmark with easy difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], use_updated: bool = False):
         self.benchmark_name = "corebench_easy"
-        super().__init__(agent_dir, config)
+        super().__init__(agent_dir, config, use_updated=use_updated)
 
     def _construct_prompt(self, task):
         """
@@ -473,9 +483,9 @@ class CoreBenchEasy(CoreBench):
 class CoreBenchMedium(CoreBench):
     """CoreBench benchmark with medium difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], use_updated: bool = False):
         self.benchmark_name = "corebench_medium"
-        super().__init__(agent_dir, config)
+        super().__init__(agent_dir, config, use_updated=use_updated)
 
     def _construct_prompt(self, task):
         """
@@ -524,9 +534,9 @@ class CoreBenchMedium(CoreBench):
 class CoreBenchHard(CoreBench):
     """CoreBench benchmark with hard difficulty level"""
 
-    def __init__(self, agent_dir: str, config: Dict[str, Any]):
+    def __init__(self, agent_dir: str, config: Dict[str, Any], use_updated: bool = False):
         self.benchmark_name = "corebench_hard"
-        super().__init__(agent_dir, config)
+        super().__init__(agent_dir, config, use_updated=use_updated)
 
     def _construct_prompt(self, task):
         """

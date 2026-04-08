@@ -40,6 +40,7 @@ class AgentRunner:
         variation_index: Optional[int] = None,
         results_dir: str = "results",
         task_ids: Optional[str] = None,
+        benchmark_args: Optional[Dict[str, Any]] = None,
     ):
         # Validate agent_function format
         if not isinstance(agent_function, str) or "." not in agent_function:
@@ -72,7 +73,7 @@ class AgentRunner:
             )
 
         # Initialize benchmark first
-        self.benchmark_manager = BenchmarkManager(agent_dir, config)
+        self.benchmark_manager = BenchmarkManager(agent_dir, config, benchmark_args=benchmark_args or {})
         self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
         self.benchmark.agent_args = agent_args
 
