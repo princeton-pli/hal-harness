@@ -19,6 +19,7 @@ class EvalSpec:
     job_id: str
     code_sas_url: str  # read SAS for hal-harness.zip
     result_sas_url: str  # container-level write SAS for result uploads
+    capsule_sas_url: str = ""  # read SAS for the per-task corebench capsule tarball, if any
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +44,10 @@ AZURE_STORAGE_ACCOUNT_KEY = os.getenv(
     "AZURE_STORAGE_ACCOUNT_KEY", ""
 )  # required for SAS
 SAS_EXPIRY_HOURS = 48
+
+# Blob name prefix where corebench capsules live (uploaded once via upload_capsules.py).
+# Each capsule is stored as: {CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz
+CAPSULES_BLOB_PREFIX = os.getenv("CAPSULES_BLOB_PREFIX", "corebench/capsules")
 
 POLL_INTERVAL_SECONDS = 15  # how often to poll Azure Batch task state
 

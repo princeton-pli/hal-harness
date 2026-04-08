@@ -5,7 +5,7 @@ from prefect.runtime import flow_run as current_flow_run
 
 from batch import create_batch_job, resize_pool, terminate_batch_job
 from config import AGENTS, BENCHMARK_TASKS, MODELS, EvalSpec
-from storage import upload_code_zip, result_container_sas
+from storage import capsule_blob_sas, result_container_sas, upload_code_zip
 from tasks import run_eval_task
 
 
@@ -33,6 +33,9 @@ def evaluation_harness(
             job_id=job_id,
             code_sas_url=code_sas_url,
             result_sas_url=res_sas_url,
+            capsule_sas_url=(
+                capsule_blob_sas(task_id) if benchmark.startswith("corebench") else ""
+            ),
         )
         for agent in agents
         for benchmark, tasks in benchmark_tasks.items()

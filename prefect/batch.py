@@ -126,7 +126,17 @@ def _submit_batch_task(spec: EvalSpec) -> str:
             batch_models.ResourceFile(
                 http_url=spec.code_sas_url,
                 file_path="hal-harness.zip",
-            )
+            ),
+            *(
+                [
+                    batch_models.ResourceFile(
+                        http_url=spec.capsule_sas_url,
+                        file_path=f"{spec.task_id}.tar.gz",
+                    )
+                ]
+                if spec.capsule_sas_url
+                else []
+            ),
         ],
         output_files=[
             batch_models.OutputFile(

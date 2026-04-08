@@ -53,11 +53,16 @@ class CoreBench(BaseBenchmark):
             capsule_id = task["capsule_id"]
             capsule_dir = os.path.join(capsules_dir, capsule_id)
 
-            # Check if capsule directory exists, if not download and extract it
+            # Skip capsules not present on disk. Capsules are distributed via
+            # blob storage in the prefect/Azure Batch flow (one capsule per task),
+            # and the upstream auto-download is broken for ~1/4 of CORE-bench
+            # capsules anyway. Local users should pre-populate the capsules dir
+            # (e.g. from capsules_share.tar.gz) before running.
             if not os.path.exists(capsule_dir):
-                self.__download_and_extract_capsule(
-                    capsules_dir, capsule_id, task_number=i, total_tasks=total_tasks
+                print(
+                    f"[corebench] Skipping {capsule_id}: not present at {capsule_dir}"
                 )
+                continue
 
             # Create task entry with prompt
             # Use the _construct_prompt method if it exists in the subclass, otherwise use the default prompt
