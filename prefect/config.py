@@ -24,6 +24,7 @@ class EvalSpec:
     # Each entry is (file_pattern, dest_subpath). file_pattern is matched relative
     # to the task working directory unless it is an absolute path. dest_subpath is
     # appended to {job_id}/logs/{azure_task_id}/ in the result container.
+    capsule_sas_url: str = ""  # read SAS for the per-task corebench capsule tarball, if any
 
 
 # ---------------------------------------------------------------------------
@@ -48,6 +49,10 @@ AZURE_STORAGE_ACCOUNT_KEY = os.getenv(
     "AZURE_STORAGE_ACCOUNT_KEY", ""
 )  # required for SAS
 SAS_EXPIRY_HOURS = 48
+
+# Blob name prefix where corebench capsules live (uploaded once via upload_capsules.py).
+# Each capsule is stored as: {CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz
+CAPSULES_BLOB_PREFIX = os.getenv("CAPSULES_BLOB_PREFIX", "corebench/capsules")
 
 POLL_INTERVAL_SECONDS = 15  # how often to poll Azure Batch task state
 

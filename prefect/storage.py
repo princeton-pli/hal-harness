@@ -24,6 +24,7 @@ from config import (
     AZURE_STORAGE_ACCOUNT_NAME,
     AZURE_STORAGE_ACCOUNT_URL,
     AZURE_STORAGE_CONTAINER_NAME,
+    CAPSULES_BLOB_PREFIX,
     SAS_EXPIRY_HOURS,
 )
 
@@ -35,7 +36,10 @@ _ZIP_EXCLUDES = {
     "results",
     "__pycache__",
     ".mypy_cache",
-    "hal/benchmarks/corebench",
+    # Exclude only the bulky capsule data, NOT corebench.py or the rest of the
+    # corebench/ tree. Capsules are distributed via blob storage (upload_capsules.py)
+    # and pulled per-task as a ResourceFile by Azure Batch.
+    "hal/benchmarks/corebench/capsules",
     "hal/benchmarks/USACO",
     "hal/benchmarks/appworld",
     "hal/benchmarks/scienceagentbench",
@@ -126,6 +130,32 @@ def upload_code_zip(job_id: str) -> str:
     sas_url = f"{AZURE_STORAGE_ACCOUNT_URL}/{AZURE_STORAGE_CONTAINER_NAME}/{blob_name}?{sas_token}"
     print(f"Code zip uploaded | sas_url_prefix={sas_url[:80]}...")
     return sas_url
+
+
+def capsule_blob_sas(capsule_id: str) -> str:
+    """
+    Return a 48h read-only SAS URL for a single corebench capsule tarball stored
+    at {CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz in the runs container.
+
+    The blob is expected to exist already; upload_capsules.py is the one-shot
+    bootstrap that puts capsules into blob storage.
+    """
+    if not AZURE_STORAGE_ACCOUNT_KEY:
+        raise RuntimeError(
+            "AZURE_STORAGE_ACCOUNT_KEY is required for SAS generation. "
+            "Set it via the environment variable."
+        )
+    blob_name = f"{CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz"
+    expiry = datetime.now(timezone.utc) + timedelta(hours=SAS_EXPIRY_HOURS)
+    sas_token = generate_blob_sas(
+        account_name=AZURE_STORAGE_ACCOUNT_NAME,
+        container_name=AZURE_STORAGE_CONTAINER_NAME,
+        blob_name=blob_name,
+        account_key=AZURE_STORAGE_ACCOUNT_KEY,
+        permission=BlobSasPermissions(read=True),
+        expiry=expiry,
+    )
+    return f"{AZURE_STORAGE_ACCOUNT_URL}/{AZURE_STORAGE_CONTAINER_NAME}/{blob_name}?{sas_token}"
 
 
 def result_container_sas() -> str:

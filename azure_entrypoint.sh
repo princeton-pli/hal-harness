@@ -24,6 +24,16 @@ echo "agent=$AGENT_NAME function=$AGENT_FUNCTION dir=$AGENT_DIR"
 echo "benchmark=$BENCHMARK task_id=$TASK_ID model=$MODEL"
 echo "python=$(python3 --version)"
 
+# For corebench, the per-task capsule was downloaded as a ResourceFile next to
+# hal-harness.zip (one level up from this repo). Extract it into the capsules dir
+# so corebench.py finds it on disk and skips its (broken, partial) auto-download.
+CAPSULE_TARBALL="../${TASK_ID}.tar.gz"
+if [ -f "$CAPSULE_TARBALL" ]; then
+  echo "Extracting capsule $TASK_ID from $CAPSULE_TARBALL..."
+  mkdir -p hal/benchmarks/corebench/capsules
+  tar xzf "$CAPSULE_TARBALL" -C hal/benchmarks/corebench/capsules
+fi
+
 echo "Installing packages..."
 python3 -m pip install --quiet --break-system-packages -e ".[dev]"
 
