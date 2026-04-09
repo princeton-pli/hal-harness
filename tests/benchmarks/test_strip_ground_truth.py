@@ -65,11 +65,17 @@ class TestStripGroundTruth:
         class NestedStub(_StubBenchmark):
             def _strip_ground_truth(self, task):
                 return {
-                    k: ([{sk: sv for sk, sv in s.items() if sk != "secret"} for s in v] if k == "steps" else v)
+                    k: (
+                        [{sk: sv for sk, sv in s.items() if sk != "secret"} for s in v]
+                        if k == "steps"
+                        else v
+                    )
                     for k, v in task.items()
                 }
 
-        data = {"t1": {"steps": [{"name": "a", "secret": 1}, {"name": "b", "secret": 2}]}}
+        data = {
+            "t1": {"steps": [{"name": "a", "secret": 1}, {"name": "b", "secret": 2}]}
+        }
         bench = NestedStub(data)
         ds = bench.get_dataset()
         assert ds == {"t1": {"steps": [{"name": "a"}, {"name": "b"}]}}

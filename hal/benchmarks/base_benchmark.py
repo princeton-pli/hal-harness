@@ -78,7 +78,9 @@ class BaseBenchmark(ABC):
         """Get the benchmark dataset with ground truth fields stripped."""
         if self._dataset is None:
             has_gt_keys = bool(self._ground_truth_keys)
-            has_override = type(self)._strip_ground_truth is not BaseBenchmark._strip_ground_truth
+            has_override = (
+                type(self)._strip_ground_truth is not BaseBenchmark._strip_ground_truth
+            )
             if not has_gt_keys and not has_override and not self._no_ground_truth:
                 logger.warning(
                     "%s does not define '_ground_truth_keys' and does not override "
