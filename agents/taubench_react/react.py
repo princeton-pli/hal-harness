@@ -1,12 +1,76 @@
-from tau_bench.envs import get_env
+import logging
 
-from tau_bench.agents.chat_react_agent import ChatReActAgent
+logger = logging.getLogger(__name__)
+
+
+def _inject_reasoning_kwargs(
+    completion_kwargs: dict,
+    *,
+    model_name: str,
+    reasoning_effort: str | None,
+) -> None:
+    """Inject reasoning parameters into litellm completion kwargs in-place.
+
+    Only modifies kwargs when the call targets our agent model and a
+    reasoning_effort was requested.
+    """
+    if reasoning_effort is None:
+        return
+    if completion_kwargs.get("model") != model_name:
+        return
+
+    completion_kwargs["temperature"] = 1.0
+    completion_kwargs["reasoning"] = {"effort": reasoning_effort}
+    completion_kwargs.pop("reasoning_effort", None)
+    logger.warning(
+        "Injecting reasoning.effort=%s for model %s", reasoning_effort, model_name
+    )
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     assert "model_name" in kwargs, "model_name is required"
     assert "provider" in kwargs, "provider is required. choose from openai or anthropic"
     task_id = list(input.keys())[0]
+
+    import litellm
+
+    litellm.drop_params = True
+
+    model_name = kwargs["model_name"]
+    is_proxy_model = model_name.startswith(("openrouter/", "together_ai/", "gemini/"))
+    is_native_openai = kwargs["provider"] == "openai" and not is_proxy_model
+    if is_native_openai and not model_name.startswith("responses/"):
+        model_name = f"responses/{model_name}"
+
+    reasoning_effort = kwargs.get("reasoning_effort") if is_native_openai else None
+
+    # Monkey-patch litellm completion functions to inject reasoning parameters.
+    # This is necessary because tau-bench calls litellm internally and its agent
+    # API provides no way to pass reasoning params through.
+    original_completion = litellm.completion
+    original_acompletion = litellm.acompletion
+
+    def completion_with_reasoning(*args, **completion_kwargs):
+        _inject_reasoning_kwargs(
+            completion_kwargs,
+            model_name=model_name,
+            reasoning_effort=reasoning_effort,
+        )
+        return original_completion(*args, **completion_kwargs)
+
+    async def acompletion_with_reasoning(*args, **completion_kwargs):
+        _inject_reasoning_kwargs(
+            completion_kwargs,
+            model_name=model_name,
+            reasoning_effort=reasoning_effort,
+        )
+        return await original_acompletion(*args, **completion_kwargs)
+
+    litellm.completion = completion_with_reasoning
+    litellm.acompletion = acompletion_with_reasoning
+
+    from tau_bench.agents.chat_react_agent import ChatReActAgent
+    from tau_bench.envs import get_env
 
     ### ENV SETUP (usually this should be untouched) ###
     isolated_env = get_env(
@@ -24,7 +88,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     agent = ChatReActAgent(
         tools_info=isolated_env.tools_info,
         wiki=isolated_env.wiki,
-        model=kwargs["model_name"],
+        model=model_name,
         provider=kwargs["provider"],
         use_reasoning=True,
         temperature=kwargs["temperature"] if "temperature" in kwargs else 0.0,
