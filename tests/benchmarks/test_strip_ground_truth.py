@@ -1,5 +1,4 @@
 import logging
-from typing import Any, Dict
 
 from hal.benchmarks.base_benchmark import BaseBenchmark
 
