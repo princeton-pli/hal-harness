@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 class USACOBenchmark(BaseBenchmark):
     """USACO benchmark implementation"""
 
+    _ground_truth_keys = {"solution", "solution_python3", "solution_english"}
+
     def __init__(self, agent_dir: str, config: Dict[str, Any]):
         assert os.path.exists(os.path.join(os.path.dirname(__file__), "USACO/data")), (
             "data folder in USACO benchmark directory (hal/benchmarks/USACO) not found. Please download and extract the USACO dataset as described in the README."

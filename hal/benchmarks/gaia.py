@@ -21,6 +21,8 @@ GAIA_LEVELS = {
 class GaiaBenchmark(BaseBenchmark):
     """Gaia benchmark implementation"""
 
+    _ground_truth_keys = {"Final answer", "Annotator Metadata"}
+
     def __init__(
         self, agent_dir: str, config: Dict[str, Any], benchmark_name: str = "gaia"
     ):

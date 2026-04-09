@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 class BaseBenchmark(ABC):
     """Base class for all benchmarks"""
 
+    _ground_truth_keys: set = set()
+    _no_ground_truth: bool = False
+
     def __init__(
         self,
         agent_dir: str,
@@ -36,6 +39,7 @@ class BaseBenchmark(ABC):
         self.requires_sandbox = (
             requires_sandbox  # Whether benchmark requires VM execution
         )
+        self._dataset: Optional[Dict[str, Any]] = None
 
     def _normalize_agent_output(self, agent_output: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -61,9 +65,35 @@ class BaseBenchmark(ABC):
         """Evaluate agent outputs"""
         raise NotImplementedError("Benchmark must implement evaluate_output")
 
+    def _strip_ground_truth(self, task: dict) -> dict:
+        """Remove ground truth keys from a single task dict.
+
+        Override for non-flat stripping (e.g., nested keys).
+        """
+        if not self._ground_truth_keys:
+            return task
+        return {k: v for k, v in task.items() if k not in self._ground_truth_keys}
+
     def get_dataset(self) -> Dict[str, Any]:
-        """Get the benchmark dataset. Override if needed."""
-        return self.benchmark
+        """Get the benchmark dataset with ground truth fields stripped."""
+        if self._dataset is None:
+            has_gt_keys = bool(self._ground_truth_keys)
+            has_override = (
+                type(self)._strip_ground_truth is not BaseBenchmark._strip_ground_truth
+            )
+            if not has_gt_keys and not has_override and not self._no_ground_truth:
+                logger.warning(
+                    "%s does not define '_ground_truth_keys' and does not override "
+                    "'_strip_ground_truth'. If this benchmark's dataset contains ground "
+                    "truth, it may be leaked to agents. Set '_no_ground_truth = True' "
+                    "to silence this warning.",
+                    type(self).__name__,
+                )
+            self._dataset = {
+                tid: self._strip_ground_truth(task)
+                for tid, task in self.benchmark.items()
+            }
+        return self._dataset
 
     def get_run_dir(self, run_id: str) -> str:
         """Get the results directory for a specific run"""

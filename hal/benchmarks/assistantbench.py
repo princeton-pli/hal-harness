@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 class AssistantBenchBenchmark(BaseBenchmark):
     """AssistantBench benchmark implementation"""
 
+    _ground_truth_keys = {"answer"}
+
     def __init__(
         self,
         agent_dir: str,
