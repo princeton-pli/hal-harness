@@ -57,6 +57,8 @@ CACHE_PATH = os.path.join(os.path.dirname(__file__), "colbench/cache")
 class ColBenchBenchmark(BaseBenchmark):
     """ColBench benchmark implementation"""
 
+    _no_ground_truth = True  # hidden_information is used server-side for user simulation
+
     def __init__(
         self,
         agent_dir: str,

@@ -15,6 +15,7 @@ class BaseBenchmark(ABC):
     """Base class for all benchmarks"""
 
     _ground_truth_keys: set = set()
+    _no_ground_truth: bool = False
 
     def __init__(
         self,
@@ -76,6 +77,16 @@ class BaseBenchmark(ABC):
     def get_dataset(self) -> Dict[str, Any]:
         """Get the benchmark dataset with ground truth fields stripped."""
         if self._dataset is None:
+            has_gt_keys = bool(self._ground_truth_keys)
+            has_override = type(self)._strip_ground_truth is not BaseBenchmark._strip_ground_truth
+            if not has_gt_keys and not has_override and not self._no_ground_truth:
+                logger.warning(
+                    "%s does not define '_ground_truth_keys' and does not override "
+                    "'_strip_ground_truth'. If this benchmark's dataset contains ground "
+                    "truth, it may be leaked to agents. Set '_no_ground_truth = True' "
+                    "to silence this warning.",
+                    type(self).__name__,
+                )
             self._dataset = {
                 tid: self._strip_ground_truth(task)
                 for tid, task in self.benchmark.items()
