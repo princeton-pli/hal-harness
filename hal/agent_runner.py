@@ -26,7 +26,6 @@ class AgentRunner:
         config: Dict[str, Any],
         task_timeout: int,
         run_id: Optional[str] = None,
-        use_vm: bool = False,
         use_docker: bool = False,
         max_concurrent: int = 1,
         conda_env: Optional[str] = None,
@@ -59,16 +58,15 @@ class AgentRunner:
             not os.path.exists(requirements_path)
             and not conda_env
             and not use_docker
-            and not use_vm
         ):
             raise ValueError(
                 f"No requirements.txt found in agent directory: {agent_dir}"
             )
 
         # Validate runner options
-        if sum([bool(conda_env), use_vm, use_docker]) > 1:
+        if sum([bool(conda_env), use_docker]) > 1:
             raise ValueError(
-                "Only one of conda_env, use_vm, or use_docker can be set at a time."
+                "Only one of conda_env or use_docker can be set at a time."
             )
 
         # Initialize benchmark first
@@ -83,45 +81,19 @@ class AgentRunner:
                 results_dir, self.benchmark.benchmark_name
             )
 
-        # Check if any task requires GPU
-        has_gpu_task = False
-        if hasattr(self.benchmark, "benchmark") and isinstance(
-            self.benchmark.benchmark, dict
-        ):
-            for task_id, task_data in self.benchmark.benchmark.items():
-                if isinstance(task_data, dict) and task_data.get("gpu", False):
-                    has_gpu_task = True
-                    break
-
-        # Print warning if GPU tasks are present but not running on VM
-        if has_gpu_task and not use_vm:
-            logger.warning(
-                "Warning: This benchmark contains tasks that require GPU, but is not being run on a VM. "
-                "GPU tasks may not work correctly without VM execution. Use the --vm flag to run on a VM."
-            )
-
         self.run_command = run_command
 
         # Check if benchmark requires sandbox
-        if self.benchmark.requires_sandbox and not use_vm and not use_docker:
+        if self.benchmark.requires_sandbox and not use_docker:
             raise ValueError(
-                f"Benchmark {benchmark_name} requires sandbox execution. Please use --vm or --docker flag."
+                f"Benchmark {benchmark_name} requires sandbox execution. Please use --docker flag."
             )
 
         # Set run ID
         self.run_id = run_id or f"{benchmark_name}_{int(time.time())}"
 
         # Initialize appropriate runner with benchmark
-        if use_vm:
-            from .utils.virtual_machine_runner import VirtualMachineRunner
-
-            self.runner = VirtualMachineRunner(
-                max_concurrent=max_concurrent,
-                log_dir=self.benchmark.get_run_dir(self.run_id),
-                benchmark=self.benchmark,
-                task_timeout=task_timeout,
-            )
-        elif use_docker:
+        if use_docker:
             self.runner = DockerRunner(
                 max_concurrent=max_concurrent,
                 log_dir=self.benchmark.get_run_dir(self.run_id),
@@ -143,7 +115,6 @@ class AgentRunner:
         self.config = config
         self.max_concurrent = max_concurrent
         self.conda_env = conda_env
-        self.use_vm = use_vm
         self.use_docker = use_docker
         self.continue_run = continue_run
         self.ignore_errors = ignore_errors

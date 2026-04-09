@@ -82,7 +82,6 @@ DEFAULT_TASK_TIMEOUT = 2700
     default=os.path.join(os.path.dirname(__file__), "config.yaml"),
     help="Path to configuration file. (currently not used)",
 )
-@click.option("--vm", is_flag=True, help="Run the agent on azure VMs")
 @click.option(
     "--docker",
     is_flag=True,
@@ -163,7 +162,6 @@ def main(
     a,
     b,
     i,
-    vm,
     docker,
     max_tasks,
     prompt_sensitivity,
@@ -204,7 +202,7 @@ def main(
         log_dir = os.path.join(results_dir, benchmark, run_id)
         os.makedirs(log_dir, exist_ok=True)
         verbose_log_path = os.path.join(log_dir, f"{run_id}_verbose.log")
-        setup_logging(log_dir, run_id, use_vm=vm)
+        setup_logging(log_dir, run_id)
 
         logger.info("HAL Harness")
 
@@ -216,9 +214,9 @@ def main(
             validate_model_pricing(agent_args["model_name"])
 
         # Validate runner options
-        if sum([bool(conda_env_name), vm, docker]) > 1:
+        if sum([bool(conda_env_name), docker]) > 1:
             logger.error(
-                "Only one of --conda_env_name, --vm, or --docker can be specified. Exiting..."
+                "Only one of --conda_env_name or --docker can be specified. Exiting..."
             )
             sys.exit(1)
 
@@ -239,7 +237,6 @@ def main(
             max_concurrent=max_concurrent,
             conda_env_name=conda_env_name,
             log_dir=log_dir,
-            vm=vm,
             docker=docker,
             continue_run=continue_run,
             ignore_errors=ignore_errors,
@@ -260,7 +257,6 @@ def main(
                 benchmark_name=benchmark,
                 config=config,
                 run_id=run_id,  # Now guaranteed to have a value
-                use_vm=vm,
                 use_docker=docker,
                 max_concurrent=max_concurrent,
                 conda_env=conda_env_name,

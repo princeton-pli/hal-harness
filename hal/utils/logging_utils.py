@@ -16,13 +16,12 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
-def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
+def setup_logging(log_dir: str, run_id: str) -> None:
     """Setup logging configuration.
 
     Args:
         log_dir: Directory for log files
         run_id: Unique run identifier
-        use_vm: Unused; kept for API compatibility.
     """
     # Create absolute path for log directory to avoid path duplication
     log_dir = os.path.abspath(log_dir)
@@ -39,16 +38,8 @@ def setup_logging(log_dir: str, run_id: str, use_vm: bool = False) -> None:
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
 
-    # Suppress verbose Azure SDK logging
-    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
-        logging.WARNING
-    )
-    # Suppress Azure identity logging
-    logging.getLogger("azure.identity").setLevel(logging.WARNING)
     # Suppress httpx logging
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    # Suppress SSH logging
-    logging.getLogger("paramiko.transport").setLevel(logging.WARNING)
 
     # Create formatters
     detailed_formatter = logging.Formatter(
@@ -142,7 +133,6 @@ def print_run_config(
     max_concurrent: int,
     log_dir: str,
     conda_env_name: Optional[str],
-    vm: bool,
     continue_run: bool,
     docker: bool = False,
     ignore_errors: bool = False,
@@ -160,7 +150,6 @@ def print_run_config(
     logger.info(f"  Log Directory: {log_dir}")
     logger.info(f"  Max Concurrent: {max_concurrent}")
     logger.info(f"  Upload Results: {'Yes' if upload else 'No'}")
-    logger.info(f"  VM Execution: {'Yes' if vm else 'No'}")
     logger.info(f"  Docker Execution: {'Yes' if docker else 'No'}")
     logger.info(f"  Continue Previous Run: {'Yes' if continue_run else 'No'}")
     logger.info(f"  Ignore Errors: {'Yes' if ignore_errors else 'No'}")

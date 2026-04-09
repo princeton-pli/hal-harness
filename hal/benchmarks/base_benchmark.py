@@ -37,7 +37,7 @@ class BaseBenchmark(ABC):
         )
         self.agent_args: Dict[str, Any] = {}  # Store agent args
         self.requires_sandbox = (
-            requires_sandbox  # Whether benchmark requires VM execution
+            requires_sandbox  # Whether benchmark requires sandbox execution
         )
         self._dataset: Optional[Dict[str, Any]] = None
 

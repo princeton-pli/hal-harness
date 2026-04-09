@@ -436,7 +436,7 @@ BENCHMARK_CONFIGS = {
     "taubench_airline": {
         "benchmark_name": "taubench_airline",
         "requires_docker": False,
-        "requires_vm": False,
+
         "max_concurrent": 5,  # Can run in parallel
         "task_ids": TAUBENCH_AIRLINE_CLEAN_TASKS,
         "compliance_constraints": [
@@ -452,7 +452,7 @@ BENCHMARK_CONFIGS = {
     # "taubench_retail": {
     #     "benchmark_name": "taubench_retail",
     #     "requires_docker": False,
-    #     "requires_vm": False,
+
     #     "max_concurrent": 5,  # Can run in parallel
     #     "compliance_constraints": [
     #         "pii_handling_customer_service",  # Customer service context
@@ -467,7 +467,7 @@ BENCHMARK_CONFIGS = {
     # "gaia": {
     #     "benchmark_name": "gaia",
     #     "requires_docker": False,
-    #     "requires_vm": False,
+
     #     "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
     #     "compliance_constraints": [
     #         "pii_handling_gaia",  # Q&A context - providing requested info is expected

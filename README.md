@@ -92,35 +92,7 @@ This repository provides a standardized evaluation harness for reproducible agen
    pip install anthropic
    ```
 
-6. **Optional: Azure VM Setup**
-   If you plan to use Azure VMs for evaluation, add the following to your `.env`:
-
-   ```
-   AZURE_SUBSCRIPTION_ID=your_subscription_id
-   AZURE_RESOURCE_GROUP_NAME=your_resource_group
-   AZURE_LOCATION=your_location
-   NETWORK_SECURITY_GROUP_NAME=your_nsg_name
-   SSH_PUBLIC_KEY_PATH=/path/to/your/ssh/key.pub
-   SSH_PRIVATE_KEY_PATH=/path/to/your/ssh/key
-   ```
-
-   - AZURE_SUBSCRIPTION_ID: This is the ID of your Azure subscription. Use the UUID.
-   - AZURE_RESOURCE_GROUP_NAME: This is the name of the resource group in which your VMs should be created.
-   - AZURE_LOCATION: e.g., "eastus" or "westus", etc.
-   - NETWORK_SECURITY_GROUP_NAME
-     - You will need to create a NSG in Azure for your access.
-     - Ensure that the NSG has an Inbound security rule that permits your machine to access SSH (port 22).
-     - Enter the NSG's name here.
-   - SSH_PUBLIC_KEY_PATH: This is your SSH key (on your local machine)
-   - SSH_PRIVATE_KEY_PATH: This is your SSH key (on your local machine)
-
-   Then run the following command to install the optional azure dependencies:
-
-   ```bash
-   pip install -e ".[azure]"
-   ```
-
-7. **Optional: Docker Setup**
+6. **Optional: Docker Setup**
    If you plan to use Docker containers for isolated evaluation, make sure Docker is installed on your system. The harness will automatically build the required Docker image.
 
 ## Tests
@@ -404,7 +376,6 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
 - **`--upload`**: Upload results to HuggingFace Hub
 - **`--max_concurrent <number>`**: Number of parallel tasks (default: 1)
 - **`--conda_env_name <env_name>`**: Conda environment for agent execution
-- **`--vm`**: Run evaluation on Azure VMs
 - **`--docker`**: Run evaluation in Docker containers for isolation
 - **`--run_id <run_id>`**: Specify a run ID (useful for continuing runs)
 - **`--continue_run`**: Continue from a previous run (requires run_id)
@@ -434,19 +405,7 @@ hal-eval --benchmark usaco \
   -A model_name=gpt-4o-mini-2024-07-18
 ```
 
-3. **Running USACO on Azure VM:**
-
-```bash
-hal-eval --benchmark usaco \
-  --agent_dir agents/usaco_example_agent/ \
-  --agent_function main.run \
-  --agent_name "USACO Solver (gpt-4o-2024-11-20)" \
-  --vm \
-  --max_concurrent 5 \
-  -A model_name=gpt-4o-2024-11-20
-```
-
-4. **Running USACO with Amazon Bedrock models:**
+3. **Running USACO with Amazon Bedrock models:**
 
 ```bash
 hal-eval --benchmark usaco \
