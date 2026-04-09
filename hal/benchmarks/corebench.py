@@ -206,6 +206,7 @@ class CoreBench(BaseBenchmark):
         self, agent_output: Dict[str, Any], run_id: str
     ) -> Dict[str, Any]:
         """Run evaluation harness. This can score based on the agent's output, or by running an evaluation script on the entire environments returned by the agent (see AppWorld benchmark)."""
+        agent_output = self._normalize_agent_output(agent_output)
 
         results = {}
 

@@ -77,6 +77,36 @@ class JsonEncryption:
         except Exception as e:
             raise ValueError(f"Decryption failed: {str(e)}")
 
+    def encrypt_raw_file(self, input_path: str, output_path: str):
+        """Encrypt any file (not just valid JSON) as raw bytes.
+
+        Args:
+            input_path (str): Path to input file
+            output_path (str): Path to save encrypted file
+        """
+        with open(input_path, "rb") as f:
+            data = f.read()
+        encrypted_data = self.cipher.encrypt(data)
+        result = {
+            "encrypted_data": base64.b64encode(encrypted_data).decode("utf-8"),
+            "salt": base64.b64encode(self.salt).decode("utf-8"),
+        }
+        with open(output_path, "w") as f:
+            json.dump(result, f, indent=2)
+
+    def decrypt_raw_file(self, encrypted_data: str, salt: str) -> bytes:
+        """Decrypt raw bytes data.
+
+        Args:
+            encrypted_data (str): Base64 encoded encrypted data
+            salt (str): Base64 encoded salt used for encryption
+
+        Returns:
+            bytes: Decrypted raw bytes
+        """
+        encrypted_bytes = base64.b64decode(encrypted_data.encode("utf-8"))
+        return self.cipher.decrypt(encrypted_bytes)
+
     def encrypt_json_file(self, input_path: str, output_path: str):
         """Encrypt JSON file.
 
