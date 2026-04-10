@@ -18,13 +18,14 @@ logger = logging.getLogger(__name__)
 class CoreBench(BaseBenchmark):
     """Base class for CoreBench benchmarks of different difficulty levels"""
 
+    _no_ground_truth = True
+
     def __init__(
         self,
         agent_dir: str,
         config: Dict[str, Any],
         max_tasks: Optional[int] = None,
     ):
-    _no_ground_truth = True
         # Set benchmark_name in subclasses
 
         # Load tasks from core_test.json
