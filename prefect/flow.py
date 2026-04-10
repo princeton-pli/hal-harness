@@ -4,7 +4,7 @@ from prefect.futures import wait
 from prefect.runtime import flow_run as current_flow_run
 
 from batch import create_batch_job, resize_pool, terminate_batch_job
-from config import AGENTS, BENCHMARK_TASKS, MODELS, EvalSpec
+from config import AGENTS, BENCHMARK_TASKS, RUN_CONFIGS, EvalSpec
 from storage import capsule_blob_sas, result_container_sas, upload_code_zip
 from tasks import run_eval_task
 
@@ -13,9 +13,13 @@ from tasks import run_eval_task
 def evaluation_harness(
     agents: list[dict] = AGENTS,
     benchmark_tasks: dict[str, list[str]] = BENCHMARK_TASKS,
-    models: list[str] = MODELS,
+    run_configs: list[tuple[str, tuple[tuple[str, str], ...]]] = RUN_CONFIGS,
 ) -> None:
-    """Submit all (agent × benchmark × model) combinations concurrently."""
+    """Submit all (agent × benchmark × task × run_config) combinations concurrently.
+
+    run_configs is a flat list of (model, agent_args) pairs rather than a
+    cartesian product of models and ablation axes.
+    """
     job_id = str(current_flow_run.id)
     create_batch_job(job_id)
 
@@ -37,11 +41,12 @@ def evaluation_harness(
             capsule_sas_url=(
                 capsule_blob_sas(task_id) if benchmark.startswith("corebench") else ""
             ),
+            agent_args=agent_args,
         )
         for agent in agents
         for benchmark, tasks in benchmark_tasks.items()
         for task_id in tasks
-        for model in models
+        for model, agent_args in run_configs
     ]
 
     resize_pool(len(specs))

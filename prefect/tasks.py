@@ -1,13 +1,25 @@
 from prefect import task
 from prefect.artifacts import create_markdown_artifact
+from prefect.runtime import task_run
 from prefect.tasks import exponential_backoff
 
 from batch import run_eval_on_batch
 from config import EvalSpec
 
 
+def _run_name() -> str:
+    """Human-readable task name including any agent_args for ablation runs."""
+    spec = task_run.parameters["spec"]
+    args = (
+        "/" + ",".join(f"{k}={v}" for k, v in spec.agent_args)
+        if spec.agent_args
+        else ""
+    )
+    return f"{spec.model}/{spec.agent}/{spec.benchmark}/{spec.task_id}{args}"
+
+
 @task(
-    task_run_name="{spec.model}/{spec.agent}/{spec.benchmark}/{spec.task_id}",
+    task_run_name=_run_name,
     # retries=2, # FIXME: restore retries!x c
     retry_delay_seconds=exponential_backoff(backoff_factor=5),
     retry_jitter_factor=1,

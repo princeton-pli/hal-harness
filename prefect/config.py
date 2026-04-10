@@ -19,6 +19,10 @@ class EvalSpec:
     job_id: str
     code_sas_url: str  # read SAS for hal-harness.zip
     result_sas_url: str  # container-level write SAS for result uploads
+    # Ordered (key, value) pairs forwarded to the agent via hal-eval's -A flag.
+    # Examples: (("max_threads", "8"),) or (("reasoning_effort", "high"),).
+    # Empty tuple = baseline (no extra agent args beyond model_name).
+    agent_args: tuple[tuple[str, str], ...] = ()
     extra_output_files: tuple[tuple[str, str], ...] = ()
     # Per-agent extra files to upload from the VM after task completion.
     # Each entry is (file_pattern, dest_subpath). file_pattern is matched relative
@@ -50,9 +54,14 @@ AZURE_STORAGE_ACCOUNT_KEY = os.getenv(
 )  # required for SAS
 SAS_EXPIRY_HOURS = 48
 
-# Blob name prefix where corebench capsules live (uploaded once via upload_capsules.py).
-# Each capsule is stored as: {CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz
-CAPSULES_BLOB_PREFIX = os.getenv("CAPSULES_BLOB_PREFIX", "corebench/capsules")
+# Dedicated container for corebench capsules (uploaded once via upload_capsules.py).
+# Kept separate from the runs container so capsules aren't tangled with per-run
+# artifacts and can have their own lifecycle/retention policy.
+# Each capsule is stored as: {CAPSULES_CONTAINER_NAME}/{CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz
+CAPSULES_CONTAINER_NAME = os.getenv(
+    "CAPSULES_CONTAINER_NAME", "corebench-capsules"
+)
+CAPSULES_BLOB_PREFIX = os.getenv("CAPSULES_BLOB_PREFIX", "")
 
 POLL_INTERVAL_SECONDS = 15  # how often to poll Azure Batch task state
 
@@ -76,10 +85,23 @@ TASK_ENV_VARS: dict[str, str] = {
 AGENTS = [
     # {"name": "core_agent", "function": "main.run", "dir": "agents/core_agent"},
     {
-        "name": "hal_generalist_agent",
+        "name": "codex_agent",
         "function": "main.run",
-        "dir": "agents/hal_generalist_agent",
+        "dir": "agents/codex_agent",
+        # Codex CLI writes per-attempt JSONL event logs to <cwd>/codex_exec.log.{0,1,2}.
+        # hal-eval runs each agent in a /tmp/agent_run_<uuid>/ temp dir then copies the
+        # whole dir into results/<run_id>/<task_id>/ on completion, so the codex logs
+        # land alongside the standard harness outputs. Capture them so the agent's
+        # conversation trace survives the ephemeral VM.
+        "extra_output_files": (
+            ("hal-harness/results/**/codex_exec.log.*", "codex"),
+        ),
     },
+    # {
+    #     "name": "hal_generalist_agent",
+    #     "function": "main.run",
+    #     "dir": "agents/hal_generalist_agent",
+    # },
 ]
 
 # Each benchmark maps to its list of task IDs.
@@ -120,39 +142,108 @@ BENCHMARK_TASKS: dict[str, list[str]] = {
     # "5cfb274c-0207-4aa7-9575-6ac0bd95d9b2",
     # ],
     # taubench task IDs are integer indices as strings
-    "taubench_airline": [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-        "11",
-        "12",
-        "13",
-        "14",
-        "15",
-        "16",
-        "17",
-        "18",
-        "19",
-        "20",
-    ],
+    # "taubench_airline": [
+    #     "0",
+    #     "1",
+    #     "2",
+    #     "3",
+    #     "4",
+    #     "5",
+    #     "6",
+    #     "7",
+    #     "8",
+    #     "9",
+    #     "10",
+    #     "11",
+    #     "12",
+    #     "13",
+    #     "14",
+    #     "15",
+    #     "16",
+    #     "17",
+    #     "18",
+    #     "19",
+    #     "20",
+    # ],
+    "corebench_hard": [
+        "capsule-5507257",
+        "capsule-3449234",
+        "capsule-8536428",
+        "capsule-8807709",
+        "capsule-6049678",
+        "capsule-2804717",
+        "capsule-3418007",
+        "capsule-1624349",
+        "capsule-9832712",
+        "capsule-2816027",
+        "capsule-3821950",
+        "capsule-9054015",
+        "capsule-3301293",
+        "capsule-1724988",
+        "capsule-4299879",
+        "capsule-0851068",
+        "capsule-1394704",
+        "capsule-0504157",
+        "capsule-3593259",
+        "capsule-3639589",
+        "capsule-2345790",
+        "capsule-7716865",
+        "capsule-4933686",
+        "capsule-9240688",
+        "capsule-1175539",
+        "capsule-4180912",
+        "capsule-2708693",
+        "capsule-4252248",
+        "capsule-4671827",
+        "capsule-7186268",
+        "capsule-5136217",
+        "capsule-7800694",
+        "capsule-6800638",
+        "capsule-8412128",
+        "capsule-7655932",
+        "capsule-9294029",
+        "capsule-6295990",
+        "capsule-9477017",
+        "capsule-0201673",
+        "capsule-0152700",
+        "capsule-2242462",
+        "capsule-3762736",
+    ]
 }
 
-MODELS = [
-    # "claude-opus-4-6",
-    # "claude-sonnet-4-6",
-    "anthropic/claude-sonnet-4-5-20250929",
-    # "anthropic/claude-3-7-sonnet-20250219",
-    # "anthropic/claude-3-5-sonnet-20241022",
-    "anthropic/claude-opus-4-5",
-    "anthropic/claude-sonnet-4-20250514",
-    "anthropic/claude-opus-4-20250514",
-    "gpt-4o",
+# ---------------------------------------------------------------------------
+# Run matrix — explicit list of (model, agent_args) pairs. Each entry is one
+# cell in the evaluation matrix and gets crossed with the agents × benchmarks
+# × tasks dimensions in flow.py. This is NOT a cartesian product of models and
+# ablation axes — it's a flat list so you can express arbitrary combinations
+# (e.g. "gpt-5.4 at four reasoning levels, but gpt-5.3-codex only at medium").
+#
+# Each entry:
+#   (model_name, ((key1, val1), (key2, val2), ...))
+# The agent_args tuple is forwarded to the agent via hal-eval's -A flag
+# (transported as HAL_AGENT_ARG_<key>=<value> env vars on the Batch node).
+#
+# Recognized agent_args keys (by codex_agent):
+#   - max_threads: int (stringified). Enables Codex CLI's subagent workflow
+#     via `agents.max_threads` config + a prompt directive telling the model
+#     to spawn parallel subagents for independent subtasks.
+#   - reasoning_effort: "low" | "medium" | "high" | "xhigh"
+#     (Codex CLI's `model_reasoning_effort` config).
+# ---------------------------------------------------------------------------
+RUN_CONFIGS: list[tuple[str, tuple[tuple[str, str], ...]]] = [
+    # Reasoning effort sweep on gpt-5.4
+    ("gpt-5.4", (("reasoning_effort", "low"),)),
+    ("gpt-5.4", (("reasoning_effort", "medium"),)),
+    ("gpt-5.4", (("reasoning_effort", "high"),)),
+    ("gpt-5.4", (("reasoning_effort", "xhigh"),)),
+    # Subagent count sweep on gpt-5.4 at medium reasoning
+    ("gpt-5.4", (("reasoning_effort", "medium"), ("max_threads", "1"))),
+    ("gpt-5.4", (("reasoning_effort", "medium"), ("max_threads", "3"))),
+    ("gpt-5.4", (("reasoning_effort", "medium"), ("max_threads", "6"))),
+    ("gpt-5.4", (("reasoning_effort", "medium"), ("max_threads", "9"))),
+    # Model sweep at medium reasoning
+    ("gpt-5", (("reasoning_effort", "medium"),)),
+    ("gpt-5.1", (("reasoning_effort", "medium"),)),
+    ("gpt-5.2", (("reasoning_effort", "medium"),)),
+    ("gpt-5.3-codex", (("reasoning_effort", "medium"),)),
 ]
