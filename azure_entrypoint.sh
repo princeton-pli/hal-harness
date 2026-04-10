@@ -16,10 +16,30 @@ BENCHMARK="${4:?}"
 TASK_ID="${5:?}"
 MODEL="${6:?}"
 
+# Extra agent kwargs are passed via HAL_AGENT_ARG_<key>=<value> env vars,
+# set per-task by prefect/batch.py from spec.agent_args. The loop below
+# collects them into -A flags for hal-eval.
+
+# Pin HOME to the Azure Batch task working directory (one level up from this
+# script, which lives inside the unzipped repo). The Batch auto-user's default
+# $HOME varies with elevation scope; forcing it here gives pip, weave, and
+# anything else using ~ a consistent, writable, per-task location.
+export HOME="$(cd "$(dirname "$0")/.." && pwd)"
+mkdir -p "$HOME/.cache"
+
+# Pin TMPDIR and the Weave disk-cache dir to paths under $HOME. Weave's default
+# is tempfile.mkdtemp() which fails to open a sqlite DB under certain Azure
+# Batch auto-user configurations ("unable to open database file"). Being
+# explicit here sidesteps that entire class of issue.
+export TMPDIR="$HOME/tmp"
+export WEAVE_SERVER_CACHE_DIR="$HOME/.cache/weave"
+mkdir -p "$TMPDIR" "$WEAVE_SERVER_CACHE_DIR"
+
 # Run from inside the repo so pip install -e . and relative agent_dir work
 cd "$(dirname "$0")"
 
 echo "=== hal-harness Azure Batch entrypoint ==="
+echo "HOME=$HOME"
 echo "agent=$AGENT_NAME function=$AGENT_FUNCTION dir=$AGENT_DIR"
 echo "benchmark=$BENCHMARK task_id=$TASK_ID model=$MODEL"
 echo "python=$(python3 --version)"
@@ -49,15 +69,29 @@ export PATH="$HOME/.local/bin:$PATH"
 
 echo "Running hal.cli..."
 # Build a unique run_id so concurrent tasks don't collide in Weave.
-# Sanitize model name: lowercase, replace non-alphanumeric with underscores.
+# Uses $AZ_BATCH_TASK_ID (globally unique per Azure Batch task) instead of
+# $(date +%s) which collides when multiple tasks start in the same second.
+# Sanitize: Weave project names only allow [a-z0-9_-].
 SANITIZED_MODEL=$(echo "$MODEL" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g')
-RUN_ID="${BENCHMARK}_${AGENT_NAME}_${SANITIZED_MODEL}_task${TASK_ID}_$(date +%s)"
+SANITIZED_AZ_TASK_ID=$(echo "${AZ_BATCH_TASK_ID:-$(date +%s%N)}" | sed 's/[^a-zA-Z0-9_-]/_/g')
+RUN_ID="${BENCHMARK}_${AGENT_NAME}_${SANITIZED_MODEL}_task${TASK_ID}_${SANITIZED_AZ_TASK_ID}"
 
-python3 -m hal.cli \
-  --agent_name "$AGENT_NAME" \
-  --agent_function "$AGENT_FUNCTION" \
-  --agent_dir "$AGENT_DIR" \
-  --benchmark "$BENCHMARK" \
-  --task_ids "$TASK_ID" \
-  --run_id "$RUN_ID" \
+HAL_CLI_ARGS=(
+  --agent_name "$AGENT_NAME"
+  --agent_function "$AGENT_FUNCTION"
+  --agent_dir "$AGENT_DIR"
+  --benchmark "$BENCHMARK"
+  --task_ids "$TASK_ID"
+  --run_id "$RUN_ID"
   -A "model_name=$MODEL"
+)
+
+# Forward any HAL_AGENT_ARG_<key>=<value> env vars as -A args to hal-eval.
+while IFS= read -r var; do
+  key="${var#HAL_AGENT_ARG_}"
+  val="${!var}"
+  HAL_CLI_ARGS+=(-A "$key=$val")
+  echo "Forwarding agent arg: $key=$val"
+done < <(compgen -e | grep '^HAL_AGENT_ARG_' || true)
+
+python3 -m hal.cli "${HAL_CLI_ARGS[@]}"

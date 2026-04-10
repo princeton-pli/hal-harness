@@ -6,6 +6,7 @@ All public functions accept an EvalSpec; internals are prefixed with _.
 
 import datetime
 import re
+import threading
 import time
 import uuid
 
@@ -26,13 +27,46 @@ from config import (
 from storage import download_task_results, save_task_results, upload_task_metadata
 
 
+# --------------------------------------------------------------------------
+# Token cache
+# --------------------------------------------------------------------------
+# AzureCliCredential.get_token() shells out to `az account get-access-token`
+# on EVERY call — it does not cache tokens in-process. Under concurrent load
+# (hundreds of Prefect tasks hitting _batch_client() at once) this spawns
+# hundreds of parallel `az` subprocess invocations racing on ~/.azure/ file
+# locks, and many of them fail.
+#
+# We wrap the credential in a manual cache: one token fetched under a lock,
+# reused until it's within 5 minutes of expiry, then refreshed under the same
+# lock. 504 concurrent threads share exactly ONE `az` invocation per refresh.
+# --------------------------------------------------------------------------
+_BATCH_SCOPE = "https://batch.core.windows.net/.default"
+_credential = AzureCliCredential()
+_token_lock = threading.Lock()
+_cached_token = None  # azure.core.credentials.AccessToken | None
+
+
+def _get_batch_token() -> str:
+    """Return a cached Batch access token, refreshing under lock if needed."""
+    global _cached_token
+    now = time.time()
+    # Fast path: check without the lock. AccessToken.expires_on is epoch seconds.
+    if _cached_token is not None and _cached_token.expires_on - now > 300:
+        return _cached_token.token
+
+    with _token_lock:
+        # Another thread may have refreshed while we waited on the lock.
+        if _cached_token is None or _cached_token.expires_on - now <= 300:
+            _cached_token = _credential.get_token(_BATCH_SCOPE)
+        return _cached_token.token
+
+
 def _batch_client() -> BatchServiceClient:
-    """Authenticated BatchServiceClient. Fresh per call — not thread-safe to share."""
+    """Authenticated BatchServiceClient using the shared, lock-protected token cache."""
     from msrest.authentication import BasicTokenAuthentication
 
-    token = AzureCliCredential().get_token("https://batch.core.windows.net/.default")
     return BatchServiceClient(
-        credentials=BasicTokenAuthentication({"access_token": token.token}),
+        credentials=BasicTokenAuthentication({"access_token": _get_batch_token()}),
         batch_url=AZURE_BATCH_ACCOUNT_URL,
     )
 
@@ -108,7 +142,23 @@ def _submit_batch_task(spec: EvalSpec) -> str:
     """Submit one eval task to Azure Batch. Returns the Azure task ID."""
     client = _batch_client()
     suffix = uuid.uuid4().hex[:8]
-    raw_prefix = f"{spec.model}-{spec.agent}-{spec.benchmark}-{spec.task_id}"
+    # Slug the agent_args into the task ID so ablation cells are visually
+    # distinguishable in blob storage and the Azure portal. Keys are
+    # abbreviated to keep task IDs under Azure Batch's 64-char limit.
+    _KEY_ABBREV = {
+        "reasoning_effort": "re",
+        "max_threads": "mt",
+    }
+    args_segment = (
+        "-" + "-".join(f"{_KEY_ABBREV.get(k, k)}{v}" for k, v in spec.agent_args)
+        if spec.agent_args
+        else ""
+    )
+    # Omit spec.agent and spec.benchmark from the Azure Batch task ID to stay
+    # under the 64-char limit. Those values are still present in the nested
+    # blob storage paths (results/{task_id}/{benchmark}/...) and in
+    # metadata.json, so no info is lost.
+    raw_prefix = f"{spec.model}-{spec.task_id}{args_segment}"
     # Azure Batch task IDs allow only [a-zA-Z0-9-_]; replace other chars with '-'
     prefix = re.sub(r"[^a-zA-Z0-9\-_]", "-", raw_prefix)
     if len(prefix) + 1 + len(suffix) > 64:
@@ -121,6 +171,15 @@ def _submit_batch_task(spec: EvalSpec) -> str:
         environment_settings=[
             batch_models.EnvironmentSetting(name=k, value=v)
             for k, v in TASK_ENV_VARS.items()
+        ]
+        # Per-task agent kwargs are transported as HAL_AGENT_ARG_<key>=<value>
+        # env vars. The entrypoint iterates them and forwards each as
+        # `-A <key>=<value>` to hal-eval.
+        + [
+            batch_models.EnvironmentSetting(
+                name=f"HAL_AGENT_ARG_{k}", value=str(v)
+            )
+            for k, v in spec.agent_args
         ],
         resource_files=[
             batch_models.ResourceFile(
@@ -163,6 +222,21 @@ def _submit_batch_task(spec: EvalSpec) -> str:
                     upload_condition=batch_models.OutputFileUploadCondition.task_success,
                 ),
             ),
+            # hal-eval's verbose.log captures the full traceback when the eval
+            # itself errors. Upload on any completion (including failure) so we
+            # can debug without re-running.
+            batch_models.OutputFile(
+                file_pattern="hal-harness/results/**/*_verbose.log",
+                destination=batch_models.OutputFileDestination(
+                    container=batch_models.OutputFileBlobContainerDestination(
+                        container_url=spec.result_sas_url,
+                        path=f"{spec.job_id}/logs/{azure_task_id}",
+                    )
+                ),
+                upload_options=batch_models.OutputFileUploadOptions(
+                    upload_condition=batch_models.OutputFileUploadCondition.task_completion,
+                ),
+            ),
             *[
                 batch_models.OutputFile(
                     file_pattern=pattern,
@@ -193,7 +267,18 @@ def _submit_batch_task(spec: EvalSpec) -> str:
         ],
         constraints=batch_models.TaskConstraints(
             max_task_retry_count=0,  # Prefect owns retries
-            retention_time=datetime.timedelta(days=365),
+            retention_time=datetime.timedelta(minutes=15),
+        ),
+        # codex_agent's setup_codex_cli() runs `sudo apt-get install ...` to
+        # install Node.js + the Codex CLI. The Batch default auto-user is
+        # non-admin, so sudo prompts for a password and fails in a
+        # non-interactive subprocess. Run the task as an admin auto-user so
+        # sudo works passwordlessly.
+        user_identity=batch_models.UserIdentity(
+            auto_user=batch_models.AutoUserSpecification(
+                scope=batch_models.AutoUserScope.task,
+                elevation_level=batch_models.ElevationLevel.admin,
+            )
         ),
     )
     client.task.add(job_id=spec.job_id, task=batch_task)
@@ -231,10 +316,14 @@ def _read_new_stdout(
 def _poll_batch_task(spec: EvalSpec, azure_task_id: str) -> None:
     """Block until the Azure Batch task completes, streaming stdout incrementally.
     Raises on non-zero exit code."""
-    client = _batch_client()
     bytes_read = 0
 
     while True:
+        # Refresh client each iteration — _batch_client() is cheap (hits the
+        # in-memory token cache) and guarantees we never poll with an expired
+        # token. The old pattern of creating one client at the top of the loop
+        # caused AuthenticationFailed errors after ~1 hour.
+        client = _batch_client()
         t = client.task.get(spec.job_id, azure_task_id)
         bytes_read = _read_new_stdout(client, spec.job_id, azure_task_id, bytes_read)
 
