@@ -653,7 +653,7 @@ def fetch_weave_calls(client) -> List[Dict[str, Any]]:
         return list(
             client.server.calls_query_stream(
                 {
-                    "project_id": client._project_id(),
+                    "project_id": f"{client.entity}/{client.project}",
                     "filter": {"trace_roots_only": False},
                     "sort_by": [{"field": "started_at", "direction": "desc"}],
                 }
@@ -703,7 +703,7 @@ def get_total_cost(client):
         return list(
             client.server.calls_query_stream(
                 CallsQueryReq(
-                    project_id=client._project_id(),
+                    project_id=f"{client.entity}/{client.project}",
                     filter=CallsFilter(trace_roots_only=False),
                     columns=["summary"],
                 )
@@ -915,7 +915,7 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
         return list(
             client.server.calls_query_stream(
                 CallsQueryReq(
-                    project_id=client._project_id(),
+                    project_id=f"{client.entity}/{client.project}",
                     filter=CallsFilter(trace_roots_only=False),
                     columns=["summary", "attributes"],
                 )
