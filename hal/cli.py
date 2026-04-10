@@ -98,6 +98,11 @@ DEFAULT_TASK_TIMEOUT = 2700
     help="Run the agent in Docker containers for isolation. Requires Docker to be installed on the system. Resources are limited to 4GB memory and 2 CPU cores per container.",
 )
 @click.option(
+    "--agent_version",
+    default=None,
+    help="Optional version string for the agent scaffold",
+)
+@click.option(
     "--continue_run",
     is_flag=True,
     help="Continue from a previous run, only running failed or incomplete tasks. You must provide the same run_id to continue a run.",
@@ -167,6 +172,7 @@ def main(
     upload,
     max_concurrent,
     conda_env_name,
+    agent_version,
     continue_run,
     ignore_errors,
     a,
@@ -286,6 +292,7 @@ def main(
                 run_command=run_command,
                 ignore_errors=ignore_errors,
                 max_tasks=max_tasks,
+                agent_version=agent_version,
                 prompt_sensitivity=prompt_sensitivity,
                 num_variations=num_variations,
                 variation_strength=variation_strength,

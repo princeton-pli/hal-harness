@@ -818,7 +818,7 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
         print("Exception processing trace of call:", call)
         ended_at = None
 
-    json_call = call.dict()
+    json_call = call.model_dump()
     json_call["started_at"] = started_at
     json_call["ended_at"] = ended_at
     json_call["weave_task_id"] = call.attributes["weave_task_id"]
@@ -827,21 +827,23 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     return json_call
 
 
-def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
-    """Get processed Weave calls with progress tracking"""
+def get_weave_calls(client) -> Tuple[Dict[str, Dict[str, Any]], Dict]:
+    """Get processed Weave calls with progress tracking.
+
+    Returns a compact dict keyed by task_id (one message array per task)
+    and a latency dict with first/last call timestamps per task.
+    """
     logger.info("Getting Weave traces (this can take a while)...")
 
-    # dict to store latency for each task
     latency_dict = {}
 
     with create_progress() as progress:
-        # Fetch calls
         task1 = progress.add_task("Fetching Weave calls...", total=1)
         calls = fetch_weave_calls(client)
         progress.update(task1, completed=1)
 
-        # Processed calls
-        processed_calls = []
+        # Group calls by task_id; filter to calls with output.usage (real LLM completions)
+        task_calls: Dict[str, list] = {}
 
         for call in calls:
             # Skip calls that don't have weave_task_id (e.g., internal calls for prompt variation generation)
@@ -850,41 +852,102 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
                 continue
 
             task_id = call.attributes["weave_task_id"]
-            processed_call = process_weave_output(call)
-            if processed_call:
-                processed_calls.append(processed_call)
 
+            # --- latency tracking (unchanged logic) ---
+            try:
+                started_at = call.started_at.isoformat()
+            except Exception:
+                started_at = None
+
+            if started_at:
                 if task_id not in latency_dict:
                     latency_dict[task_id] = {
-                        "first_call_timestamp": processed_call["started_at"],
-                        "last_call_timestamp": processed_call["started_at"],
+                        "first_call_timestamp": started_at,
+                        "last_call_timestamp": started_at,
                     }
                 else:
-                    if (
-                        processed_call["started_at"]
-                        < latency_dict[task_id]["first_call_timestamp"]
-                    ):
-                        latency_dict[task_id]["first_call_timestamp"] = processed_call[
-                            "started_at"
-                        ]
-                    if (
-                        processed_call["started_at"]
-                        > latency_dict[task_id]["last_call_timestamp"]
-                    ):
-                        latency_dict[task_id]["last_call_timestamp"] = processed_call[
-                            "started_at"
-                        ]
+                    if started_at < latency_dict[task_id]["first_call_timestamp"]:
+                        latency_dict[task_id]["first_call_timestamp"] = started_at
+                    if started_at > latency_dict[task_id]["last_call_timestamp"]:
+                        latency_dict[task_id]["last_call_timestamp"] = started_at
+
+            # --- filter to calls with output.usage ---
+            call_dict = call.model_dump()
+            output = call_dict.get("output")
+            if not isinstance(output, dict) or not output.get("usage"):
+                continue
+
+            task_calls.setdefault(task_id, []).append(call_dict)
 
             progress.update(task1, advance=1)
 
+    # Compute total latency per task
     for task_id in latency_dict:
         latency_dict[task_id]["total_time"] = (
             datetime.fromisoformat(latency_dict[task_id]["last_call_timestamp"])
             - datetime.fromisoformat(latency_dict[task_id]["first_call_timestamp"])
         ).total_seconds()
 
-    logger.info(f"Total Weave traces: {len(processed_calls)}")
-    return processed_calls, latency_dict
+    # Build compact result: one message array + metadata per task
+    compact_results: Dict[str, Dict[str, Any]] = {}
+    for task_id, calls_list in task_calls.items():
+        # The call with the most messages has the fullest conversation
+        max_call = max(
+            calls_list,
+            key=lambda c: len(c.get("inputs", {}).get("messages", [])),
+        )
+
+        messages = list(max_call["inputs"].get("messages", []))
+
+        # Append the assistant's final response from that call
+        choices = max_call.get("output", {}).get("choices", [])
+        if choices:
+            assistant_msg = choices[0].get("message")
+            if assistant_msg:
+                messages.append(assistant_msg)
+
+        # Lightweight per-call metadata (usage + timing only)
+        call_metadata = []
+        for c in sorted(calls_list, key=lambda x: x.get("started_at", "")):
+            try:
+                c_started = (
+                    c["started_at"].isoformat()
+                    if hasattr(c["started_at"], "isoformat")
+                    else c["started_at"]
+                )
+            except Exception:
+                c_started = None
+            try:
+                c_ended = (
+                    c["ended_at"].isoformat()
+                    if hasattr(c["ended_at"], "isoformat")
+                    else c["ended_at"]
+                )
+            except Exception:
+                c_ended = None
+            call_metadata.append(
+                {
+                    "usage": c["output"]["usage"],
+                    "started_at": c_started,
+                    "ended_at": c_ended,
+                }
+            )
+
+        model = max_call["inputs"].get("model") or max_call.get("output", {}).get(
+            "model"
+        )
+
+        compact_results[task_id] = {
+            "messages": messages,
+            "call_metadata": call_metadata,
+            "model": model,
+            "call_count": len(calls_list),
+        }
+
+    logger.info(
+        f"Total Weave traces: {sum(r['call_count'] for r in compact_results.values())}"
+    )
+    return compact_results, latency_dict
 
 
 def get_task_cost(run_id: str, task_id: str) -> dict:

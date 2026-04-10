@@ -105,8 +105,22 @@ def upload_results(benchmark, file, directory):
                 temp_zip_path = os.path.join(dir_path, f"temp_{file_name}.zip")
 
                 try:
-                    # Create encrypted zip for single file
-                    zip_encryptor.encrypt_files([file_path], temp_zip_path)
+                    # Build list of files to include in this zip
+                    files_to_encrypt = [file_path]
+
+                    # Find sibling RAW_SUBMISSIONS.jsonl
+                    run_dir = os.path.dirname(file_path)
+                    run_id_prefix = os.path.basename(file_path).replace(
+                        "_UPLOAD.json", ""
+                    )
+                    submissions_path = os.path.join(
+                        run_dir, f"{run_id_prefix}_RAW_SUBMISSIONS.jsonl"
+                    )
+                    if os.path.exists(submissions_path):
+                        files_to_encrypt.append(submissions_path)
+
+                    # Create encrypted zip
+                    zip_encryptor.encrypt_files(files_to_encrypt, temp_zip_path)
 
                     # Upload to Hugging Face Hub
                     # Remove .json extension for zip name

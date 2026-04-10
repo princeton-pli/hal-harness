@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 class SWEBenchBenchmark(BaseBenchmark):
     """SWEBench benchmark implementation"""
 
+    _no_ground_truth = True
+
     def __init__(self, agent_dir: str, config: Dict[str, Any], mini: bool = False):
         self.benchmark_name = "swebench_verified_mini" if mini else "swebench_verified"
         self.requires_sandbox = False
