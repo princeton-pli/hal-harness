@@ -25,6 +25,7 @@ from config import (
     AZURE_STORAGE_ACCOUNT_URL,
     AZURE_STORAGE_CONTAINER_NAME,
     CAPSULES_BLOB_PREFIX,
+    CAPSULES_CONTAINER_NAME,
     SAS_EXPIRY_HOURS,
 )
 
@@ -58,13 +59,13 @@ def _storage_client() -> BlobServiceClient:
     )
 
 
-def ensure_container() -> None:
-    """Create the blob container if it does not exist (idempotent)."""
+def ensure_container(name: str = AZURE_STORAGE_CONTAINER_NAME) -> None:
+    """Create the given blob container if it does not exist (idempotent)."""
     client = _storage_client()
-    container = client.get_container_client(AZURE_STORAGE_CONTAINER_NAME)
+    container = client.get_container_client(name)
     if not container.exists():
         container.create_container()
-        print(f"Created blob container: {AZURE_STORAGE_CONTAINER_NAME}")
+        print(f"Created blob container: {name}")
 
 
 def _zip_repo(repo_root: Path) -> bytes:
@@ -135,7 +136,7 @@ def upload_code_zip(job_id: str) -> str:
 def capsule_blob_sas(capsule_id: str) -> str:
     """
     Return a 48h read-only SAS URL for a single corebench capsule tarball stored
-    at {CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz in the runs container.
+    at {CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz in the dedicated capsules container.
 
     The blob is expected to exist already; upload_capsules.py is the one-shot
     bootstrap that puts capsules into blob storage.
@@ -145,17 +146,21 @@ def capsule_blob_sas(capsule_id: str) -> str:
             "AZURE_STORAGE_ACCOUNT_KEY is required for SAS generation. "
             "Set it via the environment variable."
         )
-    blob_name = f"{CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz"
+    blob_name = (
+        f"{CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz"
+        if CAPSULES_BLOB_PREFIX
+        else f"{capsule_id}.tar.gz"
+    )
     expiry = datetime.now(timezone.utc) + timedelta(hours=SAS_EXPIRY_HOURS)
     sas_token = generate_blob_sas(
         account_name=AZURE_STORAGE_ACCOUNT_NAME,
-        container_name=AZURE_STORAGE_CONTAINER_NAME,
+        container_name=CAPSULES_CONTAINER_NAME,
         blob_name=blob_name,
         account_key=AZURE_STORAGE_ACCOUNT_KEY,
         permission=BlobSasPermissions(read=True),
         expiry=expiry,
     )
-    return f"{AZURE_STORAGE_ACCOUNT_URL}/{AZURE_STORAGE_CONTAINER_NAME}/{blob_name}?{sas_token}"
+    return f"{AZURE_STORAGE_ACCOUNT_URL}/{CAPSULES_CONTAINER_NAME}/{blob_name}?{sas_token}"
 
 
 def result_container_sas() -> str:

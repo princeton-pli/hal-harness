@@ -19,8 +19,8 @@ from pathlib import Path
 
 from config import (
     AZURE_STORAGE_ACCOUNT_KEY,
-    AZURE_STORAGE_CONTAINER_NAME,
     CAPSULES_BLOB_PREFIX,
+    CAPSULES_CONTAINER_NAME,
 )
 from storage import _storage_client, ensure_container
 
@@ -42,10 +42,14 @@ def upload_capsule(capsule_id: str, force: bool) -> None:
         print(f"SKIP {capsule_id}: not found at {capsule_dir}", file=sys.stderr)
         return
 
-    blob_name = f"{CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz"
+    blob_name = (
+        f"{CAPSULES_BLOB_PREFIX}/{capsule_id}.tar.gz"
+        if CAPSULES_BLOB_PREFIX
+        else f"{capsule_id}.tar.gz"
+    )
     client = _storage_client()
     blob = client.get_blob_client(
-        container=AZURE_STORAGE_CONTAINER_NAME, blob=blob_name
+        container=CAPSULES_CONTAINER_NAME, blob=blob_name
     )
 
     if not force and blob.exists():
@@ -71,14 +75,17 @@ def main() -> None:
     if not CAPSULES_DIR.is_dir():
         sys.exit(f"capsules dir not found: {CAPSULES_DIR}")
 
-    ensure_container()
+    ensure_container(CAPSULES_CONTAINER_NAME)
 
     if args.capsule_ids:
         capsule_ids = args.capsule_ids
     else:
         capsule_ids = sorted(p.name for p in CAPSULES_DIR.iterdir() if p.is_dir())
 
-    print(f"Uploading {len(capsule_ids)} capsule(s) to {CAPSULES_BLOB_PREFIX}/")
+    print(
+        f"Uploading {len(capsule_ids)} capsule(s) to "
+        f"{CAPSULES_CONTAINER_NAME}/{CAPSULES_BLOB_PREFIX}/"
+    )
     for cid in capsule_ids:
         upload_capsule(cid, args.force)
     print("Done.")
