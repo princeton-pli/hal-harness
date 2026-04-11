@@ -8,6 +8,20 @@ import time
 
 logger = logging.getLogger(__name__)
 
+
+def _weave_client_project_id(client: Any) -> str:
+    """Resolve Weave trace project id across SDK versions (public ``project_id`` vs ``_project_id()``)."""
+    project_id = getattr(client, "project_id", None)
+    if isinstance(project_id, str):
+        return project_id
+    legacy = getattr(client, "_project_id", None)
+    if callable(legacy):
+        return legacy()
+    raise AttributeError(
+        f"{type(client).__name__} has neither project_id nor callable _project_id"
+    )
+
+
 # FIXME: move to new file
 MODEL_PRICES_DICT = {
     "text-embedding-3-small": {"prompt_tokens": 0.02 / 1e6, "completion_tokens": 0},
@@ -653,7 +667,7 @@ def fetch_weave_calls(client) -> List[Dict[str, Any]]:
         return list(
             client.server.calls_query_stream(
                 {
-                    "project_id": client._project_id(),
+                    "project_id": _weave_client_project_id(client),
                     "filter": {"trace_roots_only": False},
                     "sort_by": [{"field": "started_at", "direction": "desc"}],
                 }
@@ -703,7 +717,7 @@ def get_total_cost(client):
         return list(
             client.server.calls_query_stream(
                 CallsQueryReq(
-                    project_id=client._project_id(),
+                    project_id=_weave_client_project_id(client),
                     filter=CallsFilter(trace_roots_only=False),
                     columns=["summary"],
                 )
@@ -978,7 +992,7 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
         return list(
             client.server.calls_query_stream(
                 CallsQueryReq(
-                    project_id=client._project_id(),
+                    project_id=_weave_client_project_id(client),
                     filter=CallsFilter(trace_roots_only=False),
                     columns=["summary", "attributes"],
                 )

@@ -139,4 +139,4 @@ jobs:
       - name: Verify CoreBench hard result layout and upload JSON
         run: |
           set -euo pipefail
-          bash tests/gh_actions/verify_corebench_hard_e2e.sh
+          bash .github/scripts/verify_corebench_hard_e2e.sh

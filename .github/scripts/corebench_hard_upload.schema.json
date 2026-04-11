@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "hal-harness/tests/gh_actions/corebench_hard_upload",
+  "$id": "hal-harness/.github/scripts/corebench_hard_upload",
   "title": "CoreBench hard VM e2e upload artifact",
   "description": "Matches hal.benchmarks.base_benchmark.BaseBenchmark.process_results output for a CoreBench run.",
   "type": "object",
