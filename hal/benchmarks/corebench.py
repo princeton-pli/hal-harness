@@ -52,13 +52,17 @@ class CoreBench(BaseBenchmark):
             raise TypeError("core_test.json must contain a JSON array of tasks")
 
         # Match hal-eval --max_tasks: only download/load capsules we will run (saves CI time).
-        if max_tasks is not None and max_tasks > 0 and max_tasks < len(dataset):
-            logger.info(
-                "CoreBench: loading %s of %s tasks (max_tasks); skipping other capsule downloads",
-                max_tasks,
-                len(dataset),
-            )
+        # Same gate as agent_runner.run (max_tasks <= 0 means do not cap). Slice is safe when
+        # max_tasks >= len(dataset); log only when we actually skip capsules.
+        if max_tasks is not None and max_tasks > 0:
+            total_available = len(dataset)
             dataset = dataset[:max_tasks]
+            if total_available > max_tasks:
+                logger.info(
+                    "CoreBench: loading %s of %s tasks (max_tasks); skipping other capsule downloads",
+                    max_tasks,
+                    total_available,
+                )
 
         self.benchmark = {}
         self.benchmark_answers = {}
