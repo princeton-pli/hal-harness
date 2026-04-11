@@ -25,10 +25,12 @@ class VirtualMachineRunner:
         task_timeout: int,
         max_concurrent: int = 1,
         benchmark: Optional[BaseBenchmark] = None,
+        download_environment: bool = True,
     ):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
         self.task_timeout = task_timeout
+        self.download_environment = download_environment
         self.vm_manager = VirtualMachineManager()
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
@@ -248,6 +250,7 @@ class VirtualMachineRunner:
                         self.vm_manager.copy_files_from_vm,
                         vm_name,
                         dest_dir,
+                        download_environment=self.download_environment,
                     )
 
                     # Read the output.json file from the copied directory
@@ -277,7 +280,12 @@ class VirtualMachineRunner:
             except Exception as e:
                 logger.error(f"Error processing task {task_id} on VM {vm_name}: {e}")
                 traceback.print_exc()
-                return {task_id: f"ERROR: {str(e)}"}
+                # Re-raise so the eval run fails hard; `finally` below still deletes the VM (or
+                # whatever resources exist for this name). Swallowing here made hal-eval continue
+                # and report success despite Azure / provisioning failures.
+                raise RuntimeError(
+                    f"VM run failed for task {task_id} (VM {vm_name}): {e}"
+                ) from e
 
             finally:
                 wall_clock_time = time.time() - task_start_time

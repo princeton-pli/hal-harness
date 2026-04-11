@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "hal-harness/.github/scripts/corebench_hard_upload",
+  "title": "CoreBench hard VM e2e upload artifact: used by verify_corebench_hard_e2e.sh in GH",
+  "description": "Matches hal.benchmarks.base_benchmark.BaseBenchmark.process_results output for a CoreBench run.",
+  "type": "object",
+  "required": [
+    "config",
+    "results",
+    "raw_eval_results",
+    "raw_logging_results",
+    "total_usage",
+    "total_cost",
+    "git_info"
+  ],
+  "properties": {
+    "config": {
+      "type": "object",
+      "required": [
+        "agent_name",
+        "benchmark_name",
+        "date",
+        "run_id",
+        "agent_args",
+        "run_command",
+        "prompt_sensitivity"
+      ],
+      "properties": {
+        "agent_name": { "const": "CORE-Agent" },
+        "benchmark_name": { "const": "corebench_hard" },
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^corebench_hard_coreagent_[0-9]+$"
+        },
+        "agent_args": {
+          "type": "object",
+          "required": ["model_name", "benchmark_name"],
+          "properties": {
+            "model_name": {
+              "type": "string",
+              "const": "openai/gpt-4.1-2025-04-14"
+            },
+            "benchmark_name": {
+              "type": "string",
+              "const": "corebench_hard"
+            }
+          },
+          "additionalProperties": true
+        },
+        "run_command": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "hal-eval.*--benchmark corebench_hard"
+        },
+        "prompt_sensitivity": { "type": "boolean", "const": false }
+      },
+      "additionalProperties": true
+    },
+    "results": {
+      "type": "object",
+      "required": [
+        "accuracy",
+        "written_accuracy",
+        "vision_accuracy",
+        "successful_tasks",
+        "failed_tasks",
+        "total_cost",
+        "latencies"
+      ],
+      "properties": {
+        "accuracy": { "type": "number" },
+        "written_accuracy": { "type": "number" },
+        "vision_accuracy": { "type": "number" },
+        "successful_tasks": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^capsule-[0-9]+$" }
+        },
+        "failed_tasks": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^capsule-[0-9]+$" }
+        },
+        "total_cost": { "type": "number" },
+        "latencies": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "first_call_timestamp",
+              "last_call_timestamp",
+              "total_time"
+            ],
+            "properties": {
+              "first_call_timestamp": { "type": "string", "minLength": 1 },
+              "last_call_timestamp": { "type": "string", "minLength": 1 },
+              "total_time": { "type": "number" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "raw_eval_results": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^capsule-[0-9]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "correct_written_answers",
+          "correct_vision_answers",
+          "total_written_questions",
+          "total_vision_questions"
+        ],
+        "properties": {
+          "correct_written_answers": { "type": "integer", "minimum": 0 },
+          "correct_vision_answers": { "type": "integer", "minimum": 0 },
+          "total_written_questions": { "type": "integer", "minimum": 0 },
+          "total_vision_questions": { "type": "integer", "minimum": 0 },
+          "error": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "raw_logging_results": {
+      "description": "Per-task Weave traces from get_weave_calls(): dict keyed by task_id, not a list.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^capsule-[0-9]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["messages"],
+        "properties": {
+          "messages": { "type": "array" },
+          "call_metadata": { "type": "array" },
+          "model": {},
+          "call_count": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "total_usage": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "prompt_tokens": { "type": "number", "minimum": 0 },
+          "completion_tokens": { "type": "number", "minimum": 0 },
+          "cache_creation_input_tokens": { "type": "number", "minimum": 0 },
+          "cache_read_input_tokens": { "type": "number", "minimum": 0 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "total_cost": { "type": "number" },
+    "git_info": {
+      "type": "object",
+      "minProperties": 1,
+      "anyOf": [
+        {
+          "required": ["commit", "repository_url", "branch"],
+          "properties": {
+            "commit": { "type": "string", "minLength": 1 },
+            "repository_url": { "type": "string", "minLength": 1 },
+            "branch": { "type": "string", "minLength": 1 },
+            "commit_timestamp": { "type": "string" },
+            "commit_url": { "type": "string" }
+          }
+        },
+        {
+          "required": ["error"],
+          "properties": { "error": { "type": "string" } }
+        }
+      ]
+    },
+    "prompt_sensitivity_metrics": { "type": "object" },
+    "task_metrics": { "type": "object" }
+  },
+  "additionalProperties": true
+}

@@ -551,17 +551,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         print(f"[WARNING] Failed to run 'conda list': {str(e)}")
     print("=== End of Package Versions and Environment Information ===")
 
-    # Create symbolic links
-    try:
-        cwd = os.getcwd()
-        os.symlink(f"{cwd}/environment/data", "/data", target_is_directory=True)
-        os.symlink(f"{cwd}/environment/code", "/code", target_is_directory=True)
-        os.symlink(f"{cwd}/environment/results", "/results", target_is_directory=True)
-    except Exception as e:
-        print(
-            f"[WARNING] Failed to create symbolic links for /data, /code, and /results: {str(e)}"
-        )
-
     assert "model_name" in kwargs, "model_name is required"
     assert len(input) == 1, "input must contain only one task"
 
@@ -692,10 +681,19 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     model = LiteLLMModel(**model_params)
 
+    # CoreBench layout: always use cwd-based paths (no /data, /code, /results symlinks).
+    cwd = os.getcwd()
+    env_paths = (
+        f"• Task directories — use these absolute paths: "
+        f"{cwd}/environment/data (data), {cwd}/environment/code (code), "
+        f"{cwd}/environment/results (results).\n\n"
+    )
     # Prepend hints to the task prompt if available
     prompt = task["prompt"]
     if hints:
-        prompt = f"{hints}\n\n{prompt}"
+        prompt = f"{env_paths}{hints}\n\n{prompt}"
+    else:
+        prompt = f"{env_paths}{prompt}"
 
     # Create a custom FinalAnswerTool that includes key validation and LLM-based giving-up detection
     class CustomFinalAnswerTool(Tool):

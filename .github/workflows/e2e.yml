@@ -1,0 +1,134 @@
+# Runs a minimal CoreBench hard VM smoke eval. Requires a GitHub Environment
+# (update `environment.name` below) with the secrets/vars listed in the job `env` block.
+# Azure auth (pick one): (A) OIDC — Azure login with client-id, tenant-id, subscription-id
+# and id-token: write (see https://github.com/azure/login ); (B) service principal + secret —
+# Environment secrets `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` plus var
+# `AZURE_SUBSCRIPTION_ID` assembled into azure/login `creds` JSON; omit id-token: write.
+name: HAL eval CoreBench hard (VM)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# New run on the same branch/PR cancels the previous in-progress run (saves VM/API cost).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  corebench-hard-vm:
+    runs-on: ubuntu-latest
+    # Create this Environment in Repo → Settings → Environments and attach secrets/vars.
+    environment: test-environment
+    permissions:
+      contents: read
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      WANDB_API_KEY: ${{ secrets.WANDB_API_KEY }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      AZURE_RESOURCE_GROUP_NAME: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
+      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+      NETWORK_SECURITY_GROUP_NAME: ${{ vars.NETWORK_SECURITY_GROUP_NAME }}
+      SSH_PRIVATE_KEY_PATH: ${{ vars.SSH_PRIVATE_KEY_PATH }}
+      SSH_PUBLIC_KEY_PATH: ${{ vars.SSH_PUBLIC_KEY_PATH }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble Azure creds JSON
+        id: azure_creds
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          set -euo pipefail
+          for v in AZURE_CLIENT_ID AZURE_CLIENT_SECRET AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Required $v is empty (set on GitHub Environment \`test-environment\` secrets or vars)." >&2
+              exit 1
+            fi
+          done
+          CREDS="$(python3 -c 'import json, os; print(json.dumps({"clientId": os.environ["AZURE_CLIENT_ID"], "clientSecret": os.environ["AZURE_CLIENT_SECRET"], "subscriptionId": os.environ["AZURE_SUBSCRIPTION_ID"], "tenantId": os.environ["AZURE_TENANT_ID"]}))')"
+          {
+            echo 'creds<<CREDS_JSON_EOF'
+            echo "$CREDS"
+            echo 'CREDS_JSON_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Azure login (service principal)
+        uses: azure/login@v2
+        with:
+          auth-type: SERVICE_PRINCIPAL
+          creds: ${{ steps.azure_creds.outputs.creds }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          pip install -e ".[dev,azure,corebench,coreagent]"
+          # Ensure gql 4+ (weave needs TransportConnectionFailed); extras can pull gql 3.x.
+          pip install "gql[httpx]>=4.0,<5"
+
+      - name: Generate SSH key pair for VM provisioning
+        run: |
+          set -euo pipefail
+          key="${SSH_PRIVATE_KEY_PATH:?SSH_PRIVATE_KEY_PATH must be set}"
+          pub="${SSH_PUBLIC_KEY_PATH:?SSH_PUBLIC_KEY_PATH must be set}"
+          mkdir -p "$(dirname "$key")"
+          rm -f "$key" "$pub"
+          ssh-keygen -t ed25519 -f "$key" -N "" -q
+          test -f "$pub"
+          chmod 600 "$key"
+          chmod 644 "$pub"
+
+      # core_test.json is gitignored; benchmark loads decrypted JSON (see README / hal/benchmarks/corebench.py).
+      - name: Decrypt CoreBench test set
+        run: |
+          set -euo pipefail
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase 'reproducibility' \
+            --output hal/benchmarks/corebench/core_test.json \
+            --decrypt hal/benchmarks/corebench/core_test.json.gpg
+
+      - name: Run hal-eval (CoreBench hard, one test, VM)
+        run: |
+          set -euo pipefail
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "::error::OPENAI_API_KEY is empty — add repository or environment secret \`OPENAI_API_KEY\` on GitHub Environment \`test-environment\`." >&2
+            exit 1
+          fi
+          log="$(mktemp)"
+          set +e
+          set -o pipefail
+          hal-eval --benchmark corebench_hard \
+            --agent_dir agents/core_agent \
+            --agent_function main.run \
+            --agent_name "CORE-Agent" \
+            --vm \
+            --no-download-environment \
+            --max_concurrent 1 \
+            --max_tasks 1 \
+            -A 'model_name=openai/gpt-4.1-2025-04-14' \
+            2>&1 | tee "$log"
+          eval_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$eval_status" -ne 0 ]; then
+            echo "::error::hal-eval exited with status $eval_status" >&2
+            exit "$eval_status"
+          fi
+          if ! grep -Fq 'hal.cli: Evaluation completed successfully' "$log"; then
+            echo "::error::hal-eval output must contain: hal.cli: Evaluation completed successfully" >&2
+            exit 1
+          fi
+
+      - name: Verify CoreBench hard result layout and upload JSON
+        run: |
+          set -euo pipefail
+          bash .github/scripts/verify_corebench_hard_e2e.sh
