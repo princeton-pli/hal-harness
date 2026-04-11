@@ -128,9 +128,21 @@
       }
     },
     "raw_logging_results": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "type": "object", "additionalProperties": true }
+      "description": "Per-task Weave traces from get_weave_calls(): dict keyed by task_id, not a list.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^capsule-[0-9]+$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["messages"],
+        "properties": {
+          "messages": { "type": "array" },
+          "call_metadata": { "type": "array" },
+          "model": {},
+          "call_count": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": true
+      }
     },
     "total_usage": {
       "type": "object",
