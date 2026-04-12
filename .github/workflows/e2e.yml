@@ -11,6 +11,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # Default types omit ready_for_review; we need it so draft → ready triggers a run.
+    types: [opened, synchronize, reopened, ready_for_review]
 
 # New run on the same branch/PR cancels the previous in-progress run (saves VM/API cost).
 concurrency:
@@ -19,6 +21,8 @@ concurrency:
 
 jobs:
   corebench-hard-vm:
+    # Run on main pushes and on non-draft PRs; skip while the PR is a draft (runs after ready_for_review).
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     # Create this Environment in Repo → Settings → Environments and attach secrets/vars.
     environment: test-environment
