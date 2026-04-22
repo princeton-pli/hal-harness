@@ -1,0 +1,13 @@
+
+Question: You are interpreting the results of a replication attempt of a research claim.
+You are given the following information about the research claim:
+{claim_docs_for_evaluator}
+
+You are given the following information about the replication attempt.
+{agent_docs_for_evaluator}
+
+
+Your task is to interpret the the replication results and fill out the following structured JSON report.
+=== START OF INTERPRET JSON TEMPLTATE. THIS SHOULD ONLY BE FILLED OUT ONCE YOU HAVE GATHERED ALL NECESSARY INFORMATION. ===
+{interpret_json_schema}
+=== END START OF INTERPRET JSON TEMPLTATE ===

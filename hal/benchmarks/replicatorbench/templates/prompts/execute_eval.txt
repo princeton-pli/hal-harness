@@ -1,0 +1,23 @@
+
+Question: You are an experienced researcher. You are assessing a replication attempt of a research claim.
+You are given the following information about the research claim:
+{claim_docs_for_evaluator}
+
+You are given the following information about the replication attempt.
+{agent_docs_for_evaluator}
+
+
+Your task is to score the replication attempt by filling out this structured rubric 
+=== START OF EVALUATION RUBRIC TO BE FILLED OUT ===
+{rubric_schema}
+=== END OF EVALUAIION RUBRIC TO BE FILLED OUT ===
+
+For each leaf node in the rubric assign a score of 0 or 1 based on the rubric requirement, with 1 being a satisfaction of the rubric requirement.
+Remember, every response needs to have one of the two following formats:
+----- FORMAT 1 (For when you need to call actions to help accomplish the given task) -------
+Thought: [Your thinking/planning process for completing the task based on interactions so far]
+Action: [call next action to help you solve the task]
+PAUSE
+----- FORMAT 2 (For when you are ready to give a final response)-------
+Thought: [Your thinking/planning process for completing the task based on interactions so far]
+Answer: [Execute necessary next action to help you solve the task]

@@ -1,0 +1,35 @@
+{
+    "interpretation_summary": "A narrative overview of the assessment process, including key comparisons made, overall fidelity to replication plan, and high-level outcome (e.g., 'The replication on the extended dataset supported the hypothesis with a similar positive coefficient, but with a larger SE due to sample differences.').",
+    "execute_status": "Overall execution status from the Execute output (Success, Partial Success, Failure).",
+    "fidelity_assessment": {
+      "method_alignment": "Narrative on how well the executed code/methods matched the preregistration (e.g., 'Full alignment: Ordinary Least Squares regression (OLS) model used with specified variables; minor deviation in data subset due to missing values')",
+      "deviations": [
+        {
+          "issue_description": "Brief detail (e.g., 'Control variable 'education' recorded differently').",
+          "impact": "Assessed effect on results (e.g., 'Low: Did not alter significance')"
+        },
+        {
+          "issue_description": "Add more issues details if detected",
+          "impact": "Add more issues details if detected"
+        }
+      ]
+    },
+    "results_comparison": {
+      "hypothesis_tested": "Restatement of the focal hypothesis.",
+      "original_results": "Summary of key findings about the claim from the ORIGINAL paper, including numerical extracts (e.g., 'Coefficient: 566.5, SE: 209, p<0.01').",
+      "replication_results": "Summary of key replication findings, mirroring the structure of original_results.",
+      "overall_answer": "Concise answer to 'Do the replication results satisfy the preregistered comparison criteria for each claim?' (e.g., 'Yes for the focal claim; Partial for robustness checks')."
+    },
+    "replication_report": ": Short summary stating overall results (e.g., 'Replication successful: Low-caste dominance associated with +450 income per acre (p<0.05), consistent with original but attenuated effect.').",
+    "failure_handling": [
+      {
+        "failure_type": "choose from Data-Related Failures, Code/Execution Failures, Method/Alignment Failures, Results/Output Failures",
+        "suggestions": "Actionable recommendations (e.g., 'Provide alternative data mapping; Use Python equivalent for statsmodels')."
+      },
+      {
+        "failure_type": "add more types of failure if detected, choose from Data-Related Failures, Code/Execution Failures, Method/Alignment Failures, Results/Output Failures",
+        "suggestions": "Actionable recommendations (e.g., 'Provide alternative data mapping; Use Python equivalent for statsmodels')."
+      }
+    ],
+    "notes": "Additional caveats, uncertainties, or suggestions for medium/hard tiers (e.g., 'Results sensitive to sample size; Recommend sensitivity analysis in future.')."
+  }
