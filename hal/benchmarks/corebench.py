@@ -8,12 +8,45 @@ import numpy as np
 from scipy.stats import t
 import math
 import logging
+from decimal import Decimal
 
 from hal.utils.logging_utils import create_progress
 from .base_benchmark import BaseBenchmark
 
 logger = logging.getLogger(__name__)
 
+# Capsule-specific answer aliases for string tasks
+_ANSWER_ALIASES: Dict[str, Dict[str, set]] = {
+    "capsule-2816027": {
+        "fig For CTCF Signature Enrichment, report the name of the group with the highest median GSVA score.":
+            {"D538G", "MCF7_D538G"},
+    },
+    "capsule-3639589": {
+        "fig Report the color of the line with the highest maximum activation for target memory activation, DM.":
+            {"blue", "green"},
+    },
+    "capsule-2151475": {
+        "fig Report the name of the university ranked #1 by impact factor.":
+            {"Chicago", "University of Chicago"},
+        "fig Report the name of the journal with the highest 2011 impact factor from the analysis of 30 journals.":
+            {"JEL", "Journal of Economic Literature"},
+    },
+    "capsule-0152700": {
+        "Given the Kruskal-Wallis for Group 0-2 (Group 1 vs. Group 3), what is the p-value?":
+            {"2.341092434893948e-10", "1.0728737137836577e-09", "2.0438111587013562e-09"},
+    },
+}
+
+# Capsule-specific list answer aliases: capsule_id -> question_key -> list of acceptable element subsets
+# A list answer is accepted if its elements exactly match any one subset (case-insensitive)
+_LIST_ANSWER_ALIASES: Dict[str, Dict[str, list]] = {
+    "capsule-9477017": {
+        "fig Pearson correlation coefficients between the estimated proportions of different cell types were calculated, what is the highest pearson correlation related to? Give response in a list of strings": [
+            {"Smooth.1", "Endo.1"},
+            {"Smooth.1", "B"},
+        ],
+    },
+}
 
 class CoreBench(BaseBenchmark):
     """Base class for CoreBench benchmarks of different difficulty levels"""
@@ -210,6 +243,7 @@ class CoreBench(BaseBenchmark):
     ) -> Dict[str, Any]:
         """Run evaluation harness. This can score based on the agent's output, or by running an evaluation script on the entire environments returned by the agent (see AppWorld benchmark)."""
 
+        agent_output = self._normalize_agent_output(agent_output)
         results = {}
 
         for task_id, solution in agent_output.items():
@@ -254,7 +288,7 @@ class CoreBench(BaseBenchmark):
                     )
 
                 # Evaluate the result using the prediction interval logic
-                evaluation = self.__eval_result_json(gt_result, reported_result)
+                evaluation = self.__eval_result_json(gt_result, reported_result, task_id)
 
                 results[task_id] = {
                     "correct_written_answers": evaluation["correct_written_answers"],
@@ -272,8 +306,19 @@ class CoreBench(BaseBenchmark):
                 }
 
         return results
+    
+    def __get_decimal_places(self, value: float) -> int:
+        """
+        Determines the number of decimal places in a numeric value. Returns 0 for integers and full-precision values.
+        """
+        try:
+            d = Decimal(str(value)).normalize()
+            return max(0, -d.as_tuple().exponent)
+        except Exception:
+            return 0
 
-    def __eval_result_json(self, gt_result: list, reported_result: Dict):
+
+    def __eval_result_json(self, gt_result: list, reported_result: Dict, task_id: str = ""):
         """Evaluates the reported result against the ground truth using prediction intervals."""
 
         # Returns the number of correctly answered questions in the result json
@@ -325,39 +370,76 @@ class CoreBench(BaseBenchmark):
             }
             sample_size = len(gt_result)
 
-            # Calculate the 95% prediction interval bounds for numeric keys
+            # Calculate the 95% prediction interval t-value
             t_value = t.ppf(0.975, sample_size - 1)
-            prediction_interval_bounds = {
-                key: (
-                    mean_result[key]
-                    - t_value * std_dev_result[key] * math.sqrt(1 + 1 / sample_size),
-                    mean_result[key]
-                    + t_value * std_dev_result[key] * math.sqrt(1 + 1 / sample_size),
-                )
-                for key in numeric_keys
-            }
+
+            # Calculate adjusted prediction interval bounds with tolerance
+            prediction_interval_bounds = {}
+            for key in numeric_keys:
+                # Calculate standard 95% prediction interval bounds
+                L = mean_result[key] - t_value * std_dev_result[key] * math.sqrt(1 + 1 / sample_size)
+                U = mean_result[key] + t_value * std_dev_result[key] * math.sqrt(1 + 1 / sample_size)
+    
+                # Determine decimal places for each ground truth value and take the maximum
+                decimal_places = [self.__get_decimal_places(result[key]) for result in gt_result]
+                d = max(decimal_places) if decimal_places else 0
+    
+                # Calculate tolerance term: 0.5 * 10^(-d)
+                tolerance = 0.5 * (10 ** (-d))
+    
+                adjusted_lower = L - tolerance 
+                adjusted_upper = U + tolerance
+    
+                prediction_interval_bounds[key] = (adjusted_lower, adjusted_upper)  
 
             try:
                 for key in reported_result.keys():
                     if key in numeric_keys:
                         lower_bound, upper_bound = prediction_interval_bounds[key]
-                        if lower_bound <= reported_result[key] <= upper_bound:
+                        value = reported_result[key]
+                        if (lower_bound <= value <= upper_bound
+                            or np.isclose(value, lower_bound)
+                            or np.isclose(value, upper_bound)):
                             if "fig" in key:
                                 correct_vision_answers += 1
                             else:
                                 correct_written_answers += 1
                     elif key in list_keys:
-                        # Direct list comparison
-                        if reported_result[key] == gt_result[0][key]:
+                        reported_list = reported_result[key]
+                        list_aliases = (_LIST_ANSWER_ALIASES.get(task_id) or {}).get(key)
+                        if list_aliases is not None:
+                            reported_list_lower = {item.lower() for item in reported_list}
+                            correct = any(
+                                {v.lower() for v in subset} == reported_list_lower
+                                for subset in list_aliases
+                            )
+                        else:
+                            correct = reported_list == gt_result[0][key]
+                        if correct:
                             if "fig" in key:
                                 correct_vision_answers += 1
                             else:
                                 correct_written_answers += 1
                     elif key in string_keys:
-                        if (
-                            str(reported_result[key]).lower()
-                            == str(gt_result[0][key]).lower()
-                        ):
+                        gt_val = str(gt_result[0][key])
+                        reported_val = reported_result[key]
+                        # Normalize boolean-equivalent reported values
+                        # so that int/float 1 or 0 are accepted for "True"/"False" ground truths
+                        if gt_val.lower() in ("true", "false"):
+                            if isinstance(reported_val, bool):
+                                reported_val = str(reported_val)
+                            elif isinstance(reported_val, (int, float)):
+                                if reported_val == 1:
+                                    reported_val = "True"
+                                elif reported_val == 0:
+                                    reported_val = "False"
+                        reported_val = str(reported_val)
+                        alias_set = (_ANSWER_ALIASES.get(task_id) or {}).get(key)
+                        if alias_set is not None:
+                            correct = reported_val.lower() in {v.lower() for v in alias_set}
+                        else:
+                            correct = reported_val.lower() == gt_val.lower()
+                        if correct:
                             if "fig" in key:
                                 correct_vision_answers += 1
                             else:
