@@ -41,6 +41,46 @@ runcmd:
     conda activate agent_env
     "
 
+    # 7. Configure CUDA paths system-wide (ubuntu-hpc image has CUDA at /usr/local/cuda
+    # but LD_LIBRARY_PATH is only set for login shells; codex spawns non-login bash).
+    # Make CUDA libs discoverable for all processes via ldconfig + system env.
+    if [ -d /usr/local/cuda ]; then
+        echo 'PATH="/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' > /etc/environment
+        echo 'LD_LIBRARY_PATH="/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64"' >> /etc/environment
+        echo '/usr/local/cuda/lib64' > /etc/ld.so.conf.d/cuda.conf
+        echo '/usr/local/cuda/extras/CUPTI/lib64' >> /etc/ld.so.conf.d/cuda.conf
+        ldconfig
+        echo "CUDA paths configured system-wide"
+    else
+        echo "WARNING: /usr/local/cuda not found; GPU code may fail to load CUDA"
+    fi
+
+    # 8. Install CUDA 12 runtime libs + cuDNN as Python wheels at a fixed system path.
+    # Why: ubuntu-hpc image ships CUDA 13.x, but TensorFlow / PyTorch wheels expect CUDA 12.x.
+    # Solution: pip-install the nvidia-*-cu12 wheels to /opt/nvidia-cuda12 and put their
+    # lib dirs on the system LD_LIBRARY_PATH. Any Python env that uses TF/PyTorch will then
+    # find matching CUDA 12 + cuDNN regardless of what's installed in the venv.
+    sudo mkdir -p /opt/nvidia-cuda12
+    sudo pip3 install --quiet --target=/opt/nvidia-cuda12 \
+        nvidia-cuda-runtime-cu12 nvidia-cuda-nvrtc-cu12 nvidia-cuda-cupti-cu12 \
+        nvidia-cublas-cu12 nvidia-cufft-cu12 nvidia-curand-cu12 \
+        nvidia-cusolver-cu12 nvidia-cusparse-cu12 nvidia-cudnn-cu12 \
+        nvidia-nccl-cu12 nvidia-nvjitlink-cu12 || echo "WARNING: nvidia cu12 wheels install failed"
+
+    # Collect all .so directories from the installed wheels and put them on system paths.
+    NVIDIA_LIB_DIRS=$(find /opt/nvidia-cuda12/nvidia -name '*.so*' -exec dirname {} \; 2>/dev/null | sort -u | tr '\n' ':' | sed 's/:$//')
+    if [ -n "$NVIDIA_LIB_DIRS" ]; then
+        # Replace earlier LD_LIBRARY_PATH (system CUDA 13) with CUDA 12 paths. Keep system CUDA last as fallback.
+        echo "PATH=\"/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"" > /etc/environment
+        echo "LD_LIBRARY_PATH=\"${NVIDIA_LIB_DIRS}:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64\"" >> /etc/environment
+        # Also register with ldconfig so libs are findable without LD_LIBRARY_PATH
+        echo "$NVIDIA_LIB_DIRS" | tr ':' '\n' > /etc/ld.so.conf.d/nvidia-cu12.conf
+        ldconfig
+        echo "CUDA 12 wheels installed at /opt/nvidia-cuda12 and registered system-wide"
+    else
+        echo "WARNING: No nvidia .so files found; TF GPU may not work"
+    fi
+
     # 8. Create sentinel file to signal completion
     rm /home/agent/startup_started
     touch /home/agent/startup_complete

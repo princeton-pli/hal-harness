@@ -22,7 +22,7 @@ su - agent -c "bash -c '\
         echo \"Installing requirements...\" && \
         pip install -r requirements.txt && \
         echo \"Installing weave and gql pin...\" && \
-        pip install weave==0.51.41 \"gql<4\" && \
+        pip install weave==0.51.41 \"gql<4\" \"wandb<0.19\" && \
         echo \"Installing Azure VM dependencies...\" && \
         pip install \"azure-identity>=1.12.0\" \"requests>=2.31.0\" && \
         echo \"Requirements installed\"; \

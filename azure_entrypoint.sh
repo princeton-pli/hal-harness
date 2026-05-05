@@ -35,6 +35,14 @@ export TMPDIR="$HOME/tmp"
 export WEAVE_SERVER_CACHE_DIR="$HOME/.cache/weave"
 mkdir -p "$TMPDIR" "$WEAVE_SERVER_CACHE_DIR"
 
+# OpenCode's google provider expects GOOGLE_GENERATIVE_AI_API_KEY.
+# Map from GEMINI_API_KEY which is what we forward via TASK_ENV_VARS.
+if [ -n "${GEMINI_API_KEY:-}" ]; then
+  export GOOGLE_GENERATIVE_AI_API_KEY="$GEMINI_API_KEY"
+  export GOOGLE_API_KEY="$GEMINI_API_KEY"
+  echo "Mapped GEMINI_API_KEY → GOOGLE_GENERATIVE_AI_API_KEY + GOOGLE_API_KEY"
+fi
+
 # Run from inside the repo so pip install -e . and relative agent_dir work
 cd "$(dirname "$0")"
 
@@ -52,6 +60,16 @@ if [ -f "$CAPSULE_TARBALL" ]; then
   echo "Extracting capsule $TASK_ID from $CAPSULE_TARBALL..."
   mkdir -p hal/benchmarks/corebench/capsules
   tar xzf "$CAPSULE_TARBALL" -C hal/benchmarks/corebench/capsules
+  # Remove the tarball so the agent can't bypass the file filter by reading
+  # it directly. The agent has full filesystem access (codex runs with
+  # --dangerously-bypass-approvals-and-sandbox) and will find and untar it
+  # to read pre-computed results/ if left on disk.
+  rm -f "$CAPSULE_TARBALL"
+  # Also strip results/ directories from the extracted capsule. CoreBenchHard
+  # filters these out of the agent's ./environment/ via _get_capsule_files_dict,
+  # but the capsule source dir remains on disk and agents can browse to it
+  # directly (data leakage — see capsule-6800638 incident).
+  find "hal/benchmarks/corebench/capsules/${TASK_ID}" -type d -name "results" -exec rm -rf {} + 2>/dev/null || true
 fi
 
 echo "Installing packages..."
@@ -69,12 +87,17 @@ export PATH="$HOME/.local/bin:$PATH"
 
 echo "Running hal.cli..."
 # Build a unique run_id so concurrent tasks don't collide in Weave.
-# Uses $AZ_BATCH_TASK_ID (globally unique per Azure Batch task) instead of
-# $(date +%s) which collides when multiple tasks start in the same second.
-# Sanitize: Weave project names only allow [a-z0-9_-].
+# Weave project names have a 128-char limit. Use a short prefix + the uuid
+# suffix from $AZ_BATCH_TASK_ID for uniqueness. The full model/capsule info
+# is already in the UPLOAD.json config block and in blob storage paths.
 SANITIZED_MODEL=$(echo "$MODEL" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g')
-SANITIZED_AZ_TASK_ID=$(echo "${AZ_BATCH_TASK_ID:-$(date +%s%N)}" | sed 's/[^a-zA-Z0-9_-]/_/g')
-RUN_ID="${BENCHMARK}_${AGENT_NAME}_${SANITIZED_MODEL}_task${TASK_ID}_${SANITIZED_AZ_TASK_ID}"
+# Extract just the 8-char uuid suffix from the Azure task ID (last segment after final -)
+AZ_SUFFIX=$(echo "${AZ_BATCH_TASK_ID:-$(date +%s%N)}" | grep -oE '[a-f0-9]{8}$' || date +%s%N)
+RUN_ID="${BENCHMARK}_${AGENT_NAME}_${SANITIZED_MODEL}_${TASK_ID}_${AZ_SUFFIX}"
+# Enforce 128-char cap (truncate from the middle if needed, preserving suffix for uniqueness)
+if [ ${#RUN_ID} -gt 128 ]; then
+  RUN_ID="${RUN_ID:0:119}_${AZ_SUFFIX}"
+fi
 
 HAL_CLI_ARGS=(
   --agent_name "$AGENT_NAME"
@@ -85,6 +108,12 @@ HAL_CLI_ARGS=(
   --run_id "$RUN_ID"
   -A "model_name=$MODEL"
 )
+
+# If HAL_TASK_TIMEOUT is set (via env var from batch.py), override the default timeout.
+if [ -n "${HAL_TASK_TIMEOUT:-}" ]; then
+  HAL_CLI_ARGS+=(--task_timeout "$HAL_TASK_TIMEOUT")
+  echo "Task timeout: ${HAL_TASK_TIMEOUT}s"
+fi
 
 # Forward any HAL_AGENT_ARG_<key>=<value> env vars as -A args to hal-eval.
 while IFS= read -r var; do
