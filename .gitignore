@@ -20,6 +20,21 @@ hal/benchmarks/corebench/capsules
 hal/benchmarks/corebench/core_test.json
 hal/benchmarks/corebench/capsules/*
 hal/benchmarks/scienceagentbench/benchmark
+# Local-only manifest backups + encrypted variants (canonical copies live on HF)
+hal/benchmarks/corebench/core_test*.json.bak
+hal/benchmarks/corebench/core_test*.json.bak.*
+hal/benchmarks/corebench/core_test_old.json
+hal/benchmarks/corebench/*.gpg
+
+# Reliability evaluation analysis artifacts (generated outputs, not source)
+reliability_eval/analysis/
+reliability_eval/analysis_k5/
+
+# Generic editor/build backups
+*.bak
+
+# Claude Code per-session worktrees
+.claude/worktrees/
 
 # Misc
 uv.lock
