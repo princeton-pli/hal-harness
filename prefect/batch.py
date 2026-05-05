@@ -103,9 +103,21 @@ def _wait_for_pool_steady() -> None:
 
 
 def resize_pool(n_nodes: int) -> None:
-    """Resize the pool to n_nodes dedicated nodes. Pass 0 to scale down."""
+    """Scale the pool UP to at least n_nodes dedicated nodes.
+
+    Never scales down — a concurrent job may be using the existing nodes.
+    Pass 0 explicitly to force scale-down (e.g. after all jobs complete).
+    """
     _wait_for_pool_steady()
     client = _batch_client()
+    if n_nodes > 0:
+        pool = client.pool.get(AZURE_BATCH_POOL_ID)
+        current_target = pool.target_dedicated_nodes or 0
+        if n_nodes <= current_target:
+            print(
+                f"Pool already at {current_target} nodes (>= {n_nodes} requested), skipping resize"
+            )
+            return
     client.pool.resize(
         AZURE_BATCH_POOL_ID,
         batch_models.PoolResizeParameter(
@@ -148,6 +160,7 @@ def _submit_batch_task(spec: EvalSpec) -> str:
     _KEY_ABBREV = {
         "reasoning_effort": "re",
         "max_threads": "mt",
+        "thinking_budget": "tb",
     }
     args_segment = (
         "-" + "-".join(f"{_KEY_ABBREV.get(k, k)}{v}" for k, v in spec.agent_args)
@@ -180,7 +193,15 @@ def _submit_batch_task(spec: EvalSpec) -> str:
                 name=f"HAL_AGENT_ARG_{k}", value=str(v)
             )
             for k, v in spec.agent_args
-        ],
+        ]
+        # Task timeout override (hal-eval --task_timeout)
+        + (
+            [batch_models.EnvironmentSetting(
+                name="HAL_TASK_TIMEOUT", value=str(spec.task_timeout)
+            )]
+            if spec.task_timeout > 0
+            else []
+        ),
         resource_files=[
             batch_models.ResourceFile(
                 http_url=spec.code_sas_url,

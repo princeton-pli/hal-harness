@@ -29,6 +29,8 @@ class EvalSpec:
     # to the task working directory unless it is an absolute path. dest_subpath is
     # appended to {job_id}/logs/{azure_task_id}/ in the result container.
     capsule_sas_url: str = ""  # read SAS for the per-task corebench capsule tarball, if any
+    task_timeout: int = 0  # hal-eval --task_timeout override in seconds. 0 = use default (2700s).
+    repeat_idx: int = 0  # Repetition index for K-repeat reliability runs (0-indexed).
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +65,20 @@ CAPSULES_CONTAINER_NAME = os.getenv(
 )
 CAPSULES_BLOB_PREFIX = os.getenv("CAPSULES_BLOB_PREFIX", "")
 
-POLL_INTERVAL_SECONDS = 15  # how often to poll Azure Batch task state
+POLL_INTERVAL_SECONDS = 30  # how often to poll Azure Batch task state
+# At 1000+ tasks, 15s polling → ~67 req/s which risks hitting Azure Batch's
+# ~100 req/s rate limit. 30s keeps us at ~34 req/s with headroom.
+
+# Number of independent repetitions per (agent × benchmark × task × run_config)
+# cell. K >= 2 is required for outcome consistency metrics. Each repeat gets a
+# unique repeat_idx (0 .. K-1) stored in metadata so compile_results.py can
+# produce separate run directories per repeat.
+K_REPEATS = int(os.getenv("K_REPEATS", "2"))
+
+# Max dedicated nodes to request when resizing the pool. Set to 0 for no cap
+# (uses len(specs)). Use a lower value when API rate limits require throttling
+# concurrency — e.g. 20 for Anthropic models.
+MAX_NODES = int(os.getenv("MAX_NODES", "0"))
 
 # ---------------------------------------------------------------------------
 # Environment variables forwarded to each Azure Batch task node
@@ -73,6 +88,7 @@ TASK_ENV_VARS: dict[str, str] = {
     for k in [
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
         "HF_TOKEN",
         "WEAVE_API_KEY",
     ]
@@ -83,24 +99,32 @@ TASK_ENV_VARS: dict[str, str] = {
 # Evaluation matrix — agents × benchmarks × models
 # ---------------------------------------------------------------------------
 AGENTS = [
-    # {"name": "core_agent", "function": "main.run", "dir": "agents/core_agent"},
+    # ── codex_agent (reliability runs) ────────────────────────────────
     {
         "name": "codex_agent",
         "function": "main.run",
         "dir": "agents/codex_agent",
-        # Codex CLI writes per-attempt JSONL event logs to <cwd>/codex_exec.log.{0,1,2}.
-        # hal-eval runs each agent in a /tmp/agent_run_<uuid>/ temp dir then copies the
-        # whole dir into results/<run_id>/<task_id>/ on completion, so the codex logs
-        # land alongside the standard harness outputs. Capture them so the agent's
-        # conversation trace survives the ephemeral VM.
         "extra_output_files": (
             ("hal-harness/results/**/codex_exec.log.*", "codex"),
         ),
     },
+    # ── core_agent v2 (extended time + steps, commented out) ──────────
     # {
-    #     "name": "hal_generalist_agent",
+    #     "name": "core_agent",
     #     "function": "main.run",
-    #     "dir": "agents/hal_generalist_agent",
+    #     "dir": "agents/core_agent",
+    #     "task_timeout": 18000,  # 5 hours
+    # },
+    # ── opencode_agent (commented out) ────────────────────────────────
+    # {
+    #     "name": "opencode_agent",
+    #     "function": "main.run",
+    #     "dir": "agents/opencode_agent",
+    #     "extra_output_files": (
+    #         ("hal-harness/results/**/opencode_exec.log", "opencode"),
+    #         ("opencode_exec.log", "opencode"),
+    #         ("opencode_logs.tar.gz", "opencode"),
+    #     ),
     # },
 ]
 
@@ -165,49 +189,24 @@ BENCHMARK_TASKS: dict[str, list[str]] = {
     #     "19",
     #     "20",
     # ],
+    # ── corebench v2 mainline (39 capsules, from core_test.json.bak.main42) ──
+    # 3 capsules excluded from the 42-capsule original by downstream:
+    # capsule-8536428, capsule-4180912, capsule-6800638.
     "corebench_hard": [
-        "capsule-5507257",
-        "capsule-3449234",
-        "capsule-8536428",
-        "capsule-8807709",
-        "capsule-6049678",
-        "capsule-2804717",
-        "capsule-3418007",
-        "capsule-1624349",
-        "capsule-9832712",
-        "capsule-2816027",
-        "capsule-3821950",
-        "capsule-9054015",
-        "capsule-3301293",
-        "capsule-1724988",
-        "capsule-4299879",
-        "capsule-0851068",
-        "capsule-1394704",
-        "capsule-0504157",
-        "capsule-3593259",
-        "capsule-3639589",
-        "capsule-2345790",
-        "capsule-7716865",
-        "capsule-4933686",
-        "capsule-9240688",
-        "capsule-1175539",
-        "capsule-4180912",
-        "capsule-2708693",
-        "capsule-4252248",
-        "capsule-4671827",
-        "capsule-7186268",
-        "capsule-5136217",
-        "capsule-7800694",
-        "capsule-6800638",
-        "capsule-8412128",
-        "capsule-7655932",
-        "capsule-9294029",
-        "capsule-6295990",
-        "capsule-9477017",
-        "capsule-0201673",
-        "capsule-0152700",
-        "capsule-2242462",
-        "capsule-3762736",
+        "capsule-5507257", "capsule-3449234",
+        "capsule-8807709", "capsule-6049678", "capsule-2804717",
+        "capsule-3418007", "capsule-1624349", "capsule-9832712",
+        "capsule-2816027", "capsule-3821950", "capsule-9054015",
+        "capsule-3301293", "capsule-1724988", "capsule-4299879",
+        "capsule-0851068", "capsule-1394704", "capsule-0504157",
+        "capsule-3593259", "capsule-3639589", "capsule-2345790",
+        "capsule-7716865", "capsule-4933686", "capsule-9240688",
+        "capsule-1175539", "capsule-2708693",
+        "capsule-4252248", "capsule-4671827", "capsule-7186268",
+        "capsule-5136217", "capsule-7800694",
+        "capsule-8412128", "capsule-7655932", "capsule-9294029",
+        "capsule-6295990", "capsule-9477017", "capsule-0201673",
+        "capsule-0152700", "capsule-2242462", "capsule-3762736",
     ]
 }
 
@@ -231,6 +230,7 @@ BENCHMARK_TASKS: dict[str, list[str]] = {
 #     (Codex CLI's `model_reasoning_effort` config).
 # ---------------------------------------------------------------------------
 RUN_CONFIGS: list[tuple[str, tuple[tuple[str, str], ...]]] = [
+    # ── codex_agent reliability runs (12 ablations × K_REPEATS) ───────
     # Reasoning effort sweep on gpt-5.4
     ("gpt-5.4", (("reasoning_effort", "low"),)),
     ("gpt-5.4", (("reasoning_effort", "medium"),)),

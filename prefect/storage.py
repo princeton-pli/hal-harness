@@ -33,6 +33,9 @@ from config import (
 _ZIP_EXCLUDES = {
     ".git",
     ".venv",
+    ".prefect_results",
+    ".prefect_results_aggregated",
+    ".claude",
     "prefect",
     "results",
     "__pycache__",
