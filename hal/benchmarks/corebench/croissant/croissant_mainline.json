@@ -49,13 +49,13 @@
   },
   "@type": "Dataset",
   "conformsTo": "http://mlcommons.org/croissant/1.0",
-  "name": "core-bench-v2-mainline",
-  "description": "CORE-bench v2 mainline split: 39 scientific-reproducibility tasks derived from peer-reviewed Code Ocean compute capsules. Each task asks an AI agent to execute the capsule in a sandboxed Linux environment and answer questions whose ground-truth answers depend on the reproduced outputs. Disjoint from the OOD split.",
-  "version": "2.0.0",
+  "name": "core-bench-v1.1-mainline",
+  "description": "CORE-bench v1.1 mainline split: 39 scientific-reproducibility tasks derived from peer-reviewed Code Ocean compute capsules. Each task asks an AI agent to execute the capsule in a sandboxed Linux environment and answer questions whose ground-truth answers depend on the reproduced outputs. Disjoint from the OOD split.",
+  "version": "1.1.0",
   "license": "https://creativecommons.org/licenses/by/4.0/",
-  "url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline",
+  "url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline",
   "datePublished": "2026-05-03",
-  "citeAs": "@inproceedings{corebench-v2-2026, title={CORE-bench v2: A Reliability Benchmark for AI Agents on Scientific Reproducibility Tasks}, author={TODO}, booktitle={NeurIPS Datasets and Benchmarks Track}, year={2026}}",
+  "citeAs": "@inproceedings{corebench-v1-1-2026, title={CORE-bench v1.1: A Reliability Benchmark for AI Agents on Scientific Reproducibility Tasks}, author={TODO}, booktitle={NeurIPS Datasets and Benchmarks Track}, year={2026}}",
   "creator": {
     "@type": "Organization",
     "name": "TODO: lab/institution name",
@@ -76,7 +76,7 @@
       "name": "core_test.json",
       "description": "JSON array of CORE-bench tasks. One element per task.",
       "encodingFormat": "application/json",
-      "contentUrl": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/core_test.json",
+      "contentUrl": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/core_test.json",
       "sha256": "d4aa5ebb984df7f293e04f2dd120722f172fddea6fcb54a0c928e09bc6ef837d"
     },
     {
@@ -217,7 +217,7 @@
           "tasks/task_prompt": "Run multiclass_state_analysis_testing.py",
           "tasks/expected_answer": "[{\"Report the test accuracy of 'mouth talking'.\": 96.12499135323452}, {\"Report the test accuracy of 'mouth talking'.\": 96.12499135323452}, {\"Report the test accuracy of 'mouth talking'.\": 96.12499135323452}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.0217715.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-5507257.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-5507257.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-3449234",
@@ -227,7 +227,7 @@
           "tasks/task_prompt": "Run the jupyter notebook visualize_results.ipynb using a python3 kernel and convert it to html. For all the runs, disable the cell execution timeout and allow errors.",
           "tasks/expected_answer": "[{\"fig From the figure containing the standard deviation for the Essen data, report the name of the model with the highest standard deviation between time 0 and 10.\": \"SN\"}, {\"fig From the figure containing the standard deviation for the Essen data, report the name of the model with the highest standard deviation between time 0 and 10.\": \"SN\"}, {\"fig From the figure containing the standard deviation for the Essen data, report the name of the model with the highest standard deviation between time 0 and 10.\": \"SN\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.8788349.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-3449234.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-3449234.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-8807709",
@@ -237,7 +237,7 @@
           "tasks/task_prompt": "Run 'epidemic.py'.",
           "tasks/expected_answer": "[{\"fig For the third subplot in the visualization of the experiments, report the color of the line with the greatest number of nodes at epoch 15.\": \"blue\", \"fig Report the name of the first subplot in the visualization of the experiments.\": \"ill\"}, {\"fig For the third subplot in the visualization of the experiments, report the color of the line with the greatest number of nodes at epoch 15.\": \"blue\", \"fig Report the name of the first subplot in the visualization of the experiments.\": \"ill\"}, {\"fig For the third subplot in the visualization of the experiments, report the color of the line with the greatest number of nodes at epoch 15.\": \"blue\", \"fig Report the name of the first subplot in the visualization of the experiments.\": \"ill\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.1013089.v4",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-8807709.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-8807709.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-6049678",
@@ -247,7 +247,7 @@
           "tasks/task_prompt": "Run 'Main.py'.",
           "tasks/expected_answer": "[{\"Report the f1 score for the Musk1+ dataset with the svm classifier.\": 87.516, \"Report the f1 score for the Musk1+ dataset with the j48 classifier.\": 79.813}, {\"Report the f1 score for the Musk1+ dataset with the svm classifier.\": 86.578, \"Report the f1 score for the Musk1+ dataset with the j48 classifier.\": 79.426}, {\"Report the f1 score for the Musk1+ dataset with the svm classifier.\": 86.186, \"Report the f1 score for the Musk1+ dataset with the j48 classifier.\": 78.673}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.1490343.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-6049678.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-6049678.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-2804717",
@@ -257,7 +257,7 @@
           "tasks/task_prompt": "Export the following R default packages: datasets,utils,grDevices,graphics,stats,methods. Run 'ResultReproducibilityNotebook.Rmd' and render it as an html file. Store the output in ../results and set clean to 'TRUE'.",
           "tasks/expected_answer": "[{\"fig From the Network Density plot (Figure 4), report the label for the red line (ignore spaces).\": \"TS#1\"}, {\"fig From the Network Density plot (Figure 4), report the label for the red line (ignore spaces).\": \"TS#1\"}, {\"fig From the Network Density plot (Figure 4), report the label for the red line (ignore spaces).\": \"TS#1\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.4248204.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-2804717.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-2804717.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-3418007",
@@ -267,7 +267,7 @@
           "tasks/task_prompt": "Run 'main.py'.",
           "tasks/expected_answer": "[{\"Report the F1 score for statistical general only.\": 0.7536528881857651, \"fig Report the proposed model's AUC from the ROC curves figure. Ignore the confidence interval.\": 0.98}, {\"Report the F1 score for statistical general only.\": 0.7569591300356435, \"fig Report the proposed model's AUC from the ROC curves figure. Ignore the confidence interval.\": 0.98}, {\"Report the F1 score for statistical general only.\": 0.7599081605158183, \"fig Report the proposed model's AUC from the ROC curves figure. Ignore the confidence interval.\": 0.98}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.9672787.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-3418007.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-3418007.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-1624349",
@@ -277,7 +277,7 @@
           "tasks/task_prompt": "Execute 'FS-Filters.ipynb'. Save the results in html format in ../results. For all the runs, disable the cell execution timeout and allow errors.",
           "tasks/expected_answer": "[{\"Report the best accuracy of the hybrid filter wrapper strategy.\": 0.9506166187739464, \"fig Report the name of the feature with the highest I-Gain.\": \"RAWRED-MEAN\"}, {\"Report the best accuracy of the hybrid filter wrapper strategy.\": 0.9506166187739464, \"fig Report the name of the feature with the highest I-Gain.\": \"RAWRED-MEAN\"}, {\"Report the best accuracy of the hybrid filter wrapper strategy.\": 0.9506166187739464, \"fig Report the name of the feature with the highest I-Gain.\": \"RAWRED-MEAN\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.1509005.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-1624349.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-1624349.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-9832712",
@@ -287,7 +287,7 @@
           "tasks/task_prompt": "Create the following three directories in the results folder: 01_scopus-selection, 02_coding, 03_analyses. Run 'master_script.R' using Rscript.",
           "tasks/expected_answer": "[{\"fig From Figure 2 in the cleaned results, report the percentage of 'Not Available' analysis scripts for Pre-RC (2008-09)\": 100, \"fig From Table 1 in the cleaned results, report the number of Included Articles After.OS\": 255}, {\"fig From Figure 2 in the cleaned results, report the percentage of 'Not Available' analysis scripts for Pre-RC (2008-09)\": 100, \"fig From Table 1 in the cleaned results, report the number of Included Articles After.OS\": 255}, {\"fig From Figure 2 in the cleaned results, report the percentage of 'Not Available' analysis scripts for Pre-RC (2008-09)\": 100, \"fig From Table 1 in the cleaned results, report the number of Included Articles After.OS\": 255}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.2289033.v2",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-9832712.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-9832712.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-2816027",
@@ -297,7 +297,7 @@
           "tasks/task_prompt": "Export the following R default packages: datasets,utils,grDevices,graphics,stats,methods. Then, run 'main.R' using Rscript.",
           "tasks/expected_answer": "[{\"fig For CTCF Signature Enrichment, report the name of the group with the highest median GSVA score.\": \"MCF7_D538G\"}, {\"fig For CTCF Signature Enrichment, report the name of the group with the highest median GSVA score.\": \"MCF7_D538G\"}, {\"fig For CTCF Signature Enrichment, report the name of the group with the highest median GSVA score.\": \"MCF7_D538G\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.0627595.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-2816027.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-2816027.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-3821950",
@@ -307,7 +307,7 @@
           "tasks/task_prompt": "Create a 'figures' directory in the results folder. Run 'ktc_11_paper.Rmd' using Rscript and render it as html. Save the output to the ../results output directory. Set clean to 'TRUE'.",
           "tasks/expected_answer": "[{\"fig Report the name of the material with the highest Depth Below Surface at 10,000 calibrated years BP.\": \"charcoal\", \"fig Report the name of the material with the highest mass (g) and 5000 years cal. BP.\": \"ceramics\"}, {\"fig Report the name of the material with the highest Depth Below Surface at 10,000 calibrated years BP.\": \"charcoal\", \"fig Report the name of the material with the highest mass (g) and 5000 years cal. BP.\": \"ceramics\"}, {\"fig Report the name of the material with the highest Depth Below Surface at 10,000 calibrated years BP.\": \"charcoal\", \"fig Report the name of the material with the highest mass (g) and 5000 years cal. BP.\": \"ceramics\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.0c427240-6e28-417d-ba1a-777c8c4e485a",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-3821950.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-3821950.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-9054015",
@@ -317,7 +317,7 @@
           "tasks/task_prompt": "Run 'pancancer_calculation.R' using Rscript.",
           "tasks/expected_answer": "[{\"fig Report the percentage sensitivity for cancers A and B that has the highest number of cancers detected per 1,000 women for a 1.0% prevalance of cancer B.\": 90}, {\"fig Report the percentage sensitivity for cancers A and B that has the highest number of cancers detected per 1,000 women for a 1.0% prevalance of cancer B.\": 90}, {\"fig Report the percentage sensitivity for cancers A and B that has the highest number of cancers detected per 1,000 women for a 1.0% prevalance of cancer B.\": 90}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.4448554.v3",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-9054015.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-9054015.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-3301293",
@@ -327,7 +327,7 @@
           "tasks/task_prompt": "Run 'run_prediction.py'.",
           "tasks/expected_answer": "[{\"Report the test RMSE of the model.\": 26.21204}, {\"Report the test RMSE of the model.\": 26.21204}, {\"Report the test RMSE of the model.\": 26.21204}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.761a91d4-6f2f-4912-8129-2bb8abeaa044",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-3301293.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-3301293.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-1724988",
@@ -337,7 +337,7 @@
           "tasks/task_prompt": "Run 'calibration_error.R', 'lss1_summary_analyses.R', 'lss2_summary_analyses.R', and 'lss2_peak_analyses.R' all using Rscript.",
           "tasks/expected_answer": "[{\"fig Report the task name with the higher median walking speed (m/s).\": \"Walk\", \"fig Report the task name with the higher median straightness ratio.\": \"Search\"}, {\"fig Report the task name with the higher median walking speed (m/s).\": \"Walk\", \"fig Report the task name with the higher median straightness ratio.\": \"Search\"}, {\"fig Report the task name with the higher median walking speed (m/s).\": \"Walk\", \"fig Report the task name with the higher median straightness ratio.\": \"Search\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.8767371.v2",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-1724988.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-1724988.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-4299879",
@@ -347,7 +347,7 @@
           "tasks/task_prompt": "Run '01_motivation.R', '02_design.R', '03_survey.R', '04_metaketa_comp.R', '05_lapop.R', '06_misc.R' using Rscript.",
           "tasks/expected_answer": "[{\"fig From the figure measuring homicide rate per 100k in the last 12 months, report the name of the sample with the lower homicide rate per 100k in 2000.\": \"Colombia\"}, {\"fig From the figure measuring homicide rate per 100k in the last 12 months, report the name of the sample with the lower homicide rate per 100k in 2000.\": \"Colombia\"}, {\"fig From the figure measuring homicide rate per 100k in the last 12 months, report the name of the sample with the lower homicide rate per 100k in 2000.\": \"Colombia\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.0479587.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-4299879.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-4299879.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-0851068",
@@ -357,7 +357,7 @@
           "tasks/task_prompt": "Run the bash script 'demo.sh'.",
           "tasks/expected_answer": "[{\"Report the final AUC after training.\": 0.9157952669235003}, {\"Report the final AUC after training.\": 0.9157952669235003}, {\"Report the final AUC after training.\": 0.9157952669235003}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.9705378.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-0851068.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-0851068.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-1394704",
@@ -367,7 +367,7 @@
           "tasks/task_prompt": "Run 'modular.Rmd' using Rscript and render it as a html. Store the output in ../results. Set clean to 'TRUE'.",
           "tasks/expected_answer": "[{\"fig Report the name of the method with the higher R0.\": \"ML\", \"Report the R0 of EG.\": 1.035213}, {\"fig Report the name of the method with the higher R0.\": \"ML\", \"Report the R0 of EG.\": 1.035213}, {\"fig Report the name of the method with the higher R0.\": \"ML\", \"Report the R0 of EG.\": 1.035213}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.7958703.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-1394704.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-1394704.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-0504157",
@@ -377,7 +377,7 @@
           "tasks/task_prompt": "Run 'manuscript.Rmd' using Rscript and render it as a pdf. Store the output in the ../results directory. Set clean to 'TRUE'.",
           "tasks/expected_answer": "[{\"fig From figure 1, report the CS presentation time with the greatest mean EC effect (ignore units).\": 1000}, {\"fig From figure 1, report the CS presentation time with the greatest mean EC effect (ignore units).\": 1000}, {\"fig From figure 1, report the CS presentation time with the greatest mean EC effect (ignore units).\": 1000}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.26389ff0-ea56-467d-a550-b96cb9a31e04",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-0504157.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-0504157.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-3593259",
@@ -387,7 +387,7 @@
           "tasks/task_prompt": "Run 'physalia_automators.reports' as a python module with /results as the output directory.",
           "tasks/expected_answer": "[{\"fig From the violin plot of the energy comsumption of tap, report the name of the framework that consumes the most energy.\": \"Appium\"}, {\"fig From the violin plot of the energy comsumption of tap, report the name of the framework that consumes the most energy.\": \"Appium\"}, {\"fig From the violin plot of the energy comsumption of tap, report the name of the framework that consumes the most energy.\": \"Appium\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.4277516.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-3593259.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-3593259.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-3639589",
@@ -397,7 +397,7 @@
           "tasks/task_prompt": "Run demo.py in the code/src folder.",
           "tasks/expected_answer": "[{\"fig Report the color of the line with the highest maximum activation for target memory activation, DM.\": \"blue\"}, {\"fig Report the color of the line with the highest maximum activation for target memory activation, DM.\": \"blue\"}, {\"fig Report the color of the line with the highest maximum activation for target memory activation, DM.\": \"blue\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.5779179.v3",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-3639589.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-3639589.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-2345790",
@@ -407,7 +407,7 @@
           "tasks/task_prompt": "Set up the following subfolders in the ../results directory: intermediates, figures, stats_figures_markdowns. Run all the .Rmd files using Rscript and render them as html. Store the output files in ../results/stats_figures_markdowns.",
           "tasks/expected_answer": "[{\"From Study 1, report the mean of the response rate across all participants.\": 97.82, \"From Study 2, report the mean of the response rate across all participants.\": 99.41}, {\"From Study 1, report the mean of the response rate across all participants.\": 97.82, \"From Study 2, report the mean of the response rate across all participants.\": 99.41}, {\"From Study 1, report the mean of the response rate across all participants.\": 97.82, \"From Study 2, report the mean of the response rate across all participants.\": 99.41}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.3162457.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-2345790.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-2345790.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-7716865",
@@ -417,7 +417,7 @@
           "tasks/task_prompt": "Run 'manuscript.Rmd' using Rscript and render it as a pdf. Store the output in ../results. Set clean to 'TRUE'.",
           "tasks/expected_answer": "[{\"fig From Table 1, report the sensitivity for 80% power and recalculated mean (regulation).\": 1.31}, {\"fig From Table 1, report the sensitivity for 80% power and recalculated mean (regulation).\": 1.31}, {\"fig From Table 1, report the sensitivity for 80% power and recalculated mean (regulation).\": 1.31}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.7282505.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-7716865.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-7716865.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-4933686",
@@ -427,7 +427,7 @@
           "tasks/task_prompt": "Run \"Main.R\" using Rscript and xvfb-run.",
           "tasks/expected_answer": "[{\"fig From Figure 2 plot A, report Fisher's P. If the value is in scientific notion, convert it to a floating point number.\": 0.0182, \"fig From Figure 1 plot A, measuring time vs. metastasis-free survival, report the numerical value of HR (ignore the confidence interval).\": 2.15}, {\"fig From Figure 2 plot A, report Fisher's P. If the value is in scientific notion, convert it to a floating point number.\": 0.0182, \"fig From Figure 1 plot A, measuring time vs. metastasis-free survival, report the numerical value of HR (ignore the confidence interval).\": 2.15}, {\"fig From Figure 2 plot A, report Fisher's P. If the value is in scientific notion, convert it to a floating point number.\": 0.0182, \"fig From Figure 1 plot A, measuring time vs. metastasis-free survival, report the numerical value of HR (ignore the confidence interval).\": 2.15}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.9777456.v4",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-4933686.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-4933686.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-9240688",
@@ -437,7 +437,7 @@
           "tasks/task_prompt": "Run the bash script 'run.sh'.",
           "tasks/expected_answer": "[{\"From table 1, report the portion relevant in both corpora.\": 0.44}, {\"From table 1, report the portion relevant in both corpora.\": 0.44}, {\"From table 1, report the portion relevant in both corpora.\": 0.44}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.4630956.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-9240688.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-9240688.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-1175539",
@@ -447,7 +447,7 @@
           "tasks/task_prompt": "Run \"/code/CardioSCZ.R\" using Rscript.",
           "tasks/expected_answer": "[{\"fig Report the name of the patient group with the greater median concentricity.\": \"SCZ\"}, {\"fig Report the name of the patient group with the greater median concentricity.\": \"SCZ\"}, {\"fig Report the name of the patient group with the greater median concentricity.\": \"SCZ\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.9265392.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-1175539.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-1175539.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-2708693",
@@ -457,7 +457,7 @@
           "tasks/task_prompt": "Run 'preregSR_manuscript.Rmd' and render it as a pdf. Store the output in ../results. Set clean as 'TRUE'.",
           "tasks/expected_answer": "[{\"fig From table 1, report the k value for the medicine discipline.\": 81, \"fig From table 3, report n for 'percentage of studies with at least one outcome discrepancy that disclose an outcome discrepancy'.\": 620}, {\"fig From table 1, report the k value for the medicine discipline.\": 81, \"fig From table 3, report n for 'percentage of studies with at least one outcome discrepancy that disclose an outcome discrepancy'.\": 620}, {\"fig From table 1, report the k value for the medicine discipline.\": 81, \"fig From table 3, report n for 'percentage of studies with at least one outcome discrepancy that disclose an outcome discrepancy'.\": 620}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.4753181.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-2708693.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-2708693.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-4252248",
@@ -467,7 +467,7 @@
           "tasks/task_prompt": "Create the symbolic links for ../results output. Create the symbolic links for ../data Data. Run 'main-ctrpv.R', 'main-nci.R', and 'main-network-generation.R' using Rscript.",
           "tasks/expected_answer": "[{\"fig Report the overall AUC from the PR curve generated with the CTRPv2 sensitivity dataset, tested against ATC annotations and drug-target information from CHEMBL.\": 0.4929241}, {\"fig Report the overall AUC from the PR curve generated with the CTRPv2 sensitivity dataset, tested against ATC annotations and drug-target information from CHEMBL.\": 0.4929241}, {\"fig Report the overall AUC from the PR curve generated with the CTRPv2 sensitivity dataset, tested against ATC annotations and drug-target information from CHEMBL.\": 0.4929241}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.0012b3fb-3cf2-41fa-9b8d-6cc055b53ca2",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-4252248.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-4252248.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-4671827",
@@ -477,7 +477,7 @@
           "tasks/task_prompt": "Execute 'PerformanveEval.ipynb'. Save the results in html format in ../results. For all the runs, disable the cell execution timeout and allow errors.",
           "tasks/expected_answer": "[{\"fig Report the name of the mapping with the higher execution time at 44 elements.\": \"Semantic-based\"}, {\"fig Report the name of the mapping with the higher execution time at 44 elements.\": \"Semantic-based\"}, {\"fig Report the name of the mapping with the higher execution time at 44 elements.\": \"Semantic-based\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.7409799.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-4671827.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-4671827.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-7186268",
@@ -487,7 +487,7 @@
           "tasks/task_prompt": "Run 'SampleCode.Rmd' using Rscript and render it as html. Store the output in ../results. Set clean as 'TRUE'.",
           "tasks/expected_answer": "[{\"fig From laboratory test 18262-6, report the name of the method with the higher missing rate at gap 30.\": \"By Window\", \"fig From laboratory test 2160-0 Creatinine, report the ID number with the highest laboratory result at window 2.\": 109}, {\"fig From laboratory test 18262-6, report the name of the method with the higher missing rate at gap 30.\": \"By Window\", \"fig From laboratory test 2160-0 Creatinine, report the ID number with the highest laboratory result at window 2.\": 109}, {\"fig From laboratory test 18262-6, report the name of the method with the higher missing rate at gap 30.\": \"By Window\", \"fig From laboratory test 2160-0 Creatinine, report the ID number with the highest laboratory result at window 2.\": 109}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.9692445.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-7186268.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-7186268.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-5136217",
@@ -497,7 +497,7 @@
           "tasks/task_prompt": "Make the following subfolders in the ../results directory: tables, figures, for_publication/tables, for_publication/figures. Run all the .R scripts in the ../code folder using Rscript with 'source' and set echo to 'TRUE'.",
           "tasks/expected_answer": "[{\"fig From figure 3 from the figures for publication, report the name of the party ID with the lowest share of political news from portals.\": \"Lean DEM\"}, {\"fig From figure 3 from the figures for publication, report the name of the party ID with the lowest share of political news from portals.\": \"Lean DEM\"}, {\"fig From figure 3 from the figures for publication, report the name of the party ID with the lowest share of political news from portals.\": \"Lean DEM\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.1889895.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-5136217.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-5136217.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-7800694",
@@ -507,7 +507,7 @@
           "tasks/task_prompt": "Execute 'Thyroid Cancer Final Code.ipynb'. Save the results in html format in ../results. For all the runs, disable the cell execution timeout and allow errors.",
           "tasks/expected_answer": "[{\"Which model has the highest Macro F1?\": \"CatBoost\", \"What is the ROC AUC (macro OvR) of the best performing model?\": 0.957}, {\"Which model has the highest Macro F1?\": \"CatBoost\", \"What is the ROC AUC (macro OvR) of the best performing model?\": 0.957}, {\"Which model has the highest Macro F1?\": \"CatBoost\", \"What is the ROC AUC (macro OvR) of the best performing model?\": 0.957}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.2418823.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-7800694.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-7800694.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-8412128",
@@ -517,7 +517,7 @@
           "tasks/task_prompt": "Run 'run_all.sh'.",
           "tasks/expected_answer": "[{\"What is the mean of the snf_effectiveness_index?\": 0.5791337825021187, \"What is the median of the dignity_score?\": 0.5888590852515395}, {\"What is the mean of the snf_effectiveness_index?\": 0.5791337825021187, \"What is the median of the dignity_score?\": 0.5888590852515395}, {\"What is the mean of the snf_effectiveness_index?\": 0.5791337825021187, \"What is the median of the dignity_score?\": 0.5888590852515395}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.9005626.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-8412128.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-8412128.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-7655932",
@@ -527,7 +527,7 @@
           "tasks/task_prompt": "Run 'run_all.sh'.",
           "tasks/expected_answer": "[{\"What is the point estimate (deaths averted synthetic) from the child wasting impact model? Give results as integer.\": 280000, \"What is the child wasting impact model reported 95% interval (synthetic)? Give a list of 2 integer value for the confidence interval.\": [196000, 364000]}, {\"What is the point estimate (deaths averted synthetic) from the child wasting impact model? Give results as integer.\": 280000, \"What is the child wasting impact model reported 95% interval (synthetic)? Give a list of 2 integer value for the confidence interval.\": [196000, 364000]}, {\"What is the point estimate (deaths averted synthetic) from the child wasting impact model? Give results as integer.\": 280000, \"What is the child wasting impact model reported 95% interval (synthetic)? Give a list of 2 integer value for the confidence interval.\": [196000, 364000]}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.0436753.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-7655932.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-7655932.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-9294029",
@@ -537,7 +537,7 @@
           "tasks/task_prompt": "Run 'script1.R' using Rscript.",
           "tasks/expected_answer": "[{\"fig what location has the lowest median enrichment score?\": \"H\"}, {\"fig what location has the lowest median enrichment score?\": \"H\"}, {\"fig what location has the lowest median enrichment score?\": \"H\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.4427270.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-9294029.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-9294029.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-6295990",
@@ -547,7 +547,7 @@
           "tasks/task_prompt": "Run 'R_demo.R' using Rscript.",
           "tasks/expected_answer": "[{\"What is the LBP model ROC-AUC (weighted)\": 0.7142857, \"What is the percent AUC-Improvement? Give an integer\": 25}, {\"What is the LBP model ROC-AUC (weighted)\": 0.7142857, \"What is the percent AUC-Improvement? Give an integer\": 25}, {\"What is the LBP model ROC-AUC (weighted)\": 0.7142857, \"What is the percent AUC-Improvement? Give an integer\": 25}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.8413662.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-6295990.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-6295990.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-9477017",
@@ -557,7 +557,7 @@
           "tasks/task_prompt": "Export the following R default packages: datasets,utils,grDevices,graphics,stats,methods. Run 'main.R' using Rscript.",
           "tasks/expected_answer": "[{\"fig Pearson correlation coefficients between the estimated proportions of different cell types were calculated, what is the highest pearson correlation related to? Give response in a list of strings\": [\"Smooth.1\", \"Endo.1\"]}, {\"fig Pearson correlation coefficients between the estimated proportions of different cell types were calculated, what is the highest pearson correlation related to? Give response in a list of strings\": [\"Smooth.1\", \"Endo.1\"]}, {\"fig Pearson correlation coefficients between the estimated proportions of different cell types were calculated, what is the highest pearson correlation related to? Give response in a list of strings\": [\"Smooth.1\", \"Endo.1\"]}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.9243235.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-9477017.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-9477017.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-0201673",
@@ -567,7 +567,7 @@
           "tasks/task_prompt": "Run 'run_all.sh'.",
           "tasks/expected_answer": "[{\"What is the mean_gdp_gain_pct?\": 0.9999005880537901, \"What is the p95?\": 1.1643528158326386, \"What is the p50?\": 0.9999966483532146}, {\"What is the mean_gdp_gain_pct?\": 0.9999005880537901, \"What is the p95?\": 1.1643528158326386, \"What is the p50?\": 0.9999966483532146}, {\"What is the mean_gdp_gain_pct?\": 0.9999005880537901, \"What is the p95?\": 1.1643528158326386, \"What is the p50?\": 0.9999966483532146}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.4072743.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-0201673.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-0201673.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-0152700",
@@ -577,7 +577,7 @@
           "tasks/task_prompt": "Check GPU status using nvidia-smi, run the training, validation, and testing shell scripts (train.sh, val.sh, test.sh), and execute the Python scripts: directory_features_process.py, grad_cam.py, joint_feature_severity_spearman_calculation.py, sig_cal.py, joint_significance_cal_medication_response.py, summary_of_joint_medication_response_stats.py, joint_significance_ana_medication_response.py, and chord.py.",
           "tasks/expected_answer": "[{\"fig are there more than 2 features with accuracy exceeding 0.4? Respond with yes or no.\": \"yes\", \"fig which joint has the lowest absolute spearman correlation for acceleration?\": \"ankle\", \"Given the Kruskal-Wallis for Group 0-2 (Group 1 vs. Group 3), what is the p-value?\": \"2.341092434893948e-10\"}, {\"fig are there more than 2 features with accuracy exceeding 0.4? Respond with yes or no.\": \"yes\", \"fig which joint has the lowest absolute spearman correlation for acceleration?\": \"ankle\", \"Given the Kruskal-Wallis for Group 0-2 (Group 1 vs. Group 3), what is the p-value?\": \"2.341092434893948e-10\"}, {\"fig are there more than 2 features with accuracy exceeding 0.4? Respond with yes or no.\": \"yes\", \"fig which joint has the lowest absolute spearman correlation for acceleration?\": \"ankle\", \"Given the Kruskal-Wallis for Group 0-2 (Group 1 vs. Group 3), what is the p-value?\": \"2.341092434893948e-10\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.7700825.v1",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-0152700.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-0152700.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-2242462",
@@ -587,7 +587,7 @@
           "tasks/task_prompt": "Run 'main.py'.",
           "tasks/expected_answer": "[{\"What is the Chromosome chr1 with positioning 1013983, IsNGGMatch status?\": \"True\", \"What is the Chromosome chr1 with positioning 1319313, ABE8e_NG status?\": \"False\"}, {\"What is the Chromosome chr1 with positioning 1013983, IsNGGMatch status?\": \"True\", \"What is the Chromosome chr1 with positioning 1319313, ABE8e_NG status?\": \"False\"}, {\"What is the Chromosome chr1 with positioning 1013983, IsNGGMatch status?\": \"True\", \"What is the Chromosome chr1 with positioning 1319313, ABE8e_NG status?\": \"False\"}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.8003706.v2",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-2242462.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-2242462.tar.gz"
         },
         {
           "tasks/capsule_id": "capsule-3762736",
@@ -597,7 +597,7 @@
           "tasks/task_prompt": "Run the evaluation scripts: run_baseline_eval.sh, run_convnext_eval.sh, run_scl_eval.sh, run_task1_eval.sh, run_palm_eval.sh, and run_rigor_eval.sh.",
           "tasks/expected_answer": "[{\"What is the Task1_Only macro f1?\": 0.7012, \"What is the Winner_SCL RMSE?\": 0.4708}, {\"What is the Task1_Only macro f1?\": 0.7012, \"What is the Winner_SCL RMSE?\": 0.4708}, {\"What is the Task1_Only macro f1?\": 0.7012, \"What is the Winner_SCL RMSE?\": 0.4708}]",
           "tasks/capsule_doi": "https://doi.org/10.24433/CO.6713286.v2",
-          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v2-mainline/resolve/main/capsules/capsule-3762736.tar.gz"
+          "tasks/capsule_url": "https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline/resolve/main/capsules/capsule-3762736.tar.gz"
         }
       ]
     }
@@ -611,14 +611,14 @@
   "rai:dataCollectionTimeframeEnd": "2026-04-30",
   "rai:dataAnnotationProtocol": "For each capsule, annotators executed the capsule three independent times in its declared environment, recorded the resulting numeric/categorical outputs, and authored questions whose answers were stable across reruns (or, where outputs were stochastic, recorded all three observed values to support fuzzy/numeric tolerance matching during evaluation).",
   "rai:dataAnnotationPlatform": "Code Ocean execution environments + manual review",
-  "rai:dataAnnotationAnalysis": "Each ground-truth answer is the median or modal value across three independent capsule reruns. Tasks where reruns disagreed beyond expected stochastic variation were either rejected or rephrased.",
+  "rai:dataAnnotationAnalysis": "Each numeric ground truth is a 95% prediction interval over three independent capsule reruns. Each non-numeric ground truth is the deterministic answer across three independent capsule reruns. Tasks where reruns disagreed beyond expected stochastic variation were either rejected or rephrased.",
   "rai:dataAnnotationDemographics": "Annotators are graduate-level researchers with a background in computer science and computational sciences. No personal data about annotators is collected or distributed.",
   "rai:dataAnnotationPerItem": "1 annotator per task; cross-checked by a second annotator.",
   "rai:dataPreprocessingProtocol": "Capsules are distributed unmodified except that (a) the 'results/' subdirectory of each capsule is scrubbed at evaluation time to prevent data leakage to the agent, and (b) each capsule is repackaged as a single .tar.gz archive named after its Code Ocean capsule ID.",
   "rai:dataUseCases": "Intended for evaluating AI agents on end-to-end scientific reproducibility tasks: reading capsule code/data, executing it in a sandboxed environment, and answering questions whose answers depend on faithfully reproduced outputs. Suitable for outcome-consistency, calibration, and tool-use studies on agentic systems.",
   "rai:dataLimitations": "Coverage is biased toward capsules that run in CPU-only Linux environments, which under-represents GPU-heavy ML papers. The benchmark measures execution + question answering, not novel scientific reasoning. Ground-truth answers are derived from the original authors' implementations and inherit any errors therein. Some capsules involve domain-specific terminology that may disadvantage agents without scientific pretraining.",
   "rai:dataReleaseMaintenancePlan": "The dataset will be hosted on HuggingFace with versioned releases. Issues, errata, and capsule additions will be tracked in the associated GitHub repository. The maintainers commit to keeping the dataset accessible for at least three years post-publication.",
-  "rai:dataSocialImpact": "The benchmark aims to improve evaluation rigor for AI agents in scientific contexts. Risks include over-fitting agent training to the included capsules and misuse as a sole proxy for general scientific competence. We recommend reporting CORE-bench v2 results alongside other agentic and scientific benchmarks.",
+  "rai:dataSocialImpact": "The benchmark aims to improve evaluation rigor for AI agents in scientific contexts. Risks include over-fitting agent training to the included capsules and misuse as a sole proxy for general scientific competence. We recommend reporting CORE-bench v1.1 mainline results alongside other agentic and scientific benchmarks.",
   "rai:personalSensitiveInformation": "None. All source capsules are publicly licensed Code Ocean artifacts; no human-subjects data, biometric data, health/medical data, or personally identifying information about end users is included. Standard author-attribution metadata (names, institutional affiliations) is preserved in the original capsules. None of the following sensitive categories are represented in the data records: gender, socio-economic status, geography of subjects, language demographics, age, culture, experience or seniority, health or medical data, or political or religious beliefs.",
   "rai:hasSyntheticData": false,
   "prov:wasDerivedFrom": [

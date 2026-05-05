@@ -1,4 +1,4 @@
-"""Generate Croissant 1.0 metadata for the CORE-bench v2 mainline and OOD sets.
+"""Generate Croissant 1.0 metadata for the CORE-bench v1.1 mainline and OOD sets.
 
 Reads the task manifests in this directory's parent and writes croissant_*.json
 alongside this script. Re-run after editing manifests to keep the metadata in sync.
@@ -27,18 +27,18 @@ OOD_JSON = COREBENCH_DIR / "core_test.json"  # currently the OOD set in active u
 # Hosting (replace once datasets are uploaded to HuggingFace / Zenodo)
 # ---------------------------------------------------------------------------
 HF_OWNER = "agent-evals"
-HF_REPO_MAINLINE = "core-bench-v2-mainline"
-HF_REPO_OOD = "core-bench-v2-ood"
+HF_REPO_MAINLINE = "core-bench-v1.1-mainline"
+HF_REPO_OOD = "core-bench-v1.1-ood"
 
 # ---------------------------------------------------------------------------
 # Fixed metadata shared across both datasets
 # ---------------------------------------------------------------------------
 LICENSE = "https://creativecommons.org/licenses/by/4.0/"  # confirm before submission
-VERSION = "2.0.0"
+VERSION = "1.1.0"
 DATE_PUBLISHED = "2026-05-03"
 CITE_AS = (
-    "@inproceedings{corebench-v2-2026,"
-    " title={CORE-bench v2: A Reliability Benchmark for AI Agents on Scientific Reproducibility Tasks},"
+    "@inproceedings{corebench-v1-1-2026,"
+    " title={CORE-bench v1.1: A Reliability Benchmark for AI Agents on Scientific Reproducibility Tasks},"
     " author={TODO},"
     " booktitle={NeurIPS Datasets and Benchmarks Track},"
     " year={2026}"
@@ -96,6 +96,7 @@ def _build(
     repo: str,
     manifest_path: Path,
     record_count: int,
+    split_label: str,  # e.g. "mainline" or "OOD" — used in RAI text
 ) -> dict:
     # Manifests are uploaded to HF as `core_test.json` regardless of their
     # local filename (mainline lives at core_test.json.bak.main42 on disk).
@@ -255,9 +256,11 @@ def _build(
         ),
         "rai:dataAnnotationPlatform": "Code Ocean execution environments + manual review",
         "rai:dataAnnotationAnalysis": (
-            "Each ground-truth answer is the median or modal value across three "
-            "independent capsule reruns. Tasks where reruns disagreed beyond "
-            "expected stochastic variation were either rejected or rephrased."
+            "Each numeric ground truth is a 95% prediction interval over three "
+            "independent capsule reruns. Each non-numeric ground truth is the "
+            "deterministic answer across three independent capsule reruns. "
+            "Tasks where reruns disagreed beyond expected stochastic variation "
+            "were either rejected or rephrased."
         ),
         "rai:dataAnnotationDemographics": (
             "Annotators are graduate-level researchers with a background in "
@@ -297,8 +300,9 @@ def _build(
             "The benchmark aims to improve evaluation rigor for AI agents in "
             "scientific contexts. Risks include over-fitting agent training to "
             "the included capsules and misuse as a sole proxy for general "
-            "scientific competence. We recommend reporting CORE-bench v2 results "
-            "alongside other agentic and scientific benchmarks."
+            f"scientific competence. We recommend reporting CORE-bench v1.1 "
+            f"{split_label} results alongside other agentic and scientific "
+            "benchmarks."
         ),
         "rai:personalSensitiveInformation": (
             "None. All source capsules are publicly licensed Code Ocean "
@@ -415,9 +419,9 @@ def main() -> None:
     n_ood = len(json.loads(OOD_JSON.read_text()))
 
     mainline = _build(
-        name="core-bench-v2-mainline",
+        name="core-bench-v1.1-mainline",
         description=(
-            f"CORE-bench v2 mainline split: {n_main} scientific-reproducibility "
+            f"CORE-bench v1.1 mainline split: {n_main} scientific-reproducibility "
             "tasks derived from peer-reviewed Code Ocean compute capsules. Each "
             "task asks an AI agent to execute the capsule in a sandboxed Linux "
             "environment and answer questions whose ground-truth answers depend "
@@ -426,13 +430,14 @@ def main() -> None:
         repo=HF_REPO_MAINLINE,
         manifest_path=MAINLINE_JSON,
         record_count=n_main,
+        split_label="mainline",
     )
     _augment_records(mainline, MAINLINE_JSON)
 
     ood = _build(
-        name="core-bench-v2-ood",
+        name="core-bench-v1.1-ood",
         description=(
-            f"CORE-bench v2 out-of-distribution split: {n_ood} held-out "
+            f"CORE-bench v1.1 out-of-distribution split: {n_ood} held-out "
             "scientific-reproducibility tasks. Drawn from disciplines and "
             "capsule shapes not represented in the mainline split, intended for "
             "measuring generalization of AI agents trained or tuned on the "
@@ -441,6 +446,7 @@ def main() -> None:
         repo=HF_REPO_OOD,
         manifest_path=OOD_JSON,
         record_count=n_ood,
+        split_label="OOD",
     )
     _augment_records(ood, OOD_JSON)
 
