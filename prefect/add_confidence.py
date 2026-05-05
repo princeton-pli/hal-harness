@@ -38,11 +38,23 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CORE_TEST_PATH = REPO_ROOT / "hal" / "benchmarks" / "corebench" / "core_test.json"
 
 
-def load_task_prompts() -> dict[str, str]:
-    """Load capsule_id -> task_prompt mapping from core_test.json."""
-    with open(CORE_TEST_PATH) as f:
-        tasks = json.load(f)
-    return {t["capsule_id"]: t["task_prompt"] for t in tasks}
+def load_task_prompts(manifests: list[Path] | None = None) -> dict[str, str]:
+    """Load capsule_id → task_prompt from one or more manifests.
+
+    Multiple manifests are merged into one dict; later manifests override
+    earlier ones on conflict. Use this to score runs whose capsules span
+    multiple manifest splits (e.g. mainline + OOD).
+    """
+    paths = manifests or [CORE_TEST_PATH]
+    out: dict[str, str] = {}
+    for p in paths:
+        if not Path(p).exists():
+            print(f"WARN: manifest not found: {p}")
+            continue
+        with open(p) as f:
+            for t in json.load(f):
+                out[t["capsule_id"]] = t["task_prompt"]
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +168,7 @@ def build_execution_summary(log_summary: dict, max_chars: int = 4000) -> str:
 # Confidence scoring via OpenAI API
 # ---------------------------------------------------------------------------
 
-CONFIDENCE_PROMPT = """You just completed a scientific reproducibility task. You were given a task prompt and produced an answer. Below is a summary of your execution and the answer you produced.
+CONFIDENCE_PROMPT = """You just completed a computational reproducibility task. You were asked to reproduce results from a scientific paper's codebase and provide answers as a Python dictionary. Please assess your confidence in the correctness of your submitted answers.
 
 TASK PROMPT:
 {task_prompt}
@@ -167,21 +179,39 @@ EXECUTION SUMMARY:
 ANSWER PRODUCED:
 {answer_json}
 
-Please assess your confidence that your answer is CORRECT. Consider:
-1. Did you successfully run the code/pipeline to reproduce results?
-2. Did the output match what the task was asking for?
-3. Were there errors or failures during execution?
-4. How certain are you about each value in your answer?
-5. Did you verify your answers against the actual outputs?
+Consider the following when rating your confidence:
 
-Provide a confidence score from 0 to 100, where:
-- 0-20: Very uncertain, likely incorrect
-- 21-40: Low confidence, significant doubts
-- 41-60: Moderate confidence, some uncertainty
-- 61-80: Good confidence, minor doubts
-- 81-100: Very confident, highly certain of correctness
+1. Did the code execute successfully without errors, or did you encounter dependency/environment issues that may have produced incorrect outputs?
+
+2. How confident are you that each value in your answer dictionary is correct — did you extract values directly from program output, or did you have to estimate or interpret ambiguous results?
+
+3. Did the code produce the expected type of output (figures, tables, numerical results) that the questions refer to?
+
+4. Were there any discrepancies between what the code produced and what the questions asked about (e.g., missing output files, incomplete runs, partial results)?
+
+5. Did you verify that your answer dictionary keys exactly match the requested field names?
+
+6. For numerical answers, are you confident in the precision and format (e.g., rounding, scientific notation, percentage vs decimal)?
+
+Please provide a confidence score from 0 to 100, where:
+
+- 0-20: Very uncertain — code failed to run, outputs are missing, or answers are guesses
+
+- 21-40: Low confidence — code ran with significant errors, or answers were inferred from partial output
+
+- 41-60: Moderate confidence — code ran but some outputs are ambiguous or may not match expected format
+
+- 61-80: Good confidence — code ran successfully, most answers extracted directly from output
+
+- 81-100: Very confident — code ran cleanly, all answers directly extracted and verified against output
 
 Respond with ONLY a number between 0 and 100. No explanation needed."""
+
+# Versioned output keys. Bump CONFIDENCE_VERSION whenever the prompt changes.
+# The previous keys (`confidence`, `confidence_details`, written by v1) are
+# preserved untouched; new runs land under suffixed keys so historical scores
+# remain available for diff/regression analysis.
+CONFIDENCE_VERSION = "v2"
 
 
 def normalize_model_for_openai(model: str) -> str:
@@ -323,13 +353,16 @@ async def process_run(
     if not raw_eval:
         return {"run": run_dir.name, "status": "no_eval_results"}
 
-    # Skip if confidence already computed (unless --force)
+    confidence_key = f"confidence_{CONFIDENCE_VERSION}"
+    details_key = f"confidence_details_{CONFIDENCE_VERSION}"
+
+    # Skip if confidence at THIS version already computed (unless --force).
+    # Older versions on the same task remain untouched.
     sample_task = next(iter(raw_eval.values()))
-    if isinstance(sample_task, dict) and "confidence" in sample_task and not dry_run:
-        # Check if previous run had errors
-        details = sample_task.get("confidence_details", {})
+    if isinstance(sample_task, dict) and confidence_key in sample_task and not dry_run:
+        details = sample_task.get(details_key, {})
         if not details.get("error") and not force:
-            return {"run": run_dir.name, "status": "already_has_confidence"}
+            return {"run": run_dir.name, "status": f"already_has_{confidence_key}"}
 
     # Skip non-OpenAI models (anthropic/, google/) — they need different clients
     if model.startswith("anthropic/") or model.startswith("google/"):
@@ -370,8 +403,8 @@ async def process_run(
             answer_str = "(answer not found in RAW_SUBMISSIONS)"
 
         if dry_run:
-            task_eval["confidence"] = -1.0
-            task_eval["confidence_details"] = {"method": "dry_run"}
+            task_eval[confidence_key] = -1.0
+            task_eval[details_key] = {"method": "dry_run", "version": CONFIDENCE_VERSION}
             scored += 1
             return
 
@@ -381,8 +414,9 @@ async def process_run(
             )
             details["num_commands"] = log_summary["num_commands"]
             details["num_errors"] = log_summary["num_errors"]
-            task_eval["confidence"] = confidence
-            task_eval["confidence_details"] = details
+            details["version"] = CONFIDENCE_VERSION
+            task_eval[confidence_key] = confidence
+            task_eval[details_key] = details
             if details.get("error"):
                 errors += 1
             else:
@@ -432,14 +466,22 @@ async def main():
         "--force", action="store_true",
         help="Re-score even if confidence already exists",
     )
+    parser.add_argument(
+        "--manifest", action="append", default=None,
+        help=(
+            "Path to a core_test*.json manifest. Repeat to merge multiple "
+            "splits (e.g. mainline + OOD). Defaults to core_test.json."
+        ),
+    )
     args = parser.parse_args()
 
     results_dir = Path(args.results_dir)
     if not results_dir.exists():
         sys.exit(f"Results dir not found: {results_dir}")
 
-    print("Loading task prompts from core_test.json...")
-    task_prompts = load_task_prompts()
+    manifests = [Path(m) for m in args.manifest] if args.manifest else None
+    print("Loading task prompts...")
+    task_prompts = load_task_prompts(manifests)
     print(f"  {len(task_prompts)} task prompts loaded")
 
     from openai import AsyncOpenAI
