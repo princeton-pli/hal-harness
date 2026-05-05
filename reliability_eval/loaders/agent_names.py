@@ -96,8 +96,10 @@ def extract_agent_name(run_dir_name: str, benchmark: str) -> str:
     if agent_parts and agent_parts[-1].isdigit():
         agent_parts = agent_parts[:-1]
 
-    # Remove repetition markers (rep1, rep2, etc.)
+    # Remove repetition markers (rep1, rep2, k0, k1, etc.)
     if agent_parts and re.match(r"^rep\d+$", agent_parts[-1]):
+        agent_parts = agent_parts[:-1]
+    if agent_parts and re.match(r"^k\d+$", agent_parts[-1]):
         agent_parts = agent_parts[:-1]
 
     filtered_parts = []

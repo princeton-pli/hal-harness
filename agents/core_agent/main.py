@@ -842,7 +842,7 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
     agent = CodeAgent(
         tools=CORE_TOOLS,
         planning_interval=4,
-        max_steps=40,
+        max_steps=int(kwargs.get("max_steps", 40)),
         model=model,
         additional_authorized_imports=AUTHORIZED_IMPORTS,
         budget_exceeded_callback=partial(

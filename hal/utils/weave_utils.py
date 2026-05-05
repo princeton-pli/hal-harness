@@ -46,6 +46,8 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.0003 / 1000,
         "completion_tokens": 0.00061 / 1000,
     },
+    "gpt-5.1": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
+    "gpt-5.3-codex": {"prompt_tokens": 1.75 / 1e6, "completion_tokens": 14 / 1e6},
     "gpt-4o": {"prompt_tokens": 2.5 / 1e6, "completion_tokens": 10 / 1e6},
     "gpt-4o-2024-11-20": {"prompt_tokens": 2.5 / 1e6, "completion_tokens": 10 / 1e6},
     "gpt-4.1-2025-04-14": {"prompt_tokens": 2 / 1e6, "completion_tokens": 8 / 1e6},
@@ -288,6 +290,19 @@ MODEL_PRICES_DICT = {
     "anthropic/claude-opus-4-5": {
         "prompt_tokens": 5 / 1e6,
         "completion_tokens": 25 / 1e6,
+    },
+    "claude-opus-4-6": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4-6": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
+    "gemini/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2 / 1e6,
+        "completion_tokens": 12 / 1e6,
+    },
+    "google/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2 / 1e6,
+        "completion_tokens": 12 / 1e6,
     },
     "deepseek-ai/DeepSeek-V3": {
         "prompt_tokens": 1.25 / 1e6,
