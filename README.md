@@ -5,6 +5,19 @@
 
 This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking and the official [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) for sharing evaluation results.
 
+## CORE-Bench v1.1
+
+CORE-Bench v1.1 is an updated version of CORE-Bench Hard that corrects construct validity errors. CORE-Bench OOD is an out-of-distribution benchmark for CORE-Bench Hard.
+
+Both splits are hosted on HuggingFace as part of the [CORE-Bench v1.1 collection](https://huggingface.co/collections/agent-evals/core-bench-v11-69fa726a2784689a8017a6c0):
+
+- **Mainline (39 capsules):** [`agent-evals/core-bench-v1.1-mainline`](https://huggingface.co/datasets/agent-evals/core-bench-v1.1-mainline)
+- **OOD (19 capsules):** [`agent-evals/core-bench-v1.1-ood`](https://huggingface.co/datasets/agent-evals/core-bench-v1.1-ood)
+
+Each task ships as a Code Ocean capsule tarball with the original code, data, and environment; the agent runs the capsule in a sandboxed Linux container and answers questions whose ground-truth answers depend on the reproduced outputs. Each split is published with [Croissant 1.0](https://github.com/mlcommons/croissant) metadata (RAI extension) as `croissant.json`.
+
+To run CORE-Bench v1.1 with HAL, see the [CORE-bench](#core-bench) section under "Which Benchmarks Are Supported?".
+
 ## Features
 
 - **Unified `hal-eval` CLI across all benchmarks and agent types**
