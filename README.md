@@ -16,6 +16,25 @@ Both splits are hosted on HuggingFace as part of the [CORE-Bench v1.1 collection
 
 Each task ships as a Code Ocean capsule tarball with the original code, data, and environment; the agent runs the capsule in a sandboxed Linux container and answers questions whose ground-truth answers depend on the reproduced outputs. Each split is published with [Croissant 1.0](https://github.com/mlcommons/croissant) metadata (RAI extension) as `croissant.json`.
 
+### Decrypting the grader
+
+The CORE-Bench grading logic lives at `hal/benchmarks/corebench.py` and is shipped as an encrypted file (`hal/benchmarks/corebench.py.gpg`) so that agents under evaluation cannot read the answer-alias tables and ground-truth tolerances at runtime. Before running CORE-Bench v1.1 locally you must decrypt it once:
+
+```bash
+gpg --batch --yes --passphrase reproducibility \
+    --decrypt hal/benchmarks/corebench.py.gpg \
+    > hal/benchmarks/corebench.py
+```
+
+The plaintext path is `.gitignored`, so the encrypted blob remains the source of truth. After editing the grader, re-encrypt with the same passphrase:
+
+```bash
+gpg --batch --yes --passphrase reproducibility \
+    --symmetric --cipher-algo AES256 \
+    --output hal/benchmarks/corebench.py.gpg \
+    hal/benchmarks/corebench.py
+```
+
 To run CORE-Bench v1.1 with HAL, see the [CORE-bench](#core-bench) section under "Which Benchmarks Are Supported?".
 
 ## Features

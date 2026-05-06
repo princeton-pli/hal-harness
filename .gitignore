@@ -20,6 +20,9 @@ hal/benchmarks/corebench/capsules
 hal/benchmarks/corebench/core_test.json
 hal/benchmarks/corebench/capsules/*
 hal/benchmarks/scienceagentbench/benchmark
+# CORE-Bench grader plaintext: only the encrypted form ships in git.
+# Decrypt with the passphrase before running locally — see README.
+hal/benchmarks/corebench.py
 # Local-only manifest backups + encrypted variants (canonical copies live on HF)
 hal/benchmarks/corebench/core_test*.json.bak
 hal/benchmarks/corebench/core_test*.json.bak.*
