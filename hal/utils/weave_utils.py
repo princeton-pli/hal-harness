@@ -506,6 +506,18 @@ MODEL_PRICES_DICT = {
     "openai/gpt-5.4": {"prompt_tokens": 2.50 / 1e6, "completion_tokens": 15 / 1e6},
     "gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
     "openai/gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
+    # GPT-5.5 — released 2026-04-23, dated snapshot 2026-04-23
+    # https://developers.openai.com/api/docs/models/gpt-5.5  ($5 in / $30 out / $0.50 cached per M)
+    "gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "gpt-5.5-2026-04-23": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5-2026-04-23": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 30 / 1e6,
+    },
+    # GPT-5.5 Pro — $30 in / $180 out per M (same headline as gpt-5.4-pro)
+    "gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
+    "openai/gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
 }
 
 CACHED_PRICE_OVERRIDES = {
@@ -543,6 +555,14 @@ CACHED_PRICE_OVERRIDES = {
     "openai/gpt-5.4": 0.25 / 1e6,
     "gpt-5.4-pro": 3.0 / 1e6,
     "openai/gpt-5.4-pro": 3.0 / 1e6,
+    # GPT-5.5: cached input $0.50/M (per developers.openai.com pricing table)
+    "gpt-5.5": 0.50 / 1e6,
+    "openai/gpt-5.5": 0.50 / 1e6,
+    "gpt-5.5-2026-04-23": 0.50 / 1e6,
+    "openai/gpt-5.5-2026-04-23": 0.50 / 1e6,
+    # GPT-5.5 Pro: cached scales like gpt-5.4-pro (~10% of input)
+    "gpt-5.5-pro": 3.0 / 1e6,
+    "openai/gpt-5.5-pro": 3.0 / 1e6,
     "o3-2025-04-16": 0.5 / 1e6,
     "openai/o3-2025-04-16": 0.5 / 1e6,
     # Gemini 3 & 2.5 cached pricing (90% discount)

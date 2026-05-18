@@ -32,11 +32,16 @@ def supports_stop_parameter(model_id: str) -> bool:
     """
     Check if the model supports the `stop` parameter.
 
-    Not supported with reasoning models openai/o3, openai/o4-mini, and gpt-5 (and their versioned variants).
+    Not supported with reasoning models openai/o3, openai/o4-mini, and the
+    gpt-5 family (including dotted minor versions like 5.1, 5.2, 5.5; dated
+    snapshots like 5.2-2025-12-11; and -pro / -codex variants).
     """
     model_name = model_id.split("/")[-1]
-    # o3, o4-mini, and gpt-5 (including versioned variants) don't support stop parameter
-    pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5[-\d]*)$"
+    # `[-\w.]*` allows dotted minors (gpt-5.5), dated snapshots
+    # (gpt-5.2-2025-12-11) and named variants (gpt-5.5-pro, gpt-5.2-codex).
+    # The `gpt-5` / `o3` / `o4-mini` prefix anchors keep this from
+    # over-matching other model families.
+    pattern = r"^(o3[-\w.]*|o4-mini[-\w.]*|gpt-5[-\w.]*)$"
     return not re.match(pattern, model_name)
 
 
@@ -1190,8 +1195,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         # Be lenient with unknown params on different backends
         litellm.drop_params = True
 
-        # Models that don't support 'stop' parameter
-        MODELS_WITHOUT_STOP_SUPPORT = ["gpt-5", "gpt-5.2", "gpt-5.1"]
+        # Models that don't support 'stop' parameter (reasoning models). Matched
+        # by substring, so a versioned ID like "gpt-5.5-2026-04-23" also hits.
+        MODELS_WITHOUT_STOP_SUPPORT = ["gpt-5", "gpt-5.1", "gpt-5.2", "gpt-5.5"]
 
         def model_requires_stop_filter(model_name: str) -> bool:
             """Check if model requires filtering out 'stop' parameter."""

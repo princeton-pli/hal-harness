@@ -121,14 +121,14 @@ AGENT_CONFIGS = [
     #     "provider": "google",
     #     "benchmarks": ["taubench_airline"],
     # },
-    {
-        "name": "taubench_toolcalling_gemini_2_5_flash",
-        "agent_dir": "agents/taubench_tool_calling",
-        "agent_function": "tool_calling.run",
-        "model_name": "gemini/gemini-2.5-flash",
-        "provider": "google",
-        "benchmarks": ["taubench_airline"],
-    },
+    # {
+    #     "name": "taubench_toolcalling_gemini_2_5_flash",
+    #     "agent_dir": "agents/taubench_tool_calling",
+    #     "agent_function": "tool_calling.run",
+    #     "model_name": "gemini/gemini-2.5-flash",
+    #     "provider": "google",
+    #     "benchmarks": ["taubench_airline"],
+    # },
     # {
     #     "name": "taubench_toolcalling_gemini_2_5_pro",
     #     "agent_dir": "agents/taubench_tool_calling",
@@ -262,55 +262,55 @@ AGENT_CONFIGS = [
     # -------------------------------------------------------------------------
     # OpenAI Models (GAIA)
     # -------------------------------------------------------------------------
-    # {
-    #     "name": "gaia_generalist_gpt_4o_mini",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-4o-mini-2024-07-18",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {"temperature": 0.0},
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_4_turbo",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-4-turbo-2024-04-09",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_o1",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "o1-2024-12-17",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_5_2",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-5.2-2025-12-11",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
-    # {
-    #     "name": "gaia_generalist_gpt_5_2_medium",
-    #     "agent_dir": "agents/hal_generalist_agent",
-    #     "agent_function": "main.run",
-    #     "model_name": "gpt-5.2-2025-12-11",
-    #     "reasoning_effort": "medium",
-    #     "benchmarks": ["gaia"],
-    #     "extra_agent_args": {
-    #         "temperature": 0.0
-    #     }
-    # },
+    {
+        "name": "gaia_generalist_gpt_4o_mini",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-4o-mini-2024-07-18",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {"temperature": 0.0},
+    },
+    {
+        "name": "gaia_generalist_gpt_4_turbo",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-4-turbo-2024-04-09",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gpt_o1",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "o1-2024-12-17",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gpt_5_2",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-5.2-2025-12-11",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
+    {
+        "name": "gaia_generalist_gpt_5_2_medium",
+        "agent_dir": "agents/hal_generalist_agent",
+        "agent_function": "main.run",
+        "model_name": "gpt-5.2-2025-12-11",
+        "reasoning_effort": "medium",
+        "benchmarks": ["gaia"],
+        "extra_agent_args": {
+            "temperature": 0.0
+        }
+    },
     # {
     #     "name": "gaia_generalist_gpt_5_4",
     #     "agent_dir": "agents/hal_generalist_agent",
@@ -326,6 +326,30 @@ AGENT_CONFIGS = [
     #     "agent_dir": "agents/hal_generalist_agent",
     #     "agent_function": "main.run",
     #     "model_name": "gpt-5.4",
+    #     "reasoning_effort": "medium",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # GPT-5.5 (released 2026-04-23). Reasoning model: supports reasoning.effort
+    # = none/low/medium/high/xhigh, no `stop` parameter. Pricing: $5 in / $30
+    # out / $0.50 cached per M tokens. Uncomment to include in the panel.
+    # {
+    #     "name": "gaia_generalist_gpt_5_5",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.5-2026-04-23",
+    #     "benchmarks": ["gaia"],
+    #     "extra_agent_args": {
+    #         "temperature": 0.0
+    #     }
+    # },
+    # {
+    #     "name": "gaia_generalist_gpt_5_5_medium",
+    #     "agent_dir": "agents/hal_generalist_agent",
+    #     "agent_function": "main.run",
+    #     "model_name": "gpt-5.5-2026-04-23",
     #     "reasoning_effort": "medium",
     #     "benchmarks": ["gaia"],
     #     "extra_agent_args": {
@@ -433,22 +457,22 @@ AGENT_CONFIGS = [
 # =============================================================================
 
 BENCHMARK_CONFIGS = {
-    "taubench_airline": {
-        "benchmark_name": "taubench_airline",
-        "requires_docker": False,
-        "requires_vm": False,
-        "max_concurrent": 5,  # Can run in parallel
-        "task_ids": TAUBENCH_AIRLINE_CLEAN_TASKS,
-        "compliance_constraints": [
-            "pii_handling_customer_service",  # Customer service context - legitimate PII exchange allowed
-            "destructive_ops_customer_service",  # Cancellations/mods with user confirmation are OK
-            "data_minimization_customer_service",  # Accessing customer data to help them is OK
-            "policy_circumvention_customer_service",  # Detect agents manipulated to bypass policies
-            "financial_accuracy_customer_service",  # Detect wrong refund/charge amounts
-            "authentication_bypass_customer_service",  # Detect improper identity verification
-            "commitment_overreach_customer_service",  # Detect promises beyond agent authority
-        ],
-    },
+    # "taubench_airline": {
+    #     "benchmark_name": "taubench_airline",
+    #     "requires_docker": False,
+    #     "requires_vm": False,
+    #     "max_concurrent": 5,  # Can run in parallel
+    #     "task_ids": TAUBENCH_AIRLINE_CLEAN_TASKS,
+    #     "compliance_constraints": [
+    #         "pii_handling_customer_service",  # Customer service context - legitimate PII exchange allowed
+    #         "destructive_ops_customer_service",  # Cancellations/mods with user confirmation are OK
+    #         "data_minimization_customer_service",  # Accessing customer data to help them is OK
+    #         "policy_circumvention_customer_service",  # Detect agents manipulated to bypass policies
+    #         "financial_accuracy_customer_service",  # Detect wrong refund/charge amounts
+    #         "authentication_bypass_customer_service",  # Detect improper identity verification
+    #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
+    #     ],
+    # },
     # "taubench_retail": {
     #     "benchmark_name": "taubench_retail",
     #     "requires_docker": False,
@@ -464,16 +488,16 @@ BENCHMARK_CONFIGS = {
     #         "commitment_overreach_customer_service",  # Detect promises beyond agent authority
     #     ],
     # },
-    # "gaia": {
-    #     "benchmark_name": "gaia",
-    #     "requires_docker": False,
-    #     "requires_vm": False,
-    #     "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
-    #     "compliance_constraints": [
-    #         "pii_handling_gaia",  # Q&A context - providing requested info is expected
-    #         "no_destructive_ops",
-    #         "safe_code_execution",  # Check for harmful code patterns
-    #         "no_unauthorized_access",  # Check for unauthorized resource access
-    #     ],
-    # },
+    "gaia": {
+        "benchmark_name": "gaia",
+        "requires_docker": False,
+        "requires_vm": False,
+        "max_concurrent": 5,  # GAIA tasks are independent, can run in parallel
+        "compliance_constraints": [
+            "pii_handling_gaia",  # Q&A context - providing requested info is expected
+            "no_destructive_ops",
+            "safe_code_execution",  # Check for harmful code patterns
+            "no_unauthorized_access",  # Check for unauthorized resource access
+        ],
+    },
 }
