@@ -81,6 +81,49 @@ class TestStripGroundTruth:
         assert ds == {"t1": {"steps": [{"name": "a"}, {"name": "b"}]}}
 
 
+# --- attachment-path sanitisation ---
+
+
+class TestAttachmentPathSanitisation:
+    def test_file_path_reduced_to_basename(self):
+        task = {
+            "Question": "?",
+            "file_name": "x.mp3",
+            "file_path": "/home/u/.cache/huggingface/hub/datasets--gaia-benchmark--GAIA/snap/x.mp3",
+        }
+        bench = _make_stub({"t1": task}, gt_keys={"Final answer"})
+        result = bench._strip_ground_truth(task)
+        assert result["file_path"] == "x.mp3"
+        # original input unchanged
+        assert (
+            task["file_path"]
+            == "/home/u/.cache/huggingface/hub/datasets--gaia-benchmark--GAIA/snap/x.mp3"
+        )
+
+    def test_files_dict_values_reduced_to_basename(self):
+        task = {
+            "files": {
+                "x.mp3": "/abs/path/to/dataset/x.mp3",
+                "y.txt": "/abs/path/to/dataset/y.txt",
+            }
+        }
+        bench = _make_stub({"t1": task}, gt_keys={"Final answer"})
+        result = bench._strip_ground_truth(task)
+        assert result["files"] == {"x.mp3": "x.mp3", "y.txt": "y.txt"}
+
+    def test_no_attachment_no_change(self):
+        task = {"prompt": "hello"}
+        bench = _make_stub({"t1": task}, gt_keys={"answer"})
+        result = bench._strip_ground_truth(task)
+        assert result == {"prompt": "hello"}
+
+    def test_sanitisation_runs_even_without_gt_keys(self):
+        task = {"file_path": "/dataset/cache/sub/dir/y.csv"}
+        bench = _make_stub({"t1": task})  # no gt_keys
+        result = bench._strip_ground_truth(task)
+        assert result["file_path"] == "y.csv"
+
+
 # --- warning behaviour ---
 
 

@@ -65,14 +65,43 @@ class BaseBenchmark(ABC):
         """Evaluate agent outputs"""
         raise NotImplementedError("Benchmark must implement evaluate_output")
 
+    # Keys whose VALUE is an attachment path string. We rewrite these to just
+    # the basename so that the agent doesn't learn the benchmark identity from
+    # the absolute cache path (e.g.
+    # `/.../datasets--gaia-benchmark--GAIA/.../<uuid>.mp3`). Subclasses can
+    # extend this set.
+    _attachment_path_keys: set = {"file_path"}
+
+    def _sanitize_attachment_paths(self, task: dict) -> dict:
+        """Rewrite attachment path values to bare filenames.
+
+        The harness copies attachments into the agent's working directory under
+        their basename, so a basename is all the agent needs. Storing the
+        absolute cache path leaks the dataset's identity (and on GAIA, that's
+        enough for an agent to find online mirrors of the test set).
+        """
+        for key in self._attachment_path_keys:
+            if key in task and isinstance(task[key], str) and task[key]:
+                task[key] = os.path.basename(task[key])
+        # The `files` field is a {filename: source_path} mapping on GAIA. We
+        # leave the keys (already basenames) intact and rewrite the values.
+        files = task.get("files")
+        if isinstance(files, dict):
+            task["files"] = {
+                k: (os.path.basename(v) if isinstance(v, str) else v)
+                for k, v in files.items()
+            }
+        return task
+
     def _strip_ground_truth(self, task: dict) -> dict:
         """Remove ground truth keys from a single task dict.
 
         Override for non-flat stripping (e.g., nested keys).
         """
         if not self._ground_truth_keys:
-            return task
-        return {k: v for k, v in task.items() if k not in self._ground_truth_keys}
+            return self._sanitize_attachment_paths(dict(task))
+        stripped = {k: v for k, v in task.items() if k not in self._ground_truth_keys}
+        return self._sanitize_attachment_paths(stripped)
 
     def get_dataset(self) -> Dict[str, Any]:
         """Get the benchmark dataset with ground truth fields stripped."""
