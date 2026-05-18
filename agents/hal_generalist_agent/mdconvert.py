@@ -1043,14 +1043,21 @@ class MarkdownConverter:
         )
 
     def _append_ext(self, extensions, ext):
-        """Append a unique non-None, non-empty extension to a list of extensions."""
+        """Append a unique non-None, non-empty extension to a list of extensions.
+
+        The dedup check below was previously short-circuited with `if True:`,
+        which let mdconvert classify a single file as several extensions at
+        once. That produced errors like `File type was recognized as
+        ['.csv', '.docx']` and broke dispatch for files whose libmagic guess
+        disagreed with their extension. Restoring the dedup keeps each
+        recognised extension in the list exactly once.
+        """
         if ext is None:
             return
         ext = ext.strip()
         if ext == "":
             return
-        # if ext not in extensions:
-        if True:
+        if ext not in extensions:
             extensions.append(ext)
 
     def _guess_ext_magic(self, path):
