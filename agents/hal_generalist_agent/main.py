@@ -95,6 +95,11 @@ AUTHORIZED_IMPORTS = [
     "posixpath",
     "ntpath",
     "genericpath",
+    # Required for the `write_file` tool's binary-mode workflow: the agent
+    # downloads bytes (e.g. `r = requests.get(url); r.content`) and passes
+    # `base64.b64encode(r.content).decode()` into write_file. Without `base64`
+    # in the allowlist the agent can't actually produce the encoded payload.
+    "base64",
     "pandas.*",
     "numpy.*",
     "sympy.*",
