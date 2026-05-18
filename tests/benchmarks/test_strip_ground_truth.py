@@ -100,16 +100,25 @@ class TestAttachmentPathSanitisation:
             == "/home/u/.cache/huggingface/hub/datasets--gaia-benchmark--GAIA/snap/x.mp3"
         )
 
-    def test_files_dict_values_reduced_to_basename(self):
-        task = {
+    def test_files_dict_is_preserved_with_absolute_paths(self):
+        # The `files` dict's VALUES carry absolute source paths the runners
+        # need for `shutil.copy2(src, cwd)`. We intentionally do NOT rewrite
+        # them here; the runners sanitise them to basenames before writing the
+        # agent-visible input.json. If we rewrote them at strip time the copy
+        # step would fail and the agent would find an empty cwd. The test
+        # locks that behaviour in.
+        original = {
             "files": {
                 "x.mp3": "/abs/path/to/dataset/x.mp3",
                 "y.txt": "/abs/path/to/dataset/y.txt",
             }
         }
-        bench = _make_stub({"t1": task}, gt_keys={"Final answer"})
-        result = bench._strip_ground_truth(task)
-        assert result["files"] == {"x.mp3": "x.mp3", "y.txt": "y.txt"}
+        bench = _make_stub({"t1": original}, gt_keys={"Final answer"})
+        result = bench._strip_ground_truth(original)
+        assert result["files"] == {
+            "x.mp3": "/abs/path/to/dataset/x.mp3",
+            "y.txt": "/abs/path/to/dataset/y.txt",
+        }
 
     def test_no_attachment_no_change(self):
         task = {"prompt": "hello"}
