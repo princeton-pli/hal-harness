@@ -1015,7 +1015,14 @@ class MarkdownConverter:
                 if "mlm_model" not in _kwargs and self._mlm_model is not None:
                     _kwargs["mlm_model"] = self._mlm_model
 
-                # If we hit an error log it and keep trying
+                # If we hit an error log it and keep trying. Initialise `res`
+                # for this iteration: otherwise an exception on the very first
+                # converter leaves `res` unbound and the `if res is not None`
+                # check below raises `UnboundLocalError: local variable 'res'`
+                # instead of the intended FileConversionException — the agent
+                # then sees a confusing error and can't tell what went wrong
+                # (e.g. that the file simply doesn't exist).
+                res = None
                 try:
                     res = converter.convert(local_path, **_kwargs)
                 except Exception:
