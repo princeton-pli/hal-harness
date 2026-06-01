@@ -3,6 +3,7 @@
 from reliability_eval.plots.comparison import (
     plot_calibration as plot_calibration,
     plot_calibration_selective_comparison as plot_calibration_selective_comparison,
+    plot_combined_accuracy_reliability as plot_combined_accuracy_reliability,
     plot_combined_overall_reliability as plot_combined_overall_reliability,
     plot_combined_overall_reliability_large as plot_combined_overall_reliability_large,
     plot_discrimination as plot_discrimination,

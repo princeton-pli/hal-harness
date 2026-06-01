@@ -85,6 +85,7 @@ from reliability_eval.plots.levels import (
 
 from reliability_eval.plots.comparison import (
     plot_calibration,
+    plot_combined_accuracy_reliability,
     plot_combined_overall_reliability,
     plot_combined_overall_reliability_large,
     plot_discrimination,
@@ -426,6 +427,7 @@ def main():
             combined_output_dir = Path(args.output_dir)
             combined_output_dir.mkdir(parents=True, exist_ok=True)
             plot_combined_overall_reliability(benchmark_data, combined_output_dir)
+            plot_combined_accuracy_reliability(benchmark_data, combined_output_dir)
             # Exclude taubench_airline_original from the large plot
             large_plot_data = [
                 (bm, d) for bm, d in benchmark_data if bm != "taubench_airline_original"
@@ -523,6 +525,9 @@ def main():
     if args.combined_benchmarks:
         print(
             "  - combined_overall_reliability.pdf  : Overall reliability trends for multiple benchmarks"
+        )
+        print(
+            "  - combined_accuracy_reliability.pdf : Accuracy (left) and reliability (right) trends over time"
         )
         print(
             "  - calibration_selective_comparison.pdf : Calibration & selective prediction across benchmarks (2x2)"

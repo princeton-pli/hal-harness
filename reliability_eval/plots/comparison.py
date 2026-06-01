@@ -836,6 +836,206 @@ def plot_combined_overall_reliability(
     plt.close()
 
 
+def plot_combined_accuracy_reliability(
+    benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir: Path
+):
+    """
+    Create a grid of Accuracy and Overall Reliability trends over time.
+
+    Layout:
+    - Column 0: Accuracy vs Release Date (trend over time)
+    - Column 1: Overall Reliability vs Release Date (trend over time)
+    - Rows: One row per benchmark (GAIA, tau-bench, etc.)
+
+    Companion to plot_combined_overall_reliability; shares the same
+    dataframe preparation but contrasts accuracy and reliability trends
+    side by side.
+
+    Args:
+        benchmark_data: List of (benchmark_name, dataframe) tuples
+        output_dir: Directory to save the plot
+    """
+    from scipy import stats
+    import matplotlib.dates as mdates
+
+    n_benchmarks = len(benchmark_data)
+    if n_benchmarks == 0:
+        print("⚠️  No benchmark data provided for combined plot")
+        return
+
+    fig, axes = plt.subplots(n_benchmarks, 2, figsize=(5, 3.9))
+
+    # Handle single benchmark case (axes needs to be 2D)
+    if n_benchmarks == 1:
+        axes = axes.reshape(1, -1)
+
+    def prepare_dataframe(df):
+        """Prepare dataframe with required columns."""
+        df_sorted = sort_agents_by_provider_and_date(df)
+
+        if "reliability_consistency" not in df_sorted.columns:
+            df_sorted["reliability_consistency"] = compute_weighted_r_con(
+                df_sorted["consistency_outcome"],
+                df_sorted["consistency_trajectory_distribution"],
+                df_sorted["consistency_trajectory_sequence"],
+                df_sorted["consistency_resource"],
+            )
+        if "reliability_predictability" not in df_sorted.columns:
+            df_sorted["reliability_predictability"] = df_sorted[
+                "predictability_brier_score"
+            ]
+        if "reliability_robustness" not in df_sorted.columns:
+            df_sorted["reliability_robustness"] = df_sorted[
+                [
+                    "robustness_fault_injection",
+                    "robustness_structural",
+                    "robustness_prompt_variation",
+                ]
+            ].mean(axis=1, skipna=True)
+        if "reliability_safety" not in df_sorted.columns:
+            df_sorted["reliability_safety"] = df_sorted["safety_score"]
+        if "reliability_overall" not in df_sorted.columns:
+            df_sorted["reliability_overall"] = df_sorted[
+                [
+                    "reliability_consistency",
+                    "reliability_predictability",
+                    "reliability_robustness",
+                ]
+            ].mean(axis=1, skipna=True)
+
+        if "release_timestamp" not in df_sorted.columns:
+            df_sorted["release_timestamp"] = pd.to_datetime(
+                df_sorted["agent"].map(
+                    lambda x: get_model_metadata(x).get("date", "2024-01-01")
+                )
+            )
+        if "provider" not in df_sorted.columns:
+            df_sorted["provider"] = df_sorted["agent"].map(
+                lambda x: get_model_metadata(x).get("provider", "Unknown")
+            )
+
+        return df_sorted
+
+    def plot_date_trend(ax, df_sorted, y_col):
+        """Scatter a metric vs release date with a linear trend line."""
+        valid_mask = (
+            df_sorted["release_timestamp"].notna() & df_sorted[y_col].notna()
+        )
+        if valid_mask.sum() < 2:
+            return
+        x_valid = df_sorted.loc[valid_mask, "release_timestamp"]
+        y_valid = df_sorted.loc[valid_mask, y_col]
+        providers_valid = df_sorted.loc[valid_mask, "provider"]
+
+        for provider in ["OpenAI", "Google", "Anthropic"]:
+            mask = providers_valid == provider
+            if mask.sum() == 0:
+                continue
+            ax.scatter(
+                x_valid[mask],
+                y_valid[mask],
+                c=PROVIDER_COLORS.get(provider, "#999999"),
+                marker=PROVIDER_MARKERS.get(provider, "o"),
+                s=70,
+                alpha=0.85,
+                edgecolors="black",
+                linewidth=0.6,
+                label=provider,
+            )
+
+        x_numeric = (x_valid - x_valid.min()).dt.days.values
+        slope, intercept, r_value, _, __ = stats.linregress(
+            x_numeric, y_valid.values
+        )
+        x_range = np.array([x_numeric.min(), x_numeric.max()])
+        x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
+        y_trend = slope * x_range + intercept
+        ax.plot(x_dates, y_trend, "k-", linewidth=2, alpha=0.85, label="Trend")
+
+        slope_per_year = slope * 365
+        ax.annotate(
+            f"slope={slope_per_year:.2f}/yr",
+            xy=(0.95, 0.07),
+            xycoords="axes fraction",
+            fontsize=11,
+            ha="right",
+            va="bottom",
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                facecolor="white",
+                edgecolor="gray",
+                alpha=0.9,
+                linewidth=0.5,
+            ),
+        )
+
+    for row_idx, (benchmark_name, df) in enumerate(benchmark_data):
+        df_sorted = prepare_dataframe(df)
+        display_name = (
+            benchmark_name.replace(
+                "taubench_airline_original", r"$\tau$-bench (original)"
+            )
+            .replace("taubench_airline", r"$\tau$-bench")
+            .replace("gaia", "GAIA")
+        )
+        is_last_row = row_idx == n_benchmarks - 1
+
+        # Left: Accuracy vs Release Date
+        ax = axes[row_idx, 0]
+        plot_date_trend(ax, df_sorted, "accuracy")
+        ax.set_ylabel(f"Accuracy\n({display_name})", fontsize=11)
+        ax.set_ylim(0, 1.05)
+        ax.set_yticks(np.arange(0, 1.01, 0.2))
+        ax.grid(True, alpha=0.3, linewidth=0.5)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=4))
+        ax.tick_params(axis="both", labelsize=11)
+        if is_last_row:
+            ax.set_xlabel("Release Date", fontsize=11)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+        else:
+            ax.set_xlabel("")
+            ax.tick_params(axis="x", labelbottom=False)
+
+        # Right: Overall Reliability vs Release Date
+        ax = axes[row_idx, 1]
+        plot_date_trend(ax, df_sorted, "reliability_overall")
+        ax.set_ylabel(f"Reliability\n({display_name})", fontsize=11)
+        ax.set_ylim(0, 1.05)
+        ax.set_yticks(np.arange(0, 1.01, 0.2))
+        ax.grid(True, alpha=0.3, linewidth=0.5)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=4))
+        ax.tick_params(axis="both", labelsize=11)
+        if is_last_row:
+            ax.set_xlabel("Release Date", fontsize=11)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+        else:
+            ax.set_xlabel("")
+            ax.tick_params(axis="x", labelbottom=False)
+
+    # Add legend at top (shared)
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    fig.legend(
+        by_label.values(),
+        by_label.keys(),
+        loc="upper center",
+        bbox_to_anchor=(0.50, 1.05),
+        ncol=5,
+        framealpha=0.95,
+        edgecolor="gray",
+        fontsize=11,
+        handletextpad=0.3,
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    output_path = output_dir / "combined_accuracy_reliability.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
+    print(f"📊 Saved: {output_path}")
+    plt.close()
+
+
 # ── Manual label positions for combined_overall_reliability_large.pdf ──
 # Keys: (benchmark_name, column_index)  where col 0=Accuracy vs Date,
 #        col 1=Reliability vs Date, col 2=Accuracy vs Reliability.
