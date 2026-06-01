@@ -383,6 +383,53 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.50 / 1e6,
         "completion_tokens": 3.0 / 1e6,
     },
+    # Gemini 3.1 Pro Preview (Feb 2026)
+    "gemini/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "google/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    # Gemini 3.5 Flash (GA May 2026; thinking always on)
+    "gemini/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    "gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    "google/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    # OpenRouter-routed Gemini aliases (pricing matches Google direct, OpenRouter applies ~5% markup)
+    "openrouter/google/gemini-2.0-flash-001": {
+        "prompt_tokens": 0.10 / 1e6,
+        "completion_tokens": 0.40 / 1e6,
+    },
+    "openrouter/google/gemini-2.5-flash": {
+        "prompt_tokens": 0.30 / 1e6,
+        "completion_tokens": 2.50 / 1e6,
+    },
+    "openrouter/google/gemini-2.5-pro": {
+        "prompt_tokens": 1.25 / 1e6,
+        "completion_tokens": 10.0 / 1e6,
+    },
+    "openrouter/google/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "openrouter/google/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
     "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {
         "prompt_tokens": 0.27 / 1e6,
         "completion_tokens": 0.85 / 1e6,
@@ -439,6 +486,14 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 1 / 1e6,
         "completion_tokens": 5 / 1e6,
     },
+    "openrouter/anthropic/claude-3.5-haiku": {
+        "prompt_tokens": 1 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
+    "openrouter/anthropic/claude-3-haiku": {
+        "prompt_tokens": 0.25 / 1e6,
+        "completion_tokens": 1.25 / 1e6,
+    },
     "openrouter/anthropic/claude-sonnet-4.5": {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 15 / 1e6,
@@ -475,6 +530,17 @@ MODEL_PRICES_DICT = {
     # Claude Opus 4.5 (Latest - Nov 2025, cheaper than 4.1)
     "claude-opus-4.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
     "anthropic/claude-opus-4.5": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
+    # Claude Opus 4.7 (Apr 2026, same headline pricing as 4.5/4.6)
+    "claude-opus-4-7": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4-7": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
+    "claude-opus-4.7": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4.7": {
         "prompt_tokens": 5 / 1e6,
         "completion_tokens": 25 / 1e6,
     },
@@ -534,6 +600,32 @@ CACHED_PRICE_OVERRIDES = {
     "anthropic/claude-sonnet-4-5": 0.30 / 1e6,
     "claude-opus-4-5": 0.50 / 1e6,
     "anthropic/claude-opus-4-5": 0.50 / 1e6,
+    "claude-opus-4-7": 0.50 / 1e6,
+    "anthropic/claude-opus-4-7": 0.50 / 1e6,
+    "claude-opus-4.7": 0.50 / 1e6,
+    "anthropic/claude-opus-4.7": 0.50 / 1e6,
+    "openrouter/anthropic/claude-3-haiku": 0.03 / 1e6,
+    "openrouter/anthropic/claude-3-5-haiku": 0.10 / 1e6,
+    "openrouter/anthropic/claude-3.5-haiku": 0.10 / 1e6,
+    "openrouter/anthropic/claude-sonnet-4": 0.30 / 1e6,
+    # Gemini cached input overrides
+    "gemini-2.0-flash": 0.025 / 1e6,
+    "gemini/gemini-2.0-flash": 0.025 / 1e6,
+    "google/gemini-2.0-flash": 0.025 / 1e6,
+    "gemini-2.5-pro": 0.125 / 1e6,
+    "gemini/gemini-2.5-pro": 0.125 / 1e6,
+    "google/gemini-2.5-pro": 0.125 / 1e6,
+    "gemini-3.1-pro-preview": 0.20 / 1e6,
+    "gemini/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "google/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "gemini-3.5-flash": 0.15 / 1e6,
+    "gemini/gemini-3.5-flash": 0.15 / 1e6,
+    "google/gemini-3.5-flash": 0.15 / 1e6,
+    "openrouter/google/gemini-2.0-flash-001": 0.025 / 1e6,
+    "openrouter/google/gemini-2.5-flash": 0.030 / 1e6,
+    "openrouter/google/gemini-2.5-pro": 0.125 / 1e6,
+    "openrouter/google/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "openrouter/google/gemini-3.5-flash": 0.15 / 1e6,
     "claude-opus-4-20250514": 1.50 / 1e6,
     "anthropic/claude-opus-4-20250514": 1.50 / 1e6,
     "claude-opus-4.1-20250805": 1.50 / 1e6,
