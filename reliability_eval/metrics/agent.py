@@ -832,6 +832,9 @@ def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
                 "predictability_calibration": m.predictability_calibration,
                 "predictability_roc_auc": m.predictability_roc_auc,
                 "predictability_brier_score": m.predictability_brier_score,
+                "brier_score": m.extra.get("brier_data", {}).get(
+                    "brier_score", np.nan
+                ),
                 "mean_confidence": m.mean_confidence,
                 # Robustness
                 "robustness_fault_injection": m.robustness_fault_injection,

@@ -108,7 +108,7 @@ def plot_reliability_dashboard(
                         f"{val:.2f}",
                         ha="center",
                         va="bottom",
-                        fontsize=6,
+                        fontsize=5,
                     )
         return bars
 

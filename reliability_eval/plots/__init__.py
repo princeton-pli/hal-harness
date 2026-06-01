@@ -27,6 +27,7 @@ from reliability_eval.plots.detailed import (
     plot_calibration_by_model as plot_calibration_by_model,
     plot_consistency_detailed as plot_consistency_detailed,
     plot_predictability_detailed as plot_predictability_detailed,
+    plot_predictability_summaries as plot_predictability_summaries,
     plot_robustness_detailed as plot_robustness_detailed,
     plot_safety_deep_analysis as plot_safety_deep_analysis,
     plot_safety_detailed as plot_safety_detailed,

@@ -66,6 +66,7 @@ from reliability_eval.plots.detailed import (
     plot_calibration_by_model,
     plot_consistency_detailed,
     plot_predictability_detailed,
+    plot_predictability_summaries,
     plot_robustness_detailed,
     plot_safety_deep_analysis,
     plot_safety_detailed,
@@ -334,6 +335,7 @@ def main():
         print("\n📊 Generating detailed dimension plots...")
         plot_consistency_detailed(df, all_metrics, output_dir)
         plot_predictability_detailed(df, all_metrics, output_dir)
+        plot_predictability_summaries(df, all_metrics, output_dir)
         plot_accuracy_coverage_by_model(df, all_metrics, output_dir)
         plot_calibration_by_model(df, all_metrics, output_dir)
         plot_robustness_detailed(df, all_metrics, output_dir)
