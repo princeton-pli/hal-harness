@@ -3,11 +3,13 @@ from azure.mgmt.network import NetworkManagementClient
 from azure.identity import DefaultAzureCredential
 import paramiko
 import os
+import shlex
 import tarfile
 import json
 import logging
 from contextlib import contextmanager
 from pathlib import Path
+from dotenv import dotenv_values
 from .vm.azure_virtual_machine import AzureVirtualMachine
 
 # Mount names for core_agent: used only under VM_AGENT_HOME/environment/ (e.g. environment/data, environment/code, environment/results from task payload).
@@ -15,6 +17,33 @@ VM_AGENT_HOME = "/home/agent"
 VM_ENVIRONMENT_MOUNT_NAMES = ("data", "code", "results")
 
 RUN_AGENT_SCRIPT_PATH = Path(__file__).resolve().parent / "vm" / "run_agent.py"
+
+
+def _vm_resolve_env_var_from_host(name: str) -> str | None:
+    """Resolve a secret from the host process env or local .env (for VM payload files)."""
+    v = os.environ.get(name, "").strip()
+    if v:
+        return v
+    environment_file = Path.cwd() / ".env"
+    if environment_file.is_file():
+        raw_environment_variables = dotenv_values(environment_file).get(name)
+        if raw_environment_variables:
+            s = str(raw_environment_variables).strip()
+            if s:
+                return s
+    return None
+
+
+# Injected into run_agent.env so the remote agent sees keys when the host has no .env file
+# to copy to the VM (e.g. CI: secrets exist only on the runner environment).
+_VM_RUN_AGENT_SECRET_NAMES = (
+    "WANDB_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GEMINI_API_KEY",
+    "TOGETHERAI_API_KEY",
+    "OPENROUTER_API_KEY",
+)
 
 # Set up base logger
 _base_logger = logging.getLogger(__name__)
@@ -271,8 +300,20 @@ class VirtualMachineManager:
             logger.error(f"Error copying files: {e}")
             raise
 
-    def copy_files_from_vm(self, vm_name, destination_directory):
-        """Copy files from the VM to local directory."""
+    def copy_files_from_vm(
+        self,
+        vm_name,
+        destination_directory,
+        *,
+        download_environment: bool = True,
+    ):
+        """Copy files from the VM to local directory.
+
+        When download_environment is False, omits ``/home/agent/environment`` from
+        the archive (task data/code/results) to speed up SFTP; ``output.json`` and
+        other home-directory files are still included.
+        """
+        logger = _get_logger(vm_name)
         with self._get_sftp_client(
             vm_name,
             self.network_client,
@@ -288,8 +329,15 @@ class VirtualMachineManager:
                 f"/home/agent/{os.path.basename(destination_directory)}_back.tar.gz"
             )
             remote_home_directory = "/home/agent"
+            exclude_command_line_argument_string = ""
+            if not download_environment:
+                logger.info(
+                    "Excluding environment/ from VM results archive (faster download)"
+                )
+                exclude_command_line_argument_string = "--exclude=environment "
+            quoted_tar = shlex.quote(remote_tar_file_path)
             _, stdout, _ = ssh_client.exec_command(
-                f"tar -czf {remote_tar_file_path} -C {remote_home_directory} ."
+                f"tar {exclude_command_line_argument_string}-czf {quoted_tar} -C {remote_home_directory} ."
             )
             for _ in stdout:
                 pass  # Block until the tar command completes
@@ -423,6 +471,10 @@ class VirtualMachineManager:
 
                 # Write run-specific env vars for static run_agent.py
                 run_agent_env = f"RUN_ID={run_id}\nAGENT_FUNCTION={agent_function}\nTASK_ID={task_id}\n"
+                for secret_name in _VM_RUN_AGENT_SECRET_NAMES:
+                    secret_value = _vm_resolve_env_var_from_host(secret_name)
+                    if secret_value:
+                        run_agent_env += f"{secret_name}={secret_value}\n"
                 with sftp_client.open("/home/agent/run_agent.env", "w") as f:
                     f.write(run_agent_env)
 

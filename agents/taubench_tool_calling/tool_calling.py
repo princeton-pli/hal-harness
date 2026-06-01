@@ -223,6 +223,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     litellm.drop_params = True
     _install_anthropic_adaptive_thinking_patch()
 
+    def _responses_model_name(model: str) -> str:
+        return model if model.startswith("responses/") else f"responses/{model}"
+
     # ========== RELIABILITY METRICS INITIALIZATION ==========
 
     # Initialize FaultInjector if enabled
@@ -323,6 +326,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         api_key = None
         model_name = kwargs["model_name"]
 
+    is_native_openai = agent_provider == "openai" and api_base is None
+    if is_native_openai:
+        model_name = _responses_model_name(model_name)
+
     # Store the original completion functions
     original_completion = litellm.completion
     original_acompletion = litellm.acompletion
@@ -366,9 +373,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     print(
                         f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}"
                     )
+                elif is_native_openai:
+                    completion_kwargs["reasoning"] = {
+                        "effort": kwargs["reasoning_effort"]
+                    }
+                    completion_kwargs.pop("reasoning_effort", None)
+                    print(
+                        f"Setting reasoning.effort to {kwargs['reasoning_effort']} for model {model_name}"
+                    )
                 else:
-                    # OpenAI-native, Anthropic-direct, and Gemini's OpenAI-compat
-                    # shim all accept `reasoning_effort` directly.
+                    # For direct Anthropic and other non-OpenAI providers
                     completion_kwargs["reasoning_effort"] = kwargs["reasoning_effort"]
                     print(
                         f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}"
@@ -452,9 +466,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     print(
                         f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}"
                     )
+                elif is_native_openai:
+                    completion_kwargs["reasoning"] = {
+                        "effort": kwargs["reasoning_effort"]
+                    }
+                    completion_kwargs.pop("reasoning_effort", None)
+                    print(
+                        f"Setting reasoning.effort to {kwargs['reasoning_effort']} for model {model_name}"
+                    )
                 else:
-                    # OpenAI-native, Anthropic-direct, and Gemini's OpenAI-compat
-                    # shim all accept `reasoning_effort` directly.
+                    # For direct Anthropic and other non-OpenAI providers
                     completion_kwargs["reasoning_effort"] = kwargs["reasoning_effort"]
                     print(
                         f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}"

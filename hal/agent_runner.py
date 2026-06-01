@@ -34,12 +34,14 @@ class AgentRunner:
         run_command: str = "",
         ignore_errors: bool = False,
         max_tasks: Optional[int] = None,
+        agent_version: Optional[str] = None,
         prompt_sensitivity: bool = False,
         num_variations: int = 3,
         variation_strength: str = "mild",
         variation_index: Optional[int] = None,
         results_dir: str = "results",
         task_ids: Optional[str] = None,
+        download_environment: bool = True,
     ):
         # Validate agent_function format
         if not isinstance(agent_function, str) or "." not in agent_function:
@@ -71,9 +73,13 @@ class AgentRunner:
                 "Only one of conda_env, use_vm, or use_docker can be set at a time."
             )
 
-        # Initialize benchmark first
+        # Initialize benchmark first (--max_tasks limits CoreBench capsule downloads; full load if
+        # --task_ids is used so those IDs are present in the benchmark dict).
         self.benchmark_manager = BenchmarkManager(agent_dir, config)
-        self.benchmark = self.benchmark_manager.get_benchmark(benchmark_name)
+        capsule_preload_limit = None if task_ids else max_tasks
+        self.benchmark = self.benchmark_manager.get_benchmark(
+            benchmark_name, max_tasks=capsule_preload_limit
+        )
         self.benchmark.agent_args = agent_args
 
         # Override results directory if non-default
@@ -120,6 +126,7 @@ class AgentRunner:
                 log_dir=self.benchmark.get_run_dir(self.run_id),
                 benchmark=self.benchmark,
                 task_timeout=task_timeout,
+                download_environment=download_environment,
             )
         elif use_docker:
             self.runner = DockerRunner(
@@ -148,6 +155,7 @@ class AgentRunner:
         self.continue_run = continue_run
         self.ignore_errors = ignore_errors
         self.max_tasks = max_tasks
+        self.agent_version = agent_version
         self.prompt_sensitivity = prompt_sensitivity
         self.num_variations = num_variations
         self.variation_strength = variation_strength
@@ -248,11 +256,18 @@ class AgentRunner:
                 logger.error("No valid task IDs found. Exiting.")
                 return {}
 
-        # Limit the number of tasks if max_tasks is specified
-        if self.max_tasks and self.max_tasks > 0 and self.max_tasks < len(dataset):
-            logger.info(f"Limiting to the first {self.max_tasks} tasks as requested")
-            task_ids = list(dataset.keys())[: self.max_tasks]
-            dataset = {task_id: dataset[task_id] for task_id in task_ids}
+        # Cap tasks (--max_tasks). Always apply here when set, not only when max_tasks < len(dataset),
+        # so execution cannot exceed N even if a benchmark constructor omits pre-slicing.
+        if self.max_tasks is not None and self.max_tasks > 0:
+            before = len(dataset)
+            selected = list(dataset.keys())[: self.max_tasks]
+            dataset = {k: dataset[k] for k in selected}
+            if len(dataset) < before:
+                logger.info(
+                    "Limiting run to %s of %s tasks (--max_tasks)",
+                    len(dataset),
+                    before,
+                )
 
         # Handle prompt sensitivity if enabled
         prompt_variations_map = None
@@ -528,6 +543,8 @@ class AgentRunner:
             weave_client=weave_client,
             agent_output=agent_output,
             upload=upload,
+            agent_dir=self.agent_dir,
+            agent_version=self.agent_version,
             prompt_sensitivity=self.prompt_sensitivity,
         )
         return results

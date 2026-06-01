@@ -126,6 +126,7 @@ class DockerRunner:
                 benchmark.get_run_dir(run_id) if benchmark else f"results/{run_id}"
             )
             submissions_file = os.path.join(run_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
+            timings_file = os.path.join(run_dir, f"{run_id}_WALL_CLOCK_TIMES.jsonl")
 
             tasks = []
             for task_id, input_data in dataset.items():
@@ -137,6 +138,7 @@ class DockerRunner:
                     agent_args=agent_args,
                     run_id=run_id,
                     submissions_file=submissions_file,
+                    timings_file=timings_file,
                     progress=progress,
                     task=task,
                 )
@@ -198,6 +200,7 @@ class DockerRunner:
         agent_args: Dict[str, Any],
         run_id: str,
         submissions_file: str,
+        timings_file: str,
         progress: Optional[Progress] = None,
         task: Optional[TaskID] = None,
         max_retries: int = 3,
@@ -208,7 +211,7 @@ class DockerRunner:
             logger.debug(
                 f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})"
             )
-
+            start_time = time.time()
             result = None
             for attempt in range(max_retries):
                 result = await self._run_single_task(
@@ -241,12 +244,23 @@ class DockerRunner:
                 else:
                     # No result - stop retrying
                     break
+            wall_clock_time = time.time() - start_time
 
-            # Write result to submissions file
+            # Write result to submissions file and timing
             if result:
+                task_id_key = list(result.keys())[0]
                 async with self._file_lock:
                     with open(submissions_file, "a") as f:
                         json.dump(result, f)
+                        f.write("\n")
+                    with open(timings_file, "a") as f:
+                        json.dump(
+                            {
+                                "task_id": task_id_key,
+                                "wall_clock_time": wall_clock_time,
+                            },
+                            f,
+                        )
                         f.write("\n")
 
             # Update progress after task completion

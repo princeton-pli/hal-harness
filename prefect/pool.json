@@ -1,0 +1,15 @@
+{
+  "id": "hal-evals",
+  "vmSize": "Standard_D4s_v3",
+  "virtualMachineConfiguration": {
+    "imageReference": {
+      "publisher": "microsoft-dsvm",
+      "offer": "ubuntu-hpc",
+      "sku": "2404",
+      "version": "latest"
+    },
+    "nodeAgentSKUId": "batch.node.ubuntu 24.04"
+  },
+  "targetDedicatedNodes": 0,
+  "targetLowPriorityNodes": 0
+}

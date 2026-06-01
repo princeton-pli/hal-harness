@@ -25,10 +25,12 @@ class VirtualMachineRunner:
         task_timeout: int,
         max_concurrent: int = 1,
         benchmark: Optional[BaseBenchmark] = None,
+        download_environment: bool = True,
     ):
         self.max_concurrent = max_concurrent
         self.log_dir = log_dir
         self.task_timeout = task_timeout
+        self.download_environment = download_environment
         self.vm_manager = VirtualMachineManager()
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._file_lock = asyncio.Lock()
@@ -82,6 +84,8 @@ class VirtualMachineRunner:
         results = {}
         vm_names = []
 
+        timings = {}
+
         async def process_task(task_id: str, input_data: Any) -> Optional[Dict]:
             # Create unique VM name
             vm_name = (
@@ -91,6 +95,7 @@ class VirtualMachineRunner:
             )
             vm_names.append(vm_name)
 
+            task_start_time = time.time()
             try:
                 # Check if the task requires GPU
                 gpu_required = False
@@ -256,6 +261,7 @@ class VirtualMachineRunner:
                         self.vm_manager.copy_files_from_vm,
                         vm_name,
                         dest_dir,
+                        download_environment=self.download_environment,
                     )
 
                     # Read the output.json file from the copied directory
@@ -285,9 +291,16 @@ class VirtualMachineRunner:
             except Exception as e:
                 logger.error(f"Error processing task {task_id} on VM {vm_name}: {e}")
                 traceback.print_exc()
-                return {task_id: f"ERROR: {str(e)}"}
+                # Re-raise so the eval run fails hard; `finally` below still deletes the VM (or
+                # whatever resources exist for this name). Swallowing here made hal-eval continue
+                # and report success despite Azure / provisioning failures.
+                raise RuntimeError(
+                    f"VM run failed for task {task_id} (VM {vm_name}): {e}"
+                ) from e
 
             finally:
+                wall_clock_time = time.time() - task_start_time
+                timings[task_id] = wall_clock_time
                 # Cleanup VM
                 try:
                     await asyncio.to_thread(
@@ -321,10 +334,13 @@ class VirtualMachineRunner:
             if result:
                 merged_results.update(result)
 
-        # Save raw submissions if log_dir provided
+        # Save raw submissions and timings if log_dir provided
         if self.log_dir:
             raw_submissions_path = os.path.join(
                 self.log_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl"
+            )
+            timings_path = os.path.join(
+                self.log_dir, f"{run_id}_WALL_CLOCK_TIMES.jsonl"
             )
             os.makedirs(self.log_dir, exist_ok=True)
 
@@ -332,6 +348,14 @@ class VirtualMachineRunner:
             with open(raw_submissions_path, "a") as f:
                 for task_id, result in merged_results.items():
                     json.dump({task_id: result}, f)
+                    f.write("\n")
+
+            # append to timings file
+            with open(timings_path, "a") as f:
+                for task_id, wall_clock_time in timings.items():
+                    json.dump(
+                        {"task_id": task_id, "wall_clock_time": wall_clock_time}, f
+                    )
                     f.write("\n")
 
         return merged_results

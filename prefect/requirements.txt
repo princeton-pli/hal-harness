@@ -1,0 +1,6 @@
+prefect>=3.0
+azure-batch
+azure-identity
+azure-storage-blob
+msrest
+python-dotenv
