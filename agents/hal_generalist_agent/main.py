@@ -1144,6 +1144,45 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
         return heuristic_confidence, heuristic_details
 
 
+_ANTHROPIC_ADAPTIVE_REQUIRED = ("claude-opus-4-7",)
+_BUDGET_TO_EFFORT = {1024: "low", 8192: "medium", 24576: "high"}
+_anthropic_adaptive_patch_installed = False
+
+
+def _install_anthropic_adaptive_thinking_patch():
+    """Translate `thinking.type=enabled` + `budget_tokens` -> `thinking.type=adaptive`
+    + `output_config.effort` for Anthropic models that reject the old format.
+    litellm 1.76.1 always emits the old format from `reasoning_effort`; Claude
+    Opus 4.7 rejects it. The patch rewrites the request body just before send.
+
+    Note: install-once flag is kept at module scope, not as a class attribute on
+    AnthropicConfig, because litellm's `get_config()` merges every class attr
+    into the request body (Anthropic would 400 on the unknown field).
+    """
+    global _anthropic_adaptive_patch_installed
+    if _anthropic_adaptive_patch_installed:
+        return
+    from litellm.llms.anthropic.chat.transformation import AnthropicConfig
+
+    _original = AnthropicConfig.transform_request
+
+    def _patched(self, model, messages, optional_params, litellm_params, headers):
+        data = _original(self, model, messages, optional_params, litellm_params, headers)
+        if not any(slug in model for slug in _ANTHROPIC_ADAPTIVE_REQUIRED):
+            return data
+        thinking = data.get("thinking")
+        if isinstance(thinking, dict) and thinking.get("type") == "enabled":
+            effort = _BUDGET_TO_EFFORT.get(thinking.get("budget_tokens"), "medium")
+            data["thinking"] = {"type": "adaptive"}
+            data["output_config"] = {"effort": effort}
+        # Opus 4.7 deprecated `temperature` (the API rejects it). Strip silently.
+        data.pop("temperature", None)
+        return data
+
+    AnthropicConfig.transform_request = _patched
+    _anthropic_adaptive_patch_installed = True
+
+
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     assert "model_name" in kwargs, "model_name is required"
     assert len(input) == 1, "input must contain only one task"
@@ -1152,6 +1191,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     import litellm
 
+    _install_anthropic_adaptive_thinking_patch()
+
     model_params = {}
     model_params["model_id"] = kwargs["model_name"]
 
@@ -1159,9 +1200,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if "reasoning_effort" in kwargs:
         if "openrouter/" in kwargs["model_name"]:
             # OpenRouter doesn't support reasoning_effort, convert to reasoning.max_tokens
-            effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
+            # Aligned with Anthropic-direct / Gemini-direct conventions:
+            # medium=8192 matches direct API behaviour. Was {low:1024, medium:2048, high:4096}.
+            effort_to_tokens = {"low": 1024, "medium": 8192, "high": 24576}
             model_params["reasoning"] = {
-                "max_tokens": effort_to_tokens.get(kwargs["reasoning_effort"], 4096)
+                "max_tokens": effort_to_tokens.get(kwargs["reasoning_effort"], 8192)
             }
         else:
             # For Anthropic direct and other providers that support reasoning_effort
@@ -1170,7 +1213,19 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if "temperature" in kwargs:
         model_params["temperature"] = kwargs["temperature"]
 
-    if "gemini" in kwargs["model_name"]:
+    # Anthropic requires temperature=1.0 when extended thinking is enabled.
+    # Safe to force for all providers — OpenAI reasoning models ignore temperature,
+    # and Gemini accepts any value with thinking.
+    if "reasoning_effort" in kwargs:
+        model_params["temperature"] = 1.0
+
+    # `gemini/...` slug routes to Google's OpenAI-compat shim. Skip this branch
+    # for `openrouter/google/gemini-...` slugs so the OpenRouter routing (handled
+    # natively by litellm via the openrouter/ prefix) is preserved.
+    if (
+        "gemini" in kwargs["model_name"]
+        and "openrouter/" not in kwargs["model_name"]
+    ):
         model_params["model_id"] = kwargs["model_name"].replace("gemini/", "openai/")
         model_params["api_key"] = os.getenv("GEMINI_API_KEY")
         model_params["api_base"] = (
