@@ -9,10 +9,6 @@ import pandas as pd
 from pathlib import Path
 from typing import List
 
-# Render axis tick minus as ASCII hyphen so it shows up in embedded PDF fonts
-# that lack the Unicode minus glyph (U+2212).
-mpl.rcParams["axes.unicode_minus"] = False
-
 from reliability_eval.constants import (
     PROVIDER_COLORS,
     PROVIDER_MARKERS,
@@ -35,6 +31,10 @@ from reliability_eval.plots.helpers import (
     filter_oldest_and_newest_per_provider,
     generate_shaded_colors,
 )
+
+# Render axis tick minus as ASCII hyphen so it shows up in embedded PDF fonts
+# that lack the Unicode minus glyph (U+2212).
+mpl.rcParams["axes.unicode_minus"] = False
 
 
 def plot_consistency_detailed(
@@ -336,8 +336,7 @@ def plot_predictability_summaries(
     pcal_safe = p_cal.where(p_cal > 0, np.nan)
     pauroc_safe = p_auroc.where(p_auroc > 0, np.nan)
     se_geom = 0.5 * np.sqrt(
-        (pauroc_safe / pcal_safe) * se_cal**2
-        + (pcal_safe / pauroc_safe) * se_auroc**2
+        (pauroc_safe / pcal_safe) * se_cal**2 + (pcal_safe / pauroc_safe) * se_auroc**2
     )
     se_geom = se_geom.fillna(0)
 
@@ -491,9 +490,7 @@ def plot_accuracy_coverage_by_model(
                 # Convert risk to accuracy
                 accuracies = 1 - np.array(d["risks"])
                 optimal_accuracies = (
-                    1 - np.array(d["optimal_risks"])
-                    if d.get("optimal_risks")
-                    else None
+                    1 - np.array(d["optimal_risks"]) if d.get("optimal_risks") else None
                 )
 
                 # Plot model's accuracy-coverage curve

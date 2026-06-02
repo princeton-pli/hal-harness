@@ -10,27 +10,41 @@ Followed by a panel-wide rollup.
 import json
 import os
 import re
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path("/Users/sr4049/princeton/projects/hal-harness-input-fix/results_fixed/gaia")
 
 ERROR_BUCKETS = [
     (re.compile(r"account has run out of searches", re.I), "search_quota"),
-    (re.compile(r"Not a regular file|FileNotFoundError|No such file or directory", re.I), "file_not_found"),
+    (
+        re.compile(
+            r"Not a regular file|FileNotFoundError|No such file or directory", re.I
+        ),
+        "file_not_found",
+    ),
     (re.compile(r"Forbidden access to module: posixpath", re.I), "posixpath"),
     (re.compile(r"Forbidden access to module", re.I), "forbidden_module_other"),
     (re.compile(r"Forbidden function evaluation: 'open'", re.I), "open_blocked"),
     (re.compile(r"Forbidden function evaluation", re.I), "forbidden_function_other"),
     (re.compile(r"Import (?:from |of )?base64 is not allowed", re.I), "base64_blocked"),
     (re.compile(r"Import (?:from |of )?\S+ is not allowed", re.I), "forbidden_import"),
-    (re.compile(r"InterpreterError: Reached the max number of operations", re.I), "max_operations"),
+    (
+        re.compile(r"InterpreterError: Reached the max number of operations", re.I),
+        "max_operations",
+    ),
     (re.compile(r"Error in code parsing", re.I), "code_parsing"),
     (re.compile(r"FileConversionException", re.I), "file_conversion"),
-    (re.compile(r"UnboundLocalError.*local variable 'res'", re.I), "mdconvert_res_unbound"),
+    (
+        re.compile(r"UnboundLocalError.*local variable 'res'", re.I),
+        "mdconvert_res_unbound",
+    ),
     (re.compile(r"JSONDecodeError", re.I), "json_decode"),
     (re.compile(r"SyntaxError", re.I), "python_syntax"),
-    (re.compile(r"TimeoutError|timed out|task_timeout|Task timed out", re.I), "timeout"),
+    (
+        re.compile(r"TimeoutError|timed out|task_timeout|Task timed out", re.I),
+        "timeout",
+    ),
     (re.compile(r"503|504|502|InternalServerError", re.I), "upstream_5xx"),
     (re.compile(r"No results found for query", re.I), "search_no_results"),
 ]
@@ -61,13 +75,28 @@ def fault(err: str) -> bool:
 
 
 CRASH_BUCKETS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"insufficient_quota|You exceeded your current quota", re.I), "openai_insufficient_quota"),
+    (
+        re.compile(r"insufficient_quota|You exceeded your current quota", re.I),
+        "openai_insufficient_quota",
+    ),
     (re.compile(r"RateLimitError|RateLimit", re.I), "openai_rate_limit"),
-    (re.compile(r"AuthenticationError|invalid_api_key|incorrect API key", re.I), "openai_auth"),
-    (re.compile(r"context_length_exceeded|maximum context length", re.I), "context_length"),
+    (
+        re.compile(r"AuthenticationError|invalid_api_key|incorrect API key", re.I),
+        "openai_auth",
+    ),
+    (
+        re.compile(r"context_length_exceeded|maximum context length", re.I),
+        "context_length",
+    ),
     (re.compile(r"TimeoutError|task timeout|signal.*SIGTERM", re.I), "timeout"),
-    (re.compile(r"5\d{2}|InternalServerError|service.unavailable", re.I), "upstream_5xx"),
-    (re.compile(r"ConnectionError|connection (?:refused|reset|aborted)", re.I), "network"),
+    (
+        re.compile(r"5\d{2}|InternalServerError|service.unavailable", re.I),
+        "upstream_5xx",
+    ),
+    (
+        re.compile(r"ConnectionError|connection (?:refused|reset|aborted)", re.I),
+        "network",
+    ),
 ]
 
 
@@ -116,7 +145,8 @@ def analyse_run(run_dir: Path) -> dict:
         if not d.is_dir() or task == "__pycache__":
             continue
         stats["total_task_dirs"] += 1
-        ij = d / "input.json"; oj = d / "output.json"
+        ij = d / "input.json"
+        oj = d / "output.json"
         fname = ""
         if ij.is_file():
             try:
@@ -173,7 +203,9 @@ def analyse_run(run_dir: Path) -> dict:
                 if b == "file_not_found" and fname:
                     stats["attachment_fnf_events"] += 1
                 for tc in st.get("tool_calls") or []:
-                    if any(p.search(tc.get("arguments") or "") for p in GAIA_URL_PATTERNS):
+                    if any(
+                        p.search(tc.get("arguments") or "") for p in GAIA_URL_PATTERNS
+                    ):
                         stats["visited_mirror"] += 1
                         break
             if any_err:
@@ -207,19 +239,35 @@ def main() -> None:
     for run in runs:
         s = analyse_run(run)
         name = run.name.replace("gaia_gaia_generalist_", "")
-        bucket_str = ", ".join(f"{b}={n}" for b, n in s["events_by_bucket"].most_common())
-        crash_str = ", ".join(f"{b}={n}" for b, n in s["crashes_by_bucket"].most_common())
+        bucket_str = ", ".join(
+            f"{b}={n}" for b, n in s["events_by_bucket"].most_common()
+        )
+        crash_str = ", ".join(
+            f"{b}={n}" for b, n in s["crashes_by_bucket"].most_common()
+        )
         print(f"### {name}")
-        print(f"  completion : {s['complete']}/{s['total_task_dirs']}    "
-              f"accuracy: {s['scored_correct']}/{s['scored_total']} = {fmt_pct(s['scored_correct'], s['scored_total'])}    "
-              f"empty answers: {s['empty_answers']}")
+        print(
+            f"  completion : {s['complete']}/{s['total_task_dirs']}    "
+            f"accuracy: {s['scored_correct']}/{s['scored_total']} = {fmt_pct(s['scored_correct'], s['scored_total'])}    "
+            f"empty answers: {s['empty_answers']}"
+        )
         if s["crashes"]:
-            tag = "⚠" if any(b == "openai_insufficient_quota" for b in s["crashes_by_bucket"]) else " "
-            print(f"  {tag}crashes  : {s['crashes']} task(s) lost without output.json — {crash_str}")
-        print(f"  attachments: {s['attachment_file_present']}/{s['attachment_tasks']} files present in cwd    "
-              f"input.json gaia-path leaks: {s['input_json_leak']}    "
-              f"gaia-mirror visits: {s['visited_mirror']}")
-        print(f"  errors     : {s['events']} events on {s['with_any_error']} task(s)  ({fmt_pct(s['with_any_error'], s['complete'])} of completed)")
+            tag = (
+                "⚠"
+                if any(b == "openai_insufficient_quota" for b in s["crashes_by_bucket"])
+                else " "
+            )
+            print(
+                f"  {tag}crashes  : {s['crashes']} task(s) lost without output.json — {crash_str}"
+            )
+        print(
+            f"  attachments: {s['attachment_file_present']}/{s['attachment_tasks']} files present in cwd    "
+            f"input.json gaia-path leaks: {s['input_json_leak']}    "
+            f"gaia-mirror visits: {s['visited_mirror']}"
+        )
+        print(
+            f"  errors     : {s['events']} events on {s['with_any_error']} task(s)  ({fmt_pct(s['with_any_error'], s['complete'])} of completed)"
+        )
         if bucket_str:
             print(f"  by bucket  : {bucket_str}")
         if s["attachment_fnf_events"]:
@@ -242,22 +290,30 @@ def main() -> None:
     print("PANEL ROLLUP")
     print("=" * 72)
     print(f"  completion   : {panel_complete}/{panel_total_dirs}")
-    print(f"  accuracy     : {panel_correct}/{panel_scored} = {fmt_pct(panel_correct, panel_scored)}")
-    print(f"  attachments  : {panel_attachment_present}/{panel_attachment_total} files present in cwd")
+    print(
+        f"  accuracy     : {panel_correct}/{panel_scored} = {fmt_pct(panel_correct, panel_scored)}"
+    )
+    print(
+        f"  attachments  : {panel_attachment_present}/{panel_attachment_total} files present in cwd"
+    )
     print(f"  gaia leaks   : input.json={panel_leak},  mirror visits={panel_mirror}")
-    print(f"  tasks w/ err : {panel_with_err}/{panel_complete}  ({fmt_pct(panel_with_err, panel_complete)})")
-    print(f"  bucket totals:")
+    print(
+        f"  tasks w/ err : {panel_with_err}/{panel_complete}  ({fmt_pct(panel_with_err, panel_complete)})"
+    )
+    print("  bucket totals:")
     for b, n in all_buckets.most_common():
         print(f"    {n:5d}  {b}")
     if panel_crashes:
         print()
-        print(f"  TOP-LEVEL CRASHES (task lost before output.json was written): {panel_crashes}")
+        print(
+            f"  TOP-LEVEL CRASHES (task lost before output.json was written): {panel_crashes}"
+        )
         for b, n in panel_crashes_by_bucket.most_common():
             print(f"    {n:5d}  {b}")
         # Runs with the most quota-induced crashes — the redo list
         if panel_crashes_by_bucket.get("openai_insufficient_quota"):
             print()
-            print(f"  ▶ Re-run these runs (OpenAI insufficient_quota >5 tasks):")
+            print("  ▶ Re-run these runs (OpenAI insufficient_quota >5 tasks):")
             redo: list[tuple[Path, int]] = []
             for run in runs:
                 s = analyse_run(run)

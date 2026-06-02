@@ -9,17 +9,15 @@ from scipy.spatial.distance import jensenshannon
 from reliability_eval.constants import EPSILON, W_OUTCOME, W_TRAJECTORY, W_RESOURCE
 
 
-def compute_outcome_consistency(
-    task_successes: list[int]
-) -> float:
+def compute_outcome_consistency(task_successes: list[int]) -> float:
     """
     Compute outcome consistency for a single task.
 
     Formula: consistency_outcome(t) = (2 * p_hat - 1)^2
 
-    where p_hat is the observed success rate across K runs. 
+    where p_hat is the observed success rate across K runs.
 
-    This formula is derived from normalizing the biased sample variance (ddof=0) 
+    This formula is derived from normalizing the biased sample variance (ddof=0)
     by the maximum possible Bernoulli variance (0.25, which occurs at p=0.5):
         consistency_outcome = 1 - [ p_hat * (1 - p_hat) ] / 0.25
                             = 1 - 4 * p_hat * (1 - p_hat)
@@ -34,7 +32,7 @@ def compute_outcome_consistency(
         return np.nan
 
     p_hat = np.mean(task_successes)
-    
+
     # Calculate consistency using the simplified quadratic formula
     consistency_outcome = (2 * p_hat - 1) ** 2
 

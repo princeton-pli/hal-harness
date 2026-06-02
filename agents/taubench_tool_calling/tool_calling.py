@@ -197,7 +197,9 @@ def _install_anthropic_adaptive_thinking_patch():
     _original = AnthropicConfig.transform_request
 
     def _patched(self, model, messages, optional_params, litellm_params, headers):
-        data = _original(self, model, messages, optional_params, litellm_params, headers)
+        data = _original(
+            self, model, messages, optional_params, litellm_params, headers
+        )
         if not any(slug in model for slug in _ANTHROPIC_ADAPTIVE_REQUIRED):
             return data
         thinking = data.get("thinking")

@@ -295,7 +295,9 @@ class DockerRunner:
             # `input_data` for the copy step below. See base_benchmark.py for
             # context.
             input_data_for_json = input_data
-            if isinstance(input_data, dict) and isinstance(input_data.get("files"), dict):
+            if isinstance(input_data, dict) and isinstance(
+                input_data.get("files"), dict
+            ):
                 input_data_for_json = dict(input_data)
                 input_data_for_json["files"] = {
                     k: (os.path.basename(v) if isinstance(v, str) else v)

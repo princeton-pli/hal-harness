@@ -1167,7 +1167,9 @@ def _install_anthropic_adaptive_thinking_patch():
     _original = AnthropicConfig.transform_request
 
     def _patched(self, model, messages, optional_params, litellm_params, headers):
-        data = _original(self, model, messages, optional_params, litellm_params, headers)
+        data = _original(
+            self, model, messages, optional_params, litellm_params, headers
+        )
         if not any(slug in model for slug in _ANTHROPIC_ADAPTIVE_REQUIRED):
             return data
         thinking = data.get("thinking")
@@ -1222,10 +1224,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # `gemini/...` slug routes to Google's OpenAI-compat shim. Skip this branch
     # for `openrouter/google/gemini-...` slugs so the OpenRouter routing (handled
     # natively by litellm via the openrouter/ prefix) is preserved.
-    if (
-        "gemini" in kwargs["model_name"]
-        and "openrouter/" not in kwargs["model_name"]
-    ):
+    if "gemini" in kwargs["model_name"] and "openrouter/" not in kwargs["model_name"]:
         model_params["model_id"] = kwargs["model_name"].replace("gemini/", "openai/")
         model_params["api_key"] = os.getenv("GEMINI_API_KEY")
         model_params["api_base"] = (
@@ -1888,7 +1887,9 @@ Task:
         # path the agent needs to read the attachment it was given.
         attachment_hint = ""
         if task.get("file_name"):
-            attachment_hint = f"\nAttached file in your current directory: {task['file_name']}\n"
+            attachment_hint = (
+                f"\nAttached file in your current directory: {task['file_name']}\n"
+            )
 
         # Build the base instruction template
         instruction_template = f"""Please answer the question below. You should:

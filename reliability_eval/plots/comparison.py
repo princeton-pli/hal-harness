@@ -918,9 +918,7 @@ def plot_combined_accuracy_reliability(
 
     def plot_date_trend(ax, df_sorted, y_col):
         """Scatter a metric vs release date with a linear trend line."""
-        valid_mask = (
-            df_sorted["release_timestamp"].notna() & df_sorted[y_col].notna()
-        )
+        valid_mask = df_sorted["release_timestamp"].notna() & df_sorted[y_col].notna()
         if valid_mask.sum() < 2:
             return
         x_valid = df_sorted.loc[valid_mask, "release_timestamp"]
@@ -944,9 +942,7 @@ def plot_combined_accuracy_reliability(
             )
 
         x_numeric = (x_valid - x_valid.min()).dt.days.values
-        slope, intercept, r_value, _, __ = stats.linregress(
-            x_numeric, y_valid.values
-        )
+        slope, intercept, r_value, _, __ = stats.linregress(x_numeric, y_valid.values)
         x_range = np.array([x_numeric.min(), x_numeric.max()])
         x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
         y_trend = slope * x_range + intercept

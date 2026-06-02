@@ -223,7 +223,9 @@ class LocalRunner:
             # values to basenames for the agent-visible input.json without
             # mutating the in-memory `input_data` we still need for copying.
             input_data_for_json = input_data
-            if isinstance(input_data, dict) and isinstance(input_data.get("files"), dict):
+            if isinstance(input_data, dict) and isinstance(
+                input_data.get("files"), dict
+            ):
                 input_data_for_json = dict(input_data)
                 input_data_for_json["files"] = {
                     k: (os.path.basename(v) if isinstance(v, str) else v)
