@@ -1,13 +1,11 @@
 import os
 import fitz  # PyMuPDF
-import openai
 import json
 import re
 from docx import Document
 from openai import OpenAI
 
 from hal.benchmarks.replicatorbench.constants import API_KEY, TEMPLATE_PATHS
-from hal.benchmarks.replicatorbench.validator.file_utils import read_json, read_txt
 
 
 def extract_text_from_pdf(pdf_path):
@@ -51,7 +49,7 @@ def save_prompt_log(study_path, prompt):
     log_dir = os.path.join(study_path, "llm_eval")
     os.makedirs(log_dir, exist_ok=True)
 
-    log_file = os.path.join(log_dir, f"extract_llm_eval.log")
+    log_file = os.path.join(log_dir, "extract_llm_eval.log")
 
     with open(log_file, "w", encoding="utf-8") as f:
         f.write("=== GENERATED PROMPT ===\n")

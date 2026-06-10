@@ -1,5 +1,5 @@
 # core/actions.py
-from info_extractor.file_utils import read_txt, read_csv, read_json, read_pdf, read_docx
+from info_extractor.file_utils import read_txt, read_csv, read_json, read_docx
 from core.tools import (
     list_files_in_folder,
     #ask_human_input,

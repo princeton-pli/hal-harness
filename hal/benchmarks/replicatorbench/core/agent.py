@@ -1,13 +1,11 @@
 import os
 import re
-import sys
 import time
 import json
-import logging
 import tiktoken
 from openai import OpenAI
 from core.utils import get_logger
-from core.constants import API_KEY, GENERATE_REACT_CONSTANTS
+from core.constants import API_KEY
 
 logger, formatter = get_logger()
 client = OpenAI(api_key=API_KEY) 

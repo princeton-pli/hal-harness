@@ -425,8 +425,6 @@ class ReplicatorBenchmark(BaseBenchmark):
     ) -> Dict[str, Any]:
 
         import shutil
-        from urllib.request import Request, urlopen
-        from urllib.error import HTTPError, URLError
 
         meta = getattr(self, "_task_meta", {}) or {}
         task_meta = (meta.get(task_id) or {})

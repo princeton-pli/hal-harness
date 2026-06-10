@@ -1,7 +1,6 @@
 # core/utils.py
 import os
 import sys
-import json
 import logging
 
 # Markers so we can detect our own handlers

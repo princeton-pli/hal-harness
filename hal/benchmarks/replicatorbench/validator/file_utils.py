@@ -1,14 +1,11 @@
 import os
-import pymupdf
 import json
 import pandas as pd
 import pyreadr
 import io
 import re
 import docx
-from pathlib import Path
 from hal.benchmarks.replicatorbench.core.utils import get_logger
-from hal.benchmarks.replicatorbench.core.tools import read_and_summarize_pdf
 import tiktoken
 
 from openai import OpenAI
@@ -58,7 +55,7 @@ def check_long_logs(full_doc_content: str, model_name: str = "gpt-4o"):
     if _count_tokens(full_doc_content, model_name=model_name) <= MAX_TOKENS:
         return full_doc_content
     
-    print(f"Document has > 20000 tokens. Summarizing content to prevent overflow...")
+    print("Document has > 20000 tokens. Summarizing content to prevent overflow...")
 
     # Chunk + summarize
     # lines = full_doc_content.splitlines(keepends=True)
@@ -182,15 +179,8 @@ def save_prompt_log(study_path, stage, prompt, full_message):
 
 import base64
 from openai import OpenAI
-import os
-import json
-import pandas as pd
-import pyreadr
 from hal.benchmarks.replicatorbench.core.constants import API_KEY
 from typing import Dict, Any, Optional, Tuple
-import io # Add this import at the top of your file
-from pathlib import Path
-import difflib
 
 from pypdf import PdfReader
 
