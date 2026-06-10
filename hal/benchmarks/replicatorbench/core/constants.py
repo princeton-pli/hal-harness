@@ -24,7 +24,7 @@ TEMPLATE_PATHS = {
     "pre_registration_template": "templates/pre_registration_schema.json",
     "info_extractor_instructions": "templates/info_extractor_instructions.json",
     "extract_eval_prompt_template": "templates/prompts/extract_eval.txt",
-    "generate_design_eval_prompt_template": "templates/prompts/generate_design_eval.txt"
+    "generate_design_eval_prompt_template": "templates/prompts/generate_design_eval.txt",
 }
 
 
@@ -33,10 +33,7 @@ FILE_SELECTION_RULES = {
         "easy": {
             "stage_1": {
                 "files": ["initial_details_easy.txt", "original_paper.pdf"],
-                "folders": {
-                    "original_data": {},
-                    "original_code": {}
-                }
+                "folders": {"original_data": {}, "original_code": {}},
             },
             "stage_2": {
                 "files": ["initial_details_easy.txt", "post_registration.json"],
@@ -44,17 +41,14 @@ FILE_SELECTION_RULES = {
                     "data": {},
                     "replication_data": {},
                     "replication_code": {},
-                    "execution_outputs": {}
-                }
-            }
+                    "execution_outputs": {},
+                },
+            },
         },
         "medium": {
             "stage_1": {
                 "files": ["initial_details_medium_hard.txt", "original_paper.pdf"],
-                "folders": {
-                    "original_data": {},
-                    "original_code": {}
-                }
+                "folders": {"original_data": {}, "original_code": {}},
             },
             "stage_2": {
                 "files": ["initial_details_easy.txt", "post_registration.json"],
@@ -62,17 +56,14 @@ FILE_SELECTION_RULES = {
                     "data": {},
                     "replication_data": {},
                     "replication_code": {},
-                    "execution_outputs": {}
-                }
-            }
+                    "execution_outputs": {},
+                },
+            },
         },
         "hard": {
             "stage_1": {
                 "files": ["initial_details_medium_hard.txt", "original_paper.pdf"],
-                "folders": {
-                    "original_data": {},
-                    "original_code": {}
-                }
+                "folders": {"original_data": {}, "original_code": {}},
             },
             "stage_2": {
                 "files": ["initial_details_easy.txt", "post_registration.json"],
@@ -80,10 +71,10 @@ FILE_SELECTION_RULES = {
                     "data": {},
                     "replication_data": {},
                     "replication_code": {},
-                    "execution_outputs": {}
-                }
-            }
-        }
+                    "execution_outputs": {},
+                },
+            },
+        },
     }
 }
 
@@ -96,7 +87,7 @@ GENERATE_REACT_CONSTANTS = {
         "replication_data": "The folder containing the data that can potentially be used for the replication. There may also be useful code to help you with the replication. But if not, you have to generate the replication code yourself in Python.",
     },
     "json_template_python": "templates/pre_registration_schema_python.json",
-    "json_template_native": "templates/pre_registration_schema_native.json"
+    "json_template_native": "templates/pre_registration_schema_native.json",
 }
 
 GENERATE_EXECUTE_REACT_CONSTANTS = {
@@ -107,7 +98,7 @@ GENERATE_EXECUTE_REACT_CONSTANTS = {
         "replication_preregistration.json": "A structured document with plans for your replication of the claim.",
         "replication_data_code": "The folder containing the data and code that can be used for the replication.",
     },
-    "json_template": "templates/execute_schema.json"
+    "json_template": "templates/execute_schema.json",
 }
 
 EVALUATE_GENERATE_EXECUTE_CONSTANTS = {
@@ -121,9 +112,9 @@ EVALUATE_GENERATE_EXECUTE_CONSTANTS = {
         "post_registration.json": "A structured document with key extracted information about the original paper and the claim to be replicated.",
         "_log/": "Folder contain the logs of the agent replication attempt. Focus on the logs of the design and the execute stage for this evaluation.",
         "replication_info.json": "Final structured report of the design stage by the agent.",
-        "execution_results.json": "Final strcuterd report of the execution stage by the agent."
+        "execution_results.json": "Final strcuterd report of the execution stage by the agent.",
     },
-    "json_template": "templates/evaluate_execute_schema.json"
+    "json_template": "templates/evaluate_execute_schema.json",
 }
 
 
@@ -139,12 +130,11 @@ INTERPRET_CONSTANTS = {
         "replication_data": "The folder containing the data and code that were used for the replication, along with any output files generated after running the code. You MUST examine any additional execution result files not reported in execution_results.json before making your interpretataions.",
         "execution_results.json": "Final structured report of the execution stage by the agent. If the report doesn't have any results, look for output files generated by the code to find the execution results before making conclusions.",
     },
-    "json_template": "templates/interpret_schema.json"
+    "json_template": "templates/interpret_schema.json",
 }
 
 EVALUATE_INTERPRET_CONSTANTS = {
     "prompt_template": "templates/prompts/interpret_eval.txt",
     "interpret_results": "interpret_results.json",
-    "json_template": "templates/interpret_schema.json"
+    "json_template": "templates/interpret_schema.json",
 }
-

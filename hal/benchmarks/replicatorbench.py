@@ -7,21 +7,32 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .base_benchmark import BaseBenchmark
 import os as _os
+
 __path__ = [_os.path.join(_os.path.dirname(__file__), "replicatorbench")]
 
-from hal.benchmarks.replicatorbench.validator.evaluate_extract import extract_from_human_postreg
-from hal.benchmarks.replicatorbench.validator.evaluate_design import extract_from_human_prereg
-from hal.benchmarks.replicatorbench.validator.evaluate_execute import run_evaluate_execute
-from hal.benchmarks.replicatorbench.validator.evaluate_interpret import extract_from_human_report
+from hal.benchmarks.replicatorbench.validator.evaluate_extract import (
+    extract_from_human_postreg,
+)
+from hal.benchmarks.replicatorbench.validator.evaluate_design import (
+    extract_from_human_prereg,
+)
+from hal.benchmarks.replicatorbench.validator.evaluate_execute import (
+    run_evaluate_execute,
+)
+from hal.benchmarks.replicatorbench.validator.evaluate_interpret import (
+    extract_from_human_report,
+)
 
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 GT_REPO_SLUG = os.getenv("REPLICATORBENCH_GT_REPO_SLUG", "").strip()
 GT_REF_OVERRIDE = os.getenv("REPLICATORBENCH_GT_REF", "").strip()
-GT_TOKEN = os.getenv("REPLICATORBENCH_GT_TOKEN", "").strip()  
+GT_TOKEN = os.getenv("REPLICATORBENCH_GT_TOKEN", "").strip()
 
-REPLICATORBENCH_EVAL_MODE = os.getenv("REPLICATORBENCH_EVAL_MODE", "offline").strip().lower()
+REPLICATORBENCH_EVAL_MODE = (
+    os.getenv("REPLICATORBENCH_EVAL_MODE", "offline").strip().lower()
+)
 
 
 JsonObj = Union[Dict[str, Any], List[Any]]
@@ -87,7 +98,9 @@ class ReplicatorBenchmark(BaseBenchmark):
         self._bench_dir = os.path.join(os.path.dirname(__file__), "replicatorbench")
         self._tasks_path = os.path.join(self._bench_dir, "tasks.json")
 
-        self._gt_path = os.path.join(self._bench_dir, "ground_truth", "execute_ground_truth.json")
+        self._gt_path = os.path.join(
+            self._bench_dir, "ground_truth", "execute_ground_truth.json"
+        )
 
         try:
             super().__init__(
@@ -104,7 +117,9 @@ class ReplicatorBenchmark(BaseBenchmark):
 
     def _load_tasks(self) -> None:
         if not os.path.exists(self._tasks_path):
-            raise FileNotFoundError(f"[replicatorbench] tasks.json not found at: {self._tasks_path}")
+            raise FileNotFoundError(
+                f"[replicatorbench] tasks.json not found at: {self._tasks_path}"
+            )
 
         with open(self._tasks_path, "r") as f:
             payload = json.load(f)
@@ -132,18 +147,24 @@ class ReplicatorBenchmark(BaseBenchmark):
             if stage == "web_search":
                 return task_id[: -len("_web_search")]
             if stage in ("extract", "design", "execute", "interpret"):
-                return task_id[: -(len(stage) + 1)]  
+                return task_id[: -(len(stage) + 1)]
             return task_id
 
         for t in tasks:
             if not isinstance(t, dict):
-                raise ValueError("[replicatorbench] Each entry in tasks must be an object/dict.")
+                raise ValueError(
+                    "[replicatorbench] Each entry in tasks must be an object/dict."
+                )
 
             task_id = str(t.get("task_id") or "").strip()
             if not task_id:
-                raise ValueError("[replicatorbench] Task entry missing required field: task_id")
+                raise ValueError(
+                    "[replicatorbench] Task entry missing required field: task_id"
+                )
             if task_id in seen_ids:
-                raise ValueError(f"[replicatorbench] Duplicate task_id in tasks.json: {task_id}")
+                raise ValueError(
+                    f"[replicatorbench] Duplicate task_id in tasks.json: {task_id}"
+                )
             seen_ids.add(task_id)
 
             capsule_type = str(t.get("capsule_type") or "").strip()
@@ -152,11 +173,17 @@ class ReplicatorBenchmark(BaseBenchmark):
             gpu = bool(t.get("gpu", False))
 
             if not capsule_type:
-                raise ValueError(f"[replicatorbench:{task_id}] Missing required field: capsule_type")
+                raise ValueError(
+                    f"[replicatorbench:{task_id}] Missing required field: capsule_type"
+                )
             if not capsule_url:
-                raise ValueError(f"[replicatorbench:{task_id}] Missing required field: capsule_url")
+                raise ValueError(
+                    f"[replicatorbench:{task_id}] Missing required field: capsule_url"
+                )
             if not prompt:
-                raise ValueError(f"[replicatorbench:{task_id}] Missing required field: prompt")
+                raise ValueError(
+                    f"[replicatorbench:{task_id}] Missing required field: prompt"
+                )
 
             stage = _infer_stage(task_id)
             capsule_id = str(t.get("capsule_id") or "").strip()
@@ -176,7 +203,7 @@ class ReplicatorBenchmark(BaseBenchmark):
 
             self.benchmark[task_id] = {
                 "prompt": prompt,
-                "files": {},   
+                "files": {},
                 "gpu": gpu,
             }
 
@@ -189,7 +216,9 @@ class ReplicatorBenchmark(BaseBenchmark):
             obj = json.load(f)
 
         if not isinstance(obj, dict):
-            raise ValueError(f"[replicatorbench] Ground truth must be a JSON object/dict: {self._gt_path}")
+            raise ValueError(
+                f"[replicatorbench] Ground truth must be a JSON object/dict: {self._gt_path}"
+            )
 
         gt: Dict[str, Dict[str, Any]] = {}
         for task_id, entry in obj.items():
@@ -198,7 +227,6 @@ class ReplicatorBenchmark(BaseBenchmark):
         self._ground_truth = gt
 
     def _parse_agent_obj(self, solution: Any) -> Optional[Dict[str, Any]]:
-
         if solution is None:
             return None
         if isinstance(solution, dict):
@@ -250,10 +278,18 @@ class ReplicatorBenchmark(BaseBenchmark):
                 return None
         return None
 
-    def _extract_primary_effect(self, execution_results: Dict[str, Any]) -> Tuple[Optional[float], Optional[float], str]:
-        results = execution_results.get("results", {}) if isinstance(execution_results, dict) else {}
+    def _extract_primary_effect(
+        self, execution_results: Dict[str, Any]
+    ) -> Tuple[Optional[float], Optional[float], str]:
+        results = (
+            execution_results.get("results", {})
+            if isinstance(execution_results, dict)
+            else {}
+        )
         findings = results.get("findings_summary", [])
-        if not (isinstance(findings, list) and findings and isinstance(findings[0], dict)):
+        if not (
+            isinstance(findings, list) and findings and isinstance(findings[0], dict)
+        ):
             return None, None, ""
         primary = findings[0]
         est = self._to_float(primary.get("value"))
@@ -271,13 +307,11 @@ class ReplicatorBenchmark(BaseBenchmark):
         return est, pval, direction
 
     def _canonical_task_dir(self, task_id: str) -> str:
-
         meta = getattr(self, "_task_meta", {}) or {}
         capsule_id = (meta.get(task_id) or {}).get("capsule_id") or task_id
         return os.path.join(self.TARGET_ROOT, capsule_id)
 
-
-    # Stage checks 
+    # Stage checks
     def _stage_check_json(
         self,
         task_id: str,
@@ -286,7 +320,6 @@ class ReplicatorBenchmark(BaseBenchmark):
         parsed_ptr: Optional[Dict[str, Any]],
         allow_list: bool = False,
     ) -> Dict[str, Any]:
-
         path = None
         if isinstance(parsed_ptr, dict):
             for key in self.POINTER_KEYS.get(filename, []):
@@ -298,7 +331,12 @@ class ReplicatorBenchmark(BaseBenchmark):
         if path is None:
             path = os.path.join(self._canonical_task_dir(task_id), filename)
 
-        info: Dict[str, Any] = {"file": filename, "path": path, "ok": False, "error": None}
+        info: Dict[str, Any] = {
+            "file": filename,
+            "path": path,
+            "ok": False,
+            "error": None,
+        }
 
         if not os.path.exists(path):
             info["error"] = "missing_file"
@@ -310,7 +348,6 @@ class ReplicatorBenchmark(BaseBenchmark):
             return info
 
         if isinstance(obj, dict):
-            
             schema_map = {
                 "post_registration.json": "post_registration_schema.json",
                 "replication_info.json": "replication_info_schema.json",
@@ -321,7 +358,10 @@ class ReplicatorBenchmark(BaseBenchmark):
 
             if schema_name:
                 schema_path = os.path.join(
-                    os.path.dirname(__file__), "replicatorbench", "templates", schema_name
+                    os.path.dirname(__file__),
+                    "replicatorbench",
+                    "templates",
+                    schema_name,
                 )
                 try:
                     with open(schema_path, "r", encoding="utf-8") as f:
@@ -350,22 +390,24 @@ class ReplicatorBenchmark(BaseBenchmark):
 
         info["error"] = "wrong_json_type"
         return info
-    
+
     def summarize_eval_execute(self, eval_data):
         eval_scores = {}
         for sub_stage, sub_stage_eval_data in eval_data.items():
-            eval_scores[f"execute_{sub_stage}"] = {
-                "aspect_scores": {}
-            }
+            eval_scores[f"execute_{sub_stage}"] = {"aspect_scores": {}}
             sub_stage_scores = []
             for aspect in sub_stage_eval_data:
                 aspect_scores = []
                 for rubric_id, rubric_info in sub_stage_eval_data[aspect].items():
-                    aspect_scores.append(rubric_info['score'])
-                aspect_avg = sum(aspect_scores)/len(aspect_scores)
-                eval_scores[f"execute_{sub_stage}"]["aspect_scores"][aspect] = aspect_avg
+                    aspect_scores.append(rubric_info["score"])
+                aspect_avg = sum(aspect_scores) / len(aspect_scores)
+                eval_scores[f"execute_{sub_stage}"]["aspect_scores"][aspect] = (
+                    aspect_avg
+                )
                 sub_stage_scores.append(aspect_avg)
-            eval_scores[f"execute_{sub_stage}"]["avg_score"] = sum(sub_stage_scores)/len(sub_stage_scores)
+            eval_scores[f"execute_{sub_stage}"]["avg_score"] = sum(
+                sub_stage_scores
+            ) / len(sub_stage_scores)
         return eval_scores
 
     def _to_float_or_none(self, x):
@@ -377,7 +419,7 @@ class ReplicatorBenchmark(BaseBenchmark):
             s = x.strip()
             if s.upper() in {"NA", "N/A", ""}:
                 return None
-            return float(s)  
+            return float(s)
         return None
 
     def summarize_eval_scores(self, study_path):
@@ -389,7 +431,7 @@ class ReplicatorBenchmark(BaseBenchmark):
             if stage == "execute":
                 eval_data = {
                     "design": eval_json["evaluate_design"],
-                    "execute": eval_json["execute"] 
+                    "execute": eval_json["execute"],
                 }
                 eval_summary.update(self.summarize_eval_execute(eval_data))
             else:
@@ -415,19 +457,17 @@ class ReplicatorBenchmark(BaseBenchmark):
                     sum(stage_scores) / len(stage_scores) if stage_scores else 0.0
                 )
         with open(f"{study_path}/llm_eval/eval_summary.json", "w") as fout:
-            json.dump(eval_summary, fout, indent =2)
-            
+            json.dump(eval_summary, fout, indent=2)
+
         return eval_summary
-            
-    
+
     def _evaluate_task(
         self, task_id: str, parsed_ptr: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-
         import shutil
 
         meta = getattr(self, "_task_meta", {}) or {}
-        task_meta = (meta.get(task_id) or {})
+        task_meta = meta.get(task_id) or {}
 
         capsule_id = task_meta.get("capsule_id") or task_id
 
@@ -436,23 +476,38 @@ class ReplicatorBenchmark(BaseBenchmark):
         out_dir = self._canonical_task_dir(task_id)
 
         extract_checks = [
-            self._stage_check_json(task_id, "extract", "post_registration.json", parsed_ptr, allow_list=False),
+            self._stage_check_json(
+                task_id,
+                "extract",
+                "post_registration.json",
+                parsed_ptr,
+                allow_list=False,
+            ),
         ]
         web_search_checks = [
-            self._stage_check_json(task_id, "web_search", "merged-urls.json", parsed_ptr, allow_list=True),
+            self._stage_check_json(
+                task_id, "web_search", "merged-urls.json", parsed_ptr, allow_list=True
+            ),
         ]
         design_checks = [
-            self._stage_check_json(task_id, "design", "replication_info.json", parsed_ptr, allow_list=False),
+            self._stage_check_json(
+                task_id, "design", "replication_info.json", parsed_ptr, allow_list=False
+            ),
         ]
         execute_check = self._stage_check_json(
             task_id, "execute", "execution_results.json", parsed_ptr, allow_list=False
         )
         interpret_checks = [
-            self._stage_check_json(task_id, "interpret", "interpret_results.json", parsed_ptr, allow_list=False),
+            self._stage_check_json(
+                task_id,
+                "interpret",
+                "interpret_results.json",
+                parsed_ptr,
+                allow_list=False,
+            ),
         ]
 
         def _repo_slug_from_url(capsule_url: str) -> str:
-            
             s = (capsule_url or "").strip()
             if s.startswith("https://github.com/"):
                 s = s[len("https://github.com/") :]
@@ -521,47 +576,70 @@ class ReplicatorBenchmark(BaseBenchmark):
                 # expected_post_registration.json
                 if not os.path.exists(gt_post_reg_local):
                     _download(
-                        _raw_url(repo_slug, capsule_ref, f"{gt_subdir}/expected_post_registration.json"),
+                        _raw_url(
+                            repo_slug,
+                            capsule_ref,
+                            f"{gt_subdir}/expected_post_registration.json",
+                        ),
                         gt_post_reg_local,
                         token=GT_TOKEN,
                     )
 
                 # prereg (try pdf then docx)
-                if not (os.path.exists(gt_prereg_pdf) or os.path.exists(gt_prereg_docx)):
+                if not (
+                    os.path.exists(gt_prereg_pdf) or os.path.exists(gt_prereg_docx)
+                ):
                     ok = _download(
-                        _raw_url(repo_slug, capsule_ref, f"{gt_subdir}/human_preregistration.pdf"),
+                        _raw_url(
+                            repo_slug,
+                            capsule_ref,
+                            f"{gt_subdir}/human_preregistration.pdf",
+                        ),
                         gt_prereg_pdf,
                         token=GT_TOKEN,
                     )
                     if not ok:
                         _download(
-                            _raw_url(repo_slug, capsule_ref, f"{gt_subdir}/human_preregistration.docx"),
+                            _raw_url(
+                                repo_slug,
+                                capsule_ref,
+                                f"{gt_subdir}/human_preregistration.docx",
+                            ),
                             gt_prereg_docx,
                             token=GT_TOKEN,
                         )
 
                 # report (try pdf then docx)
-                if not (os.path.exists(gt_report_pdf) or os.path.exists(gt_report_docx)):
+                if not (
+                    os.path.exists(gt_report_pdf) or os.path.exists(gt_report_docx)
+                ):
                     ok = _download(
-                        _raw_url(repo_slug, capsule_ref, f"{gt_subdir}/human_report.pdf"),
+                        _raw_url(
+                            repo_slug, capsule_ref, f"{gt_subdir}/human_report.pdf"
+                        ),
                         gt_report_pdf,
                         token=GT_TOKEN,
                     )
                     if not ok:
                         _download(
-                            _raw_url(repo_slug, capsule_ref, f"{gt_subdir}/human_report.docx"),
+                            _raw_url(
+                                repo_slug, capsule_ref, f"{gt_subdir}/human_report.docx"
+                            ),
                             gt_report_docx,
                             token=GT_TOKEN,
                         )
 
-                gt_prereg_path = gt_prereg_pdf if os.path.exists(gt_prereg_pdf) else (
-                    gt_prereg_docx if os.path.exists(gt_prereg_docx) else None
+                gt_prereg_path = (
+                    gt_prereg_pdf
+                    if os.path.exists(gt_prereg_pdf)
+                    else (gt_prereg_docx if os.path.exists(gt_prereg_docx) else None)
                 )
-                gt_report_path = gt_report_pdf if os.path.exists(gt_report_pdf) else (
-                    gt_report_docx if os.path.exists(gt_report_docx) else None
+                gt_report_path = (
+                    gt_report_pdf
+                    if os.path.exists(gt_report_pdf)
+                    else (gt_report_docx if os.path.exists(gt_report_docx) else None)
                 )
 
-                gt_ready = True
             else:
                 gt_note = (
                     "GT download skipped (missing repo_slug/capsule_ref/gt_subdir). "
@@ -573,26 +651,36 @@ class ReplicatorBenchmark(BaseBenchmark):
         if (task_meta.get("stage") or "").strip() == "interpret":
             try:
                 if extract_checks[0]["ok"] and os.path.exists(gt_post_reg_local):
-                    extract_from_human_postreg(extract_checks[0]["path"], gt_post_reg_local, out_dir)
+                    extract_from_human_postreg(
+                        extract_checks[0]["path"], gt_post_reg_local, out_dir
+                    )
             except Exception:
                 pass
 
             try:
                 if design_checks[0]["ok"] and gt_prereg_path:
-                    extract_from_human_prereg(design_checks[0]["path"], gt_prereg_path, out_dir)
+                    extract_from_human_prereg(
+                        design_checks[0]["path"], gt_prereg_path, out_dir
+                    )
             except Exception:
                 pass
 
             try:
                 if interpret_checks[0]["ok"] and gt_report_path:
-                    extract_from_human_report(interpret_checks[0]["path"], gt_report_path, out_dir)
+                    extract_from_human_report(
+                        interpret_checks[0]["path"], gt_report_path, out_dir
+                    )
             except Exception:
                 pass
 
         try:
             if execute_check["ok"]:
                 if os.path.isdir(capsule_inputs_dir):
-                    need = ["original_paper.pdf", "replication_data", "initial_details.txt"]
+                    need = [
+                        "original_paper.pdf",
+                        "replication_data",
+                        "initial_details.txt",
+                    ]
                     for name in need:
                         src = os.path.join(capsule_inputs_dir, name)
                         dst = os.path.join(out_dir, name)
@@ -628,7 +716,9 @@ class ReplicatorBenchmark(BaseBenchmark):
             "interpret": interpret_checks,
         }
 
-        if os.path.isdir(llm_eval_dir) and all(os.path.exists(p) for p in expected_eval_files):
+        if os.path.isdir(llm_eval_dir) and all(
+            os.path.exists(p) for p in expected_eval_files
+        ):
             eval_summary = self.summarize_eval_scores(out_dir)
             eval_summary["checks"] = checks_block
         else:
@@ -656,7 +746,9 @@ class ReplicatorBenchmark(BaseBenchmark):
         }
 
     # HAL API
-    def evaluate_output(self, agent_output: Dict[str, Any], run_id: str) -> Dict[str, Any]:
+    def evaluate_output(
+        self, agent_output: Dict[str, Any], run_id: str
+    ) -> Dict[str, Any]:
         """
         Evaluate tasks.
 
@@ -675,7 +767,9 @@ class ReplicatorBenchmark(BaseBenchmark):
             task_ids = list(self.benchmark.keys())
 
         for task_id in task_ids:
-            solution = agent_output.get(task_id) if isinstance(agent_output, dict) else None
+            solution = (
+                agent_output.get(task_id) if isinstance(agent_output, dict) else None
+            )
             parsed_ptr = self._parse_agent_obj(solution)
 
             host_task_root = os.path.join(
@@ -689,9 +783,11 @@ class ReplicatorBenchmark(BaseBenchmark):
             self.TARGET_ROOT = host_task_root
 
             ev = self._evaluate_task(task_id, parsed_ptr) or {}
-            summary = (ev.get("eval_summary") or {})
+            summary = ev.get("eval_summary") or {}
 
-            task_stage = ((self._task_meta.get(task_id) or {}).get("stage") or "").strip()
+            task_stage = (
+                (self._task_meta.get(task_id) or {}).get("stage") or ""
+            ).strip()
 
             stage_complete = {
                 "extract": 0.0,
@@ -711,15 +807,23 @@ class ReplicatorBenchmark(BaseBenchmark):
                     it = checks.get("interpret", [])
 
                     if isinstance(ex, list) and len(ex) > 0:
-                        stage_complete["extract"] = 1.0 if all(c.get("ok") for c in ex) else 0.0
+                        stage_complete["extract"] = (
+                            1.0 if all(c.get("ok") for c in ex) else 0.0
+                        )
                     if isinstance(ws, list) and len(ws) > 0:
-                        stage_complete["web_search"] = 1.0 if all(c.get("ok") for c in ws) else 0.0
+                        stage_complete["web_search"] = (
+                            1.0 if all(c.get("ok") for c in ws) else 0.0
+                        )
                     if isinstance(de, list) and len(de) > 0:
-                        stage_complete["design"] = 1.0 if all(c.get("ok") for c in de) else 0.0
+                        stage_complete["design"] = (
+                            1.0 if all(c.get("ok") for c in de) else 0.0
+                        )
                     if isinstance(eu, dict) and ("ok" in eu):
                         stage_complete["execute"] = 1.0 if bool(eu.get("ok")) else 0.0
                     if isinstance(it, list) and len(it) > 0:
-                        stage_complete["interpret"] = 1.0 if all(c.get("ok") for c in it) else 0.0
+                        stage_complete["interpret"] = (
+                            1.0 if all(c.get("ok") for c in it) else 0.0
+                        )
                 except Exception:
                     pass
 
@@ -731,16 +835,30 @@ class ReplicatorBenchmark(BaseBenchmark):
                         stage_scores[k] = float(summary["stage_scores"].get(k) or 0.0)
             else:
                 try:
-                    if isinstance(summary.get("extract"), dict) and summary["extract"].get("avg_score") is not None:
+                    if (
+                        isinstance(summary.get("extract"), dict)
+                        and summary["extract"].get("avg_score") is not None
+                    ):
                         stage_scores["extract"] = float(summary["extract"]["avg_score"])
-                    if isinstance(summary.get("design"), dict) and summary["design"].get("avg_score") is not None:
+                    if (
+                        isinstance(summary.get("design"), dict)
+                        and summary["design"].get("avg_score") is not None
+                    ):
                         stage_scores["design"] = float(summary["design"]["avg_score"])
-                    if isinstance(summary.get("interpret"), dict) and summary["interpret"].get("avg_score") is not None:
-                        stage_scores["interpret"] = float(summary["interpret"]["avg_score"])
+                    if (
+                        isinstance(summary.get("interpret"), dict)
+                        and summary["interpret"].get("avg_score") is not None
+                    ):
+                        stage_scores["interpret"] = float(
+                            summary["interpret"]["avg_score"]
+                        )
 
                     exec_parts = []
                     for k in ("execute_design", "execute_execute"):
-                        if isinstance(summary.get(k), dict) and summary[k].get("avg_score") is not None:
+                        if (
+                            isinstance(summary.get(k), dict)
+                            and summary[k].get("avg_score") is not None
+                        ):
                             exec_parts.append(float(summary[k]["avg_score"]))
                     if exec_parts:
                         stage_scores["execute"] = sum(exec_parts) / len(exec_parts)
@@ -770,7 +888,9 @@ class ReplicatorBenchmark(BaseBenchmark):
         total = len(task_ids)
 
         passed = [tid for tid in task_ids if eval_results[tid].get("correct", False)]
-        failed = [tid for tid in task_ids if not eval_results[tid].get("correct", False)]
+        failed = [
+            tid for tid in task_ids if not eval_results[tid].get("correct", False)
+        ]
 
         avg_overall = 0.0
         stage_sums = {
@@ -786,7 +906,9 @@ class ReplicatorBenchmark(BaseBenchmark):
             ev = eval_results.get(tid, {}) or {}
             avg_overall += float(ev.get("overall_score") or 0.0)
 
-            task_stage = ev.get("task_stage") or ((self._task_meta.get(tid) or {}).get("stage") or "")
+            task_stage = ev.get("task_stage") or (
+                (self._task_meta.get(tid) or {}).get("stage") or ""
+            )
             if task_stage in stage_sums:
                 stage_sums[task_stage] += float(ev.get("overall_score") or 0.0)
                 stage_counts[task_stage] += 1
@@ -800,7 +922,7 @@ class ReplicatorBenchmark(BaseBenchmark):
 
         return {
             "pass_rate_stage_tasks": pass_rate,
-            "pass_rate_all_stages": pass_rate,  
+            "pass_rate_all_stages": pass_rate,
             "avg_overall_score": avg_overall,
             "avg_stage_scores": stage_avgs,
             "n_tasks": total,
@@ -824,7 +946,9 @@ class ReplicatorBenchHard(ReplicatorBenchmark):
         self.benchmark_name = "replicatorbench_hard"
         super().__init__(agent_dir, config)
 
-    def _filter_files_dict(self, files_dict: Dict[str, str], task: Dict[str, Any]) -> Dict[str, str]:
+    def _filter_files_dict(
+        self, files_dict: Dict[str, str], task: Dict[str, Any]
+    ) -> Dict[str, str]:
         """
         Hard tier: do not provide original paper code.
         """
