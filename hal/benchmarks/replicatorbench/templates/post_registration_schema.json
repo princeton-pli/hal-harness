@@ -1,0 +1,53 @@
+{
+    "original_study": {
+        "claim": {
+            "hypotheses": "A testable hypothesis based on the claim",
+            "hypotheses_location": "Specific location where the hypotheses is stated in the original paper",
+            "statement": "The main claim made by the original study that matches the claim given as an input.",
+            "statement_location": "Specific location where the claim is stated in the original paper.",
+            "study_type": "Type of study (Experimental, Observational, Meta-Analysis)"
+        },
+        "data": {
+            "source": "Data Source (e.g., survey, database)",
+            "wave_or_subset": "Specific waves or subsets (if applicable)",
+            "sample_size": "Sample size of the selected data (if applicable)",
+            "unit_of_analysis": "Unit of analysis (e.g., individual, household)",
+            "access_details": "Access details (e.g., restrictions, request process)",
+            "notes": "Any additional information or caveats (e.g., encoding issues, nested structure, missing metadata, unusual column formats)"
+        },
+        "method": {
+            "description": "Narrative summary of how the study was conducted.",
+            "steps": "Ordered list of procedural steps to reproduce the study.",
+            "models": "Models or statistical approach (e.g., regression type)",
+            "outcome_variable": "Dependent/outcome variable measured or analyzed",
+            "independent_variables": "Primary variables expected to influence the outcome",
+            "control_variables": "Variables controlled for in the analysis",
+            "tools_software": "Tools or software specifics (e.g., mentions of R, Python, packages)"
+        },
+        "results": {
+            "summary": "Narrative summary of the main results or findings from the original study.",
+            "numerical_results": [
+                {
+                    "outcome_name": "Name or label of the outcome (e.g., 'test_score', 'conversion_rate')",
+                    "value": "Numeric result value (e.g., 0.45)",
+                    "unit": "Optional unit of measurement (e.g., %, points, ms)",
+                    "effect_size": "Optional effect size (e.g., Cohen's d, odds ratio)",
+                    "confidence_interval": {
+                        "lower": "Lower bound (e.g., 0.32)",
+                        "upper": "Upper bound (e.g., 0.58)",
+                        "level": "Confidence level, e.g., 95"
+                    },
+                    "p_value": "Optional p-value associated with the result (e.g., 0.001)",
+                    "statistical_significance": "Boolean indicating if result is statistically significant",
+                    "direction": "Qualitative direction of the effect (positive, negative, or null) based on the sign and magnitude of the reported result."
+                }
+            ]
+        },
+        "metadata": {
+            "original_paper_id": "DOI or unique identifier.",
+            "original_paper_title": "Title of the original paper.",
+            "original_paper_code": "Link to the original study's codebase.",
+            "original_paper_data": "Link to the original study's dataset(s)."
+        }
+    }
+}

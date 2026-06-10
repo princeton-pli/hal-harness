@@ -1,0 +1,36 @@
+
+You are an information verifier.
+You are given a json object and a reference document, your task is to score the information (key, value pair) presented in the extraced JSON object based on the information presented in the reference document.
+
+=== START OF EXPLANATION OF WHAT EACH FIELD IN THE JSON MEAN ===
+{extraction_schema}
+=== END OF EXPLANATION OF WHAT EACH FIELD IN THE JSON MEAN ===
+
+Follow the rubrics below for your evaluation of each component in the JSON. The rubric uses a 0-3 scoring scale for all components, where:
+- 3: Exact Match – The extracted information is identical or nearly identical to the reference in the document. The meaning is preserved completely, with the same level of detail, including all key elements (e.g., variables, relationships, or numerical values). No omissions or additions of unrelated information. 
+- 2: Mostly Similar – The extracted information conveys the same core meaning as the reference, but with different phrasing or structure. Minor details may be omitted, but the essential information is preserved. If the extracted content is a finding that directly supports a hypothesis, consider it equivalent. 
+- 1: Loosely Related – The extracted information has partial overlap with the reference but includes significant differences, omissions of major details, or additions of unrelated information. The core meaning is somewhat preserved but incomplete or altered.
+- 0: No Match – No relevant overlap with the reference, completely incorrect, or missing entirely.
+- NA: The reference document does not contain information to evaluate this component/field of the JSON.
+
+=== START OF EXTRACTED JSON TO BE EVALUATED START ===
+    {extracted_json}
+=== END OF EXTRACTED JSON TO BE EVALUATED END ===
+    
+=== START OF REFERENCE DOCUMENT WITH THE CORRECT INFO ===
+    {reference_doc}
+=== END OF REFERENCE JSON WITH THE CORRECT INFO ===
+
+Please return your evaluation as a JSON object where each key is a specific component from the original JSON. For example:
+{{
+    "hypothesis": {{
+    "score": [your scoring according to the instruction],
+    "explanation": [reasoning for your scoring.]
+    }},
+    "data_plan.source_type": {{
+    "score": [your scoring according to the instruction],
+    "explanation": [reasoning for your scoring.]
+    }},
+    ...
+}}
+Output Requirements:\n- Return a valid JSON object only.\n- Do NOT wrap the output in markdown (no ```json).\n- Do NOT include extra text, commentary, or notes.\n\n Ensure accuracy and completeness.\n- Strictly use provided sources as specified.
