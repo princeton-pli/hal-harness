@@ -1,0 +1,6 @@
+[CLAIM]
+The relationship between violence and election fraud follows an inverted U-shape: fraud increases with violence up to a certain level, then decreases.
+
+[HYPOTHESES]
+H1: The linear association between violence and election fraud will be positive.
+H* (SCORE focal test): The quadratic association between violence and election fraud will be negative.

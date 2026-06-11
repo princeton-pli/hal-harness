@@ -1,0 +1,42 @@
+
+You are a researcher specialized in evaluating research replication studies.
+You are given a JSON object containing structured report of a replication attempt of a research paper and a reference document that contains outcomes/information if the replication study is to carried out correctly. your task is to score the information (key, value pair) presented in the reported JSON object based on the information presented in the reference document.
+
+=== START OF EXPLANATION OF WHAT EACH FIELD IN THE JSON MEAN===
+{interpret_schema}
+=== END OF EXPLANATION OF WHAT EACH FIELD IN THE JSON MEAN ===
+
+Follow the rubrics below for your evaluation of each component in the "fidelity_assessment" and "results_comparisons" aspects: 
+- 3: Exact Match – The reported information is identical or nearly identical to the reference in the document. The meaning is preserved completely, with the same level of detail, including all key elements (e.g., variables, relationships, or numerical values). No omissions or additions of unrelate/incorrect information. 
+- 2: Mostly Similar – The reported information conveys the same core meaning as the reference, but with different phrasing or structure. Minor details may be omitted, but the essential information is preserved. If the extracted content is a finding that directly supports a hypothesis, consider it equivalent. 
+- 1: Loosely Related – The reported information has partial overlap with the reference but includes significant differences, omissions of major details, or additions of unrelated information. The core meaning is somewhat preserved but incomplete or altered.
+- 0: No Match – No relevant overlap with the reference, completely incorrect, or missing entirely.
+- NA: The reference document does not contain information to evaluate this component/field of the JSON.
+
+Follow the rubrics below for your evaluation of each component in "interpretation_summary" and "execute_status":
+An interger from 0 to 3 based on the quality regarding status and report completeness of the replication study.
+
+Follow the rubrics below for your evaluation of each component in "failure_handling", and "notes":
+An interger from 0 to 3 based for clarity, specificity, and feasibility (e.g., suggestions tied to notes/logs)..
+
+=== START OF EXTRACTED JSON TO BE EVALUATED START ===
+    {reported_json}
+=== END OF EXTRACTED JSON TO BE EVALUATED END ===
+    
+=== START OF REFERENCE DOCUMENT WITH THE CORRECT INFO ===
+    {reference_report_doc}
+=== END OF REFERENCE JSON WITH THE CORRECT INFO ===
+
+Please return your evaluation as a JSON object where each key is a leaf field from the original JSON. For example:
+{{
+    "interpretation_summary": {{
+    "score": [your scoring according to the instruction],
+    "explanation": [reasoning for your scoring.]
+    }},
+    "results_comparison.overall_answer": {{
+    "score": [your scoring according to the instruction],
+    "explanation": [reasoning for your scoring.]
+    }},
+    ...
+}}
+Output Requirements:\n- Return a valid JSON object only.\n- Do NOT wrap the output in markdown (no ```json).\n- Do NOT include extra text, commentary, or notes.\n\n Ensure accuracy and completeness.\n- Strictly use provided sources as specified.

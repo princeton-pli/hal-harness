@@ -1,0 +1,13 @@
+pytest>=8
+pytest-cov>=4
+openai>=1.30
+python-dotenv>=1.0
+pymupdf>=1.24
+pyreadr>=0.5
+pandas>=2.2
+numpy>=1.26
+docker>=7.0.0
+python-docx>=1.1.0
+json_repair>=0.52.4
+pypdf>=4.0.0
+tiktoken>=0.7.0

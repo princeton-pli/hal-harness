@@ -1,0 +1,159 @@
+{
+  "original_study": {
+    "claim": {
+      "statement": "social distancing measures introduced by governments during the 2020 pandemic reduced the mobility in the concerned cities.",
+      "hypothesis": "H*: The introduction of social distancing measures is associated with a decrease in mobility",
+      "original_coefficient": 23.0,
+      "original_p_value": null,
+      "direction": "negative",
+      "study_type": "Observational"
+    },
+    "datasets": [
+      {
+        "name": "Citymapper Mobility Index (CMI)",
+        "filename": "citymapper_mobility_data.csv",
+        "type": "original",
+        "file_format": "csv",
+        "columns": [
+          "City",
+          "Date",
+          "Mobility Index",
+          "Social Distancing Measures"
+        ],
+        "summary_statistics": {
+          "info": "Total observations: 1025 across 41 cities; 25 observations per city.",
+          "describe": {
+            "MedianMobilityStart": "100% (IQR: 94%, 107%)",
+            "MedianMobilityEnd": "10% (IQR: 7%, 17%)",
+            "AverageDailyDecrease": "3.4% (95%CI: 3.3%, 3.6%)",
+            "EffectOfMeasures": "23% (95%CI: 20%, 27%)"
+          }
+        },
+        "access": {
+          "url": "https://citymapper.com/cmi",
+          "restrictions": "CC-BY-NC 4.0 International license"
+        },
+        "notes": "Data may not be generalizable to populations not using public transit. Higher risk of transmission in public transport means findings are significant for an epidemiologically relevant group."
+      }
+    ],
+    "codebase": {
+      "files": {
+        "996g_results.R": "Reimplementation of the study's analysis in R using multilevel mixed-effects linear regression model to assess the effect of social distancing. Outputs nearly identical results as original conducted in Stata.",
+        "createReplicationDataset.do": "Creates and processes replication dataset focusing on specific countries and date range, emulating Citymapper dataset for comparison.",
+        "mycode_for.replication.dataset.do": "Handles focal and additional analyses using mixed-effects models for replication dataset, simulating original study processes."
+      },
+      "notes": "Includes both R and Stata scripts, with significant overlap. Scripts cover data cleaning, transformation, and model execution. Requires R libraries tidyverse and lme4. In Stata, focuses on data import and transformation."
+    },
+    "method": {
+      "description": "The study analyzed mobility data from Citymapper for 41 cities between March 2 and March 26, 2020, assessing the impact of social distancing measures using a multilevel mixed-effects linear regression.",
+      "steps": [
+        "Download mobility data from Citymapper for March 2nd to March 26th, 2020.",
+        "Record social distancing measures from government and media sources.",
+        "Classify cities based on the implementation of social distancing and its intensity.",
+        "Analyze data using a multilevel mixed-effects linear regression model to assess mobility changes.",
+        "Calculate average daily mobility decrease and additional reduction due to social distancing measures."
+      ]
+    },
+    "results": {
+      "summary": "Mobility decreased on average by 3.4% per day due to time alone and by an additional 23% due to social distancing measures.",
+      "numerical_results": [
+        {
+          "outcome_name": "Daily Decrease in Mobility",
+          "value": 3.4,
+          "unit": "%",
+          "effect_size": null,
+          "confidence_interval": {
+            "lower": 3.3,
+            "upper": 3.6,
+            "level": 95
+          },
+          "p_value": null,
+          "statistical_significance": true
+        },
+        {
+          "outcome_name": "Decrease Due to Social Distancing",
+          "value": 23.0,
+          "unit": "%",
+          "effect_size": null,
+          "confidence_interval": {
+            "lower": 20.0,
+            "upper": 27.0,
+            "level": 95
+          },
+          "p_value": null,
+          "statistical_significance": true
+        }
+      ]
+    },
+    "metadata": {
+      "original_paper_id": "10.1101/2020.03.30.20048090",
+      "original_paper_title": "COVID-19 related social distancing measures and reduction in city mobility",
+      "original_paper_code": "https://osf.io/nkjsx",
+      "original_paper_data": "https://citymapper.com/cmi"
+    }
+  },
+  "replication_datasets": [
+    {
+      "name": "Replication Dataset for Malik et al. (2020)",
+      "filename": "replicationDataset_Malik2020_with.year.csv",
+      "type": "replication",
+      "file_format": "csv",
+      "columns": [
+        "city",
+        "date",
+        "CMRT_transit",
+        "lockdown"
+      ],
+      "summary_statistics": {
+        "info": "975 observations. Variables include city, date, transit metric, and lockdown status.",
+        "describe": null
+      },
+      "schema_mapping": {
+        "original": [
+          "City",
+          "Date",
+          "Mobility Index",
+          "Social Distancing Measures"
+        ],
+        "replication": [
+          "city",
+          "date",
+          "CMRT_transit",
+          "lockdown"
+        ]
+      },
+      "access": {
+        "url": null,
+        "restrictions": "Access limited to replication team"
+      },
+      "notes": "Replication dataset mimics original conditions; data transformation reflects changes for replication."
+    }
+  ],
+  "docker_specs": {
+    "base_image": "rocker/verse",
+    "packages": {
+      "python": [],
+      "r": [
+        "tidyverse",
+        "lme4",
+        "lmerTest",
+        "broom.mixed"
+      ],
+      "other": [
+        "git"
+      ]
+    },
+    "hardware": {
+      "gpu_support": false,
+      "min_gpu_memory_gb": null,
+      "min_ram_gb": 4
+    },
+    "volumes": [
+      "./data:/app/data"
+    ]
+  },
+  "analysis": {
+    "instructions": "Run the R script using '996g_results.R' to re-analyze data and verify coefficients. Stata script 'createReplicationDataset.do' sets up dataset, then 'mycode_for.replication.dataset.do' runs model for replication assessment.",
+    "comparison_metrics": "Comparison of coefficients and R-squared values of the multilevel models. Assessing p-value significance and matching confidence intervals between original and replication results."
+  }
+}
