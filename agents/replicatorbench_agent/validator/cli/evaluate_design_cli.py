@@ -4,7 +4,6 @@ Evaluate Generate-design using human preregistration document.
 """
 
 import argparse
-import json
 
 from validator.evaluate_replication_preregistration import extract_from_human_replication_study
 

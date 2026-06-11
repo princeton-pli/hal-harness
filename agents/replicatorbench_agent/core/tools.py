@@ -1,7 +1,6 @@
 import base64
 from openai import OpenAI
 import os
-import json
 import pandas as pd
 import pyreadr
 from core.constants import API_KEY
@@ -319,7 +318,6 @@ def list_files_in_folder(study_path, folder_path: str) -> str:
     file_info += "All files:\n" + "\n".join(file_paths)
     return file_info
 
-from pathlib import Path
 
 def write_file(file_path: str, file_content: str, overwrite: bool = False) -> str:
     """

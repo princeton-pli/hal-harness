@@ -1,4 +1,5 @@
-import os, logging
+import os
+import logging
 
 def setup_logger(log_file: str) -> logging.Logger:
     logger = logging.getLogger("generate")

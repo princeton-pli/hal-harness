@@ -1,13 +1,11 @@
 import os
 import re
-import sys
 import time
 import json
-import logging
 import tiktoken
 from openai import OpenAI
 from core.utils import get_logger
-from core.constants import API_KEY, GENERATE_REACT_CONSTANTS
+from core.constants import API_KEY
 
 logger, formatter = get_logger()
 client = OpenAI(api_key=API_KEY) 
@@ -389,12 +387,14 @@ def run_react_loop(system_prompt: str, known_actions: dict, tool_definitions: li
             
             # 1. Answer: { ... }
             answer_match = re.search(r'Answer:\s*(\{.*?\})\s*$', content_text, re.DOTALL)
-            if answer_match: json_answer_str = answer_match.group(1).strip()
+            if answer_match:
+                json_answer_str = answer_match.group(1).strip()
             
             # 2. Markdown JSON
             elif "```json" in content_text:
-                 json_match = re.search(r'```json\n(.*?)\n```', content_text, re.DOTALL)
-                 if json_match: json_answer_str = json_match.group(1).strip()
+                json_match = re.search(r'```json\n(.*?)\n```', content_text, re.DOTALL)
+                if json_match:
+                    json_answer_str = json_match.group(1).strip()
             
             # 3. Raw JSON
             elif content_text.strip().startswith("{") and content_text.strip().endswith("}"):
@@ -427,7 +427,8 @@ def run_react_loop(system_prompt: str, known_actions: dict, tool_definitions: li
                 final_answer = json.loads(json_answer_str)
                 logger.info("\n--- Final Answer Found ---")
                 
-                if on_final: on_final(final_answer)
+                if on_final:
+                    on_final(final_answer)
 
                 if study_path and stage_name:
                     total_time = time.time() - start_time

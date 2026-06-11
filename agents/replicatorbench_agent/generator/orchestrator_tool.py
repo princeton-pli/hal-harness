@@ -6,7 +6,6 @@ import platform as _pyplat
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
-from info_extractor.file_utils import check_long_logs
 import tiktoken
 
 try:
@@ -38,9 +37,12 @@ DEFAULT_CONTAINER_NAME = "replication-runner"
 
 def _detect_lang_from_ext(filename: str) -> str:
     f = filename.lower()
-    if f.endswith(".r"): return "r"
-    if f.endswith(".py"): return "python"
-    if f.endswith(".sh"): return "bash"
+    if f.endswith(".r"):
+        return "r"
+    if f.endswith(".py"):
+        return "python"
+    if f.endswith(".sh"):
+        return "bash"
     return "bash"
 
 def _require_docker():
@@ -102,7 +104,8 @@ def plan_from_replication_info(replication_info: Dict) -> ExecutionPlan:
 
 def _get_docker_specs(spec: Dict) -> Dict:
     d = spec.get("docker_specs")
-    if d: return d
+    if d:
+        return d
     return spec.get("replication_study", {}).get("docker_specs", {}) or {}
 
 # Tools
@@ -248,10 +251,14 @@ def orchestrator_run_container(
             working_dir="/workspace",
             volumes=volumes,
         )
-        if mem_limit: kwargs["mem_limit"] = mem_limit
-        if cpus: kwargs["nano_cpus"] = int(float(cpus) * 1e9)
-        if read_only: kwargs["read_only"] = True
-        if network_disabled: kwargs["network_disabled"] = True
+        if mem_limit:
+            kwargs["mem_limit"] = mem_limit
+        if cpus:
+            kwargs["nano_cpus"] = int(float(cpus) * 1e9)
+        if read_only:
+            kwargs["read_only"] = True
+        if network_disabled:
+            kwargs["network_disabled"] = True
 
         container = cli.containers.run(**kwargs)
         return json.dumps({"ok": True, "container": container.name})
@@ -297,12 +304,15 @@ def _find_entry(container_name: str, study_path: str, entry: str) -> Optional[st
 def _exec_file(container_name: str, study_path: str, container_path: str, lang: str) -> Dict:
     cli = _require_docker()
     c = cli.containers.get(container_name)
-    l = (lang or "").lower()
+    language = (lang or "").lower()
     
     cmd = []
-    if l == "r": cmd = ["Rscript", container_path]
-    elif l == "python": cmd = ["python3", container_path]
-    elif l == "bash": cmd = ["bash", container_path]
+    if language == "r":
+        cmd = ["Rscript", container_path]
+    elif language == "python":
+        cmd = ["python3", container_path]
+    elif language == "bash":
+        cmd = ["bash", container_path]
     else:
         return {"ok": False, "exit_code": 2, "stdout": "", "stderr": f"Unsupported lang: {lang}", "artifacts": []}
 
@@ -358,12 +368,15 @@ def orchestrator_preview_entry(study_path: str) -> str:
                 "entry": step.entry,
             })
 
-        l = (step.lang or "").lower()
-        if l == "r": cmd = ["Rscript", found]
-        elif l == "python": cmd = ["python3", found]
-        elif l == "bash": cmd = ["bash", found]
+        language = (step.lang or "").lower()
+        if language == "r":
+            cmd = ["Rscript", found]
+        elif language == "python":
+            cmd = ["python3", found]
+        elif language == "bash":
+            cmd = ["bash", found]
         else:
-             return json.dumps({"ok": False, "error": f"Unsupported lang: {step.lang}"})
+            return json.dumps({"ok": False, "error": f"Unsupported lang: {step.lang}"})
         
 
         return json.dumps({
@@ -376,7 +389,7 @@ def orchestrator_preview_entry(study_path: str) -> str:
             "command_pretty": " ".join(cmd),
         })
     except Exception as e:
-         return json.dumps({"ok": False, "error": str(e)})
+        return json.dumps({"ok": False, "error": str(e)})
 
 def orchestrator_execute_entry(study_path: str) -> str:
     try:

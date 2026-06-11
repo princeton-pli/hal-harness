@@ -7,7 +7,6 @@ Created on Wed Jun 18 00:32:19 2025
 """
 
 import argparse
-import json
 
 from validator.extract_from_human_replication_study import extract_from_human_replication_study
 

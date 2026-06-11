@@ -1,17 +1,12 @@
 # interpreter/agent.py
 
 import os
-import json
-import re
-import logging
-import sys
 import tiktoken
-import copy
 
 from core.constants import API_KEY, INTERPRET_CONSTANTS
 from openai import OpenAI
 
-from info_extractor.file_utils import read_txt, read_csv, read_json, read_pdf, read_docx
+from info_extractor.file_utils import read_txt, read_json
 
 from core.prompts import PREAMBLE, INTERPRET, EXAMPLE
 from core.agent import run_react_loop, save_output

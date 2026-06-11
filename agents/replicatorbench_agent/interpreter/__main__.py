@@ -1,5 +1,6 @@
 # unified CLI
-import argparse, os, sys
+import argparse
+import sys
 
 def main():
     p = argparse.ArgumentParser("interpret")

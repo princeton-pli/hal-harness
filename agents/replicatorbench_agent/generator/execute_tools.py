@@ -1,11 +1,4 @@
-import base64
-from openai import OpenAI
 import os
-import json
-import pandas as pd
-from core.constants import API_KEY
-from typing import Dict, Any, Optional, Tuple
-import io # Add this import at the top of your file
 import shlex
 import subprocess
 
@@ -20,7 +13,7 @@ def run_shell_command(command: str) -> str:
         str: The combined standard output and standard error from the command, or a rejection message.
     """
     # 1. Ask for human confirmation, showing the exact command
-    print(f"\n🤔 [HUMAN CONFIRMATION REQUIRED] 🤔")
+    print("\n🤔 [HUMAN CONFIRMATION REQUIRED] 🤔")
     print(f"Agent wants to execute the command: `{command}`")
     user_response = input("Do you approve? (yes/no): ")
 
@@ -29,7 +22,7 @@ def run_shell_command(command: str) -> str:
         print("❌ User denied execution.")
         return "Command execution denied by the user."
 
-    print(f"✅ User approved. Executing command...")
+    print("✅ User approved. Executing command...")
     try:
         # 3. Execute the command securely
         # shlex.split handles arguments with spaces correctly
@@ -69,7 +62,7 @@ def run_stata_do_file(file_path: str) -> str:
     command = f"stata-mp -b do {file_path}"
 
     # 2. Get human confirmation before executing
-    print(f"\n🤔 [HUMAN CONFIRMATION REQUIRED] 🤔")
+    print("\n🤔 [HUMAN CONFIRMATION REQUIRED] 🤔")
     print(f"Agent wants to execute the Stata script: `{file_path}`")
     user_response = input(f"This will run the command: `{command}`\nDo you approve? (yes/no): ")
 
@@ -78,7 +71,7 @@ def run_stata_do_file(file_path: str) -> str:
     
     try:
         # 3. Execute the Stata command
-        print(f"✅ User approved. Executing Stata script...")
+        print("✅ User approved. Executing Stata script...")
         args = shlex.split(command)
         result = subprocess.run(args, capture_output=True, text=True, check=False)
 

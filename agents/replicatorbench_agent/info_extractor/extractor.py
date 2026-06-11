@@ -10,7 +10,6 @@ import re
 import json
 import time
 from openai import OpenAI
-from openai.types.beta.threads import TextContentBlock
 from core.utils import get_logger
 
 from info_extractor.file_utils import split_models, read_file_contents, save_output, find_required_file, call_search_model_once, parse_json_strict
@@ -32,7 +31,7 @@ def run_stage_1(study_path, difficulty, show_prompt=False, model_name: str="gpt-
     Extract original study information and save to post_registration.json
     """
     start_time = time.time()
-    configure_file_logging(logger, study_path, f"extract.log")
+    configure_file_logging(logger, study_path, "extract.log")
     print(f"\n\nmodel name for extractor stage: {model_name}\n\n")
 
     logger.info("Running Stage 1: original study extraction")
@@ -129,7 +128,7 @@ def run_web_search(study_path,model_name,show_prompt=False):
     raw = ""
     try:
     	raw = call_search_model_once(search_model, claim_text, paper_text)
-    except Exception as e:
+    except Exception:
     	print(f"search model call failed: {search_model}")
     	
     parsed = parse_json_strict(raw)

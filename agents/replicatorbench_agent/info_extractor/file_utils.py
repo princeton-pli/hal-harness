@@ -15,9 +15,11 @@ import io
 import re
 import docx
 from pathlib import Path
+from openai import OpenAI
+import tiktoken
+from core.constants import API_KEY
 from core.utils import get_logger
 from core.tools import read_and_summarize_pdf
-import tiktoken
 
 logger, formatter = get_logger()
 
@@ -155,9 +157,6 @@ def parse_json_strict(text: str):
     except Exception:
         return None
 
-
-from openai import OpenAI
-from core.constants import API_KEY
 client = OpenAI(api_key=API_KEY)
 
 def read_txt(file_path, model_name: str = "gpt-4o"):
@@ -184,7 +183,7 @@ def check_long_logs(full_doc_content: str, model_name: str = "gpt-4o"):
     if _count_tokens(full_doc_content, model_name=model_name) <= MAX_TOKENS:
         return full_doc_content
     
-    print(f"Document has > 20000 tokens. Summarizing content to prevent overflow...")
+    print("Document has > 20000 tokens. Summarizing content to prevent overflow...")
 
     # Chunk + summarize
     # lines = full_doc_content.splitlines(keepends=True)
@@ -494,5 +493,4 @@ def save_prompt_log(study_path, stage, prompt, full_message):
         f.write(full_message + "\n")
 
     print(f"[INFO] Prompt and message logged to {log_file}")
-
 

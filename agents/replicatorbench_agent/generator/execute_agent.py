@@ -2,14 +2,12 @@
 
 import os
 import json
-import logging
-from typing import Dict, Any
 
 from core.constants import GENERATE_EXECUTE_REACT_CONSTANTS
 from core.actions import base_known_actions, get_execute_tool_definitions
 from core.agent import run_react_loop, save_output
 from core.prompts import PREAMBLE, EXECUTE, EXAMPLE, EXECUTE_CODE_MODE_POLICY
-from core.utils import build_file_description, configure_file_logging, get_logger
+from core.utils import configure_file_logging, get_logger
 from info_extractor.file_utils import read_json
 
 # Execute-stage-only tools
@@ -64,22 +62,6 @@ CHECKPOINT_MAP = {
     # PHASE 5
     "orchestrator_stop_container":      "7. Stop Container"
 }
-
-def _on_final(ans: dict):
-    # Canonical output
-    save_output(
-        ans,
-        study_path=study_path,
-        filename="execution_results.json",
-        stage_name="execute",
-    )
-    # Mode-specific copy for side-by-side comparisons
-    save_output(
-        ans,
-        study_path=study_path,
-        filename=f"execution_results__{code_mode}.json",
-        stage_name="execute",
-    )
 
 def run_execute(study_path: str, show_prompt: bool = False, templates_dir: str = "./templates", tier="easy", code_mode: str = "python", model_name: str="gpt-4o"):
     configure_file_logging(logger, study_path, f"execute_{tier}__{code_mode}.log")
@@ -173,11 +155,19 @@ Answer: [Execute necessary next action to help you solve the task]
             study_path=study_path,
             stage_name="generate-execute",
             checkpoint_map=CHECKPOINT_MAP,
-            on_final=lambda ans: save_output(
-                ans,
-                study_path=study_path,
-                filename="execution_results.json",
-                stage_name="execute"
+            on_final=lambda ans: (
+                save_output(
+                    ans,
+                    study_path=study_path,
+                    filename="execution_results.json",
+                    stage_name="execute",
+                ),
+                save_output(
+                    ans,
+                    study_path=study_path,
+                    filename=f"execution_results__{code_mode}.json",
+                    stage_name="execute",
+                ),
             ),
             model_name=model_name
         )

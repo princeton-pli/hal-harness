@@ -4,7 +4,6 @@ Extract and evaluate from human replication study at the same time.
 """
 
 import argparse
-import json
 
 from validator.evaluate_execute import run_evaluate_execute
 

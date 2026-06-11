@@ -3,12 +3,23 @@
 import os
 import json
 import re
-from openai import OpenAI
-from core.constants import API_KEY, EVALUATE_GENERATE_EXECUTE_CONSTANTS
 import logging
 import sys
 import tiktoken
 import copy
+from openai import OpenAI
+from core.constants import API_KEY, EVALUATE_GENERATE_EXECUTE_CONSTANTS
+from info_extractor.file_utils import read_txt, read_csv, read_json, read_pdf, read_docx
+from core.tools import (
+    load_dataset,
+    get_dataset_head,
+    get_dataset_shape,
+    get_dataset_description,
+    get_dataset_info,
+    read_image,
+    list_files_in_folder,
+    ask_human_input,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG) # Set to DEBUG during development to see everything
@@ -20,9 +31,6 @@ console_handler.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
 client = OpenAI(api_key=API_KEY) 
-from info_extractor.file_utils import read_txt, read_csv, read_json, read_pdf, read_docx # Keep save_output here if the agent orchestrates saving
-from core.tools import load_dataset, get_dataset_head, get_dataset_shape, get_dataset_description, get_dataset_info
-from core.tools import read_image, list_files_in_folder, ask_human_input
 
 MAX_TOKENS = 20000
 
@@ -400,8 +408,6 @@ def query_agent(question: str, max_turns: int = 20, study_path_for_saving=None):
     bot = Agent(agent_prompt, session_state = {"analyzers": {}})
     next_prompt = question
 
-    final_extracted_data = {} # To accumulate results
-    
     MAX_DISPLAY_PROMPT_LEN = 2000
 
     while i < max_turns:

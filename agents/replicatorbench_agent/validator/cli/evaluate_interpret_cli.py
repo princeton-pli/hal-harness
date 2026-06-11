@@ -1,5 +1,4 @@
 import argparse
-import json
 
 from validator.evaluate_interpret import extract_from_human_replication_study
 

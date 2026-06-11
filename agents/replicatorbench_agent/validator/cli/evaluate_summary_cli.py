@@ -1,5 +1,4 @@
 import argparse
-import json
 
 from validator.aggregate_eval_scores import summarize_eval_scores
 

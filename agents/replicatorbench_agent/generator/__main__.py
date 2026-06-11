@@ -1,5 +1,6 @@
 # unified CLI
-import argparse, os, sys
+import argparse
+import sys
 from core.constants import DEFAULT_CODE_MODE, CODE_MODE_CHOICES
 
 def main():

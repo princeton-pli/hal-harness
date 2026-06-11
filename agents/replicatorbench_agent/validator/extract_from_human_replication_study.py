@@ -8,7 +8,6 @@ Created on Wed Jun 18 00:32:19 2025
 
 import os
 import fitz  # PyMuPDF
-import openai
 import json
 import re
 from docx import Document

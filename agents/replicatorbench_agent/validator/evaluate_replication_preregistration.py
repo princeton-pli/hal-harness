@@ -1,6 +1,5 @@
 import os
 import fitz  # PyMuPDF
-import openai
 import json
 import re
 from docx import Document
@@ -51,7 +50,7 @@ def save_prompt_log(study_path, prompt):
     log_dir = os.path.join(study_path, "llm_eval")
     os.makedirs(log_dir, exist_ok=True)
 
-    log_file = os.path.join(log_dir, f"design_llm_eval.log")
+    log_file = os.path.join(log_dir, "design_llm_eval.log")
 
     with open(log_file, "w", encoding="utf-8") as f:
         f.write("=== GENERATED PROMPT ===\n")

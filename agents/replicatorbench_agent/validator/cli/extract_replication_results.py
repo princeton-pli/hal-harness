@@ -1,7 +1,5 @@
 from info_extractor.interpret.agent import run_extraction
 import argparse
-import logging
-import sys # Needed for sys.stdout
 
 
 def main():
