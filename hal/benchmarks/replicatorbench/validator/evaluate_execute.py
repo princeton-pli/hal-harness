@@ -3,28 +3,50 @@
 import os
 import json
 import re
-from openai import OpenAI
-from hal.benchmarks.replicatorbench.constants import API_KEY, EVALUATE_GENERATE_EXECUTE_CONSTANTS
 import logging
 import sys
 import tiktoken
 import copy
 
+from openai import OpenAI
+
+from hal.benchmarks.replicatorbench.constants import (
+    API_KEY,
+    EVALUATE_GENERATE_EXECUTE_CONSTANTS,
+)
+from hal.benchmarks.replicatorbench.validator.file_utils import (
+    read_txt,
+    read_csv,
+    read_json,
+    read_pdf,
+    read_docx,
+)  # Keep save_output here if the agent orchestrates saving
+from hal.benchmarks.replicatorbench.validator.file_utils import (
+    load_dataset,
+    get_dataset_head,
+    get_dataset_shape,
+    get_dataset_description,
+    get_dataset_info,
+)
+from hal.benchmarks.replicatorbench.validator.file_utils import (
+    read_image,
+    list_files_in_folder,
+    ask_human_input,
+)
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG) # Set to DEBUG during development to see everything
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger.setLevel(logging.DEBUG)  # Set to DEBUG during development to see everything
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(formatter)
-console_handler.setLevel(logging.INFO) 
+console_handler.setLevel(logging.INFO)
 logger.addHandler(console_handler)
 
-client = OpenAI(api_key=API_KEY) 
-from hal.benchmarks.replicatorbench.validator.file_utils import read_txt, read_csv, read_json, read_pdf, read_docx # Keep save_output here if the agent orchestrates saving
-from hal.benchmarks.replicatorbench.validator.file_utils import load_dataset, get_dataset_head, get_dataset_shape, get_dataset_description, get_dataset_info
-from hal.benchmarks.replicatorbench.validator.file_utils import read_image, list_files_in_folder, ask_human_input
+client = OpenAI(api_key=API_KEY)
 
 MAX_TOKENS = 20000
+
 
 def count_tokens_in_messages(messages, model_name="gpt-4o"):
     """Counts the number of tokens in a list of messages for a given model."""
@@ -32,7 +54,9 @@ def count_tokens_in_messages(messages, model_name="gpt-4o"):
     num_tokens = 0
     for message in messages:
         # Each message has a role, content, and potentially a name
-        num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+        num_tokens += (
+            4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+        )
         for key, value in message.items():
             num_tokens += len(encoding.encode(value))
             if key == "name":
@@ -40,11 +64,12 @@ def count_tokens_in_messages(messages, model_name="gpt-4o"):
     num_tokens += 2  # every reply is primed with <im_start>assistant
     return num_tokens
 
+
 def read_log(file_path, model_name="gpt-4o"):
     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-        full_log =  f.read()
+        full_log = f.read()
     encoding = tiktoken.encoding_for_model(model_name)
-    log_token_count =  len(encoding.encode(full_log))
+    log_token_count = len(encoding.encode(full_log))
     if log_token_count > MAX_TOKENS:
         log_lines = []
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -57,13 +82,13 @@ def read_log(file_path, model_name="gpt-4o"):
         for i in range(0, len(log_lines), chunk_size):
             # Get the chunk of 50 lines (e.g., 0:50, 50:100, etc.)
             chunk = log_lines[i : i + chunk_size]
-            
+
             # Join the lines in that chunk into a single string
             combined_string = "".join(chunk)
-            
+
             # Add the combined string to your new list
             processed_chunks.append(combined_string)
-            
+
         summary_messages = [
             {
                 "role": "system",
@@ -71,33 +96,29 @@ def read_log(file_path, model_name="gpt-4o"):
                 Your task is to process a specific chunk of a long log. 
                 Generate a concise but informative summary of the current chunk. 
                 Only output the summary without anything else.
-                """.strip()
+                """.strip(),
             }
         ]
-        
+
         summarized_content = ""
         for chunk_id, chunk in enumerate(processed_chunks, start=1):
-            
             current_messages = copy.deepcopy(summary_messages)
-            current_messages.append({
-                "role": "user",
-                "content": f"CURRENT CHUNK:\n {chunk}"
-            })
+            current_messages.append(
+                {"role": "user", "content": f"CURRENT CHUNK:\n {chunk}"}
+            )
             chunk_summary_completion = client.chat.completions.create(
-                                        model="gpt-4o",
-                                        temperature=0,
-                                        messages=current_messages)
+                model="gpt-4o", temperature=0, messages=current_messages
+            )
             chunk_summary = chunk_summary_completion.choices[0].message.content
-            summary_messages.append({
-                "role": "system",
-                "content": chunk_summary   
-            })
+            summary_messages.append({"role": "system", "content": chunk_summary})
             summarized_content += chunk_summary + "\n"
-            print(f"SUMMARIZED CHUNK {chunk_id} out of {len(processed_chunks)} chunks", chunk_summary)
+            print(
+                f"SUMMARIZED CHUNK {chunk_id} out of {len(processed_chunks)} chunks",
+                chunk_summary,
+            )
         return summarized_content
     else:
         return full_log
-                
 
 
 class Agent:
@@ -107,14 +128,16 @@ class Agent:
         if self.system:
             self.messages.append({"role": "system", "content": system})
         self.session_state = session_state
-        
+
     def count_tokens_in_messages(self, model_name="gpt-4o"):
         """Counts the number of tokens in a list of messages for a given model."""
         encoding = tiktoken.encoding_for_model(model_name)
         num_tokens = 0
         for message in self.messages:
             # Each message has a role, content, and potentially a name
-            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            num_tokens += (
+                4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            )
             for key, value in message.items():
                 num_tokens += len(encoding.encode(value))
                 if key == "name":
@@ -126,7 +149,10 @@ class Agent:
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello, how are you today?"},
-        {"role": "assistant", "content": "I'm doing well, thank you! How can I assist you?"}
+        {
+            "role": "assistant",
+            "content": "I'm doing well, thank you! How can I assist you?",
+        },
     ]
 
     def __call__(self, message):
@@ -134,7 +160,7 @@ class Agent:
         result = self.execute()
         self.messages.append({"role": "assistant", "content": result})
         return result
-    
+
     def summarize_messages(self, history):
         messages = copy.deepcopy(history)
         summary_prompt = """
@@ -142,37 +168,29 @@ class Agent:
         Generate a detailed summary to help you accomplish the main task.
         Simply output the summary without saying anything else.
         """
-        
-        messages.append({
-            "role": "user",
-            "content": summary_prompt
-        })
-        
+
+        messages.append({"role": "user", "content": summary_prompt})
+
         summary_completion = client.chat.completions.create(
-                                    model="gpt-4o",
-                                    temperature=0,
-                                    messages=messages)
+            model="gpt-4o", temperature=0, messages=messages
+        )
         return summary_completion.choices[0].message.content
 
     def execute(self):
         token_count = count_tokens_in_messages(self.messages)
         print(f"Total tokens in messages: {token_count}")
-        if  token_count > MAX_TOKENS:
+        if token_count > MAX_TOKENS:
             summary = self.summarize_messages(history=self.messages[:-1])
             self.messages = [
                 self.messages[0],
-                {
-                    "role": "assistant",
-                    "content": summary
-                },
-                self.messages[-1]
+                {"role": "assistant", "content": summary},
+                self.messages[-1],
             ]
         completion = client.chat.completions.create(
-                                model="gpt-4o",
-                                temperature=0,
-                                messages=self.messages)
+            model="gpt-4o", temperature=0, messages=self.messages
+        )
         return completion.choices[0].message.content
-    
+
     def _execute_tool_call(self, known_actions, action, action_input_str):
         """
         Robustly parse tool arguments the LLM may emit as:
@@ -372,36 +390,36 @@ known_actions = {
     "read_log": read_log,
     "read_image": read_image,
     "load_dataset": load_dataset,
-    "get_dataset_head": get_dataset_head, 
-    "get_dataset_shape": get_dataset_shape, 
-    "get_dataset_description": get_dataset_description, 
+    "get_dataset_head": get_dataset_head,
+    "get_dataset_shape": get_dataset_shape,
+    "get_dataset_description": get_dataset_description,
     "get_dataset_info": get_dataset_info,
     "ask_human_input": ask_human_input,
 }
 
-action_re = re.compile(r'^Action: (\w+): (.*)$', re.MULTILINE) # Use re.MULTILINE for multiline parsing
+action_re = re.compile(
+    r"^Action: (\w+): (.*)$", re.MULTILINE
+)  # Use re.MULTILINE for multiline parsing
+
+
 def save_output(extracted_json, study_path):
-    final_output = {
-        "stage": "execute",
-        **extracted_json
-    }
-    output_path = os.path.join(study_path,"llm_eval", "execute_llm_eval.json")
+    final_output = {"stage": "execute", **extracted_json}
+    output_path = os.path.join(study_path, "llm_eval", "execute_llm_eval.json")
     extracted_json = final_output
-    with open(output_path, 'w') as f:
+    with open(output_path, "w") as f:
         json.dump(extracted_json, f, indent=2)
 
     logger.info(f"Interpret stage output saved to {output_path}")
-    
+
+
 def query_agent(question: str, max_turns: int = 20, study_path_for_saving=None):
     """
     Main function to query the agent and orchestrate the extraction process.
     """
     i = 0
-    bot = Agent(agent_prompt, session_state = {"analyzers": {}})
+    bot = Agent(agent_prompt, session_state={"analyzers": {}})
     next_prompt = question
 
-    final_extracted_data = {} # To accumulate results
-    
     MAX_DISPLAY_PROMPT_LEN = 2000
 
     while i < max_turns:
@@ -410,35 +428,50 @@ def query_agent(question: str, max_turns: int = 20, study_path_for_saving=None):
         # print(f"Agent input: {next_prompt}")
         display_prompt = next_prompt
         if len(display_prompt) > MAX_DISPLAY_PROMPT_LEN:
-            display_prompt = display_prompt[:MAX_DISPLAY_PROMPT_LEN] + "\n... (truncated for display)"
+            display_prompt = (
+                display_prompt[:MAX_DISPLAY_PROMPT_LEN]
+                + "\n... (truncated for display)"
+            )
         logger.info(f"\n***Agent input: {display_prompt}")
 
-        result = bot(next_prompt) # Get LLM's thought/action/answer
+        result = bot(next_prompt)  # Get LLM's thought/action/answer
         logger.info(f"\n***Agent output:\n{result}")
 
         # Check if the LLM provided a final answer
         if "Answer:" in result:
             try:
-                answer_match = re.search(r'Answer:\s*(\{.*?\})\s*$', result, re.DOTALL)
+                answer_match = re.search(r"Answer:\s*(\{.*?\})\s*$", result, re.DOTALL)
                 if answer_match:
                     json_answer_str = answer_match.group(1).strip()
                 else:
                     json_answer_str = result.split("Answer:", 1)[1].strip()
-                    if json_answer_str.strip().startswith('{') and json_answer_str.strip().endswith('}'):
-                            pass # Looks like valid JSON, proceed
+                    if json_answer_str.strip().startswith(
+                        "{"
+                    ) and json_answer_str.strip().endswith("}"):
+                        pass  # Looks like valid JSON, proceed
                     else:
-                        logger.warning(f"Warning: Answer found but doesn't look like clean JSON: {json_answer_str[:200]}...")
+                        logger.warning(
+                            f"Warning: Answer found but doesn't look like clean JSON: {json_answer_str[:200]}..."
+                        )
                         # Try to find the JSON part more aggressively
-                        json_start = json_answer_str.find('{')
-                        json_end = json_answer_str.rfind('}')
-                        if json_start != -1 and json_end != -1 and json_end > json_start:
+                        json_start = json_answer_str.find("{")
+                        json_end = json_answer_str.rfind("}")
+                        if (
+                            json_start != -1
+                            and json_end != -1
+                            and json_end > json_start
+                        ):
                             json_answer_str = json_answer_str[json_start : json_end + 1]
                         else:
-                            raise ValueError("Could not find a valid JSON structure after 'Answer:'")
-                json_start = json_answer_str.find('{')
-                json_end = json_answer_str.rfind('}')
+                            raise ValueError(
+                                "Could not find a valid JSON structure after 'Answer:'"
+                            )
+                json_start = json_answer_str.find("{")
+                json_end = json_answer_str.rfind("}")
                 if json_start == -1 or json_end == -1 or json_end < json_start:
-                    raise ValueError("Could not find a valid JSON object (missing curly braces) after cleaning.")
+                    raise ValueError(
+                        "Could not find a valid JSON object (missing curly braces) after cleaning."
+                    )
 
                 final_answer = json.loads(json_answer_str[json_start : json_end + 1])
                 logger.info("\n--- Final Answer ---")
@@ -458,7 +491,7 @@ def query_agent(question: str, max_turns: int = 20, study_path_for_saving=None):
         else:
             actions_matches = [
                 action_re.match(line)
-                for line in result.split('\n')
+                for line in result.split("\n")
                 if action_re.match(line)
             ]
 
@@ -467,20 +500,26 @@ def query_agent(question: str, max_turns: int = 20, study_path_for_saving=None):
                 match = actions_matches[0]
                 action, action_input_str = match.groups()
 
-                logger.info(f" -- Running Action: {action} with input: {action_input_str}")
+                logger.info(
+                    f" -- Running Action: {action} with input: {action_input_str}"
+                )
 
                 if action not in known_actions:
-                    logger.error(f"Unknown action: {action}: {action_input_str}") 
+                    logger.error(f"Unknown action: {action}: {action_input_str}")
                     raise Exception(f"Unknown action: {action}: {action_input_str}")
 
-                observation = bot._execute_tool_call(known_actions, action, action_input_str)
+                observation = bot._execute_tool_call(
+                    known_actions, action, action_input_str
+                )
 
                 # print(f"Observation: {observation}")
                 next_prompt = f"Observation: {observation}"
             else:
                 logger.warning("Agent did not propose an action. Terminating.")
                 # If the agent doesn't provide an action or an answer, something is wrong or it's stuck.
-                return {"error": "Agent did not provide a recognized action or final answer."}
+                return {
+                    "error": "Agent did not provide a recognized action or final answer."
+                }
 
     print("Max turns reached. Agent terminated without a final answer.")
     return {"error": "Max turns reached without a final answer."}
@@ -492,6 +531,7 @@ def build_file_description(available_files, file_path):
         desc += f"{file_id}. {os.path.join(file_path, file_name)}: {file_desc}\n"
     return desc
 
+
 def _configure_file_logging(study_path: str):
     """
     Configures a file handler for the logger, saving logs to the study_path.
@@ -500,14 +540,18 @@ def _configure_file_logging(study_path: str):
     """
     # Remove any existing FileHandlers attached to this logger
     # This prevents creating multiple log files or appending to old ones if run_extraction is called multiple times.
-    for handler in list(logger.handlers): # Use list() to iterate over a copy, safe to modify
+    for handler in list(
+        logger.handlers
+    ):  # Use list() to iterate over a copy, safe to modify
         if isinstance(handler, logging.FileHandler):
             logger.removeHandler(handler)
-            handler.close() # Important: close the file handle to release the file
+            handler.close()  # Important: close the file handle to release the file
 
     # Construct the log file path within the given study_path
-    log_file_name = 'evaluate_execute.log'
-    log_directory = os.path.join(study_path, "llm_eval") # Assuming study_path is already the directory where you want the log
+    log_file_name = "evaluate_execute.log"
+    log_directory = os.path.join(
+        study_path, "llm_eval"
+    )  # Assuming study_path is already the directory where you want the log
     os.makedirs(log_directory, exist_ok=True)
     log_file_full_path = os.path.join(log_directory, log_file_name)
 
@@ -515,9 +559,9 @@ def _configure_file_logging(study_path: str):
     os.makedirs(os.path.dirname(log_file_full_path), exist_ok=True)
 
     # Create a new FileHandler
-    file_handler = logging.FileHandler(log_file_full_path, mode='a') # 'a' for append
-    file_handler.setFormatter(formatter) # Use the globally defined formatter
-    file_handler.setLevel(logging.DEBUG) # File logs everything (DEBUG level)
+    file_handler = logging.FileHandler(log_file_full_path, mode="a")  # 'a' for append
+    file_handler.setFormatter(formatter)  # Use the globally defined formatter
+    file_handler.setLevel(logging.DEBUG)  # File logs everything (DEBUG level)
     logger.addHandler(file_handler)
 
     logger.info(f"File logging configured to: '{log_file_full_path}'.")
@@ -527,21 +571,25 @@ def run_evaluate_execute(study_path, show_prompt=False):
     _configure_file_logging(study_path)
     # Load json template
     logger.info(f"Starting execution evaluation for study path: {study_path}")
-    eval_prompt_template = read_txt(EVALUATE_GENERATE_EXECUTE_CONSTANTS['prompt_template'])
-    rubric_schema =  read_json(EVALUATE_GENERATE_EXECUTE_CONSTANTS['json_template'])
-    claim_docs_for_evaluator = build_file_description(EVALUATE_GENERATE_EXECUTE_CONSTANTS['claim_files'], study_path)
-    agent_docs_for_evaluator = build_file_description(EVALUATE_GENERATE_EXECUTE_CONSTANTS['agent_files'], study_path)
-    
+    eval_prompt_template = read_txt(
+        EVALUATE_GENERATE_EXECUTE_CONSTANTS["prompt_template"]
+    )
+    rubric_schema = read_json(EVALUATE_GENERATE_EXECUTE_CONSTANTS["json_template"])
+    claim_docs_for_evaluator = build_file_description(
+        EVALUATE_GENERATE_EXECUTE_CONSTANTS["claim_files"], study_path
+    )
+    agent_docs_for_evaluator = build_file_description(
+        EVALUATE_GENERATE_EXECUTE_CONSTANTS["agent_files"], study_path
+    )
 
     variables = {
-        'rubric_schema': rubric_schema,
-        'claim_docs_for_evaluator': claim_docs_for_evaluator,
-        'agent_docs_for_evaluator': agent_docs_for_evaluator,
+        "rubric_schema": rubric_schema,
+        "claim_docs_for_evaluator": claim_docs_for_evaluator,
+        "agent_docs_for_evaluator": agent_docs_for_evaluator,
     }
 
     query_question = eval_prompt_template.format(**variables)
-    
-    
+
     query_agent(
         query_question,
         study_path_for_saving=study_path,

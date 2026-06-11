@@ -1,12 +1,12 @@
 # core/utils.py
 import os
 import sys
-import json
 import logging
 
 # Markers so we can detect our own handlers
 _CONSOLE_MARK = "_core_console_handler"
 _FILE_MARK = "_core_file_handler"
+
 
 def get_logger(name: str = "replication"):
     """
@@ -39,11 +39,13 @@ def get_logger(name: str = "replication"):
 
     return logger, formatter
 
+
 def build_file_description(available_files, file_path):
     desc = ""
     for file_id, (file_name, file_desc) in enumerate(available_files.items(), start=1):
         desc += f"{file_id}. {os.path.join(file_path, file_name)}: {file_desc}\n"
     return desc
+
 
 def configure_file_logging(logger: logging.Logger, study_path: str, log_file_name: str):
     """
@@ -64,9 +66,9 @@ def configure_file_logging(logger: logging.Logger, study_path: str, log_file_nam
     fh = logging.FileHandler(log_file_full_path, mode="a", encoding="utf-8")
     fh.setLevel(logging.DEBUG)
     # Reuse the same human-friendly format
-    fh.setFormatter(logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    ))
+    fh.setFormatter(
+        logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    )
     setattr(fh, _FILE_MARK, True)
     logger.addHandler(fh)
 
