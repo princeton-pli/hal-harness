@@ -21,8 +21,8 @@ su - agent -c "bash -c '\
     if [ -f requirements.txt ]; then \
         echo \"Installing requirements...\" && \
         pip install -r requirements.txt && \
-        echo \"Installing weave and gql pin...\" && \
-        pip install weave==0.51.41 \"gql<4\" && \
+        echo \"Installing weave...\" && \
+        pip install \"weave>=0.52.36\" \"gql[httpx]>=4.0,<5\" && \
         echo \"Installing Azure VM dependencies...\" && \
         pip install \"azure-identity>=1.12.0\" \"requests>=2.31.0\" && \
         echo \"Requirements installed\"; \

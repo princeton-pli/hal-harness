@@ -442,7 +442,7 @@ class DockerRunner:
                 container_id,
                 "bash",
                 "-c",
-                "conda run -n agent_env pip install weave==0.51.41 'gql<4'",
+                "conda run -n agent_env pip install 'weave>=0.52.36' 'gql[httpx]>=4.0,<5'",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
