@@ -7,7 +7,19 @@ import subprocess
 import time
 
 from azure.mgmt.compute import ComputeManagementClient
-from azure.mgmt.compute.models import VirtualMachine
+from azure.mgmt.compute.models import (
+    HardwareProfile,
+    ImageReference,
+    LinuxConfiguration,
+    NetworkInterfaceReference,
+    NetworkProfile,
+    OSDisk,
+    OSProfile,
+    SshConfiguration,
+    SshPublicKey,
+    StorageProfile,
+    VirtualMachine,
+)
 from azure.mgmt.network import NetworkManagementClient
 from azure.identity import DefaultAzureCredential
 
@@ -140,54 +152,54 @@ class AzureVirtualMachine:
         # Create VM
         # Use Ubuntu-HPC image for GPU VMs (has NVIDIA drivers pre-installed)
         if self.gpu:
-            image_reference = {
-                "publisher": "microsoft-dsvm",
-                "offer": "ubuntu-hpc",
-                "sku": "2204",
-                "version": "latest",
-            }
+            image_reference = ImageReference(
+                publisher="microsoft-dsvm",
+                offer="ubuntu-hpc",
+                sku="2204",
+                version="latest",
+            )
             logger.info(
                 f"Using Ubuntu-HPC 22.04 image with pre-installed GPU drivers for {self.name}"
             )
         else:
-            image_reference = {
-                "publisher": "Canonical",
-                "offer": "0001-com-ubuntu-server-jammy",
-                "sku": "22_04-lts-gen2",
-                "version": "latest",
-            }
+            image_reference = ImageReference(
+                publisher="Canonical",
+                offer="0001-com-ubuntu-server-jammy",
+                sku="22_04-lts-gen2",
+                version="latest",
+            )
             logger.info(f"Using standard Ubuntu 22.04 image for {self.name}")
 
-        vm_params = {
-            "location": self.location,
-            "storage_profile": {
-                "image_reference": image_reference,
-                "os_disk": {"create_option": "FromImage", "disk_size_gb": 80},
-            },
-            "hardware_profile": {"vm_size": self.vm_size},
-            "os_profile": {
-                "computer_name": self.name,
-                "admin_username": "agent",
-                "custom_data": custom_data,
-                "linux_configuration": {
-                    "disable_password_authentication": True,
-                    "ssh": {
-                        "public_keys": [
-                            {
-                                "path": "/home/agent/.ssh/authorized_keys",
-                                "key_data": self.ssh_public_key,
-                            }
+        vm = VirtualMachine(
+            location=self.location,
+            hardware_profile=HardwareProfile(vm_size=self.vm_size),
+            storage_profile=StorageProfile(
+                image_reference=image_reference,
+                os_disk=OSDisk(create_option="FromImage", disk_size_gb=80),
+            ),
+            os_profile=OSProfile(
+                computer_name=self.name,
+                admin_username="agent",
+                custom_data=custom_data,
+                linux_configuration=LinuxConfiguration(
+                    disable_password_authentication=True,
+                    ssh=SshConfiguration(
+                        public_keys=[
+                            SshPublicKey(
+                                path="/home/agent/.ssh/authorized_keys",
+                                key_data=self.ssh_public_key,
+                            )
                         ]
-                    },
-                },
-            },
-            "network_profile": {"network_interfaces": [{"id": nic.id}]},
-        }
+                    ),
+                ),
+            ),
+            network_profile=NetworkProfile(
+                network_interfaces=[NetworkInterfaceReference(id=nic.id)]
+            ),
+        )
 
-        # azure-mgmt-compute 38+ requires VM profile fields under properties; the
-        # VirtualMachine model serializes flat kwargs into the correct wire format.
         self.compute_client.virtual_machines.begin_create_or_update(
-            self.resource_group, self.name, VirtualMachine(**vm_params)
+            self.resource_group, self.name, vm
         ).result()
 
         logger.info(f"VM {self.name} created at {self.public_ip}")
