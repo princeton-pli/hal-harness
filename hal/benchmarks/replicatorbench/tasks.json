@@ -1,0 +1,1121 @@
+{
+  "tasks": [
+    {
+      "task_id": "replicatorbench_01_extract",
+      "capsule_id": "replicatorbench_01",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_01/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_01/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_01_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_01/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_01/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/1/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_01_web_search",
+      "capsule_id": "replicatorbench_01",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_01/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_01/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_01_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_01/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_01/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/1/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_01_design",
+      "capsule_id": "replicatorbench_01",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_01/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_01/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_01_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_01/post_registration.json (if present)\n- /workspace/replicatorbench_01/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_01/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_01/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/1/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_01_execute",
+      "capsule_id": "replicatorbench_01",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_01/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_01/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_01_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_01/\n\nYou MUST write:\n  - /workspace/replicatorbench_01/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_01/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/1/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_01_interpret",
+      "capsule_id": "replicatorbench_01",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_01/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_01/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_01_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_01/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_01/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_01/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/1/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_02_extract",
+      "capsule_id": "replicatorbench_02",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_02/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_02/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_02_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_02/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_02/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/2/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_02_web_search",
+      "capsule_id": "replicatorbench_02",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_02/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_02/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_02_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_02/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_02/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/2/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_02_design",
+      "capsule_id": "replicatorbench_02",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_02/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_02/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_02_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_02/post_registration.json (if present)\n- /workspace/replicatorbench_02/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_02/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_02/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/2/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_02_execute",
+      "capsule_id": "replicatorbench_02",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_02/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_02/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_02_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_02/\n\nYou MUST write:\n  - /workspace/replicatorbench_02/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_02/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/2/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_02_interpret",
+      "capsule_id": "replicatorbench_02",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_02/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_02/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_02_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_02/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_02/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_02/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/2/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_03_extract",
+      "capsule_id": "replicatorbench_03",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_03/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_03/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_03_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_03/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_03/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/3/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_03_web_search",
+      "capsule_id": "replicatorbench_03",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_03/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_03/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_03_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_03/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_03/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/3/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_03_design",
+      "capsule_id": "replicatorbench_03",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_03/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_03/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_03_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_03/post_registration.json (if present)\n- /workspace/replicatorbench_03/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_03/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_03/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/3/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_03_execute",
+      "capsule_id": "replicatorbench_03",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_03/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_03/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_03_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_03/\n\nYou MUST write:\n  - /workspace/replicatorbench_03/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_03/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/3/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_03_interpret",
+      "capsule_id": "replicatorbench_03",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_03/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_03/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_03_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_03/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_03/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_03/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/3/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_04_extract",
+      "capsule_id": "replicatorbench_04",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_04/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_04/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_04_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_04/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_04/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/4/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_04_web_search",
+      "capsule_id": "replicatorbench_04",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_04/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_04/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_04_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_04/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_04/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/4/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_04_design",
+      "capsule_id": "replicatorbench_04",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_04/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_04/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_04_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_04/post_registration.json (if present)\n- /workspace/replicatorbench_04/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_04/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_04/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/4/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_04_execute",
+      "capsule_id": "replicatorbench_04",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_04/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_04/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_04_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_04/\n\nYou MUST write:\n  - /workspace/replicatorbench_04/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_04/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/4/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_04_interpret",
+      "capsule_id": "replicatorbench_04",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_04/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_04/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_04_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_04/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_04/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_04/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/4/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_05_extract",
+      "capsule_id": "replicatorbench_05",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_05/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_05/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_05_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_05/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_05/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/5/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_05_web_search",
+      "capsule_id": "replicatorbench_05",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_05/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_05/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_05_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_05/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_05/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/5/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_05_design",
+      "capsule_id": "replicatorbench_05",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_05/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_05/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_05_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_05/post_registration.json (if present)\n- /workspace/replicatorbench_05/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_05/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_05/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/5/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_05_execute",
+      "capsule_id": "replicatorbench_05",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_05/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_05/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_05_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_05/\n\nYou MUST write:\n  - /workspace/replicatorbench_05/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_05/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/5/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_05_interpret",
+      "capsule_id": "replicatorbench_05",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_05/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_05/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_05_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_05/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_05/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_05/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/5/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_06_extract",
+      "capsule_id": "replicatorbench_06",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_06/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_06/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_06_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_06/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_06/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/6/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_06_web_search",
+      "capsule_id": "replicatorbench_06",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_06/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_06/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_06_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_06/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_06/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/6/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_06_design",
+      "capsule_id": "replicatorbench_06",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_06/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_06/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_06_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_06/post_registration.json (if present)\n- /workspace/replicatorbench_06/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_06/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_06/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/6/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_06_execute",
+      "capsule_id": "replicatorbench_06",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_06/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_06/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_06_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_06/\n\nYou MUST write:\n  - /workspace/replicatorbench_06/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_06/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/6/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_06_interpret",
+      "capsule_id": "replicatorbench_06",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_06/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_06/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_06_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_06/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_06/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_06/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/6/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_07_extract",
+      "capsule_id": "replicatorbench_07",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_07/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_07/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_07_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_07/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_07/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/7/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_07_web_search",
+      "capsule_id": "replicatorbench_07",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_07/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_07/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_07_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_07/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_07/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/7/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_07_design",
+      "capsule_id": "replicatorbench_07",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_07/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_07/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_07_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_07/post_registration.json (if present)\n- /workspace/replicatorbench_07/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_07/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_07/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/7/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_07_execute",
+      "capsule_id": "replicatorbench_07",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_07/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_07/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_07_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_07/\n\nYou MUST write:\n  - /workspace/replicatorbench_07/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_07/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/7/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_07_interpret",
+      "capsule_id": "replicatorbench_07",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_07/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_07/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_07_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_07/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_07/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_07/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/7/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_08_extract",
+      "capsule_id": "replicatorbench_08",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_08/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_08/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_08_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_08/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_08/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/8/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_08_web_search",
+      "capsule_id": "replicatorbench_08",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_08/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_08/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_08_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_08/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_08/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/8/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_08_design",
+      "capsule_id": "replicatorbench_08",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_08/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_08/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_08_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_08/post_registration.json (if present)\n- /workspace/replicatorbench_08/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_08/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_08/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/8/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_08_execute",
+      "capsule_id": "replicatorbench_08",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_08/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_08/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_08_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_08/\n\nYou MUST write:\n  - /workspace/replicatorbench_08/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_08/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/8/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_08_interpret",
+      "capsule_id": "replicatorbench_08",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_08/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_08/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_08_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_08/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_08/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_08/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/8/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_09_extract",
+      "capsule_id": "replicatorbench_09",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_09/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_09/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_09_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_09/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_09/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/9/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_09_web_search",
+      "capsule_id": "replicatorbench_09",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_09/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_09/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_09_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_09/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_09/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/9/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_09_design",
+      "capsule_id": "replicatorbench_09",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_09/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_09/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_09_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_09/post_registration.json (if present)\n- /workspace/replicatorbench_09/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_09/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_09/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/9/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_09_execute",
+      "capsule_id": "replicatorbench_09",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_09/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_09/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_09_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_09/\n\nYou MUST write:\n  - /workspace/replicatorbench_09/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_09/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/9/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_09_interpret",
+      "capsule_id": "replicatorbench_09",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_09/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_09/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_09_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_09/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_09/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_09/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/9/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_10_extract",
+      "capsule_id": "replicatorbench_10",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_10/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_10/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_10_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_10/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_10/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/10/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_10_web_search",
+      "capsule_id": "replicatorbench_10",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_10/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_10/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_10_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_10/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_10/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/10/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_10_design",
+      "capsule_id": "replicatorbench_10",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_10/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_10/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_10_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_10/post_registration.json (if present)\n- /workspace/replicatorbench_10/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_10/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_10/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/10/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_10_execute",
+      "capsule_id": "replicatorbench_10",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_10/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_10/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_10_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_10/\n\nYou MUST write:\n  - /workspace/replicatorbench_10/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_10/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/10/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_10_interpret",
+      "capsule_id": "replicatorbench_10",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_10/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_10/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_10_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_10/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_10/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_10/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/10/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_11_extract",
+      "capsule_id": "replicatorbench_11",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_11/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_11/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_11_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_11/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_11/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/11/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_11_web_search",
+      "capsule_id": "replicatorbench_11",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_11/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_11/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_11_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_11/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_11/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/11/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_11_design",
+      "capsule_id": "replicatorbench_11",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_11/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_11/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_11_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_11/post_registration.json (if present)\n- /workspace/replicatorbench_11/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_11/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_11/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/11/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_11_execute",
+      "capsule_id": "replicatorbench_11",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_11/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_11/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_11_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_11/\n\nYou MUST write:\n  - /workspace/replicatorbench_11/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_11/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/11/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_11_interpret",
+      "capsule_id": "replicatorbench_11",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_11/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_11/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_11_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_11/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_11/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_11/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/11/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_12_extract",
+      "capsule_id": "replicatorbench_12",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_12/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_12/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_12_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_12/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_12/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/12/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_12_web_search",
+      "capsule_id": "replicatorbench_12",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_12/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_12/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_12_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_12/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_12/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/12/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_12_design",
+      "capsule_id": "replicatorbench_12",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_12/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_12/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_12_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_12/post_registration.json (if present)\n- /workspace/replicatorbench_12/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_12/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_12/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/12/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_12_execute",
+      "capsule_id": "replicatorbench_12",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_12/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_12/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_12_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_12/\n\nYou MUST write:\n  - /workspace/replicatorbench_12/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_12/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/12/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_12_interpret",
+      "capsule_id": "replicatorbench_12",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_12/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_12/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_12_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_12/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_12/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_12/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/12/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_13_extract",
+      "capsule_id": "replicatorbench_13",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_13/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_13/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_13_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_13/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_13/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/13/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_13_web_search",
+      "capsule_id": "replicatorbench_13",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_13/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_13/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_13_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_13/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_13/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/13/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_13_design",
+      "capsule_id": "replicatorbench_13",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_13/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_13/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_13_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_13/post_registration.json (if present)\n- /workspace/replicatorbench_13/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_13/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_13/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/13/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_13_execute",
+      "capsule_id": "replicatorbench_13",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_13/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_13/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_13_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_13/\n\nYou MUST write:\n  - /workspace/replicatorbench_13/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_13/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/13/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_13_interpret",
+      "capsule_id": "replicatorbench_13",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_13/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_13/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_13_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_13/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_13/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_13/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/13/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_14_extract",
+      "capsule_id": "replicatorbench_14",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_14/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_14/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_14_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_14/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_14/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/14/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_14_web_search",
+      "capsule_id": "replicatorbench_14",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_14/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_14/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_14_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_14/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_14/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/14/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_14_design",
+      "capsule_id": "replicatorbench_14",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_14/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_14/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_14_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_14/post_registration.json (if present)\n- /workspace/replicatorbench_14/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_14/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_14/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/14/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_14_execute",
+      "capsule_id": "replicatorbench_14",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_14/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_14/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_14_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_14/\n\nYou MUST write:\n  - /workspace/replicatorbench_14/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_14/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/14/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_14_interpret",
+      "capsule_id": "replicatorbench_14",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_14/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_14/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_14_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_14/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_14/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_14/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/14/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_15_extract",
+      "capsule_id": "replicatorbench_15",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_15/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_15/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_15_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_15/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_15/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/15/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_15_web_search",
+      "capsule_id": "replicatorbench_15",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_15/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_15/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_15_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_15/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_15/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/15/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_15_design",
+      "capsule_id": "replicatorbench_15",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_15/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_15/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_15_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_15/post_registration.json (if present)\n- /workspace/replicatorbench_15/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_15/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_15/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/15/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_15_execute",
+      "capsule_id": "replicatorbench_15",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_15/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_15/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_15_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_15/\n\nYou MUST write:\n  - /workspace/replicatorbench_15/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_15/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/15/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_15_interpret",
+      "capsule_id": "replicatorbench_15",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_15/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_15/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_15_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_15/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_15/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_15/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/15/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_16_extract",
+      "capsule_id": "replicatorbench_16",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_16/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_16/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_16_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_16/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_16/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/16/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_16_web_search",
+      "capsule_id": "replicatorbench_16",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_16/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_16/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_16_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_16/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_16/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/16/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_16_design",
+      "capsule_id": "replicatorbench_16",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_16/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_16/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_16_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_16/post_registration.json (if present)\n- /workspace/replicatorbench_16/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_16/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_16/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/16/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_16_execute",
+      "capsule_id": "replicatorbench_16",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_16/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_16/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_16_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_16/\n\nYou MUST write:\n  - /workspace/replicatorbench_16/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_16/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/16/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_16_interpret",
+      "capsule_id": "replicatorbench_16",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_16/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_16/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_16_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_16/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_16/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_16/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/16/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_17_extract",
+      "capsule_id": "replicatorbench_17",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_17/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_17/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_17_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_17/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_17/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/17/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_17_web_search",
+      "capsule_id": "replicatorbench_17",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_17/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_17/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_17_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_17/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_17/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/17/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_17_design",
+      "capsule_id": "replicatorbench_17",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_17/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_17/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_17_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_17/post_registration.json (if present)\n- /workspace/replicatorbench_17/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_17/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_17/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/17/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_17_execute",
+      "capsule_id": "replicatorbench_17",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_17/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_17/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_17_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_17/\n\nYou MUST write:\n  - /workspace/replicatorbench_17/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_17/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/17/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_17_interpret",
+      "capsule_id": "replicatorbench_17",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_17/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_17/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_17_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_17/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_17/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_17/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/17/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_18_extract",
+      "capsule_id": "replicatorbench_18",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_18/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_18/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_18_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_18/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_18/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/18/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_18_web_search",
+      "capsule_id": "replicatorbench_18",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_18/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_18/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_18_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_18/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_18/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/18/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_18_design",
+      "capsule_id": "replicatorbench_18",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_18/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_18/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_18_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_18/post_registration.json (if present)\n- /workspace/replicatorbench_18/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_18/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_18/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/18/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_18_execute",
+      "capsule_id": "replicatorbench_18",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_18/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_18/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_18_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_18/\n\nYou MUST write:\n  - /workspace/replicatorbench_18/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_18/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/18/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_18_interpret",
+      "capsule_id": "replicatorbench_18",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_18/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_18/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_18_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_18/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_18/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_18/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/18/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+
+
+
+
+    {
+      "task_id": "replicatorbench_19_extract",
+      "capsule_id": "replicatorbench_19",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_19/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_19/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_19_extract/\n\nEXTRACTION TASK (Post-registration):\nYou are filling a structured JSON template using ONLY the provided study materials.\n\nYou will be provided with:\n- original_paper.pdf (the paper)\n- initial_details.txt (or similarly named initial_details*.txt)\n\nSource rules (important):\n- For claim.statement: copy the EXACT claim statement from initial_details*.txt (do not rewrite).\n- For hypotheses: copy the EXACT hypotheses list from initial_details*.txt (do not rewrite).\n- For ALL other fields: extract ONLY from original_paper.pdf.\n- If something is not stated in the allowed source, set it to null (do not guess).\n\nYou MUST write the JSON output:\n  1) /workspace/replicatorbench_19/post_registration.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/post_registration_schema.json\n- Do not include extra commentary or notes in the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object with exactly this key and absolute path:\n{\n  \"post_registration_path\": \"/workspace/replicatorbench_19/post_registration.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/19/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_19_web_search",
+      "capsule_id": "replicatorbench_19",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_19/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_19/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_19_web_search/\n\nWEB SEARCH TASK:\nYou are a replication assistant with web search.\n\nDefinitions (important):\n- Reproduction: re-running the original authors' analysis on the same dataset/sample.\n- Replication (our goal): independently re-testing the claim using new data or an independent sample, while matching the paper's design/operationalization as closely as feasible.\n\nInputs available in the capsule:\n- initial_details*.txt (claim/hypotheses)\n- original_paper.pdf\n- post_registration.json (may already exist if Extract ran)\n\nTask:\nFind ALL URLs needed to replicate the claim (not just reproduce the original run):\n- data sources (datasets, archives, portals, OSF/Zenodo/Dataverse, etc.)\n- code sources (GitHub repos, OSF code, supplements, etc.)\n\nIf the original dataset is restricted, outdated, or a one-off sample, also identify the closest feasible data source that could support a new sample with the required variables/definitions.\n\nYou MUST write:\n  - /workspace/replicatorbench_19/merged-urls.json\n\nReturn ONLY JSON in this format (always include both keys):\n{\n  \"urls\": [\n    {\n      \"url\": \"https://...\",\n      \"kind\": \"data|code\",\n      \"resource_name\": \"short name\",\n      \"why_needed\": \"one sentence\"\n    }\n  ],\n  \"missing\": [\n    {\n      \"resource_name\": \"what is still missing\",\n      \"search_query\": \"a query that would likely find it\"\n    }\n  ]\n}\n\nRules:\n- Use web search when the paper describes a dataset/repo but does not provide a URL.\n- Prefer stable landing pages (DOI landing page, archive landing page, repository homepage).\n- Do not include prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"merged_urls_path\": \"/workspace/replicatorbench_19/merged-urls.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/19/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_19_design",
+      "capsule_id": "replicatorbench_19",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_19/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_19/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_19_design/\n\nDESIGN TASK:\nYour goal is to create replication_info.json (a structured replication plan) using the available study materials.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- /workspace/replicatorbench_19/post_registration.json (if present)\n- /workspace/replicatorbench_19/merged-urls.json (if present)\n- replication_data/ (in the capsule)\n\nPlan the replication so the Execute stage can run it. Be explicit about:\n- the target variables and how to construct them from the available data\n- inclusion/exclusion criteria and sample definition\n- the statistical model/tests needed for the focal claim\n- what outputs/files the Execute stage should produce\n\nYou MUST write:\n  - /workspace/replicatorbench_19/replication_info.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/replication_info_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"replication_info_path\": \"/workspace/replicatorbench_19/replication_info.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/19/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_19_execute",
+      "capsule_id": "replicatorbench_19",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_19/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_19/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_19_execute/\n\nEXECUTE TASK:\nRun the replication based on replication_info.json using the provided replication_data/ (and any provided code, if present).\n\nGoals:\n- Execute the analysis needed to evaluate the focal claim.\n- If something fails (missing file, missing package, script error), debug and retry with minimal changes.\n- Save any additional outputs (tables, logs, intermediate CSVs) into:\n  /workspace/replicatorbench_19/\n\nYou MUST write:\n  - /workspace/replicatorbench_19/execution_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/execute_schema.json\n- Report the primary result needed for the claim (estimate/value, standard_error if available, p_value if available, and direction).\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"execution_results_path\": \"/workspace/replicatorbench_19/execution_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/19/input",
+      "capsule_sha256": null,
+      "gpu": false
+    },
+    {
+      "task_id": "replicatorbench_19_interpret",
+      "capsule_id": "replicatorbench_19",
+      "prompt": "You are in /workspace/.\n\nA study capsule for this study has been downloaded to:\n  /workspace/capsules/replicatorbench_19/\nDo not modify anything under /workspace/capsules/.\n\nShared STUDY output directory (write required outputs here):\n  /workspace/replicatorbench_19/\n\nOptional scratch directory for THIS task:\n  /workspace/replicatorbench_19_interpret/\n\nINTERPRET TASK:\nInterpret the results of the replication attempt and decide whether the focal claim is supported.\n\nYou may use:\n- original_paper.pdf\n- initial_details*.txt\n- post_registration.json\n- replication_info.json\n- execution_results.json\n- Any additional output files produced in /workspace/replicatorbench_19/ (logs, tables, figures)\n\nRules:\n- If execution_results.json is incomplete, check other produced outputs before concluding.\n- Do not invent results; if evidence is missing, report uncertainty using null fields as needed.\n\nYou MUST write:\n  - /workspace/replicatorbench_19/interpret_results.json\n\nFormatting requirements:\n- JSON must be valid.\n- Follow this schema template:\n  - /workspace/replicatorbench_templates/interpret_schema.json\n- If unsure, use null rather than inventing.\n- Do not include extra prose outside the JSON.\n\nChat return:\nAfter writing the file, return a single JSON object:\n{\n  \"interpret_results_path\": \"/workspace/replicatorbench_19/interpret_results.json\"\n}\nDo not include file contents in chat.",
+      "capsule_type": "github_subdir",
+      "capsule_url": "https://github.com/CenterForOpenScience/llm-benchmarking.git",
+      "capsule_ref": "b87e0c56e00200d805cfc0e30c58ed5fc4430211",
+      "capsule_subdir": "data/original/19/input",
+      "capsule_sha256": null,
+      "gpu": false
+    }
+  ]
+}
