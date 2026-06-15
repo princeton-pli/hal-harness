@@ -7,6 +7,7 @@ import subprocess
 import time
 
 from azure.mgmt.compute import ComputeManagementClient
+from azure.mgmt.compute.models import VirtualMachine
 from azure.mgmt.network import NetworkManagementClient
 from azure.identity import DefaultAzureCredential
 
@@ -161,7 +162,7 @@ class AzureVirtualMachine:
             "location": self.location,
             "storage_profile": {
                 "image_reference": image_reference,
-                "os_disk": {"createOption": "FromImage", "diskSizeGB": 80},
+                "os_disk": {"create_option": "FromImage", "disk_size_gb": 80},
             },
             "hardware_profile": {"vm_size": self.vm_size},
             "os_profile": {
@@ -183,8 +184,10 @@ class AzureVirtualMachine:
             "network_profile": {"network_interfaces": [{"id": nic.id}]},
         }
 
+        # azure-mgmt-compute 38+ requires VM profile fields under properties; the
+        # VirtualMachine model serializes flat kwargs into the correct wire format.
         self.compute_client.virtual_machines.begin_create_or_update(
-            self.resource_group, self.name, vm_params
+            self.resource_group, self.name, VirtualMachine(**vm_params)
         ).result()
 
         logger.info(f"VM {self.name} created at {self.public_ip}")
