@@ -38,6 +38,8 @@ class TestAzureVirtualMachineCheckForFilePresence:
                 "test -f /path/to/file.txt",
             ],
             capture_output=True,
+            text=True,
+            timeout=10,
         )
 
     @patch.dict(os.environ, {"SSH_PRIVATE_KEY_PATH": "/path/to/key"})
@@ -69,6 +71,8 @@ class TestAzureVirtualMachineCheckForFilePresence:
                 "test -f /path/to/missing.txt",
             ],
             capture_output=True,
+            text=True,
+            timeout=10,
         )
 
     @patch.dict(

@@ -63,7 +63,9 @@ class AzureVirtualMachine:
         # Create the VM
         self._create()
 
-    def _run_ssh(self, remote_command: str, *, timeout: int = 10) -> subprocess.CompletedProcess:
+    def _run_ssh(
+        self, remote_command: str, *, timeout: int = 10
+    ) -> subprocess.CompletedProcess:
         """Run a command on the VM over SSH."""
         ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
         cmd = [
@@ -242,7 +244,9 @@ class AzureVirtualMachine:
 
             log_offset = self._stream_startup_log(startup_log, log_offset)
             elapsed = int(time.time() - start_time)
-            started = self.check_for_file_presence_by_path("/home/agent/startup_started")
+            started = self.check_for_file_presence_by_path(
+                "/home/agent/startup_started"
+            )
             logger.info(
                 f"Startup in progress on {self.name} ({self.public_ip}): "
                 f"{elapsed}s elapsed, cloud-init started={started}"
