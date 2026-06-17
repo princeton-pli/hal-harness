@@ -836,6 +836,202 @@ def plot_combined_overall_reliability(
     plt.close()
 
 
+def plot_combined_accuracy_reliability(
+    benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir: Path
+):
+    """
+    Create a grid of Accuracy and Overall Reliability trends over time.
+
+    Layout:
+    - Column 0: Accuracy vs Release Date (trend over time)
+    - Column 1: Overall Reliability vs Release Date (trend over time)
+    - Rows: One row per benchmark (GAIA, tau-bench, etc.)
+
+    Companion to plot_combined_overall_reliability; shares the same
+    dataframe preparation but contrasts accuracy and reliability trends
+    side by side.
+
+    Args:
+        benchmark_data: List of (benchmark_name, dataframe) tuples
+        output_dir: Directory to save the plot
+    """
+    from scipy import stats
+    import matplotlib.dates as mdates
+
+    n_benchmarks = len(benchmark_data)
+    if n_benchmarks == 0:
+        print("⚠️  No benchmark data provided for combined plot")
+        return
+
+    fig, axes = plt.subplots(n_benchmarks, 2, figsize=(5, 3.9))
+
+    # Handle single benchmark case (axes needs to be 2D)
+    if n_benchmarks == 1:
+        axes = axes.reshape(1, -1)
+
+    def prepare_dataframe(df):
+        """Prepare dataframe with required columns."""
+        df_sorted = sort_agents_by_provider_and_date(df)
+
+        if "reliability_consistency" not in df_sorted.columns:
+            df_sorted["reliability_consistency"] = compute_weighted_r_con(
+                df_sorted["consistency_outcome"],
+                df_sorted["consistency_trajectory_distribution"],
+                df_sorted["consistency_trajectory_sequence"],
+                df_sorted["consistency_resource"],
+            )
+        if "reliability_predictability" not in df_sorted.columns:
+            df_sorted["reliability_predictability"] = df_sorted[
+                "predictability_brier_score"
+            ]
+        if "reliability_robustness" not in df_sorted.columns:
+            df_sorted["reliability_robustness"] = df_sorted[
+                [
+                    "robustness_fault_injection",
+                    "robustness_structural",
+                    "robustness_prompt_variation",
+                ]
+            ].mean(axis=1, skipna=True)
+        if "reliability_safety" not in df_sorted.columns:
+            df_sorted["reliability_safety"] = df_sorted["safety_score"]
+        if "reliability_overall" not in df_sorted.columns:
+            df_sorted["reliability_overall"] = df_sorted[
+                [
+                    "reliability_consistency",
+                    "reliability_predictability",
+                    "reliability_robustness",
+                ]
+            ].mean(axis=1, skipna=True)
+
+        if "release_timestamp" not in df_sorted.columns:
+            df_sorted["release_timestamp"] = pd.to_datetime(
+                df_sorted["agent"].map(
+                    lambda x: get_model_metadata(x).get("date", "2024-01-01")
+                )
+            )
+        if "provider" not in df_sorted.columns:
+            df_sorted["provider"] = df_sorted["agent"].map(
+                lambda x: get_model_metadata(x).get("provider", "Unknown")
+            )
+
+        return df_sorted
+
+    def plot_date_trend(ax, df_sorted, y_col):
+        """Scatter a metric vs release date with a linear trend line."""
+        valid_mask = df_sorted["release_timestamp"].notna() & df_sorted[y_col].notna()
+        if valid_mask.sum() < 2:
+            return
+        x_valid = df_sorted.loc[valid_mask, "release_timestamp"]
+        y_valid = df_sorted.loc[valid_mask, y_col]
+        providers_valid = df_sorted.loc[valid_mask, "provider"]
+
+        for provider in ["OpenAI", "Google", "Anthropic"]:
+            mask = providers_valid == provider
+            if mask.sum() == 0:
+                continue
+            ax.scatter(
+                x_valid[mask],
+                y_valid[mask],
+                c=PROVIDER_COLORS.get(provider, "#999999"),
+                marker=PROVIDER_MARKERS.get(provider, "o"),
+                s=70,
+                alpha=0.85,
+                edgecolors="black",
+                linewidth=0.6,
+                label=provider,
+            )
+
+        x_numeric = (x_valid - x_valid.min()).dt.days.values
+        slope, intercept, r_value, _, __ = stats.linregress(x_numeric, y_valid.values)
+        x_range = np.array([x_numeric.min(), x_numeric.max()])
+        x_dates = [x_valid.min() + pd.Timedelta(days=d) for d in x_range]
+        y_trend = slope * x_range + intercept
+        ax.plot(x_dates, y_trend, "k-", linewidth=2, alpha=0.85, label="Trend")
+
+        slope_per_year = slope * 365
+        ax.annotate(
+            f"slope={slope_per_year:.2f}/yr",
+            xy=(0.95, 0.07),
+            xycoords="axes fraction",
+            fontsize=11,
+            ha="right",
+            va="bottom",
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                facecolor="white",
+                edgecolor="gray",
+                alpha=0.9,
+                linewidth=0.5,
+            ),
+        )
+
+    for row_idx, (benchmark_name, df) in enumerate(benchmark_data):
+        df_sorted = prepare_dataframe(df)
+        display_name = (
+            benchmark_name.replace(
+                "taubench_airline_original", r"$\tau$-bench (original)"
+            )
+            .replace("taubench_airline", r"$\tau$-bench")
+            .replace("gaia", "GAIA")
+        )
+        is_last_row = row_idx == n_benchmarks - 1
+
+        # Left: Accuracy vs Release Date
+        ax = axes[row_idx, 0]
+        plot_date_trend(ax, df_sorted, "accuracy")
+        ax.set_ylabel(f"Accuracy\n({display_name})", fontsize=11)
+        ax.set_ylim(0, 1.05)
+        ax.set_yticks(np.arange(0, 1.01, 0.2))
+        ax.grid(True, alpha=0.3, linewidth=0.5)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=4))
+        ax.tick_params(axis="both", labelsize=11)
+        if is_last_row:
+            ax.set_xlabel("Release Date", fontsize=11)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+        else:
+            ax.set_xlabel("")
+            ax.tick_params(axis="x", labelbottom=False)
+
+        # Right: Overall Reliability vs Release Date
+        ax = axes[row_idx, 1]
+        plot_date_trend(ax, df_sorted, "reliability_overall")
+        ax.set_ylabel(f"Reliability\n({display_name})", fontsize=11)
+        ax.set_ylim(0, 1.05)
+        ax.set_yticks(np.arange(0, 1.01, 0.2))
+        ax.grid(True, alpha=0.3, linewidth=0.5)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=4))
+        ax.tick_params(axis="both", labelsize=11)
+        if is_last_row:
+            ax.set_xlabel("Release Date", fontsize=11)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+        else:
+            ax.set_xlabel("")
+            ax.tick_params(axis="x", labelbottom=False)
+
+    # Add legend at top (shared)
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    by_label = dict(zip(labels, handles))
+    fig.legend(
+        by_label.values(),
+        by_label.keys(),
+        loc="upper center",
+        bbox_to_anchor=(0.50, 1.05),
+        ncol=5,
+        framealpha=0.95,
+        edgecolor="gray",
+        fontsize=11,
+        handletextpad=0.3,
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    output_path = output_dir / "combined_accuracy_reliability.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
+    print(f"📊 Saved: {output_path}")
+    plt.close()
+
+
 # ── Manual label positions for combined_overall_reliability_large.pdf ──
 # Keys: (benchmark_name, column_index)  where col 0=Accuracy vs Date,
 #        col 1=Reliability vs Date, col 2=Accuracy vs Reliability.
@@ -1355,8 +1551,17 @@ def plot_combined_overall_reliability_large(
         else:
             ax.tick_params(axis="x", labelbottom=False)
 
-    # Shared legend: separate boxes per provider + trend, arranged side by side at top
+    # Single wide legend box: one row per provider (bold provider name on the
+    # left, then all of that provider's models to the right).
     from matplotlib.lines import Line2D
+    from matplotlib.text import Text
+    from matplotlib.offsetbox import (
+        AnchoredOffsetbox,
+        DrawingArea,
+        HPacker,
+        TextArea,
+        VPacker,
+    )
 
     # Group legend entries by provider (use canonical color map for consistency)
     provider_groups = {}  # provider -> {display_name: (color, marker)}
@@ -1372,104 +1577,76 @@ def plot_combined_overall_reliability_large(
             if dname not in provider_groups[provider]:
                 provider_groups[provider][dname] = (clr, mkr)
 
-    # Build legend boxes, measure them, then place side-by-side centered
     provider_order = ["OpenAI", "Google", "Anthropic"]
     active_providers = [p for p in provider_order if p in provider_groups]
-    max_cols = {"OpenAI": 3}  # OpenAI gets 3 cols; others default to 2
 
-    legend_kwargs = dict(
-        framealpha=0.95,
-        edgecolor="gray",
-        fontsize=9.5,
-        handletextpad=0.3,
-        columnspacing=0.5,
-        borderpad=0.4,
-    )
+    name_fontsize = 10
+    label_fontsize = 9.5
+    row_h = 13.0  # points; shared row height so the name column aligns with models
+    name_w = 70.0  # points; fixed width for the provider-name column
 
-    # First pass: create all legend objects so we can measure their widths
-    legend_objects = []
-
-    # Trend line box (placed first = leftmost)
-    trend_handle = [
-        Line2D([0], [1], color="black", linewidth=2, alpha=0.85, label="Trend")
-    ]
-    trend_leg = fig.legend(
-        handles=trend_handle,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.08),
-        ncol=1,
-        **legend_kwargs,
-    )
-    legend_objects.append(trend_leg)
-
-    for provider in active_providers:
-        entries = provider_groups[provider]
-        handles = []
-        for dname, (clr, mkr) in entries.items():
-            legend_mkr = _variant_markers.get(dname, mkr)
-            handles.append(
-                Line2D(
-                    [0],
-                    [0],
-                    marker=legend_mkr,
-                    color="none",
-                    markerfacecolor=clr,
-                    markeredgecolor="black",
-                    markeredgewidth=0.8,
-                    markersize=8,
-                    label=dname,
-                )
+    def _marker_cell(dname, clr, mkr):
+        legend_mkr = _variant_markers.get(dname, mkr)
+        da = DrawingArea(14, row_h, 0, 0)
+        da.add_artist(
+            Line2D(
+                [7],
+                [row_h / 2],
+                marker=legend_mkr,
+                color="none",
+                markerfacecolor=clr,
+                markeredgecolor="black",
+                markeredgewidth=0.8,
+                markersize=8,
+                linestyle="none",
             )
-        ncol = min(len(handles), max_cols.get(provider, 2))
-        leg = fig.legend(
-            handles=handles,
-            title=provider,
-            title_fontproperties={"weight": "bold", "size": 10},
-            loc="upper center",
-            bbox_to_anchor=(0.5, 1.08),
-            ncol=ncol,
-            **legend_kwargs,
         )
-        fig.add_artist(leg)
-        legend_objects.append(leg)
+        return HPacker(
+            children=[da, TextArea(dname, textprops={"size": label_fontsize})],
+            align="center",
+            pad=0,
+            sep=2,
+        )
+
+    def _name_cell(provider):
+        da = DrawingArea(name_w, row_h, 0, 0)
+        da.add_artist(
+            Text(
+                0,
+                row_h / 2,
+                provider,
+                fontweight="bold",
+                fontsize=name_fontsize,
+                va="center",
+                ha="left",
+            )
+        )
+        return da
+
+    rows = []
+    for provider in active_providers:
+        cells = [_name_cell(provider)]
+        for dname, (clr, mkr) in provider_groups[provider].items():
+            cells.append(_marker_cell(dname, clr, mkr))
+        rows.append(HPacker(children=cells, align="center", pad=0, sep=10))
+
+    legend_box = VPacker(children=rows, align="left", pad=2, sep=2)
+    # Anchor the box's bottom just above the axes so it never overhangs the plots;
+    # it grows upward and is captured by the tight bounding box on save.
+    anchored = AnchoredOffsetbox(
+        loc="lower center",
+        child=legend_box,
+        pad=0.4,
+        borderpad=0,
+        frameon=True,
+        bbox_to_anchor=(0.5, 1.0),
+        bbox_transform=fig.transFigure,
+    )
+    anchored.patch.set(edgecolor="gray", facecolor="white", alpha=0.95)
+    fig.add_artist(anchored)
 
     # Leave space on the left for row annotations
-    plt.tight_layout(rect=[0.03, 0, 1, 0.96])
-
-    # Second pass: measure actual widths in figure coords and reposition
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
-    gap = 0.015  # gap between boxes in figure fraction
-
-    widths = []
-    for leg in legend_objects:
-        bb = leg.get_window_extent(renderer)
-        bb_fig = bb.transformed(fig.transFigure.inverted())
-        widths.append(bb_fig.width)
-
-    total_width = sum(widths) + gap * (len(widths) - 1)
-    x_left = 0.5 - total_width / 2  # start x so group is centered slightly right
-
-    y_anchor = 1.08
-
-    # Measure heights so we can vertically center the trend box with provider boxes
-    heights = []
-    for leg in legend_objects:
-        bb = leg.get_window_extent(renderer)
-        bb_fig = bb.transformed(fig.transFigure.inverted())
-        heights.append(bb_fig.height)
-
-    # Trend is the first; provider boxes are the rest
-    provider_max_h = max(heights[1:]) if len(heights) > 1 else heights[0]
-
-    for leg, w, h in zip(legend_objects, widths, heights):
-        x_center = x_left + w / 2
-        # Shift shorter boxes (trend) down so their vertical center matches the tallest
-        y_offset = (provider_max_h - h) / 2
-        leg.set_bbox_to_anchor(
-            (x_center, y_anchor - y_offset), transform=fig.transFigure
-        )
-        x_left += w + gap
+    plt.tight_layout(rect=[0.03, 0, 1, 0.97])
 
     # Add benchmark name annotations on the far left of each row
     for row_idx, (benchmark_name, _) in enumerate(benchmark_data):
@@ -1609,7 +1786,7 @@ def plot_calibration_selective_comparison(
                         f"{val:.2f}",
                         ha="center",
                         va="bottom",
-                        fontsize=7,
+                        fontsize=6,
                     )
 
             # Formatting
@@ -1986,6 +2163,7 @@ def _plot_shared_metric(
     show_yticks: bool = True,
     show_legend: bool = True,
     show_xticks: bool = True,
+    row_height: float = 2.0,
 ):
     """Shared bar chart with one row per benchmark for a single metric."""
     benchmark_display = {
@@ -2010,7 +2188,7 @@ def _plot_shared_metric(
     # Original width: figsize=(3, 2.0 * n_rows)
     # fig, axes = plt.subplots(n_rows, 1, figsize=(4, 1.75 * n_rows), squeeze=False)
     # fig, axes = plt.subplots(n_rows, 1, figsize=(4, 1.3 * n_rows), squeeze=False)
-    fig, axes = plt.subplots(n_rows, 1, figsize=(4, 2 * n_rows), squeeze=False)
+    fig, axes = plt.subplots(n_rows, 1, figsize=(4, row_height * n_rows), squeeze=False)
 
     for row_idx, benchmark in enumerate(benchmark_order):
         ax = axes[row_idx, 0]
@@ -2022,34 +2200,12 @@ def _plot_shared_metric(
             continue
 
         df_sorted = sort_agents_by_provider_and_date(df)
-        # Filter out Gemini 2.5 Pro from taubench (incomplete/unreliable data)
-        if "taubench" in benchmark:
-            df_sorted = df_sorted[
-                ~df_sorted["agent"].str.contains("gemini_2_5_pro", case=False)
-            ].reset_index(drop=True)
         agents = [strip_agent_prefix(a) for a in df_sorted["agent"]]
         colors = generate_shaded_colors(df_sorted)
         values = df_sorted[metric_col].values
 
-        # Define shared x-tick labels and in-bar variant text for models that
-        # differ across benchmarks but occupy the same x position.
-        _shared_xtick = {
-            "Gemini 3.0 Pro": "Gemini",
-            "Gemini 2.5 Pro": "Gemini",
-            # 'Gemini 2.5 Flash': 'Gemini',
-            "GPT 5.2 (xhigh)": "GPT 5.2 (reasoning)",
-            "GPT 5.2 (medium)": "GPT 5.2 (reasoning)",
-        }
-        _bar_variant_text = {
-            "Gemini 3.0 Pro": "3 Pro",
-            "Gemini 2.5 Pro": "2.5 Pro",
-            # 'Gemini 2.5 Flash': '2.5 Flash',
-            "GPT 5.2 (xhigh)": "xhigh",
-            "GPT 5.2 (medium)": "med",
-        }
-
-        # Build x-tick labels (shared short form where needed)
-        xtick_labels = [_shared_xtick.get(a, a) for a in agents]
+        # Use full model names for x-tick labels.
+        xtick_labels = list(agents)
 
         x_pos = np.arange(len(agents))
 
@@ -2073,7 +2229,7 @@ def _plot_shared_metric(
             error_kw={"linewidth": 1.0, "color": "black"},
         )
 
-        for i, (bar, val, agent_name) in enumerate(zip(bars, values, agents)):
+        for i, (bar, val) in enumerate(zip(bars, values)):
             if not np.isnan(val):
                 label_y = bar.get_height() + (yerr[i] if yerr is not None else 0) + 0.01
                 ax.text(
@@ -2082,21 +2238,7 @@ def _plot_shared_metric(
                     f"{val:.2f}",
                     ha="center",
                     va="bottom",
-                    fontsize=9,
-                )
-            # Add rotated variant text inside bar for models that differ across benchmarks
-            if agent_name in _bar_variant_text:
-                bar_height = val if not np.isnan(val) else 0
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar_height / 2,
-                    _bar_variant_text[agent_name],
-                    ha="center",
-                    va="center",
-                    fontsize=8,
-                    rotation=90,
-                    color="white",
-                    fontweight="bold",
+                    fontsize=7,
                 )
 
         if show_ylabel:
@@ -2186,6 +2328,7 @@ def plot_calibration(benchmark_data: List[Tuple[str, pd.DataFrame]], output_dir:
         show_yticks=False,
         show_legend=False,
         show_xticks=False,
+        row_height=1.5,
     )
 
 
@@ -2313,7 +2456,7 @@ def plot_reasoning_vs_nonreasoning(
                         f"{val:.2f}",
                         ha="center",
                         va="bottom",
-                        fontsize=7,
+                        fontsize=6,
                     )
 
         ax.set_xticks(x)
@@ -2494,7 +2637,7 @@ def plot_scaffold_comparison(
                     f"{tv:.2f}",
                     ha="center",
                     va="bottom",
-                    fontsize=6.5,
+                    fontsize=5.5,
                 )
             if not np.isnan(cv):
                 offset = (yerr_cx[i] if yerr_cx is not None else 0) + 0.01
@@ -2504,7 +2647,7 @@ def plot_scaffold_comparison(
                     f"{cv:.2f}",
                     ha="center",
                     va="bottom",
-                    fontsize=6.5,
+                    fontsize=5.5,
                 )
 
         ax.set_title(metric_label, fontsize=10, fontweight="bold")
@@ -2664,9 +2807,10 @@ def plot_taubench_clean_vs_orig(
     """
     Create a 2x2 plot with one subplot per reliability dimension.
 
-    For each provider, the oldest and newest model are selected.  For each
-    model the base benchmark bar and the clean benchmark bar are shown
-    side-by-side, distinguished by hatching (clean bars are hatched).
+    For each provider, the oldest and newest model that appear in BOTH the
+    original and clean splits are selected.  For each model the base benchmark
+    bar and the clean benchmark bar are shown side-by-side, distinguished by
+    hatching (clean bars are hatched).
     A shared legend at the top explains the encoding.
 
     Expects *benchmark_data* to contain entries for both 'taubench_airline_original'
@@ -2714,13 +2858,18 @@ def plot_taubench_clean_vs_orig(
     df_base = _prepare(df_base.copy())
     df_clean = _prepare(df_clean.copy())
 
-    # ---- pick oldest + newest per provider ----
-    df_base = filter_oldest_and_newest_per_provider(df_base)
-    df_clean = filter_oldest_and_newest_per_provider(df_clean)
+    # ---- pick earliest + latest per provider among models in BOTH splits ----
+    # Restrict to models that appear in both splits so every selected model has a
+    # base and a clean bar, then take the oldest/newest per provider.
+    common_agents = set(df_base["agent"]) & set(df_clean["agent"])
+    df_base = filter_oldest_and_newest_per_provider(
+        df_base[df_base["agent"].isin(common_agents)]
+    )
 
-    # Use the base model ordering as the canonical x-axis
+    # Use the base model ordering as the canonical x-axis; clean uses the same models
     agents = df_base["agent"].tolist()
     display_names = [strip_agent_prefix(a) for a in agents]
+    df_clean = df_clean[df_clean["agent"].isin(agents)]
 
     # Build a lookup for clean values (keyed by agent name)
     clean_lookup = df_clean.set_index("agent")
@@ -2805,8 +2954,9 @@ def plot_taubench_clean_vs_orig(
                 df_clean_ordered = pd.DataFrame(clean_rows)
                 yerr_clean = _get_yerr(df_clean_ordered, dim_col, values=clean_vals)
 
-        # Colors from provider
-        colors = generate_shaded_colors(df_base)
+        # Colors from provider; keep shades near the base color (not too
+        # light/dark) since each provider has only an earliest/latest model here.
+        colors = generate_shaded_colors(df_base, shade_min=0.6, shade_max=1.3)
 
         # Draw bars: clean (solid, left) and original (hatched, right)
         ax.bar(

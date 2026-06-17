@@ -20,27 +20,29 @@ class TestComputeOutcomeConsistency:
         assert compute_outcome_consistency([0, 0, 0, 0, 0]) == pytest.approx(1.0)
 
     def test_fifty_fifty_split_is_zero_consistency(self):
-        # p_hat = 0.5, sigma^2 = 0.5/(K-1) ≈ p*(1-p) → consistency_outcome ≈ 0
-        result = compute_outcome_consistency([1, 0, 1, 0, 1, 0])
-        assert result == pytest.approx(0.0, abs=0.05)
+        # p_hat = 0.5 maximises the Bernoulli variance, so (2*p - 1)^2 = 0.
+        assert compute_outcome_consistency([1, 0, 1, 0, 1, 0]) == pytest.approx(0.0)
 
     def test_single_run_returns_nan(self):
         assert math.isnan(compute_outcome_consistency([1]))
 
-    def test_result_is_clipped_between_zero_and_one(self):
+    def test_result_is_in_unit_interval(self):
+        # (2*p - 1)^2 is in [0, 1] for any p in [0, 1].
         result = compute_outcome_consistency([1, 0])
         assert 0.0 <= result <= 1.0
 
-    def test_any_deviation_clips_to_zero(self):
-        # sigma^2 (ddof=1) = K/(K-1) * p*(1-p) which always exceeds p*(1-p),
-        # so any mixed sequence produces a negative raw consistency_outcome that clips to 0.
-        result = compute_outcome_consistency([1, 1, 1, 1, 0])
-        assert result == pytest.approx(0.0)
+    def test_partial_agreement_produces_smooth_value(self):
+        # 4 / 5 = 0.8  ->  (2 * 0.8 - 1) ** 2 = 0.36
+        # Replaces an obsolete test that asserted any deviation should clip to
+        # 0 under the old ddof=1-sample-variance formula. The new closed-form
+        # consistency is smooth.
+        assert compute_outcome_consistency([1, 1, 1, 1, 0]) == pytest.approx(0.36)
 
     def test_a_specific_sequence(self):
+        # mean = 0.8615; (2*0.8615 - 1)^2 = 0.722^2 = 0.522729
         assert compute_outcome_consistency(
             [1, 0.9, 0.789, 0.98, 0.83, 0.67]
-        ) == pytest.approx(0.8698810638081038)
+        ) == pytest.approx(0.522729)
 
 
 class TestComputeTrajectoryConsistencyConditioned:

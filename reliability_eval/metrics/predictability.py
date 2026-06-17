@@ -216,7 +216,7 @@ def compute_brier_metrics(confidences: np.ndarray, successes: np.ndarray) -> dic
     # Transform to higher-is-better
     predictability_brier_score = 1 - brier_score
 
-    # Also compute reference Brier scores for context
+    # Also compute reference Brier scores for context (e.g. Brier Skill Score in plots)
     base_rate = np.mean(successes)
     brier_baseline = base_rate * (1 - base_rate)  # Brier if always predicting base rate
 

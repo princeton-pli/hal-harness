@@ -134,12 +134,17 @@ def plot_level_stratified_analysis(
     )
 
     # 0.1 Mean Actions by Level
+    # Track the largest bar-plus-error-bar extent so the y-axis fits the whiskers.
     max_traj = 0
     for m in all_metrics:
-        traj_dict = m.extra.get("level_metrics", {}).get("trajectory_complexity", {})
-        for v in traj_dict.values():
-            if v and not np.isnan(v) and v > max_traj:
-                max_traj = v
+        lm = m.extra.get("level_metrics", {})
+        traj_dict = lm.get("trajectory_complexity", {})
+        traj_se = lm.get("trajectory_complexity_se", {})
+        for lvl, v in traj_dict.items():
+            if v and not np.isnan(v):
+                se = traj_se.get(lvl, 0.0) or 0.0
+                se = 0.0 if np.isnan(se) else se
+                max_traj = max(max_traj, v + se)
     plot_metric_by_level(
         axes[0, 1],
         lambda m, lvl: (

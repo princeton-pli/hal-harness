@@ -121,8 +121,21 @@ class VirtualMachineRunner:
                     input_file = os.path.join(temp_dir, "input.json")
                     args_file = os.path.join(temp_dir, "agent_args.json")
 
+                    # Sanitise `files` values to basenames for the agent-visible
+                    # input.json while keeping the original absolute paths in
+                    # `input_data` for the copy step below. See
+                    # base_benchmark.py for context.
+                    input_data_for_json = input_data
+                    if isinstance(input_data, dict) and isinstance(
+                        input_data.get("files"), dict
+                    ):
+                        input_data_for_json = dict(input_data)
+                        input_data_for_json["files"] = {
+                            k: (os.path.basename(v) if isinstance(v, str) else v)
+                            for k, v in input_data["files"].items()
+                        }
                     with open(input_file, "w") as f:
-                        json.dump({task_id: input_data}, f)
+                        json.dump({task_id: input_data_for_json}, f)
                     with open(args_file, "w") as f:
                         json.dump(agent_args, f)
 

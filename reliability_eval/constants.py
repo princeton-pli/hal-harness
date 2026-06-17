@@ -58,9 +58,12 @@ MODEL_METADATA = {
     "taubench_toolcalling_gpt_4o_mini": {"date": "2024-07-18", "provider": "OpenAI"},
     "taubench_toolcalling_gpt_o1": {"date": "2024-12-05", "provider": "OpenAI"},
     "taubench_toolcalling_gpt_5_2": {"date": "2025-12-11", "provider": "OpenAI"},
+    "taubench_toolcalling_gpt_5_2_medium": {"date": "2025-12-11", "provider": "OpenAI"},
     "taubench_toolcalling_gpt_5_2_xhigh": {"date": "2025-12-11", "provider": "OpenAI"},
     "taubench_toolcalling_gpt_5_4": {"date": "2026-03-05", "provider": "OpenAI"},
     "taubench_toolcalling_gpt_5_4_xhigh": {"date": "2026-03-05", "provider": "OpenAI"},
+    "taubench_toolcalling_gpt_5_5": {"date": "2026-04-23", "provider": "OpenAI"},
+    "taubench_toolcalling_gpt_5_5_medium": {"date": "2026-04-23", "provider": "OpenAI"},
     "taubench_toolcalling_gemini_2_flash": {"date": "2024-12-11", "provider": "Google"},
     "taubench_toolcalling_gemini_2_5_flash": {
         "date": "2025-03-25",
@@ -68,8 +71,16 @@ MODEL_METADATA = {
     },
     "taubench_toolcalling_gemini_2_5_pro": {"date": "2025-04-17", "provider": "Google"},
     "taubench_toolcalling_gemini_3_pro": {"date": "2025-11-18", "provider": "Google"},
+    "taubench_toolcalling_claude_haiku_3": {
+        "date": "2024-03-13",
+        "provider": "Anthropic",
+    },
     "taubench_toolcalling_claude_haiku_3_5": {
         "date": "2024-10-22",
+        "provider": "Anthropic",
+    },
+    "taubench_toolcalling_claude_sonnet_4": {
+        "date": "2025-05-22",
         "provider": "Anthropic",
     },
     "taubench_toolcalling_claude_sonnet_3_7": {
@@ -83,6 +94,18 @@ MODEL_METADATA = {
     "taubench_toolcalling_claude_opus_4_5": {
         "date": "2025-11-24",
         "provider": "Anthropic",
+    },
+    "taubench_toolcalling_claude_opus_4_7": {
+        "date": "2026-04-16",
+        "provider": "Anthropic",
+    },
+    "taubench_toolcalling_gemini_3_1_pro": {
+        "date": "2026-02-19",
+        "provider": "Google",
+    },
+    "taubench_toolcalling_gemini_3_5_flash": {
+        "date": "2026-05-19",
+        "provider": "Google",
     },
     # Codex scaffold (agentic CLI)
     "taubench_codex_gpt_5_2": {"date": "2025-12-11", "provider": "OpenAI"},
@@ -124,20 +147,27 @@ MODEL_METADATA = {
     # Note: gpt_5_2_xhigh not run on GAIA (only medium reasoning effort used)
     "gaia_generalist_gpt_5_4": {"date": "2026-03-05", "provider": "OpenAI"},
     "gaia_generalist_gpt_5_4_medium": {"date": "2026-03-05", "provider": "OpenAI"},
+    "gaia_generalist_gpt_5_5": {"date": "2026-04-23", "provider": "OpenAI"},
+    "gaia_generalist_gpt_5_5_medium": {"date": "2026-04-23", "provider": "OpenAI"},
     "gaia_generalist_gemini_2_flash": {"date": "2024-12-11", "provider": "Google"},
     "gaia_generalist_gemini_2_5_flash": {"date": "2025-03-25", "provider": "Google"},
     "gaia_generalist_gemini_2_5_pro": {"date": "2025-04-17", "provider": "Google"},
-    # Note: gemini_3_pro excluded from GAIA (no runs available)
-    "gaia_generalist_claude_haiku_3_5": {"date": "2024-10-22", "provider": "Anthropic"},
+    "gaia_generalist_gemini_3_1_pro": {"date": "2026-02-19", "provider": "Google"},
+    "gaia_generalist_gemini_3_5_flash": {"date": "2026-05-19", "provider": "Google"},
+    # Note: gemini_3_pro excluded from GAIA (retired 2026-03-09)
+    "gaia_generalist_claude_haiku_3": {"date": "2024-03-13", "provider": "Anthropic"},
+    "gaia_generalist_claude_haiku_3_5": {"date": "2024-11-04", "provider": "Anthropic"},
     "gaia_generalist_claude_sonnet_3_7": {
         "date": "2025-02-24",
         "provider": "Anthropic",
     },
+    "gaia_generalist_claude_sonnet_4": {"date": "2025-05-22", "provider": "Anthropic"},
     "gaia_generalist_claude_sonnet_4_5": {
         "date": "2025-09-29",
         "provider": "Anthropic",
     },
     "gaia_generalist_claude_opus_4_5": {"date": "2025-11-24", "provider": "Anthropic"},
+    "gaia_generalist_claude_opus_4_7": {"date": "2026-04-16", "provider": "Anthropic"},
 }
 
 # Provider color palette
@@ -166,12 +196,15 @@ MODEL_CATEGORY = {
     "gpt_4o_mini": "small",
     "gemini_2_flash": "small",
     "gemini_2_5_flash": "small",
+    "claude_haiku_3": "small",
     "claude_haiku_3_5": "small",
     # Large/frontier models
     "gpt_4_turbo": "large",
     "gpt_5_2": "large",
     "gpt_5_4": "large",
+    "gpt_5_5": "large",
     "claude_sonnet_3_7": "large",
+    "claude_sonnet_4": "large",
     "claude_sonnet_4_5": "large",
     # Reasoning models (extended thinking / reasoning-enhanced)
     "gpt_o1": "reasoning",
@@ -180,9 +213,13 @@ MODEL_CATEGORY = {
     "gpt_5_2_codex_medium": "reasoning",
     "gpt_5_4_medium": "reasoning",
     "gpt_5_4_xhigh": "reasoning",
+    "gpt_5_5_medium": "reasoning",
     "gemini_2_5_pro": "reasoning",
     "gemini_3_pro": "reasoning",
+    "gemini_3_1_pro": "reasoning",
+    "gemini_3_5_flash": "reasoning",
     "claude_opus_4_5": "reasoning",
+    "claude_opus_4_7": "reasoning",
 }
 
 CATEGORY_COLORS = {

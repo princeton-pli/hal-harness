@@ -312,4 +312,15 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 1.25 / 1e6,
         "completion_tokens": 10 / 1e6,
     },
+    # GPT-5.5 — released 2026-04-23.
+    # https://developers.openai.com/api/docs/models/gpt-5.5  ($5 in / $30 out / $0.50 cached per M)
+    "gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "gpt-5.5-2026-04-23": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5-2026-04-23": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 30 / 1e6,
+    },
+    "gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
+    "openai/gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
 }
