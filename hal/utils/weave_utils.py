@@ -316,6 +316,74 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 7 / 1e6,
     },
+    "meta-llama/llama-3.3-70b-instruct:free": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "openrouter/meta-llama/llama-3.3-70b-instruct:free": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "gemini-2.0-flash": {
+        "prompt_tokens": 0.10 / 1e6,
+        "completion_tokens": 0.40 / 1e6,
+    },
+    "gemini-2.0-flash-lite": {
+        "prompt_tokens": 0.075 / 1e6,
+        "completion_tokens": 0.30 / 1e6,
+    },
+    "gemini-1.5-flash": {
+        "prompt_tokens": 0.075 / 1e6,
+        "completion_tokens": 0.30 / 1e6,
+    },
+    "gemini-1.5-flash-8b": {
+        "prompt_tokens": 0.0375 / 1e6,
+        "completion_tokens": 0.15 / 1e6,
+    },
+    "qwen2.5-coder:7b": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "qwen2.5-coder:14b": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "ollama:qwen2.5-coder:14b": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "groq/llama-3.3-70b-versatile": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "groq/llama-3.1-8b-instant": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "ollama/qwen2.5-coder:7b": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "ollama/qwen2.5-coder:14b": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "moonshotai/kimi-k2": {
+        "prompt_tokens": 0.14 / 1e6,
+        "completion_tokens": 0.56 / 1e6,
+    },
+    "moonshotai/kimi-k2:free": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
+    "openrouter/moonshotai/kimi-k2": {
+        "prompt_tokens": 0.14 / 1e6,
+        "completion_tokens": 0.56 / 1e6,
+    },
+    "openrouter/moonshotai/kimi-k2:free": {
+        "prompt_tokens": 0.0,
+        "completion_tokens": 0.0,
+    },
     "openrouter/deepseek/deepseek-chat-v3-0324": {
         "prompt_tokens": 0.18 / 1e6,
         "completion_tokens": 0.72 / 1e6,

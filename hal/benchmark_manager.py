@@ -109,6 +109,11 @@ class BenchmarkManager:
 
             benchmark = ReplicatorBenchmark(self.agent_dir, self.config)
 
+        elif benchmark_name == "gsm8k":
+            from .benchmarks.gsm8k import GSM8KBenchmark
+
+            benchmark = GSM8KBenchmark(self.agent_dir, self.config)
+
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
 

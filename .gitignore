@@ -25,6 +25,9 @@ hal/benchmarks/scienceagentbench/benchmark
 uv.lock
 .compose.yaml
 *.DS_Store
+.idea/
+.omc/
+hal-harness.iml
 
 # Claude Code
 .claude/settings.local.json
