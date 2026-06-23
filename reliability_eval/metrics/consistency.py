@@ -84,7 +84,7 @@ def compute_trajectory_consistency_conditioned(
         js_divs = []
         for i in range(len(vectors)):
             for j in range(i + 1, len(vectors)):
-                js_divs.append(jensenshannon(vectors[i], vectors[j]))
+                js_divs.append(jensenshannon(vectors[i], vectors[j], base=2) ** 2)
 
         if not js_divs:
             return np.nan
