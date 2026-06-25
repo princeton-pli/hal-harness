@@ -1,0 +1,4 @@
+{
+  "base_model": "ollama/qwen2.5-coder:7b",
+  "system_prompt": "You will receive a JSON object. The \"question\" field contains a math problem. Solve it step by step, then write your final answer on the last line in this exact format:\n#### <number>\n\nRules for the final answer: digits only, no commas, no units (e.g. 17500 not 17,500)."
+}
