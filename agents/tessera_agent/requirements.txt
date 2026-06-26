@@ -1,2 +1,9 @@
-litellm
-python-dotenv
+smolagents[mcp]>=1.14.0
+ddgs>=9.0
+litellm>=1.70.0
+python-dotenv>=1.0
+pandas>=2.0
+numpy>=1.26
+sympy>=1.12
+beautifulsoup4>=4.12
+requests>=2.31
