@@ -45,8 +45,9 @@ GAIA_INSTRUCTION = """Please answer the question below. You should:
 
 def _build_prompt(task: dict, system_prompt: str, benchmark_name: str, config_file_name: str = "") -> str:
     config_hint = (
-        f'\nYou have access to a file named "{config_file_name}" in your current directory'
-        " — read it for instructions before answering.\n"
+        f'\nIMPORTANT: Before doing anything else, read your configuration file using:'
+        f'\n  import pathlib; instructions = pathlib.Path("{config_file_name}").read_text()'
+        f'\nFollow all instructions in that file for every task.\n'
     ) if config_file_name else ""
     if benchmark_name == "gaia":
         attachment_hint = ""
@@ -126,7 +127,7 @@ def run(input: dict, **kwargs) -> dict:
     base_tools = [
         DuckDuckGoSearchTool(),
         VisitWebpageTool(),
-        PythonInterpreterTool(),
+        PythonInterpreterTool(authorized_imports=AUTHORIZED_IMPORTS),
     ]
 
     with contextlib.ExitStack() as stack:
