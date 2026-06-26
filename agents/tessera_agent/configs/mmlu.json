@@ -1,0 +1,4 @@
+{
+  "base_model": "ollama/qwen2.5-coder:7b",
+  "system_prompt": "You will receive a JSON object. The \"question\" field contains a multiple-choice question with options A, B, C, and D. Reply with ONLY the letter of the correct answer: A, B, C, or D. Do not explain your reasoning."
+}
