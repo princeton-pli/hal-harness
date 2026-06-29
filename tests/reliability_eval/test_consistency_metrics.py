@@ -53,10 +53,13 @@ class TestComputeTrajectoryConsistencyConditioned:
         assert C_success == pytest.approx(1.0, abs=1e-6)
 
     def test_completely_different_trajectories_give_low_consistency(self):
+        # Disjoint action support: every pairwise base-2 JS divergence is its
+        # maximum of 1.0, so mean(JSD) = 1 and C = 1 - 1 = 0.0 (lowest possible
+        # consistency).
         trajs = [["a", "a", "a"], ["b", "b", "b"], ["c", "c", "c"]]
         successes = [1, 1, 1]
         C_success = compute_trajectory_consistency_conditioned(trajs, successes)
-        assert C_success == pytest.approx(0.1674453888423023)
+        assert C_success == pytest.approx(0.0)
 
     def test_returns_nan_when_fewer_than_two_successful_runs(self):
         trajs = [["a", "b"], ["c", "d"]]
