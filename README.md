@@ -3,6 +3,11 @@
 [![HAL Leaderboards](https://img.shields.io/badge/Leaderboards-HAL-blue)](https://hal.cs.princeton.edu/)
 [![Weave](https://img.shields.io/badge/W&B-Weave-orange)](https://wandb.ai/site/weave)
 
+> [!IMPORTANT]
+> HAL leaderboard results are no longer being updated through this harness. We are focusing our current work on agent reliability; explore the public HAL results on the [leaderboard](https://hal.cs.princeton.edu/) and the [Reliability Dashboard](https://hal.cs.princeton.edu/reliability/).
+>
+> We will have more to share soon. For now, we are retiring active PRs against this repository, and the repository is archived for historical reference.
+
 This repository provides a standardized evaluation harness for reproducible agent evaluations across various benchmarks. It supports several benchmarks and allows users to add new agents and benchmarks. The unified CLI allows evaluation across all benchmarks and agents. The harness integrates with [Weave](https://wandb.ai/site/weave/) for logging and cost tracking and the official [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) for sharing evaluation results.
 
 ## Features
@@ -516,27 +521,9 @@ See [hal/benchmarks/README.md](hal/benchmarks/README.md) for details.
 
 ## How Can I Submit My Results to the HAL Leaderboards?
 
-Results can be uploaded to the [Holistic Agent Leaderboard (HAL)](https://hal.cs.princeton.edu) in several ways. To avoid benchmark contamination, we automatically encrypt the results before uploading.
+HAL is no longer accepting new result submissions through this harness. We have paused updates to the [leaderboard](https://hal.cs.princeton.edu/) and are focusing our work on [agent reliability](https://hal.cs.princeton.edu/reliability/). Existing public results remain available on the leaderboard.
 
-1. **During Evaluation:**
-
-   ```bash
-   hal-eval --benchmark <benchmark> ... --upload
-   ```
-
-2. **After Evaluation:**
-   For submitting results to the leaderboard, upload the files ending with `_UPLOAD.json` located in the generatedrun directories `results/<benchmark_name>/<run_id>/`. There are multiple ways to do this.
-
-   ```bash
-   # Upload all results for a benchmark (this will upload all files ending with `_UPLOAD.json` in the run directories for the benchmark)
-   hal-upload -B <benchmark_name>
-
-   # Upload a single file
-   hal-upload -F path/to/<run_id>_UPLOAD.json
-
-   # Upload all files in a directory you point to (you can move the files you want to this directory and then upload)
-   hal-upload -D path/to/directory
-   ```
+Active PRs for new leaderboard results are being retired while this repository is archived. We will have more to share soon.
 
 ## How can I use the agent traces from the HAL Leaderboard?
 
