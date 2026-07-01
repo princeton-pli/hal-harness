@@ -1,6 +1,7 @@
 import os
 import logging
 
+
 def setup_logger(log_file: str) -> logging.Logger:
     logger = logging.getLogger("generate")
     logger.setLevel(logging.INFO)
@@ -16,5 +17,3 @@ def setup_logger(log_file: str) -> logging.Logger:
     fh.setFormatter(fmt)
     logger.addHandler(fh)
     return logger
-
-

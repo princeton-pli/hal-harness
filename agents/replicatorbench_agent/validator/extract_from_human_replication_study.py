@@ -58,6 +58,7 @@ def build_extraction_prompt(preregistration, score_report, expected_schema):
         Output Requirements:\n- Return a valid JSON object only.\n- Do NOT wrap the output in markdown (no ```json).\n- Do NOT include extra text, commentary, or notes.\n\nBegin extraction using the provided schema below and the file contents. Ensure accuracy and completeness.\n- Strictly use provided sources as specified
         """
 
+
 def save_prompt_log(study_path, prompt):
     case_name = os.path.basename(os.path.normpath(study_path))
 
@@ -65,7 +66,7 @@ def save_prompt_log(study_path, prompt):
         match = re.search(r"case_study_\d+", study_path)
         if match:
             case_name = match.group()
-            
+
     log_dir = "logs"
     # log_dir = os.path.join(study_path, "logs")
     os.makedirs(log_dir, exist_ok=True)
@@ -77,17 +78,19 @@ def save_prompt_log(study_path, prompt):
         f.write(prompt + "\n\n")
 
     print(f"[INFO] Prompt logged to {log_file}")
-    
 
-def generate_expected_json(preregistration, score_report, expected_schema, client, log_path):
+
+def generate_expected_json(
+    preregistration, score_report, expected_schema, client, log_path
+):
     prompt = build_extraction_prompt(preregistration, score_report, expected_schema)
 
     save_prompt_log(log_path, prompt)
-    
+
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt.strip()}],
-        temperature=0
+        temperature=0,
     )
     content = response.choices[0].message.content
     return json.loads(content)
@@ -95,19 +98,23 @@ def generate_expected_json(preregistration, score_report, expected_schema, clien
 
 def save_json(data, path):
     save_path = os.path.join(path, "llm_eval", "design_llm_eval.json")
-    with open(save_path, 'w') as f:
+    with open(save_path, "w") as f:
         json.dump(data, f, indent=2)
         print(f"extract_from_human_replication_study.py output saved to {save_path}")
 
 
-def extract_from_human_replication_study(preregistration_path, score_report_path, output_path):
+def extract_from_human_replication_study(
+    preregistration_path, score_report_path, output_path
+):
     client = OpenAI(api_key=API_KEY)
-    
-    expected_schema = read_json(TEMPLATE_PATHS['replication_info_template'])
-    
+
+    expected_schema = read_json(TEMPLATE_PATHS["replication_info_template"])
+
     preregistration = load_report_text(preregistration_path)
     score_report = load_report_text(score_report_path)
-    
+
     log_path = os.path.dirname(output_path)
-    expected_json = generate_expected_json(preregistration, score_report, expected_schema, client, log_path)
+    expected_json = generate_expected_json(
+        preregistration, score_report, expected_schema, client, log_path
+    )
     save_json(expected_json, output_path)

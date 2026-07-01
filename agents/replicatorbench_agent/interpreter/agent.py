@@ -11,7 +11,7 @@ from info_extractor.file_utils import read_txt, read_json
 from core.prompts import PREAMBLE, INTERPRET, EXAMPLE
 from core.agent import run_react_loop, save_output
 from core.actions import base_known_actions, get_interpret_tool_definitions
-from core.utils import get_logger, configure_file_logging, build_file_description  
+from core.utils import get_logger, configure_file_logging, build_file_description
 
 logger, formatter = get_logger()
 
@@ -19,9 +19,11 @@ client = OpenAI(api_key=API_KEY)
 
 MAX_TOKENS = 20000
 
+
 def _count_tokens(text: str, model_name="gpt-4o"):
     enc = tiktoken.encoding_for_model(model_name if model_name else "gpt-4")
     return len(enc.encode(text))
+
 
 def discover_interpretable_files(study_path: str):
     """
@@ -55,6 +57,7 @@ def discover_interpretable_files(study_path: str):
 
     return auto_files
 
+
 def read_log(file_path: str, model_name: str = "gpt-4o"):
     """
     Tool: read a potentially very long log. If too big, chunk and summarize progressively.
@@ -72,7 +75,9 @@ def read_log(file_path: str, model_name: str = "gpt-4o"):
     # Chunk + summarize
     lines = full_log.splitlines(keepends=True)
     chunk_size = 800  # lines per chunk (tweakable)
-    chunks = ["".join(lines[i:i+chunk_size]) for i in range(0, len(lines), chunk_size)]
+    chunks = [
+        "".join(lines[i : i + chunk_size]) for i in range(0, len(lines), chunk_size)
+    ]
 
     sys_prompt = (
         "You are an effective log reader. Summarize the provided log chunk. "
@@ -83,13 +88,11 @@ def read_log(file_path: str, model_name: str = "gpt-4o"):
     for idx, chunk in enumerate(chunks, 1):
         messages = [
             {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": f"CHUNK {idx}/{len(chunks)}:\n{chunk}"}
+            {"role": "user", "content": f"CHUNK {idx}/{len(chunks)}:\n{chunk}"},
         ]
         try:
             out = client.chat.completions.create(
-                model="gpt-4o",
-                temperature=0,
-                messages=messages
+                model="gpt-4o", temperature=0, messages=messages
             )
             summaries.append(out.choices[0].message.content)
         except Exception as e:
@@ -97,45 +100,54 @@ def read_log(file_path: str, model_name: str = "gpt-4o"):
 
     # One final synthesis pass (bounded)
     final_messages = [
-        {"role": "system", "content": "Synthesize the chunk summaries into a concise but detailed overall summary."},
-        {"role": "user", "content": "\n\n".join(summaries)}
+        {
+            "role": "system",
+            "content": "Synthesize the chunk summaries into a concise but detailed overall summary.",
+        },
+        {"role": "user", "content": "\n\n".join(summaries)},
     ]
     try:
-        final = client.chat.completions.create(
-            model="gpt-4o",
-            temperature=0,
-            messages=final_messages
-        ).choices[0].message.content
+        final = (
+            client.chat.completions.create(
+                model="gpt-4o", temperature=0, messages=final_messages
+            )
+            .choices[0]
+            .message.content
+        )
     except Exception as e:
         final = "\n\n".join(summaries) + f"\n[final synthesis error] {e}"
     return final
 
+
 system_prompt = "\n\n".join([PREAMBLE, INTERPRET, EXAMPLE])
 
 # Map action names to their functions
-known_actions = {
-    **base_known_actions(),
-    "read_log": read_log
-}
+known_actions = {**base_known_actions(), "read_log": read_log}
+
 
 def run_interpret(study_path, show_prompt=False, tier="easy", model="gpt-4o"):
     configure_file_logging(logger, study_path, f"interpret_{tier}.log")
     logger.info(f"Starting execution evaluation for study path: {study_path}")
 
-    eval_prompt_template = read_txt(INTERPRET_CONSTANTS['prompt_template'])
-    json_schema = read_json(INTERPRET_CONSTANTS['json_template'])
-    claim_docs_for_evaluator = build_file_description(INTERPRET_CONSTANTS['claim_files'], study_path)
-    agent_docs_for_evaluator = build_file_description(INTERPRET_CONSTANTS['agent_files'], study_path)
+    eval_prompt_template = read_txt(INTERPRET_CONSTANTS["prompt_template"])
+    json_schema = read_json(INTERPRET_CONSTANTS["json_template"])
+    claim_docs_for_evaluator = build_file_description(
+        INTERPRET_CONSTANTS["claim_files"], study_path
+    )
+    agent_docs_for_evaluator = build_file_description(
+        INTERPRET_CONSTANTS["agent_files"], study_path
+    )
 
     auto_files_map = discover_interpretable_files(study_path)
-    auto_files_for_evaluator = build_file_description(auto_files_map, study_path) if auto_files_map else ""
+    auto_files_for_evaluator = (
+        build_file_description(auto_files_map, study_path) if auto_files_map else ""
+    )
     logger.info(f"ADDITIONAL FILES FOUND: {auto_files_for_evaluator}")
 
-
     variables = {
-        'interpret_json_schema': json_schema,
-        'claim_docs_for_evaluator': claim_docs_for_evaluator,
-        'agent_docs_for_evaluator': agent_docs_for_evaluator,
+        "interpret_json_schema": json_schema,
+        "claim_docs_for_evaluator": claim_docs_for_evaluator,
+        "agent_docs_for_evaluator": agent_docs_for_evaluator,
     }
 
     base_question = eval_prompt_template.format(**variables)
@@ -181,5 +193,5 @@ Answer: [Execute necessary next action to help you solve the task]
             filename="interpret_results.json",
             stage_name="interpret",
         ),
-        model_name=model
+        model_name=model,
     )

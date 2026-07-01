@@ -91,7 +91,6 @@ RUN POLICY (DESIGN)
 - Otherwise only make minimal fixes needed to run (paths to /app/data, deps, small execution bugs etc.).
 - Identify the correct entrypoint and execution order.
  """.strip(),
-
     "python": """
 RUN POLICY (DESIGN)
 - Translate every non-Python analysis script (.R/.do/etc.) into Python. Any necessary translation must be performed BEFORE filling out the given JSON template.
@@ -103,7 +102,7 @@ RUN POLICY (DESIGN)
 - Preserve logic, outputs, and seeds as closely as possible.
 - Make sure that replication_info.json reflects the change. All docker related information must also be compatible with Python execution.
  """.strip(),
- }
+}
 
 
 EXECUTE_CODE_MODE_POLICY = {
@@ -123,7 +122,7 @@ RUN POLICY (EXECUTE)
   create a single Python entrypoint, and update replication_info.json to that .py entrypoint.
 - If it fails, fix the Python rewrite / deps (don’t switch back to the original language).
  """.strip(),
- }
+}
 
 CODE_ACCESS_POLICY = {
     "easy": """
@@ -139,7 +138,7 @@ Find potential issues with the provided code such as a data file path that is di
     """.strip(),
     "hard": """
 Before filling out the JSON template, you must inspect and use the given dataset to generate the Python code for the replication. You must ensure that your code follows the original study's methodology as close as possible.
-    """.strip()
+    """.strip(),
 }
 
 INTERPRET = """

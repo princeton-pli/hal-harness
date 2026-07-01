@@ -6,10 +6,13 @@ import sys
 from core.utils import get_logger
 from .extractor import run_extraction
 
+
 def main():
     parser = argparse.ArgumentParser("extractor")
     parser.add_argument("--stage", choices=["stage_1", "web_search"], required=True)
-    parser.add_argument("--difficulty", choices=["easy", "medium", "hard"], required=True)
+    parser.add_argument(
+        "--difficulty", choices=["easy", "medium", "hard"], required=True
+    )
     parser.add_argument("--study-path", required=True)
     parser.add_argument("--show-prompt", action="store_true", default=False)
     parser.add_argument("--model-name", help="Please specify the OpenAI model to use.")
@@ -35,12 +38,12 @@ def main():
             difficulty=args.difficulty,
             stage=args.stage,
             model_name=args.model_name,
-            show_prompt=args.show_prompt
+            show_prompt=args.show_prompt,
         )
     except Exception as e:
         logger.exception(f"Fatal error during run_extraction: {e}")
         sys.exit(1)
 
+
 if __name__ == "__main__":
     main()
-

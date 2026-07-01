@@ -13,9 +13,10 @@ logger, formatter = get_logger()
 
 
 def build_prompt(template, instruction, stage="stage_1"):
-    
+
     prompt = (
-        instruction + "\n\n"
+        instruction
+        + "\n\n"
         + "Here is the JSON template, and its values represent descriptions of what is expected to be stored in each key:\n\n"
         + json.dumps(template, indent=2)
         + "\n\nPlease return only a completed JSON object appropriate for this stage."
@@ -23,12 +24,14 @@ def build_prompt(template, instruction, stage="stage_1"):
     return prompt
 
 
-def build_context_and_message(study_path, template, file_context, stage, original_study=None):
+def build_context_and_message(
+    study_path, template, file_context, stage, original_study=None
+):
     context_message = ""
-    
+
     if stage == "stage_1":
         context_message = "Extract stage 1 (original study) information."
-    
+
     elif stage == "stage_2":
         context_message = (
             "You are extracting structured information about the replication study. "
@@ -50,7 +53,3 @@ def build_context_and_message(study_path, template, file_context, stage, origina
     )
 
     return context_message, full_message
-
-
-
-

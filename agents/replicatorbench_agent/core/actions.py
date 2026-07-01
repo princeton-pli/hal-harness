@@ -2,7 +2,7 @@
 from info_extractor.file_utils import read_txt, read_csv, read_json, read_docx
 from core.tools import (
     list_files_in_folder,
-    #ask_human_input,
+    # ask_human_input,
     read_image,
     read_file,
     edit_file,
@@ -17,6 +17,7 @@ from core.tools import (
     read_and_summarize_pdf,
 )
 
+
 def base_known_actions() -> dict:
     """
     Generic actions available to ALL agents.
@@ -24,31 +25,27 @@ def base_known_actions() -> dict:
     """
     return {
         "list_files_in_folder": list_files_in_folder,
-
         "read_txt": read_txt,
         "read_csv": read_csv,
-        #"read_pdf": read_pdf,
+        # "read_pdf": read_pdf,
         "read_pdf": read_and_summarize_pdf,
         "read_json": read_json,
         "read_docx": read_docx,
-
         "read_image": read_image,
-
         "load_dataset": load_dataset,
         "get_dataset_head": get_dataset_head,
         "get_dataset_shape": get_dataset_shape,
         "get_dataset_description": get_dataset_description,
         "get_dataset_info": get_dataset_info,
         "get_dataset_columns": get_dataset_columns,
-         "get_dataset_variable_summary": get_dataset_variable_summary,
-
-        #"ask_human_input": ask_human_input,
-        
-        # file manipulating 
+        "get_dataset_variable_summary": get_dataset_variable_summary,
+        # "ask_human_input": ask_human_input,
+        # file manipulating
         "read_file": read_file,
         "edit_file": edit_file,
         "write_file": write_file,
     }
+
 
 def get_tool_definitions() -> list:
     """
@@ -63,11 +60,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "folder_path": {"type": "string", "description": "The path to the folder to list files from."}
+                        "folder_path": {
+                            "type": "string",
+                            "description": "The path to the folder to list files from.",
+                        }
                     },
-                    "required": ["folder_path"]
-                }
-            }
+                    "required": ["folder_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -77,11 +77,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the text file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the text file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -91,11 +94,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the PDF file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the PDF file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -105,11 +111,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the JSON file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the JSON file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -119,11 +128,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the .docx file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the .docx file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -133,11 +145,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the image file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the image file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -147,11 +162,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the dataset file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the dataset file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -161,11 +179,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the already loaded dataset file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the already loaded dataset file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -175,11 +196,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the already loaded dataset file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the already loaded dataset file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -189,11 +213,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the already loaded dataset file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the already loaded dataset file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -203,11 +230,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the already loaded dataset file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the already loaded dataset file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -217,11 +247,14 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the already loaded dataset file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the already loaded dataset file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -231,12 +264,18 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the dataset file."},
-                        "variable_name": {"type": "string", "description": "Name of the variable to analyze."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the dataset file.",
+                        },
+                        "variable_name": {
+                            "type": "string",
+                            "description": "Name of the variable to analyze.",
+                        },
                     },
-                    "required": ["file_path", "variable_name"]
-                }
-            }
+                    "required": ["file_path", "variable_name"],
+                },
+            },
         },
         # {
         #     "type": "function",
@@ -260,13 +299,22 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path where the file will be created."},
-                        "file_content": {"type": "string", "description": "The content to write to the file."},
-                        "overwrite": {"type": "boolean", "description": "Whether to overwrite if the file exists (default False)."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path where the file will be created.",
+                        },
+                        "file_content": {
+                            "type": "string",
+                            "description": "The content to write to the file.",
+                        },
+                        "overwrite": {
+                            "type": "boolean",
+                            "description": "Whether to overwrite if the file exists (default False).",
+                        },
                     },
-                    "required": ["file_path", "file_content"]
-                }
-            }
+                    "required": ["file_path", "file_content"],
+                },
+            },
         },
         {
             "type": "function",
@@ -276,21 +324,44 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the file to edit."},
-                        "edit_type": {
-                            "type": "string", 
-                            "enum": ["replace", "insert_after", "replace_between", "append"],
-                            "description": "Type of edit to perform."
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file to edit.",
                         },
-                        "old_text": {"type": "string", "description": "Text to search for (for 'replace')."},
-                        "new_text": {"type": "string", "description": "Text to insert or replace with."},
-                        "anchor": {"type": "string", "description": "Text to find to insert after (for 'insert_after')."},
-                        "start_marker": {"type": "string", "description": "Start marker for 'replace_between'."},
-                        "end_marker": {"type": "string", "description": "End marker for 'replace_between'."}
+                        "edit_type": {
+                            "type": "string",
+                            "enum": [
+                                "replace",
+                                "insert_after",
+                                "replace_between",
+                                "append",
+                            ],
+                            "description": "Type of edit to perform.",
+                        },
+                        "old_text": {
+                            "type": "string",
+                            "description": "Text to search for (for 'replace').",
+                        },
+                        "new_text": {
+                            "type": "string",
+                            "description": "Text to insert or replace with.",
+                        },
+                        "anchor": {
+                            "type": "string",
+                            "description": "Text to find to insert after (for 'insert_after').",
+                        },
+                        "start_marker": {
+                            "type": "string",
+                            "description": "Start marker for 'replace_between'.",
+                        },
+                        "end_marker": {
+                            "type": "string",
+                            "description": "End marker for 'replace_between'.",
+                        },
                     },
-                    "required": ["file_path", "edit_type"]
-                }
-            }
+                    "required": ["file_path", "edit_type"],
+                },
+            },
         },
         {
             "type": "function",
@@ -300,13 +371,17 @@ def get_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
-        }
+                    "required": ["file_path"],
+                },
+            },
+        },
     ]
+
 
 def get_execute_tool_definitions() -> list:
     """
@@ -314,7 +389,7 @@ def get_execute_tool_definitions() -> list:
     Base tools + Shell/Stata tools + Orchestrator tools.
     """
     base_tools = get_tool_definitions()
-    
+
     execute_tools = [
         {
             "type": "function",
@@ -324,11 +399,14 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "command": {"type": "string", "description": "The full shell command to run (e.g. 'python script.py')."}
+                        "command": {
+                            "type": "string",
+                            "description": "The full shell command to run (e.g. 'python script.py').",
+                        }
                     },
-                    "required": ["command"]
-                }
-            }
+                    "required": ["command"],
+                },
+            },
         },
         {
             "type": "function",
@@ -338,11 +416,14 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the .do file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the .do file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -352,11 +433,14 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                            "study_path": {"type": "string", "description": "Path to the current study directory"}
+                        "study_path": {
+                            "type": "string",
+                            "description": "Path to the current study directory",
+                        }
                     },
-                    "required": ["study_path"]
-                }
-            }
+                    "required": ["study_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -366,11 +450,14 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                       "study_path": {"type": "string", "description": "Path to the current study directory"}
+                        "study_path": {
+                            "type": "string",
+                            "description": "Path to the current study directory",
+                        }
                     },
-                    "required": ["study_path"]
-                }
-            }
+                    "required": ["study_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -380,12 +467,18 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "study_path": {"type": "string", "description": "Path to the current study directory"},
-                        "image_name": {"type": "string", "description": "Tag for the image."}
+                        "study_path": {
+                            "type": "string",
+                            "description": "Path to the current study directory",
+                        },
+                        "image_name": {
+                            "type": "string",
+                            "description": "Tag for the image.",
+                        },
                     },
-                    "required": ["study_path"]
-                }
-            }
+                    "required": ["study_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -395,11 +488,14 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "study_path": {"type": "string", "description": "Path to the current study directory"},
+                        "study_path": {
+                            "type": "string",
+                            "description": "Path to the current study directory",
+                        },
                     },
-                    "required": ["study_path"]
-                }
-            }
+                    "required": ["study_path"],
+                },
+            },
         },
         {
             "type": "function",
@@ -409,13 +505,16 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "study_path": {"type": "string", "description": "Path to the current study directory"},
+                        "study_path": {
+                            "type": "string",
+                            "description": "Path to the current study directory",
+                        },
                     },
-                    "required": ["study_path"]
-                }
-            }
+                    "required": ["study_path"],
+                },
+            },
         },
-         {
+        {
             "type": "function",
             "function": {
                 "name": "orchestrator_stop_container",
@@ -423,15 +522,19 @@ def get_execute_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "study_path": {"type": "string", "description": "Path to the current study directory"},
+                        "study_path": {
+                            "type": "string",
+                            "description": "Path to the current study directory",
+                        },
                     },
-                    "required": ["study_path"]
-                }
-            }
-        }
+                    "required": ["study_path"],
+                },
+            },
+        },
     ]
-    
+
     return base_tools + execute_tools
+
 
 def get_interpret_tool_definitions() -> list:
     """
@@ -439,7 +542,7 @@ def get_interpret_tool_definitions() -> list:
     Base tools + read_log.
     """
     base_tools = get_tool_definitions()
-    
+
     interpret_tools = [
         {
             "type": "function",
@@ -449,12 +552,15 @@ def get_interpret_tool_definitions() -> list:
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "file_path": {"type": "string", "description": "Path to the log file."}
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the log file.",
+                        }
                     },
-                    "required": ["file_path"]
-                }
-            }
+                    "required": ["file_path"],
+                },
+            },
         }
     ]
-    
+
     return base_tools + interpret_tools

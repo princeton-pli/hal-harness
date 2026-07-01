@@ -3,35 +3,57 @@ import json
 import re
 from core.constants import GENERATE_REACT_CONSTANTS
 
-from info_extractor.file_utils import read_json # Keep save_output here if the agent orchestrates saving
-from core.prompts import PREAMBLE, DESIGN, EXAMPLE, DESIGN_CODE_MODE_POLICY, CODE_ACCESS_POLICY
+from info_extractor.file_utils import (
+    read_json,
+)  # Keep save_output here if the agent orchestrates saving
+from core.prompts import (
+    PREAMBLE,
+    DESIGN,
+    EXAMPLE,
+    DESIGN_CODE_MODE_POLICY,
+    CODE_ACCESS_POLICY,
+)
 from core.agent import run_react_loop, save_output
 from core.utils import build_file_description, configure_file_logging, get_logger
 from core.actions import base_known_actions, get_tool_definitions
 
 logger, formatter = get_logger()
-action_re = re.compile(r'^Action: (\w+): (.*)$', re.MULTILINE) # Use re.MULTILINE for multiline parsing
+action_re = re.compile(
+    r"^Action: (\w+): (.*)$", re.MULTILINE
+)  # Use re.MULTILINE for multiline parsing
 known_actions = base_known_actions()
 
+
 def build_system_prompt(code_mode: str) -> str:
-    code_policy = DESIGN_CODE_MODE_POLICY.get(code_mode, DESIGN_CODE_MODE_POLICY["python"])
+    code_policy = DESIGN_CODE_MODE_POLICY.get(
+        code_mode, DESIGN_CODE_MODE_POLICY["python"]
+    )
     # Put the policy in SYSTEM prompt
     return "\n\n".join([PREAMBLE, DESIGN, code_policy, EXAMPLE])
 
-def run_design(study_path, show_prompt: bool = False, tier: str = "easy", code_mode: str = "python", model_name: str = "gpt-4o"):
+
+def run_design(
+    study_path,
+    show_prompt: bool = False,
+    tier: str = "easy",
+    code_mode: str = "python",
+    model_name: str = "gpt-4o",
+):
     configure_file_logging(logger, study_path, f"design_{tier}__{code_mode}.log")
     # Load json template
     logger.info(f"Starting extraction for study path: {study_path}")
-    template =  read_json(GENERATE_REACT_CONSTANTS[f'json_template_{code_mode}'])
-    code_policy = DESIGN_CODE_MODE_POLICY.get(code_mode, DESIGN_CODE_MODE_POLICY["python"])
+    template = read_json(GENERATE_REACT_CONSTANTS[f"json_template_{code_mode}"])
+    code_policy = DESIGN_CODE_MODE_POLICY.get(
+        code_mode, DESIGN_CODE_MODE_POLICY["python"]
+    )
     code_access_policy = CODE_ACCESS_POLICY.get(tier, CODE_ACCESS_POLICY["easy"])
-    
+
     system_prompt = build_system_prompt(code_mode)
-    
+
     question = f"""The goal is to create replication_info.json. 
     
     You will have access to the following documents:
-    {build_file_description(GENERATE_REACT_CONSTANTS['files'], study_path)}
+    {build_file_description(GENERATE_REACT_CONSTANTS["files"], study_path)}
     
     Based on the provided documents, your goal is to plan for the replication study and fill out this JSON template:
     {json.dumps(template)}
@@ -61,13 +83,13 @@ def run_design(study_path, show_prompt: bool = False, tier: str = "easy", code_m
     print(f"starting design phase with {model_name}\n")
     tool_definitions = get_tool_definitions()
     return run_react_loop(
-    	system_prompt,
-    	known_actions,
-    	tool_definitions,
-    	question,
-    	session_state={"analyzers": {}},
-    	study_path=study_path,
+        system_prompt,
+        known_actions,
+        tool_definitions,
+        question,
+        session_state={"analyzers": {}},
+        study_path=study_path,
         stage_name="generate-design",
-    	on_final=lambda ans: save_output(ans, study_path),
-    	model_name=model_name
+        on_final=lambda ans: save_output(ans, study_path),
+        model_name=model_name,
     )

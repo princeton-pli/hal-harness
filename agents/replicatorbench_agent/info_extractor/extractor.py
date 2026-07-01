@@ -5,6 +5,7 @@ info_extractor--|extractor.py
 Created on Mon Jun  9 15:36:52 2025
 @author: Rochana Obadage
 """
+
 import os
 import re
 import json
@@ -12,7 +13,14 @@ import time
 from openai import OpenAI
 from core.utils import get_logger
 
-from info_extractor.file_utils import split_models, read_file_contents, save_output, find_required_file, call_search_model_once, parse_json_strict
+from info_extractor.file_utils import (
+    split_models,
+    read_file_contents,
+    save_output,
+    find_required_file,
+    call_search_model_once,
+    parse_json_strict,
+)
 from info_extractor.prompt_builder import build_prompt, build_context_and_message
 from core.constants import API_KEY, TEMPLATE_PATHS, FILE_SELECTION_RULES
 from core.utils import configure_file_logging
@@ -23,10 +31,12 @@ from core.tools import read_and_summarize_pdf
 client = OpenAI(api_key=API_KEY)
 logger, formatter = get_logger()
 
+
 def is_reasoning_model(model: str) -> bool:
     return model.startswith(("o1", "o3", "gpt-5"))
 
-def run_stage_1(study_path, difficulty, show_prompt=False, model_name: str="gpt-4o"):
+
+def run_stage_1(study_path, difficulty, show_prompt=False, model_name: str = "gpt-4o"):
     """
     Extract original study information and save to post_registration.json
     """
@@ -36,14 +46,20 @@ def run_stage_1(study_path, difficulty, show_prompt=False, model_name: str="gpt-
 
     logger.info("Running Stage 1: original study extraction")
     # Load post-registration template
-    with open(TEMPLATE_PATHS['post_registration_template']) as f:
+    with open(TEMPLATE_PATHS["post_registration_template"]) as f:
         template = json.load(f)
 
     # Load instructions for stage_1 / difficulty
-    with open(TEMPLATE_PATHS['info_extractor_instructions']) as f:
+    with open(TEMPLATE_PATHS["info_extractor_instructions"]) as f:
         instructions = json.load(f).get(difficulty, {}).get("stage_1", {})
 
-    file_context, datasets_original, datasets_replication, code_file_descriptions, original_study_data = read_file_contents(
+    (
+        file_context,
+        datasets_original,
+        datasets_replication,
+        code_file_descriptions,
+        original_study_data,
+    ) = read_file_contents(
         study_path, difficulty, FILE_SELECTION_RULES, stage="stage_1"
     )
 
@@ -79,11 +95,17 @@ def run_stage_1(study_path, difficulty, show_prompt=False, model_name: str="gpt-
         "total_tokens": usage.total_tokens if usage else 0,
         "prompt_tokens": (
             usage.input_tokens if is_reasoning_model(model_name) else usage.input_tokens
-        ) if usage else 0,
+        )
+        if usage
+        else 0,
         "completion_tokens": (
-            usage.output_tokens if is_reasoning_model(model_name) else usage.output_tokens
-        ) if usage else 0,
-        "total_turns": 1
+            usage.output_tokens
+            if is_reasoning_model(model_name)
+            else usage.output_tokens
+        )
+        if usage
+        else 0,
+        "total_turns": 1,
     }
     update_metadata(study_path, "extract_stage_1", metric_data)
 
@@ -106,7 +128,8 @@ def run_stage_1(study_path, difficulty, show_prompt=False, model_name: str="gpt-
     save_output(extracted_json, study_path, stage="stage_1")
     return extracted_json
 
-def run_web_search(study_path,model_name,show_prompt=False):
+
+def run_web_search(study_path, model_name, show_prompt=False):
     """
     Reads initial_details.txt + original_paper.pdf, then calls the paired search model once
     to return URLs needed for replication. Saves found_urls.json.
@@ -120,30 +143,34 @@ def run_web_search(study_path,model_name,show_prompt=False):
     # read claim
     with open(details_path, "r", encoding="utf-8", errors="ignore") as f:
         claim_text = f.read()
-    
+
     summarizer_model, search_model = split_models(model_name)
-    print(f"[web-search] summarizer_model={summarizer_model} -> search_model={search_model}")
-    
-    paper_text = read_and_summarize_pdf(paper_path, summarizer_model=summarizer_model, for_data=True)
+    print(
+        f"[web-search] summarizer_model={summarizer_model} -> search_model={search_model}"
+    )
+
+    paper_text = read_and_summarize_pdf(
+        paper_path, summarizer_model=summarizer_model, for_data=True
+    )
     raw = ""
     try:
-    	raw = call_search_model_once(search_model, claim_text, paper_text)
+        raw = call_search_model_once(search_model, claim_text, paper_text)
     except Exception:
-    	print(f"search model call failed: {search_model}")
-    	
+        print(f"search model call failed: {search_model}")
+
     parsed = parse_json_strict(raw)
 
     duration = time.time() - start_time
 
     study_id = None
-    # extract id "/10/" from the study path. 
+    # extract id "/10/" from the study path.
     match = re.search(r"[/\\](\d+)[/\\]", str(study_path))
     if match:
         study_id = int(match.group(1))
 
     # Save output
     out_obj = {
-    	"id": study_id,
+        "id": study_id,
         "requested_model": model_name,
         "summarizer_model": summarizer_model,
         "search_model": search_model,
@@ -172,7 +199,7 @@ def run_web_search(study_path,model_name,show_prompt=False):
     audit_path = os.path.join(audit_dir, f"merged_{model_name}.jsonl")
     with open(audit_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(out_obj) + "\n")
-        
+
     # Metadata
     metric_data = {
         "total_time_seconds": round(duration, 2),
@@ -184,14 +211,11 @@ def run_web_search(study_path,model_name,show_prompt=False):
     return out_obj
 
 
-
 def run_extraction(study_path, difficulty, stage, model_name, show_prompt=False):
 
     if stage == "stage_1":
         return run_stage_1(study_path, difficulty, show_prompt, model_name)
     if stage == "web_search":
-    	return run_web_search(study_path,model_name, show_prompt)
+        return run_web_search(study_path, model_name, show_prompt)
     else:
         raise ValueError(f"Unknown stage: {stage}")
-
-

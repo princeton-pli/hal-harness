@@ -11,9 +11,7 @@ from core.utils import configure_file_logging, get_logger
 from info_extractor.file_utils import read_json
 
 # Execute-stage-only tools
-from generator.execute_tools import (
-    run_shell_command, run_stata_do_file
-)
+from generator.execute_tools import run_shell_command, run_stata_do_file
 from generator.orchestrator_tool import (
     orchestrator_generate_dockerfile,
     orchestrator_build_image,
@@ -32,7 +30,6 @@ known_actions = {
     **base_known_actions(),
     "run_shell_command": run_shell_command,
     "run_stata_do_file": run_stata_do_file,
-
     # Orchestrator tools
     "orchestrator_generate_dockerfile": orchestrator_generate_dockerfile,
     "orchestrator_build_image": orchestrator_build_image,
@@ -46,24 +43,28 @@ known_actions = {
 CHECKPOINT_MAP = {
     # PHASE 1
     "orchestrator_generate_dockerfile": "1. Generate Dockerfile",
-    "orchestrator_build_image":         "2. Build Image",
-    
+    "orchestrator_build_image": "2. Build Image",
     # PHASE 2
-    "orchestrator_run_container":       "3. Start Container",
-    "orchestrator_plan":                "4. Plan & Preview",
-    "orchestrator_preview_entry":       "4. Plan & Preview",
-    
+    "orchestrator_run_container": "3. Start Container",
+    "orchestrator_plan": "4. Plan & Preview",
+    "orchestrator_preview_entry": "4. Plan & Preview",
     # PHASE 3
-    "ask_human_input":                  "5. Human Approval",
-    
+    "ask_human_input": "5. Human Approval",
     # PHASE 4
-    "orchestrator_execute_entry":       "6. Execute Code",
-    
+    "orchestrator_execute_entry": "6. Execute Code",
     # PHASE 5
-    "orchestrator_stop_container":      "7. Stop Container"
+    "orchestrator_stop_container": "7. Stop Container",
 }
 
-def run_execute(study_path: str, show_prompt: bool = False, templates_dir: str = "./templates", tier="easy", code_mode: str = "python", model_name: str="gpt-4o"):
+
+def run_execute(
+    study_path: str,
+    show_prompt: bool = False,
+    templates_dir: str = "./templates",
+    tier="easy",
+    code_mode: str = "python",
+    model_name: str = "gpt-4o",
+):
     configure_file_logging(logger, study_path, f"execute_{tier}__{code_mode}.log")
     logger.info(f"[agent] dynamic orchestrator run loop for: {study_path}")
 
@@ -80,7 +81,9 @@ def run_execute(study_path: str, show_prompt: bool = False, templates_dir: str =
         }
         GENERATE_EXECUTE_REACT_CONSTANTS["json_template"] = schema_path
 
-        code_policy = EXECUTE_CODE_MODE_POLICY.get(code_mode, EXECUTE_CODE_MODE_POLICY["python"])
+        code_policy = EXECUTE_CODE_MODE_POLICY.get(
+            code_mode, EXECUTE_CODE_MODE_POLICY["python"]
+        )
 
         instruction = f"""
 Your goal is to successfully execute the replication study inside a Docker container.
@@ -143,7 +146,9 @@ Answer: [Execute necessary next action to help you solve the task]
 """.strip()
 
         if show_prompt:
-            logger.info("\n\n===== Agent Input (truncated) =====\n" + instruction[:2000])
+            logger.info(
+                "\n\n===== Agent Input (truncated) =====\n" + instruction[:2000]
+            )
         print(f"\n\nmodel name for execute agent: {model_name}\n\n")
         tool_definitions = get_execute_tool_definitions()
         return run_react_loop(
@@ -169,7 +174,7 @@ Answer: [Execute necessary next action to help you solve the task]
                     stage_name="execute",
                 ),
             ),
-            model_name=model_name
+            model_name=model_name,
         )
     finally:
         GENERATE_EXECUTE_REACT_CONSTANTS["files"] = prev_files

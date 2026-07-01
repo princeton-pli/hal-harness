@@ -28,16 +28,18 @@ def load_report_text(path):
         raise ValueError("Unsupported format")
 
 
-
-def build_extract_evaluate_prompt(eval_prompt_template, extraction_schema, extracted_json, reference_doc):
+def build_extract_evaluate_prompt(
+    eval_prompt_template, extraction_schema, extracted_json, reference_doc
+):
     variables = {
-        'extraction_schema': extraction_schema,
-        'extracted_json': extracted_json,
-        'reference_doc': reference_doc,
+        "extraction_schema": extraction_schema,
+        "extracted_json": extracted_json,
+        "reference_doc": reference_doc,
     }
 
     final_prompt = eval_prompt_template.format(**variables)
     return final_prompt
+
 
 def save_prompt_log(study_path, prompt):
     case_name = os.path.basename(os.path.normpath(study_path))
@@ -46,7 +48,7 @@ def save_prompt_log(study_path, prompt):
         match = re.search(r"case_study_\d+", study_path)
         if match:
             case_name = match.group()
-            
+
     log_dir = os.path.join(study_path, "llm_eval")
     os.makedirs(log_dir, exist_ok=True)
 
@@ -57,17 +59,26 @@ def save_prompt_log(study_path, prompt):
         f.write(prompt + "\n\n")
 
     print(f"[INFO] Prompt logged to {log_file}")
-    
 
-def generate_evaluation_json(eval_prompt_template, expected_schema, extracted_json, reference_doc, client, log_path):
-    prompt = build_extract_evaluate_prompt(eval_prompt_template, expected_schema, extracted_json, reference_doc)
+
+def generate_evaluation_json(
+    eval_prompt_template,
+    expected_schema,
+    extracted_json,
+    reference_doc,
+    client,
+    log_path,
+):
+    prompt = build_extract_evaluate_prompt(
+        eval_prompt_template, expected_schema, extracted_json, reference_doc
+    )
 
     save_prompt_log(log_path, prompt)
-    
+
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt.strip()}],
-        temperature=0
+        temperature=0,
     )
     content = response.choices[0].message.content
     return json.loads(content)
@@ -75,20 +86,31 @@ def generate_evaluation_json(eval_prompt_template, expected_schema, extracted_js
 
 def save_json(data, path):
     save_path = os.path.join(path, "llm_eval", "design_llm_eval.json")
-    with open(save_path, 'w') as f:
+    with open(save_path, "w") as f:
         json.dump(data, f, indent=2)
         print(f"Design Evaluate output saved to {save_path}")
 
 
-def extract_from_human_replication_study(extracted_json_path, reference_doc_path, output_path):
+def extract_from_human_replication_study(
+    extracted_json_path, reference_doc_path, output_path
+):
     client = OpenAI(api_key=API_KEY)
-    
-    eval_prompt_template = read_txt(TEMPLATE_PATHS['generate_design_eval_prompt_template'])
-    
-    expected_schema = read_json(TEMPLATE_PATHS['post_registration_template'])
+
+    eval_prompt_template = read_txt(
+        TEMPLATE_PATHS["generate_design_eval_prompt_template"]
+    )
+
+    expected_schema = read_json(TEMPLATE_PATHS["post_registration_template"])
     extracted_json = read_json(extracted_json_path)
     reference_doc = read_pdf(reference_doc_path)
-    
+
     log_path = output_path
-    evaluated_json = generate_evaluation_json(eval_prompt_template, expected_schema, extracted_json, reference_doc, client, log_path)
+    evaluated_json = generate_evaluation_json(
+        eval_prompt_template,
+        expected_schema,
+        extracted_json,
+        reference_doc,
+        client,
+        log_path,
+    )
     save_json(evaluated_json, output_path)

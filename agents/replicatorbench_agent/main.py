@@ -25,11 +25,13 @@ STAGE_TO_OUTPUT = {
 
 STAGE_SUFFIXES = ["_extract", "_web_search", "_design", "_execute", "_interpret"]
 
+
 def _base_id_from_task_id(task_id: str) -> str:
     for suf in STAGE_SUFFIXES:
         if task_id.endswith(suf):
             return task_id[: -len(suf)]
     return task_id
+
 
 def _find_parent_dir_containing(capsule_dir: str, filename: str) -> Optional[str]:
     for root, _dirs, files in os.walk(capsule_dir):
@@ -37,7 +39,10 @@ def _find_parent_dir_containing(capsule_dir: str, filename: str) -> Optional[str
             return root
     return None
 
-def _pick_source_dir(capsule_dir: str, required_files: Optional[List[str]] = None) -> str:
+
+def _pick_source_dir(
+    capsule_dir: str, required_files: Optional[List[str]] = None
+) -> str:
 
     input_dir = os.path.join(capsule_dir, "input")
     if os.path.isdir(input_dir):
@@ -56,6 +61,7 @@ def _pick_source_dir(capsule_dir: str, required_files: Optional[List[str]] = Non
             return only_path
 
     return capsule_dir
+
 
 def _symlink_into(src_dir: str, dst_dir: str) -> None:
     os.makedirs(dst_dir, exist_ok=True)
@@ -81,12 +87,14 @@ def _infer_stage(task_id: str) -> str:
             return suf
     return "unknown"
 
+
 def _infer_capsule_id(task_id: str, stage: str) -> str:
     if stage == "web_search":
         return task_id[: -len("_web_search")]
     if stage in ("extract", "design", "execute", "interpret"):
-        return task_id[: -(len(stage) + 1)]  
+        return task_id[: -(len(stage) + 1)]
     return task_id
+
 
 def _load_current_task() -> Tuple[str, Dict[str, Any]]:
 
@@ -97,6 +105,7 @@ def _load_current_task() -> Tuple[str, Dict[str, Any]]:
     task_id = next(iter(payload.keys()))
     task = payload[task_id]
     return task_id, task
+
 
 def _ensure_tasks_json() -> None:
 
@@ -116,6 +125,7 @@ def _ensure_tasks_json() -> None:
         "setup_script.sh requires /workspace/tasks.json, but it is missing and no bundled copy was found. "
         "Bundle tasks.json with the agent (e.g., agents/replicatorbench_agent/tasks.json)."
     )
+
 
 def _prepare_study_dir(task_id: str, stage: str) -> str:
 
@@ -140,7 +150,9 @@ def _prepare_study_dir(task_id: str, stage: str) -> str:
     setup_stderr = ""
 
     if os.path.exists(setup_path) and not os.path.exists(sentinel):
-        logging.info("study_dir missing/empty (%s). Will rerun setup: %s", study_dir, setup_path)
+        logging.info(
+            "study_dir missing/empty (%s). Will rerun setup: %s", study_dir, setup_path
+        )
         try:
             with open(sentinel, "w") as f:
                 f.write("1")
@@ -162,22 +174,27 @@ def _prepare_study_dir(task_id: str, stage: str) -> str:
                 logging.info("setup stderr (tail): %s", setup_stderr[-2000:])
 
             if proc.returncode != 0:
-                raise RuntimeError(f"setup_script.sh exited with code {proc.returncode}")
+                raise RuntimeError(
+                    f"setup_script.sh exited with code {proc.returncode}"
+                )
 
         except Exception as e:
-
             logging.exception("Setup rerun failed: %s", e)
 
         if _has_real_inputs(study_dir):
             logging.info("setup produced populated study_dir=%s", study_dir)
             return study_dir
 
-    required_files = ["initial_details.txt", "original_paper.pdf"] if stage in ("extract", "web_search") else []
+    required_files = (
+        ["initial_details.txt", "original_paper.pdf"]
+        if stage in ("extract", "web_search")
+        else []
+    )
 
     candidates = [
-        f"/workspace/{task_id}",          
-        f"/workspace/capsules/{task_id}", 
-        f"/workspace/capsules/{base_id}", 
+        f"/workspace/{task_id}",
+        f"/workspace/capsules/{task_id}",
+        f"/workspace/capsules/{base_id}",
     ]
 
     cwd0 = os.getcwd()
@@ -200,7 +217,9 @@ def _prepare_study_dir(task_id: str, stage: str) -> str:
     if capsule_dir is None:
         ws_listing = os.listdir("/workspace") if os.path.isdir("/workspace") else None
         caps_listing = (
-            os.listdir("/workspace/capsules") if os.path.isdir("/workspace/capsules") else None
+            os.listdir("/workspace/capsules")
+            if os.path.isdir("/workspace/capsules")
+            else None
         )
 
         raise FileNotFoundError(
@@ -226,17 +245,24 @@ def _prepare_study_dir(task_id: str, stage: str) -> str:
 
     return study_dir
 
+
 def _ensure_api_env(env: Dict[str, str]) -> Dict[str, str]:
 
     if env.get("API_KEY") and not env.get("OPENAI_API_KEY"):
         env["OPENAI_API_KEY"] = env["API_KEY"]
     return env
 
-def _run_make_target(cwd: str, env: Dict[str, str], study_dir: str, model: str, target: str) -> None:
+
+def _run_make_target(
+    cwd: str, env: Dict[str, str], study_dir: str, model: str, target: str
+) -> None:
     cmd = ["make", target, f"STUDY={study_dir}", f"MODEL={model}"]
     subprocess.run(cmd, cwd=cwd, env=env, check=True)
 
-def _ensure_prereqs(stage: str, cwd: str, env: Dict[str, str], study_dir: str, model: str) -> None:
+
+def _ensure_prereqs(
+    stage: str, cwd: str, env: Dict[str, str], study_dir: str, model: str
+) -> None:
     post_reg = os.path.join(study_dir, "post_registration.json")
     merged = os.path.join(study_dir, "merged-urls.json")
     repl = os.path.join(study_dir, "replication_info.json")
@@ -260,7 +286,9 @@ def _ensure_prereqs(stage: str, cwd: str, env: Dict[str, str], study_dir: str, m
                     if os.path.abspath(candidates[0]) != os.path.abspath(merged):
                         shutil.copy2(candidates[0], merged)
                 elif len(candidates) > 1:
-                    raise RuntimeError(f"web-search produced multiple URL files: {candidates}")
+                    raise RuntimeError(
+                        f"web-search produced multiple URL files: {candidates}"
+                    )
                 else:
                     raise RuntimeError(f"web-search ran but did not create {merged}")
 
@@ -271,6 +299,7 @@ def _ensure_prereqs(stage: str, cwd: str, env: Dict[str, str], study_dir: str, m
     if stage in ("execute", "interpret"):
         if not os.path.exists(exec_res):
             _run_make_target(cwd, env, study_dir, model, "execute-easy")
+
 
 def _stage_output_path(stage: str, study_dir: str) -> str:
     stage_to_file = {
@@ -284,6 +313,7 @@ def _stage_output_path(stage: str, study_dir: str) -> str:
         raise ValueError(f"Unknown stage: {stage}")
     return os.path.join(study_dir, stage_to_file[stage])
 
+
 def run(*args, **kwargs) -> Dict[str, str]:
     task_id, _task = _load_current_task()
     stage = _infer_stage(task_id)
@@ -295,8 +325,9 @@ def run(*args, **kwargs) -> Dict[str, str]:
     if stage == "web_search":
         details = os.path.join(study_dir, "initial_details.txt")
         if not os.path.exists(details):
-            raise FileNotFoundError(f"Missing {details}. Study dir has: {os.listdir(study_dir)}")
-
+            raise FileNotFoundError(
+                f"Missing {details}. Study dir has: {os.listdir(study_dir)}"
+            )
 
     make_target = STAGE_TO_MAKE[stage]
     out_file, out_key = STAGE_TO_OUTPUT[stage]
@@ -327,12 +358,13 @@ def run(*args, **kwargs) -> Dict[str, str]:
         subprocess.run(cmd, cwd=cwd, env=env, check=True)
     else:
         print(f"[INFO] Skipping {make_target}; output already exists at {stage_output}")
-    
 
     if stage == "web_search" and not os.path.exists(out_path):
         metadata_path = os.path.join(study_dir, "metadata.json")
         if not os.path.exists(metadata_path):
-            raise RuntimeError(f"web_search did not produce {out_path} and metadata.json is missing at {metadata_path}")
+            raise RuntimeError(
+                f"web_search did not produce {out_path} and metadata.json is missing at {metadata_path}"
+            )
 
         with open(metadata_path, "r") as f:
             meta = json.load(f)
