@@ -3,6 +3,8 @@
 import os
 from unittest.mock import Mock, patch
 
+from azure.mgmt.network.models import NetworkInterface, PublicIPAddress, VirtualNetwork
+
 from hal.utils.vm.azure_virtual_machine import AzureVirtualMachine
 
 
@@ -223,3 +225,65 @@ class TestAzureVirtualMachineInit:
         assert vm.timeout == 555
         assert vm.public_ip is None  # Not set until _create runs
         mock_create.assert_called_once()
+
+
+class TestAzureVirtualMachineCreate:
+    """Tests for Azure resource creation payloads."""
+
+    @patch("hal.utils.vm.azure_virtual_machine.open")
+    @patch(
+        "hal.utils.vm.azure_virtual_machine.AzureVirtualMachine._wait_for_setup_to_complete"
+    )
+    def test_create_uses_azure_network_models(self, _, mock_open):
+        """Ensure network payloads serialize to ARM-compatible model objects."""
+        mock_open.return_value.__enter__.return_value.read.return_value = (
+            "#cloud-config"
+        )
+        vm = object.__new__(AzureVirtualMachine)
+        vm.name = "test-vm"
+        vm.resource_group = "test-rg"
+        vm.location = "eastus"
+        vm.vm_size = "Standard_E2as_v5"
+        vm.gpu = False
+        vm.timeout = 555
+        vm.nsg_id = "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Network/networkSecurityGroups/nsg"
+        vm.ssh_public_key = "ssh-ed25519 AAAAB3..."
+        vm.public_ip = None
+
+        subnet = Mock(id="/subscriptions/sub/subnets/test-subnet")
+        vnet_result = Mock(subnets=[subnet])
+        public_ip_result = Mock(
+            id="/subscriptions/sub/publicIPAddresses/test-ip",
+            ip_address="1.2.3.4",
+        )
+        nic_result = Mock(id="/subscriptions/sub/networkInterfaces/test-nic")
+
+        vm.network_client = Mock()
+        vm.network_client.virtual_networks.begin_create_or_update.return_value.result.return_value = vnet_result
+        vm.network_client.public_ip_addresses.begin_create_or_update.return_value.result.return_value = public_ip_result
+        vm.network_client.network_interfaces.begin_create_or_update.return_value.result.return_value = nic_result
+        vm.compute_client = Mock()
+
+        vm._create()
+
+        vnet_payload = (
+            vm.network_client.virtual_networks.begin_create_or_update.call_args.args[2]
+        )
+        public_ip_payload = (
+            vm.network_client.public_ip_addresses.begin_create_or_update.call_args.args[
+                2
+            ]
+        )
+        nic_payload = (
+            vm.network_client.network_interfaces.begin_create_or_update.call_args.args[
+                2
+            ]
+        )
+
+        assert isinstance(vnet_payload, VirtualNetwork)
+        assert vnet_payload.as_dict()["properties"]["addressSpace"] == {
+            "addressPrefixes": ["10.0.0.0/16"]
+        }
+        assert isinstance(public_ip_payload, PublicIPAddress)
+        assert public_ip_payload.as_dict()["sku"] == {"name": "Standard"}
+        assert isinstance(nic_payload, NetworkInterface)

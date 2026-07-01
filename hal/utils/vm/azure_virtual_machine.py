@@ -21,6 +21,16 @@ from azure.mgmt.compute.models import (
     VirtualMachine,
 )
 from azure.mgmt.network import NetworkManagementClient
+from azure.mgmt.network.models import (
+    AddressSpace,
+    NetworkInterface,
+    NetworkInterfaceIPConfiguration,
+    PublicIPAddress,
+    PublicIPAddressSku,
+    Subnet,
+    SubResource,
+    VirtualNetwork,
+)
 from azure.identity import DefaultAzureCredential
 
 from .utils import run_command
@@ -110,11 +120,11 @@ class AzureVirtualMachine:
         vnet = self.network_client.virtual_networks.begin_create_or_update(
             self.resource_group,
             vnet_name,
-            {
-                "location": self.location,
-                "address_space": {"address_prefixes": ["10.0.0.0/16"]},
-                "subnets": [{"name": subnet_name, "address_prefix": "10.0.0.0/24"}],
-            },
+            VirtualNetwork(
+                location=self.location,
+                address_space=AddressSpace(address_prefixes=["10.0.0.0/16"]),
+                subnets=[Subnet(name=subnet_name, address_prefix="10.0.0.0/24")],
+            ),
         ).result()
         subnet = vnet.subnets[0]
 
@@ -123,11 +133,11 @@ class AzureVirtualMachine:
         public_ip = self.network_client.public_ip_addresses.begin_create_or_update(
             self.resource_group,
             public_ip_name,
-            {
-                "location": self.location,
-                "sku": {"name": "Standard"},
-                "public_ip_allocation_method": "Static",
-            },
+            PublicIPAddress(
+                location=self.location,
+                sku=PublicIPAddressSku(name="Standard"),
+                public_ip_allocation_method="Static",
+            ),
         ).result()
         self.public_ip = public_ip.ip_address
 
@@ -136,17 +146,17 @@ class AzureVirtualMachine:
         nic = self.network_client.network_interfaces.begin_create_or_update(
             self.resource_group,
             nic_name,
-            {
-                "location": self.location,
-                "ip_configurations": [
-                    {
-                        "name": "default",
-                        "subnet": {"id": subnet.id},
-                        "public_ip_address": {"id": public_ip.id},
-                    }
+            NetworkInterface(
+                location=self.location,
+                ip_configurations=[
+                    NetworkInterfaceIPConfiguration(
+                        name="default",
+                        subnet=SubResource(id=subnet.id),
+                        public_ip_address=SubResource(id=public_ip.id),
+                    )
                 ],
-                "network_security_group": {"id": self.nsg_id},
-            },
+                network_security_group=SubResource(id=self.nsg_id),
+            ),
         ).result()
 
         # Load cloud-init config
