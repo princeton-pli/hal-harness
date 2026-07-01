@@ -88,8 +88,14 @@ MODEL_PRICES_DICT = {
     "openai/gpt-5-pro": {"prompt_tokens": 15 / 1e6, "completion_tokens": 120 / 1e6},
     "openai/gpt-5.1": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
     "openai/gpt-5.2-pro": {"prompt_tokens": 21 / 1e6, "completion_tokens": 168 / 1e6},
-    "openai/gpt-5.4-mini": {"prompt_tokens": 0.75 / 1e6, "completion_tokens": 4.5 / 1e6},
-    "openai/gpt-5.4-nano": {"prompt_tokens": 0.2 / 1e6, "completion_tokens": 1.25 / 1e6},
+    "openai/gpt-5.4-mini": {
+        "prompt_tokens": 0.75 / 1e6,
+        "completion_tokens": 4.5 / 1e6,
+    },
+    "openai/gpt-5.4-nano": {
+        "prompt_tokens": 0.2 / 1e6,
+        "completion_tokens": 1.25 / 1e6,
+    },
     "Mistral-small-zgjes": {
         "prompt_tokens": 0.001 / 1000,
         "completion_tokens": 0.003 / 1000,
