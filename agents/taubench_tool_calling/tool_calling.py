@@ -174,6 +174,47 @@ def _detect_abstention(
     }
 
 
+_ANTHROPIC_ADAPTIVE_REQUIRED = ("claude-opus-4-7",)
+_BUDGET_TO_EFFORT = {1024: "low", 8192: "medium", 24576: "high"}
+_anthropic_adaptive_patch_installed = False
+
+
+def _install_anthropic_adaptive_thinking_patch():
+    """Translate `thinking.type=enabled` + `budget_tokens` -> `thinking.type=adaptive`
+    + `output_config.effort` for Anthropic models that reject the old format.
+    litellm 1.76.1 always emits the old format from `reasoning_effort`; Claude
+    Opus 4.7 rejects it. The patch rewrites the request body just before send.
+
+    Note: install-once flag is kept at module scope, not as a class attribute on
+    AnthropicConfig, because litellm's `get_config()` merges every class attr
+    into the request body (Anthropic would 400 on the unknown field).
+    """
+    global _anthropic_adaptive_patch_installed
+    if _anthropic_adaptive_patch_installed:
+        return
+    from litellm.llms.anthropic.chat.transformation import AnthropicConfig
+
+    _original = AnthropicConfig.transform_request
+
+    def _patched(self, model, messages, optional_params, litellm_params, headers):
+        data = _original(
+            self, model, messages, optional_params, litellm_params, headers
+        )
+        if not any(slug in model for slug in _ANTHROPIC_ADAPTIVE_REQUIRED):
+            return data
+        thinking = data.get("thinking")
+        if isinstance(thinking, dict) and thinking.get("type") == "enabled":
+            effort = _BUDGET_TO_EFFORT.get(thinking.get("budget_tokens"), "medium")
+            data["thinking"] = {"type": "adaptive"}
+            data["output_config"] = {"effort": effort}
+        # Opus 4.7 deprecated `temperature` (the API rejects it). Strip silently.
+        data.pop("temperature", None)
+        return data
+
+    AnthropicConfig.transform_request = _patched
+    _anthropic_adaptive_patch_installed = True
+
+
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     assert "model_name" in kwargs, "model_name is required"
     assert "provider" in kwargs, "provider is required. choose from openai or anthropic"
@@ -182,6 +223,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     import litellm
 
     litellm.drop_params = True
+    _install_anthropic_adaptive_thinking_patch()
 
     def _responses_model_name(model: str) -> str:
         return model if model.startswith("responses/") else f"responses/{model}"
@@ -318,9 +360,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                 # Set temperature to 1 for reasoning calls
                 completion_kwargs["temperature"] = 1.0
 
-                if api_base:  # Using OpenRouter
-                    # For OpenRouter, add reasoning to extra_body
-                    effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
+                if "openrouter/" in kwargs["model_name"]:
+                    # OpenRouter convention: reasoning.max_tokens via extra_body.
+                    # Aligned with Anthropic-direct / Gemini-direct conventions:
+                    # medium=8192 matches direct API behaviour. Was {low:1024, medium:2048, high:4096}.
+                    effort_to_tokens = {"low": 1024, "medium": 8192, "high": 24576}
                     reasoning_tokens = effort_to_tokens.get(
                         kwargs["reasoning_effort"], 4096
                     )
@@ -409,9 +453,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                 # Set temperature to 1 for reasoning calls
                 completion_kwargs["temperature"] = 1.0
 
-                if api_base:  # Using OpenRouter
-                    # For OpenRouter, add reasoning to extra_body
-                    effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
+                if "openrouter/" in kwargs["model_name"]:
+                    # OpenRouter convention: reasoning.max_tokens via extra_body.
+                    # Aligned with Anthropic-direct / Gemini-direct conventions:
+                    # medium=8192 matches direct API behaviour. Was {low:1024, medium:2048, high:4096}.
+                    effort_to_tokens = {"low": 1024, "medium": 8192, "high": 24576}
                     reasoning_tokens = effort_to_tokens.get(
                         kwargs["reasoning_effort"], 4096
                     )

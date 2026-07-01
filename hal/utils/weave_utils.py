@@ -75,6 +75,27 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 75 / 1e6,
         "completion_tokens": 150 / 1e6,
     },
+    "gpt-5-mini": {"prompt_tokens": 0.25 / 1e6, "completion_tokens": 2 / 1e6},
+    "gpt-5-nano": {"prompt_tokens": 0.05 / 1e6, "completion_tokens": 0.4 / 1e6},
+    "gpt-5-pro": {"prompt_tokens": 15 / 1e6, "completion_tokens": 120 / 1e6},
+    "gpt-5.1": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
+    "gpt-5.2-pro": {"prompt_tokens": 21 / 1e6, "completion_tokens": 168 / 1e6},
+    "gpt-5.4-mini": {"prompt_tokens": 0.75 / 1e6, "completion_tokens": 4.5 / 1e6},
+    "gpt-5.4-nano": {"prompt_tokens": 0.2 / 1e6, "completion_tokens": 1.25 / 1e6},
+    "openai/gpt-5": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
+    "openai/gpt-5-mini": {"prompt_tokens": 0.25 / 1e6, "completion_tokens": 2 / 1e6},
+    "openai/gpt-5-nano": {"prompt_tokens": 0.05 / 1e6, "completion_tokens": 0.4 / 1e6},
+    "openai/gpt-5-pro": {"prompt_tokens": 15 / 1e6, "completion_tokens": 120 / 1e6},
+    "openai/gpt-5.1": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
+    "openai/gpt-5.2-pro": {"prompt_tokens": 21 / 1e6, "completion_tokens": 168 / 1e6},
+    "openai/gpt-5.4-mini": {
+        "prompt_tokens": 0.75 / 1e6,
+        "completion_tokens": 4.5 / 1e6,
+    },
+    "openai/gpt-5.4-nano": {
+        "prompt_tokens": 0.2 / 1e6,
+        "completion_tokens": 1.25 / 1e6,
+    },
     "Mistral-small-zgjes": {
         "prompt_tokens": 0.001 / 1000,
         "completion_tokens": 0.003 / 1000,
@@ -85,6 +106,7 @@ MODEL_PRICES_DICT = {
     },
     "o1-mini-2024-09-12": {"prompt_tokens": 3 / 1e6, "completion_tokens": 12 / 1e6},
     "o3-mini-2025-01-31": {"prompt_tokens": 1.1 / 1e6, "completion_tokens": 4.4 / 1e6},
+    "o4-mini": {"prompt_tokens": 1.1 / 1e6, "completion_tokens": 4.4 / 1e6},
     "o4-mini-2025-04-16": {"prompt_tokens": 1.1 / 1e6, "completion_tokens": 4.4 / 1e6},
     "openai/o4-mini-2025-04-16": {
         "prompt_tokens": 1.1 / 1e6,
@@ -397,6 +419,53 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.50 / 1e6,
         "completion_tokens": 3.0 / 1e6,
     },
+    # Gemini 3.1 Pro Preview (Feb 2026)
+    "gemini/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "google/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    # Gemini 3.5 Flash (GA May 2026; thinking always on)
+    "gemini/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    "gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    "google/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    # OpenRouter-routed Gemini aliases (pricing matches Google direct, OpenRouter applies ~5% markup)
+    "openrouter/google/gemini-2.0-flash-001": {
+        "prompt_tokens": 0.10 / 1e6,
+        "completion_tokens": 0.40 / 1e6,
+    },
+    "openrouter/google/gemini-2.5-flash": {
+        "prompt_tokens": 0.30 / 1e6,
+        "completion_tokens": 2.50 / 1e6,
+    },
+    "openrouter/google/gemini-2.5-pro": {
+        "prompt_tokens": 1.25 / 1e6,
+        "completion_tokens": 10.0 / 1e6,
+    },
+    "openrouter/google/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "openrouter/google/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
     "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {
         "prompt_tokens": 0.27 / 1e6,
         "completion_tokens": 0.85 / 1e6,
@@ -453,6 +522,14 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 1 / 1e6,
         "completion_tokens": 5 / 1e6,
     },
+    "openrouter/anthropic/claude-3.5-haiku": {
+        "prompt_tokens": 1 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
+    "openrouter/anthropic/claude-3-haiku": {
+        "prompt_tokens": 0.25 / 1e6,
+        "completion_tokens": 1.25 / 1e6,
+    },
     "openrouter/anthropic/claude-sonnet-4.5": {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 15 / 1e6,
@@ -492,6 +569,17 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 5 / 1e6,
         "completion_tokens": 25 / 1e6,
     },
+    # Claude Opus 4.7 (Apr 2026, same headline pricing as 4.5/4.6)
+    "claude-opus-4-7": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4-7": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
+    "claude-opus-4.7": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4.7": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
     # Claude Haiku models
     "claude-haiku-3.5": {"prompt_tokens": 1 / 1e6, "completion_tokens": 5 / 1e6},
     "anthropic/claude-haiku-3.5": {
@@ -520,6 +608,18 @@ MODEL_PRICES_DICT = {
     "openai/gpt-5.4": {"prompt_tokens": 2.50 / 1e6, "completion_tokens": 15 / 1e6},
     "gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
     "openai/gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
+    # GPT-5.5 — released 2026-04-23, dated snapshot 2026-04-23
+    # https://developers.openai.com/api/docs/models/gpt-5.5  ($5 in / $30 out / $0.50 cached per M)
+    "gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "gpt-5.5-2026-04-23": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5-2026-04-23": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 30 / 1e6,
+    },
+    # GPT-5.5 Pro — $30 in / $180 out per M (same headline as gpt-5.4-pro)
+    "gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
+    "openai/gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
 }
 
 CACHED_PRICE_OVERRIDES = {
@@ -536,6 +636,32 @@ CACHED_PRICE_OVERRIDES = {
     "anthropic/claude-sonnet-4-5": 0.30 / 1e6,
     "claude-opus-4-5": 0.50 / 1e6,
     "anthropic/claude-opus-4-5": 0.50 / 1e6,
+    "claude-opus-4-7": 0.50 / 1e6,
+    "anthropic/claude-opus-4-7": 0.50 / 1e6,
+    "claude-opus-4.7": 0.50 / 1e6,
+    "anthropic/claude-opus-4.7": 0.50 / 1e6,
+    "openrouter/anthropic/claude-3-haiku": 0.03 / 1e6,
+    "openrouter/anthropic/claude-3-5-haiku": 0.10 / 1e6,
+    "openrouter/anthropic/claude-3.5-haiku": 0.10 / 1e6,
+    "openrouter/anthropic/claude-sonnet-4": 0.30 / 1e6,
+    # Gemini cached input overrides
+    "gemini-2.0-flash": 0.025 / 1e6,
+    "gemini/gemini-2.0-flash": 0.025 / 1e6,
+    "google/gemini-2.0-flash": 0.025 / 1e6,
+    "gemini-2.5-pro": 0.125 / 1e6,
+    "gemini/gemini-2.5-pro": 0.125 / 1e6,
+    "google/gemini-2.5-pro": 0.125 / 1e6,
+    "gemini-3.1-pro-preview": 0.20 / 1e6,
+    "gemini/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "google/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "gemini-3.5-flash": 0.15 / 1e6,
+    "gemini/gemini-3.5-flash": 0.15 / 1e6,
+    "google/gemini-3.5-flash": 0.15 / 1e6,
+    "openrouter/google/gemini-2.0-flash-001": 0.025 / 1e6,
+    "openrouter/google/gemini-2.5-flash": 0.030 / 1e6,
+    "openrouter/google/gemini-2.5-pro": 0.125 / 1e6,
+    "openrouter/google/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "openrouter/google/gemini-3.5-flash": 0.15 / 1e6,
     "claude-opus-4-20250514": 1.50 / 1e6,
     "anthropic/claude-opus-4-20250514": 1.50 / 1e6,
     "claude-opus-4.1-20250805": 1.50 / 1e6,
@@ -557,6 +683,14 @@ CACHED_PRICE_OVERRIDES = {
     "openai/gpt-5.4": 0.25 / 1e6,
     "gpt-5.4-pro": 3.0 / 1e6,
     "openai/gpt-5.4-pro": 3.0 / 1e6,
+    # GPT-5.5: cached input $0.50/M (per developers.openai.com pricing table)
+    "gpt-5.5": 0.50 / 1e6,
+    "openai/gpt-5.5": 0.50 / 1e6,
+    "gpt-5.5-2026-04-23": 0.50 / 1e6,
+    "openai/gpt-5.5-2026-04-23": 0.50 / 1e6,
+    # GPT-5.5 Pro: cached scales like gpt-5.4-pro (~10% of input)
+    "gpt-5.5-pro": 3.0 / 1e6,
+    "openai/gpt-5.5-pro": 3.0 / 1e6,
     "o3-2025-04-16": 0.5 / 1e6,
     "openai/o3-2025-04-16": 0.5 / 1e6,
     # Gemini 3 & 2.5 cached pricing (90% discount)

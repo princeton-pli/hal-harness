@@ -15,25 +15,22 @@ runcmd:
     touch /home/agent/startup_started
     chown agent:agent /home/agent/startup_started
 
-    # 1. Update package lists
+    # 1. Update package lists (do not apt-get upgrade: breaks walinuxagent on Azure HPC images)
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
 
-    # 2. Upgrade existing packages
-    sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
-
-    # 3. Install Python 3 and pip
+    # 2. Install Python 3 and pip
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-venv
 
-    # 4. Install system dependencies
+    # 3. Install system dependencies
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential git curl wget
 
-    # 5. Install miniconda
+    # 4. Install miniconda
     wget --quiet "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" -O /tmp/miniconda.sh
     bash /tmp/miniconda.sh -b -p /home/agent/miniconda3
     rm /tmp/miniconda.sh
     chown -R agent:agent /home/agent/miniconda3
 
-    # 6. Create conda environment as agent user
+    # 5. Create conda environment as agent user
     sudo -u agent bash -c "
     export CONDA_PLUGINS_AUTO_ACCEPT_TOS=true && \
     source /home/agent/miniconda3/etc/profile.d/conda.sh && \
@@ -41,7 +38,7 @@ runcmd:
     conda activate agent_env
     "
 
-    # 8. Create sentinel file to signal completion
+    # 6. Create sentinel file to signal completion
     rm /home/agent/startup_started
     touch /home/agent/startup_complete
     chown agent:agent /home/agent/startup_complete

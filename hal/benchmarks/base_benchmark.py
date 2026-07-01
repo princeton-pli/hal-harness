@@ -65,14 +65,38 @@ class BaseBenchmark(ABC):
         """Evaluate agent outputs"""
         raise NotImplementedError("Benchmark must implement evaluate_output")
 
+    # Keys whose value is an absolute path that would expose the dataset's
+    # identity to the agent (e.g.
+    # `/.../datasets--gaia-benchmark--GAIA/.../<uuid>.mp3`). Reduced to a
+    # basename before tasks are exposed in input.json. Subclasses can extend
+    # this set.
+    #
+    # NOTE on `files`: the `files` dict is intentionally NOT sanitised here.
+    # The harness runners (`hal/utils/local_runner.py`,
+    # `hal/utils/docker_runner.py`, `hal/utils/virtual_machine_runner.py`)
+    # use `input_data["files"]` values as the SOURCE path for
+    # `shutil.copy2(src, cwd)` when seeding the agent's working directory.
+    # If we replaced the value with a basename here, the copy would fail and
+    # the agent would find an empty cwd. The runners sanitise the `files`
+    # values themselves after the copy and before writing input.json.
+    _attachment_path_keys: set = {"file_path"}
+
+    def _sanitize_attachment_paths(self, task: dict) -> dict:
+        """Reduce identity-leaking path strings to basenames."""
+        for key in self._attachment_path_keys:
+            if key in task and isinstance(task[key], str) and task[key]:
+                task[key] = os.path.basename(task[key])
+        return task
+
     def _strip_ground_truth(self, task: dict) -> dict:
         """Remove ground truth keys from a single task dict.
 
         Override for non-flat stripping (e.g., nested keys).
         """
         if not self._ground_truth_keys:
-            return task
-        return {k: v for k, v in task.items() if k not in self._ground_truth_keys}
+            return self._sanitize_attachment_paths(dict(task))
+        stripped = {k: v for k, v in task.items() if k not in self._ground_truth_keys}
+        return self._sanitize_attachment_paths(stripped)
 
     def get_dataset(self) -> Dict[str, Any]:
         """Get the benchmark dataset with ground truth fields stripped."""

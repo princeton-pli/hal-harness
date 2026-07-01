@@ -9,33 +9,34 @@ from scipy.spatial.distance import jensenshannon
 from reliability_eval.constants import EPSILON, W_OUTCOME, W_TRAJECTORY, W_RESOURCE
 
 
-def compute_outcome_consistency(
-    task_successes: list[int], epsilon: float = 1e-8
-) -> float:
+def compute_outcome_consistency(task_successes: list[int]) -> float:
     """
     Compute outcome consistency for a single task.
 
-    Formula: consistency_outcome(t) = 1 - sigma_hat^2 / (p_hat * (1 - p_hat) + epsilon)
+    Formula: consistency_outcome(t) = (2 * p_hat - 1)^2
 
-    where p_hat is the observed success rate across K runs and
-    sigma_hat^2 is the sample variance (ddof=1).
+    where p_hat is the observed success rate across K runs.
 
-    Normalizes the sample variance by the maximum Bernoulli variance for
-    that task's success rate, so consistency_outcome measures how much of the possible
-    variance is realized:
-      - All runs agree (p=0 or p=1): consistency_outcome = 1  (perfect consistency)
-      - Maximally variable:          consistency_outcome = 0  (worst consistency)
+    This formula is derived from normalizing the biased sample variance (ddof=0)
+    by the maximum possible Bernoulli variance (0.25, which occurs at p=0.5):
+        consistency_outcome = 1 - [ p_hat * (1 - p_hat) ] / 0.25
+                            = 1 - 4 * p_hat * (1 - p_hat)
+                            = (2 * p_hat - 1)^2
+
+    This naturally maps the consistency score to a strict [0, 1] range:
+      - All runs agree (p=0.0 or p=1.0): consistency_outcome = 1.0 (perfect consistency)
+      - Maximally variable (p=0.5):      consistency_outcome = 0.0 (worst consistency)
     """
     K = len(task_successes)
     if K < 2:
         return np.nan
 
     p_hat = np.mean(task_successes)
-    sigma_hat_sq = np.var(task_successes, ddof=1)
 
-    consistency_outcome = 1 - sigma_hat_sq / (p_hat * (1 - p_hat) + epsilon)
+    # Calculate consistency using the simplified quadratic formula
+    consistency_outcome = (2 * p_hat - 1) ** 2
 
-    return np.clip(consistency_outcome, 0.0, 1.0)
+    return float(consistency_outcome)
 
 
 def compute_trajectory_consistency_conditioned(
@@ -83,7 +84,7 @@ def compute_trajectory_consistency_conditioned(
         js_divs = []
         for i in range(len(vectors)):
             for j in range(i + 1, len(vectors)):
-                js_divs.append(jensenshannon(vectors[i], vectors[j]))
+                js_divs.append(jensenshannon(vectors[i], vectors[j], base=2) ** 2)
 
         if not js_divs:
             return np.nan

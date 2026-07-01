@@ -216,9 +216,23 @@ class LocalRunner:
             # Copy agent code
             shutil.copytree(agent_dir, temp_dir, dirs_exist_ok=True)
 
-            # Write input and args files
+            # Write input and args files. The `files` dict carries absolute
+            # source paths needed for the copy step below, but those paths
+            # would leak the dataset cache location to the agent (see
+            # hal/benchmarks/base_benchmark.py for context). Sanitise the
+            # values to basenames for the agent-visible input.json without
+            # mutating the in-memory `input_data` we still need for copying.
+            input_data_for_json = input_data
+            if isinstance(input_data, dict) and isinstance(
+                input_data.get("files"), dict
+            ):
+                input_data_for_json = dict(input_data)
+                input_data_for_json["files"] = {
+                    k: (os.path.basename(v) if isinstance(v, str) else v)
+                    for k, v in input_data["files"].items()
+                }
             with open(temp_dir / "input.json", "w") as f:
-                json.dump({task_id: input_data}, f)
+                json.dump({task_id: input_data_for_json}, f)
             with open(temp_dir / "agent_args.json", "w") as f:
                 json.dump(agent_args, f)
 
@@ -265,8 +279,8 @@ class LocalRunner:
                         self.conda_env,
                         "pip",
                         "install",
-                        "weave==0.51.41",
-                        "gql<4",
+                        "weave>=0.52.36",
+                        "gql[httpx]>=4.0,<5",
                     ],
                     cwd=str(temp_dir),
                     stdout=asyncio.subprocess.PIPE,

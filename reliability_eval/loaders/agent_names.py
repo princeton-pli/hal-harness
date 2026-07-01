@@ -53,14 +53,21 @@ def strip_agent_prefix(name: str) -> str:
         "gpt_5_4": "GPT 5.4",
         "gpt_5_4_medium": "GPT 5.4 (medium)",
         "gpt_5_4_xhigh": "GPT 5.4 (xhigh)",
+        "gpt_5_5": "GPT 5.5",
+        "gpt_5_5_medium": "GPT 5.5 (medium)",
         "gemini_2_flash": "Gemini 2.0 Flash",
         "gemini_2_5_flash": "Gemini 2.5 Flash",
         "gemini_2_5_pro": "Gemini 2.5 Pro",
         "gemini_3_pro": "Gemini 3.0 Pro",
+        "gemini_3_1_pro": "Gemini 3.1 Pro",
+        "gemini_3_5_flash": "Gemini 3.5 Flash",
+        "claude_haiku_3": "Claude 3 Haiku",
         "claude_haiku_3_5": "Claude 3.5 Haiku",
         "claude_sonnet_3_7": "Claude 3.7 Sonnet",
+        "claude_sonnet_4": "Claude 4 Sonnet",
         "claude_sonnet_4_5": "Claude 4.5 Sonnet",
         "claude_opus_4_5": "Claude 4.5 Opus",
+        "claude_opus_4_7": "Claude 4.7 Opus",
     }
 
     return display_names.get(name, name)
