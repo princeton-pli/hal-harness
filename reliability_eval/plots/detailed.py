@@ -1,5 +1,8 @@
 """Detailed dimension plots."""
 
+import re
+
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -9,6 +12,7 @@ from typing import List
 from reliability_eval.constants import (
     PROVIDER_COLORS,
     PROVIDER_MARKERS,
+    PROVIDER_ORDER,
 )
 from reliability_eval.loaders.agent_names import (
     get_model_metadata,
@@ -27,6 +31,10 @@ from reliability_eval.plots.helpers import (
     filter_oldest_and_newest_per_provider,
     generate_shaded_colors,
 )
+
+# Render axis tick minus as ASCII hyphen so it shows up in embedded PDF fonts
+# that lack the Unicode minus glyph (U+2212).
+mpl.rcParams["axes.unicode_minus"] = False
 
 
 def plot_consistency_detailed(
@@ -200,7 +208,10 @@ def plot_predictability_detailed(
     ax.set_title("Overall Predictability", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels([])
-    ax.set_ylim(0, 1.15)
+    pred_min = min(0.0, float(reliability_predictability.min()))
+    ax.set_ylim(pred_min - 0.15 if pred_min < 0 else 0, 1.15)
+    if pred_min < 0:
+        ax.axhline(0, color="black", linewidth=0.5, alpha=0.5)
     ax.grid(True, alpha=0.3, axis="y")
     ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, reliability_predictability, yerr_pred)
@@ -257,7 +268,10 @@ def plot_predictability_detailed(
     ax.set_title("Overall Quality", fontsize=14, fontweight="bold")
     ax.set_xticks(x_pos)
     ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
-    ax.set_ylim(0, 1.15)
+    brier_min = min(0.0, float(p_brier_vals.min()))
+    ax.set_ylim(brier_min - 0.15 if brier_min < 0 else 0, 1.15)
+    if brier_min < 0:
+        ax.axhline(0, color="black", linewidth=0.5, alpha=0.5)
     ax.grid(True, alpha=0.3, axis="y")
     ax.tick_params(axis="y", labelsize=11)
     _add_bar_labels_ci(ax, bars, p_brier_vals, yerr)
@@ -269,229 +283,303 @@ def plot_predictability_detailed(
     plt.close()
 
 
+def plot_predictability_summaries(
+    df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
+):
+    """
+    Component + summary comparison for predictability.
+
+    Six rows: Calibration, Discrimination, 1 - Brier, BSS,
+    arithmetic mean of (cal, AUROC), geometric mean of (cal, AUROC).
+    """
+    df_sorted = sort_agents_by_provider_and_date(df)
+    bar_colors = generate_shaded_colors(df_sorted)
+
+    fig, axes = plt.subplots(6, 1, figsize=(5, 15))
+    agents = [strip_agent_prefix(a) for a in df_sorted["agent"].tolist()]
+    x_pos = np.arange(len(agents))
+
+    p_cal = df_sorted["predictability_calibration"]
+    p_auroc = df_sorted["predictability_roc_auc"]
+    # Canonical predictability_brier_score is (1 - Brier).
+    one_minus_brier = df_sorted["predictability_brier_score"]
+
+    se_cal = df_sorted.get(
+        "predictability_calibration_se", pd.Series(np.nan, index=df_sorted.index)
+    ).fillna(0)
+    se_auroc = df_sorted.get(
+        "predictability_roc_auc_se", pd.Series(np.nan, index=df_sorted.index)
+    ).fillna(0)
+    # SE of (1 - Brier), i.e. SE(Brier).
+    se_one_minus_brier = df_sorted.get(
+        "predictability_brier_score_se", pd.Series(np.nan, index=df_sorted.index)
+    ).fillna(0)
+
+    # Brier Skill Score row (computed independently of the canonical 1 - Brier metric):
+    # BSS = 1 - Brier / baseline, baseline = base_rate * (1 - base_rate) ≈ acc * (1 - acc).
+    acc = df_sorted["accuracy"]
+    baseline = (acc * (1 - acc)).replace(0, np.nan)
+    if "brier_score" in df_sorted.columns and df_sorted["brier_score"].notna().any():
+        brier_raw = df_sorted["brier_score"]
+    else:
+        brier_raw = 1 - one_minus_brier
+    p_bss = 1 - brier_raw / baseline
+    # SE(BSS) = SE(Brier) / baseline.
+    se_bss = se_one_minus_brier / baseline
+
+    arith_mean = (p_cal + p_auroc) / 2
+    geom_mean = np.sqrt(p_cal.clip(lower=0) * p_auroc.clip(lower=0))
+
+    # Propagated SE for the (cal, AUROC) summaries.
+    se_arith = 0.5 * np.sqrt(se_cal**2 + se_auroc**2)
+    # Geometric mean: Var(G) = (B/(4A))*Var(A) + (A/(4B))*Var(B) where G = sqrt(A*B).
+    pcal_safe = p_cal.where(p_cal > 0, np.nan)
+    pauroc_safe = p_auroc.where(p_auroc > 0, np.nan)
+    se_geom = 0.5 * np.sqrt(
+        (pauroc_safe / pcal_safe) * se_cal**2 + (pcal_safe / pauroc_safe) * se_auroc**2
+    )
+    se_geom = se_geom.fillna(0)
+
+    # Each row: (title, ylabel, values, yerr, fixed_ylim or None for adaptive).
+    rows = [
+        ("Calibration", r"$P_{\mathrm{cal}}$", p_cal, se_cal, (0, 1.15)),
+        ("Discrimination", r"$P_{\mathrm{AUROC}}$", p_auroc, se_auroc, (0, 1.15)),
+        (
+            "Overall Quality (1 - Brier)",
+            r"$1-\mathrm{Brier}$",
+            one_minus_brier,
+            se_one_minus_brier,
+            (0, 1.15),
+        ),
+        ("Brier Skill Score", r"$\mathrm{BSS}$", p_bss, se_bss, None),
+        (
+            "Arithmetic Mean (Cal, AUROC)",
+            r"$\overline{P}_{\mathrm{arith}}$",
+            arith_mean,
+            se_arith,
+            (0, 1.15),
+        ),
+        (
+            "Geometric Mean (Cal, AUROC)",
+            r"$\overline{P}_{\mathrm{geom}}$",
+            geom_mean,
+            se_geom,
+            (0, 1.15),
+        ),
+    ]
+
+    for i, (title, ylabel, vals, se_vals, fixed_ylim) in enumerate(rows):
+        ax = axes[i]
+        vals_clean = vals.fillna(0)
+        yerr = np.where(np.isnan(se_vals), 0, se_vals).astype(float)
+        bars = ax.bar(
+            x_pos,
+            vals_clean,
+            color=bar_colors,
+            alpha=0.8,
+            edgecolor="black",
+            linewidth=0.5,
+            yerr=yerr,
+            capsize=3,
+            error_kw={"linewidth": 1.0, "color": "black"},
+        )
+        ax.set_ylabel(ylabel, fontsize=14, fontweight="bold")
+        ax.set_title(title, fontsize=14, fontweight="bold")
+        ax.set_xticks(x_pos)
+        if i == len(rows) - 1:
+            ax.set_xticklabels(agents, rotation=45, ha="right", fontsize=11)
+        else:
+            ax.set_xticklabels([])
+        if fixed_ylim is None:
+            v_min = min(0.0, float(vals_clean.min()))
+            ax.set_ylim(v_min - 0.15 if v_min < 0 else 0, 1.15)
+            if v_min < 0:
+                ax.axhline(0, color="black", linewidth=0.5, alpha=0.5)
+        else:
+            ax.set_ylim(*fixed_ylim)
+        ax.grid(True, alpha=0.3, axis="y")
+        ax.tick_params(axis="y", labelsize=11)
+        _add_bar_labels_ci(ax, bars, vals_clean, yerr)
+
+    plt.tight_layout()
+    output_path = output_dir / "predictability_summaries.pdf"
+    plt.savefig(output_path, dpi=300, bbox_inches="tight", format="pdf")
+    print(f"📊 Saved: {output_path}")
+    plt.close()
+
+
+# Scaffold prefixes shared across benchmarks; stripping one yields the bare model key.
+_SCAFFOLD_PREFIX_RE = re.compile(
+    r"^(?:taubench_codex|taubench_toolcalling|taubench_fewshot|gaia_generalist)[-_]"
+)
+
+
+def _model_grid_from_metrics(all_metrics: List[ReliabilityMetrics], n_cols: int = 3):
+    """Build the model panels from the metrics actually present.
+
+    Returns (models, n_rows, n_cols), where models is a flat list of
+    (agent_name, display_name, provider) sorted by provider then release date and
+    laid out row-major into an n_cols-wide grid. One panel per model run
+    (reasoning-effort variants included); a provider may wrap across rows.
+    """
+    entries = []  # (provider_rank, date, agent_name, display_name, provider)
+    seen = set()  # (provider, base model key) already added
+    for m in all_metrics:
+        base_key = _SCAFFOLD_PREFIX_RE.sub("", m.agent_name)
+        meta = get_model_metadata(m.agent_name)
+        provider = meta.get("provider", "Unknown")
+        if provider == "Unknown":
+            continue
+        key = (provider, base_key)
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append(
+            (
+                PROVIDER_ORDER.get(provider, 99),
+                meta.get("date", "2024-01-01"),
+                m.agent_name,
+                strip_agent_prefix(m.agent_name),
+                provider,
+            )
+        )
+
+    entries.sort(key=lambda e: (e[0], e[1]))
+    models = [(a, d, p) for _, _, a, d, p in entries]
+    n_rows = max(1, -(-len(models) // n_cols))  # ceil division
+    return models, n_rows, n_cols
+
+
 def plot_accuracy_coverage_by_model(
     df: pd.DataFrame, all_metrics: List[ReliabilityMetrics], output_dir: Path
 ):
     """
-    Create accuracy-coverage plots for each model in a 3x4 grid (provider x model).
-    Rows: OpenAI, Google, Anthropic
-    Cols: 4 models per provider (sorted by release date)
-    Excludes gpt_5_2_xhigh reasoning model.
-    Works with any benchmark by dynamically detecting scaffold prefixes.
+    Create accuracy-coverage plots for each model in a 3-column grid.
+    One panel per model run (reasoning-effort variants included), sorted by
+    provider then release date and wrapped across rows.
+    Works with any benchmark; the model set is derived from the metrics present.
     """
-    # Define model order per provider (excluding reasoning variants like xhigh)
-    provider_models = {
-        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2", "gpt_5_4"],
-        "Google": [
-            "gemini_2_flash",
-            "gemini_2_5_flash",
-            "gemini_2_5_pro",
-            "gemini_3_pro",
-        ],
-        "Anthropic": [
-            "claude_haiku_3_5",
-            "claude_sonnet_3_7",
-            "claude_sonnet_4_5",
-            "claude_opus_4_5",
-        ],
-    }
-
-    provider_order = ["OpenAI", "Google", "Anthropic"]
-
-    # Build mapping from model key to agent name
     agent_to_metrics = {m.agent_name: m for m in all_metrics}
+    models, n_rows, n_cols = _model_grid_from_metrics(all_metrics)
 
-    # Detect scaffold prefixes dynamically from actual agent names
-    # e.g., 'taubench_toolcalling_gpt_4_turbo' -> prefix is 'taubench_toolcalling_'
-    # e.g., 'gaia_generalist_claude_haiku_3_5' -> prefix is 'gaia_generalist_'
-    all_model_keys = [m for models in provider_models.values() for m in models]
-    detected_prefixes = set()
-    for agent_name in agent_to_metrics.keys():
-        for model_key in all_model_keys:
-            if agent_name.endswith(model_key):
-                prefix = agent_name[: -len(model_key)]
-                if prefix:
-                    detected_prefixes.add(prefix)
-    detected_prefixes = (
-        list(detected_prefixes)
-        if detected_prefixes
-        else ["taubench_toolcalling_", "taubench_fewshot_"]
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(2.5 * n_cols, 2.2 * n_rows),
+        squeeze=False,
     )
-
-    # Model display name mapping for well-formatted titles
-    model_display_names = {
-        "gpt_4_turbo": "GPT-4 Turbo",
-        "gpt_4o_mini": "GPT-4o mini",
-        "gpt_o1": "o1",
-        "gpt_5_2": "GPT-5.2",
-        "gpt_5_4": "GPT-5.4",
-        "gemini_2_flash": "Gemini 2.0 Flash",
-        "gemini_2_5_flash": "Gemini 2.5 Flash",
-        "gemini_2_5_pro": "Gemini 2.5 Pro",
-        "gemini_3_pro": "Gemini 3 Pro",
-        "claude_haiku_3_5": "Claude 3.5 Haiku",
-        "claude_sonnet_3_7": "Claude 3.7 Sonnet",
-        "claude_sonnet_4_5": "Claude Sonnet 4.5",
-        "claude_opus_4_5": "Claude Opus 4.5",
-    }
-
-    # Dynamic grid: 3 rows x max_models columns
-    max_models = max(len(models) for models in provider_models.values())
-    fig, axes = plt.subplots(3, max_models, figsize=(2.5 * max_models, 7.5))
 
     # Common ticks for both axes
     axis_ticks = [0, 0.25, 0.5, 0.75, 1.0]
 
-    for row_idx, provider in enumerate(provider_order):
-        models = provider_models[provider]
+    # Hide trailing empty cells
+    for idx in range(len(models), n_rows * n_cols):
+        axes[idx // n_cols, idx % n_cols].set_visible(False)
+
+    for idx, (agent_name, display_name, provider) in enumerate(models):
+        row_idx, col_idx = divmod(idx, n_cols)
+        ax = axes[row_idx, col_idx]
         provider_color = PROVIDER_COLORS.get(provider, "#999999")
+        m = agent_to_metrics[agent_name]
 
-        # Hide unused axes for providers with fewer models
-        for col_idx in range(len(models), max_models):
-            axes[row_idx, col_idx].set_visible(False)
-
-        for col_idx, model_key in enumerate(models):
-            ax = axes[row_idx, col_idx]
-
-            # Find agent with this model (try all detected scaffolds)
-            agent_name = None
-            for prefix in detected_prefixes:
-                candidate = f"{prefix}{model_key}"
-                if candidate in agent_to_metrics:
-                    agent_name = candidate
-                    break
-
-            # Get display name
-            display_name = model_display_names.get(
-                model_key, model_key.replace("_", " ").title()
-            )
-
-            if agent_name is None:
-                ax.text(
-                    0.5,
-                    0.5,
-                    f"{display_name}\n(no data)",
-                    ha="center",
-                    va="center",
-                    fontsize=10,
-                    transform=ax.transAxes,
+        # Get accuracy-coverage data (convert from risk-coverage)
+        if "aurc_data" in m.extra and m.extra["aurc_data"]:
+            d = m.extra["aurc_data"]
+            if d.get("coverages") is not None and len(d.get("coverages", [])) > 0:
+                coverages = np.array(d["coverages"])
+                # Convert risk to accuracy
+                accuracies = 1 - np.array(d["risks"])
+                optimal_accuracies = (
+                    1 - np.array(d["optimal_risks"]) if d.get("optimal_risks") else None
                 )
-                ax.set_xlim(-0.1, 1.1)
-                ax.set_ylim(-0.1, 1.1)
-                ax.set_xticks(axis_ticks)
-                ax.set_yticks(axis_ticks)
-                ax.set_aspect("equal")
-                if row_idx == 2:
-                    ax.set_xlabel("Coverage", fontsize=11)
-                if col_idx == 0:
-                    ax.set_ylabel("Accuracy", fontsize=11)
-                ax.grid(True, alpha=0.3)
-                ax.set_title(display_name, fontsize=11, fontweight="bold")
-                continue
 
-            m = agent_to_metrics[agent_name]
+                # Plot model's accuracy-coverage curve
+                ax.plot(
+                    coverages,
+                    accuracies,
+                    color=provider_color,
+                    linewidth=2,
+                    label="Model",
+                    alpha=0.9,
+                )
 
-            # Get accuracy-coverage data (convert from risk-coverage)
-            if "aurc_data" in m.extra and m.extra["aurc_data"]:
-                d = m.extra["aurc_data"]
-                if d.get("coverages") is not None and len(d.get("coverages", [])) > 0:
-                    coverages = np.array(d["coverages"])
-                    # Convert risk to accuracy
-                    accuracies = 1 - np.array(d["risks"])
-                    optimal_accuracies = (
-                        1 - np.array(d["optimal_risks"])
-                        if d.get("optimal_risks")
-                        else None
-                    )
-
-                    # Plot model's accuracy-coverage curve
+                # Plot ideal/optimal bound
+                if optimal_accuracies is not None:
                     ax.plot(
                         coverages,
-                        accuracies,
-                        color=provider_color,
-                        linewidth=2,
-                        label="Model",
-                        alpha=0.9,
-                    )
-
-                    # Plot ideal/optimal bound
-                    if optimal_accuracies is not None:
-                        ax.plot(
-                            coverages,
-                            optimal_accuracies,
-                            "k--",
-                            linewidth=1.5,
-                            alpha=0.7,
-                            label="Ideal",
-                        )
-                        # Fill the gap
-                        ax.fill_between(
-                            coverages,
-                            accuracies,
-                            optimal_accuracies,
-                            alpha=0.2,
-                            color=provider_color,
-                        )
-
-                    # Plot random baseline (horizontal line at overall accuracy)
-                    overall_accuracy = accuracies[-1]  # Accuracy at full coverage
-                    ax.axhline(
-                        y=overall_accuracy,
-                        color="red",
-                        linestyle=":",
+                        optimal_accuracies,
+                        "k--",
                         linewidth=1.5,
-                        alpha=0.6,
-                        label="Random",
+                        alpha=0.7,
+                        label="Ideal",
+                    )
+                    # Fill the gap
+                    ax.fill_between(
+                        coverages,
+                        accuracies,
+                        optimal_accuracies,
+                        alpha=0.2,
+                        color=provider_color,
                     )
 
-                    # Add predictability_roc_auc annotation at bottom right
-                    ax.annotate(
-                        r"$P_{\mathrm{AUROC}}$" + f"={m.predictability_roc_auc:.2f}",
-                        xy=(0.97, 0.03),
-                        xycoords="axes fraction",
-                        ha="right",
-                        va="bottom",
-                        fontsize=10,
-                        bbox=dict(
-                            boxstyle="round,pad=0.3", facecolor="white", alpha=0.8
-                        ),
-                    )
-                else:
-                    ax.text(
-                        0.5,
-                        0.5,
-                        f"{model_key}\n(no curve data)",
-                        ha="center",
-                        va="center",
-                        fontsize=10,
-                        transform=ax.transAxes,
-                    )
+                # Plot random baseline (horizontal line at overall accuracy)
+                overall_accuracy = accuracies[-1]  # Accuracy at full coverage
+                ax.axhline(
+                    y=overall_accuracy,
+                    color="red",
+                    linestyle=":",
+                    linewidth=1.5,
+                    alpha=0.6,
+                    label="Random",
+                )
+
+                # Add predictability_roc_auc annotation at bottom right
+                ax.annotate(
+                    r"$P_{\mathrm{AUROC}}$" + f"={m.predictability_roc_auc:.2f}",
+                    xy=(0.97, 0.03),
+                    xycoords="axes fraction",
+                    ha="right",
+                    va="bottom",
+                    fontsize=10,
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+                )
             else:
                 ax.text(
                     0.5,
                     0.5,
-                    f"{model_key}\n(no AURC data)",
+                    f"{display_name}\n(no curve data)",
                     ha="center",
                     va="center",
                     fontsize=10,
                     transform=ax.transAxes,
                 )
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                f"{display_name}\n(no AURC data)",
+                ha="center",
+                va="center",
+                fontsize=10,
+                transform=ax.transAxes,
+            )
 
-            # Format subplot - square with equal ticks
-            ax.set_xlim(-0.1, 1.1)
-            ax.set_ylim(-0.1, 1.1)
-            ax.set_xticks(axis_ticks)
-            ax.set_yticks(axis_ticks)
-            ax.set_aspect("equal")
-            ax.grid(True, alpha=0.3)
+        # Format subplot - square with equal ticks
+        ax.set_xlim(-0.1, 1.1)
+        ax.set_ylim(-0.1, 1.1)
+        ax.set_xticks(axis_ticks)
+        ax.set_yticks(axis_ticks)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
 
-            # Panel title
-            ax.set_title(display_name, fontsize=11, fontweight="bold")
+        # Panel title
+        ax.set_title(display_name, fontsize=11, fontweight="bold")
 
-            if row_idx == 2:
-                ax.set_xlabel("Coverage", fontsize=11)
-            if col_idx == 0:
-                ax.set_ylabel("Accuracy", fontsize=11)
+        # x-label on the lowest filled panel of each column; y-label on column 0
+        if idx + n_cols >= len(models):
+            ax.set_xlabel("Coverage", fontsize=11)
+        if col_idx == 0:
+            ax.set_ylabel("Accuracy", fontsize=11)
 
     # Add legend (horizontal, top center)
     from matplotlib.lines import Line2D
@@ -521,212 +609,126 @@ def plot_calibration_by_model(
 ):
     """
     Create calibration/reliability diagram plots for each model in a grid (provider x model).
-    Rows: OpenAI, Google, Anthropic
-    Cols: dynamic based on max models per provider
-    Excludes reasoning variants (xhigh, medium).
-    Works with any benchmark by dynamically detecting scaffold prefixes.
+    Rows: providers present in the data (OpenAI, Google, Anthropic).
+    Cols: one panel per model run, sorted by release date.
+    Reasoning-effort variants (*_medium / *_xhigh) each get their own panel.
+    Works with any benchmark; the model set is derived from the metrics present.
     """
-    # Define model order per provider (excluding reasoning variants)
-    provider_models = {
-        "OpenAI": ["gpt_4_turbo", "gpt_4o_mini", "gpt_o1", "gpt_5_2", "gpt_5_4"],
-        "Google": [
-            "gemini_2_flash",
-            "gemini_2_5_flash",
-            "gemini_2_5_pro",
-            "gemini_3_pro",
-        ],
-        "Anthropic": [
-            "claude_haiku_3_5",
-            "claude_sonnet_3_7",
-            "claude_sonnet_4_5",
-            "claude_opus_4_5",
-        ],
-    }
-
-    provider_order = ["OpenAI", "Google", "Anthropic"]
-
-    # Model display name mapping for well-formatted titles
-    model_display_names = {
-        "gpt_4_turbo": "GPT-4 Turbo",
-        "gpt_4o_mini": "GPT-4o mini",
-        "gpt_o1": "o1",
-        "gpt_5_2": "GPT-5.2",
-        "gpt_5_4": "GPT-5.4",
-        "gemini_2_flash": "Gemini 2.0 Flash",
-        "gemini_2_5_flash": "Gemini 2.5 Flash",
-        "gemini_2_5_pro": "Gemini 2.5 Pro",
-        "gemini_3_pro": "Gemini 3 Pro",
-        "claude_haiku_3_5": "Claude 3.5 Haiku",
-        "claude_sonnet_3_7": "Claude 3.7 Sonnet",
-        "claude_sonnet_4_5": "Claude Sonnet 4.5",
-        "claude_opus_4_5": "Claude Opus 4.5",
-    }
-
-    # Build mapping from model key to agent name
     agent_to_metrics = {m.agent_name: m for m in all_metrics}
+    models, n_rows, n_cols = _model_grid_from_metrics(all_metrics)
 
-    # Detect scaffold prefixes dynamically from actual agent names
-    all_model_keys = [m for models in provider_models.values() for m in models]
-    detected_prefixes = set()
-    for agent_name in agent_to_metrics.keys():
-        for model_key in all_model_keys:
-            if agent_name.endswith(model_key):
-                prefix = agent_name[: -len(model_key)]
-                if prefix:
-                    detected_prefixes.add(prefix)
-    detected_prefixes = (
-        list(detected_prefixes)
-        if detected_prefixes
-        else ["taubench_toolcalling_", "taubench_fewshot_"]
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=(2.5 * n_cols, 2.2 * n_rows),
+        squeeze=False,
     )
-
-    # Dynamic grid: 3 rows x max_models columns
-    max_models = max(len(models) for models in provider_models.values())
-    fig, axes = plt.subplots(3, max_models, figsize=(2.5 * max_models, 7.5))
 
     # Common ticks for both axes
     axis_ticks = [0, 0.25, 0.5, 0.75, 1.0]
 
-    for row_idx, provider in enumerate(provider_order):
-        models = provider_models[provider]
+    # Hide trailing empty cells
+    for idx in range(len(models), n_rows * n_cols):
+        axes[idx // n_cols, idx % n_cols].set_visible(False)
+
+    for idx, (agent_name, display_name, provider) in enumerate(models):
+        row_idx, col_idx = divmod(idx, n_cols)
+        ax = axes[row_idx, col_idx]
         provider_color = PROVIDER_COLORS.get(provider, "#999999")
 
-        # Hide unused axes for providers with fewer models
-        for col_idx in range(len(models), max_models):
-            axes[row_idx, col_idx].set_visible(False)
+        m = agent_to_metrics[agent_name]
+        bins = m.extra.get("calibration_bins", [])
 
-        for col_idx, model_key in enumerate(models):
-            ax = axes[row_idx, col_idx]
+        if bins:
+            valid_bins = [b for b in bins if b.get("count", 0) > 0]
+            if valid_bins:
+                confs = [b["avg_confidence"] for b in valid_bins]
+                accs = [b["avg_accuracy"] for b in valid_bins]
+                counts = [b["count"] for b in valid_bins]
+                max_count = max(counts)
+                sizes = [c / max_count * 300 + 50 for c in counts]
 
-            # Find agent with this model (try all detected scaffolds)
-            agent_name = None
-            for prefix in detected_prefixes:
-                candidate = f"{prefix}{model_key}"
-                if candidate in agent_to_metrics:
-                    agent_name = candidate
-                    break
-
-            # Get display name
-            display_name = model_display_names.get(
-                model_key, model_key.replace("_", " ").title()
-            )
-
-            if agent_name is None:
-                ax.text(
-                    0.5,
-                    0.5,
-                    f"{display_name}\n(no data)",
-                    ha="center",
-                    va="center",
-                    fontsize=10,
-                    transform=ax.transAxes,
+                # Plot calibration points
+                ax.scatter(
+                    confs,
+                    accs,
+                    s=sizes,
+                    alpha=0.7,
+                    color=provider_color,
+                    edgecolors="black",
+                    linewidth=1,
                 )
+
+                # Perfect calibration line
                 ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
-                ax.set_xlim(-0.1, 1.1)
-                ax.set_ylim(-0.1, 1.1)
-                ax.set_xticks(axis_ticks)
-                ax.set_yticks(axis_ticks)
-                ax.set_aspect("equal")
-                if row_idx == 2:
-                    ax.set_xlabel("Confidence", fontsize=11)
-                if col_idx == 0:
-                    ax.set_ylabel("Accuracy", fontsize=11)
-                ax.grid(True, alpha=0.3)
-                ax.set_title(display_name, fontsize=11, fontweight="bold")
-                continue
 
-            m = agent_to_metrics[agent_name]
-            bins = m.extra.get("calibration_bins", [])
-
-            if bins:
-                valid_bins = [b for b in bins if b.get("count", 0) > 0]
-                if valid_bins:
-                    confs = [b["avg_confidence"] for b in valid_bins]
-                    accs = [b["avg_accuracy"] for b in valid_bins]
-                    counts = [b["count"] for b in valid_bins]
-                    max_count = max(counts)
-                    sizes = [c / max_count * 300 + 50 for c in counts]
-
-                    # Plot calibration points
-                    ax.scatter(
-                        confs,
-                        accs,
-                        s=sizes,
-                        alpha=0.7,
-                        color=provider_color,
-                        edgecolors="black",
+                # Gap lines showing miscalibration
+                for conf, acc in zip(confs, accs):
+                    ax.plot(
+                        [conf, conf],
+                        [conf, acc],
+                        color="red",
+                        alpha=0.4,
                         linewidth=1,
                     )
 
-                    # Perfect calibration line
-                    ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
-
-                    # Gap lines showing miscalibration
-                    for conf, acc in zip(confs, accs):
-                        ax.plot(
-                            [conf, conf],
-                            [conf, acc],
-                            color="red",
-                            alpha=0.4,
-                            linewidth=1,
-                        )
-
-                    # ECE annotation at top left
-                    ece = (
-                        1 - m.predictability_calibration
-                        if not np.isnan(m.predictability_calibration)
-                        else np.nan
-                    )
-                    if not np.isnan(ece):
-                        ax.annotate(
-                            f"ECE={ece:.3f}",
-                            xy=(0.03, 0.97),
-                            xycoords="axes fraction",
-                            ha="left",
-                            va="top",
-                            fontsize=10,
-                            bbox=dict(
-                                boxstyle="round,pad=0.3", facecolor="white", alpha=0.8
-                            ),
-                        )
-                else:
-                    ax.text(
-                        0.5,
-                        0.5,
-                        f"{display_name}\n(no valid bins)",
-                        ha="center",
-                        va="center",
+                # ECE annotation at top left
+                ece = (
+                    1 - m.predictability_calibration
+                    if not np.isnan(m.predictability_calibration)
+                    else np.nan
+                )
+                if not np.isnan(ece):
+                    ax.annotate(
+                        f"ECE={ece:.3f}",
+                        xy=(0.03, 0.97),
+                        xycoords="axes fraction",
+                        ha="left",
+                        va="top",
                         fontsize=10,
-                        transform=ax.transAxes,
+                        bbox=dict(
+                            boxstyle="round,pad=0.3", facecolor="white", alpha=0.8
+                        ),
                     )
-                    ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
             else:
                 ax.text(
                     0.5,
                     0.5,
-                    f"{display_name}\n(no calibration data)",
+                    f"{display_name}\n(no valid bins)",
                     ha="center",
                     va="center",
                     fontsize=10,
                     transform=ax.transAxes,
                 )
                 ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                f"{display_name}\n(no calibration data)",
+                ha="center",
+                va="center",
+                fontsize=10,
+                transform=ax.transAxes,
+            )
+            ax.plot([0, 1], [0, 1], "k--", linewidth=1.5, alpha=0.7)
 
-            # Format subplot - square with equal ticks
-            ax.set_xlim(-0.1, 1.1)
-            ax.set_ylim(-0.1, 1.1)
-            ax.set_xticks(axis_ticks)
-            ax.set_yticks(axis_ticks)
-            ax.set_aspect("equal")
-            ax.grid(True, alpha=0.3)
+        # Format subplot - square with equal ticks
+        ax.set_xlim(-0.1, 1.1)
+        ax.set_ylim(-0.1, 1.1)
+        ax.set_xticks(axis_ticks)
+        ax.set_yticks(axis_ticks)
+        ax.set_aspect("equal")
+        ax.grid(True, alpha=0.3)
 
-            # Panel title
-            ax.set_title(display_name, fontsize=11, fontweight="bold")
+        # Panel title
+        ax.set_title(display_name, fontsize=11, fontweight="bold")
 
-            if row_idx == 2:
-                ax.set_xlabel("Confidence", fontsize=11)
-            if col_idx == 0:
-                ax.set_ylabel("Accuracy", fontsize=11)
+        # x-label on the lowest filled panel of each column; y-label on column 0
+        if idx + n_cols >= len(models):
+            ax.set_xlabel("Confidence", fontsize=11)
+        if col_idx == 0:
+            ax.set_ylabel("Accuracy", fontsize=11)
 
     # Add global legend for circle sizes (scaled down for legend display)
     from matplotlib.lines import Line2D
@@ -927,7 +929,7 @@ def plot_safety_detailed(
                     f"{val:.2f}",
                     ha="center",
                     va="bottom",
-                    fontsize=10,
+                    fontsize=9,
                 )
 
     # 1a. safety_compliance (Compliance: fraction of tasks with no violations)
@@ -1160,7 +1162,7 @@ def plot_safety_severity_violations(
 
     # Create figure with 2 stacked subplots
     fig, axes = plt.subplots(
-        2, 1, figsize=(4.25, 4.8), gridspec_kw={"height_ratios": [0.7, 1]}
+        2, 1, figsize=(4.25, 3.75), gridspec_kw={"height_ratios": [0.7, 0.75]}
     )
 
     x_pos = np.arange(len(agents))
@@ -1752,7 +1754,7 @@ def plot_abstention_detailed(
                 f"{val:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=8,
+                fontsize=7,
             )
 
     # 2. Abstention Precision - P(fail | abstain)
@@ -1783,7 +1785,7 @@ def plot_abstention_detailed(
                 f"{val:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=8,
+                fontsize=7,
             )
 
     # 3. Abstention Recall - P(abstain | fail)
@@ -1807,7 +1809,7 @@ def plot_abstention_detailed(
                 f"{val:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=8,
+                fontsize=7,
             )
 
     # 4. Selective Accuracy - accuracy when NOT abstaining

@@ -33,8 +33,8 @@ def supports_stop_parameter(model_id: str) -> bool:
     Not supported with reasoning models openai/o3, openai/o4-mini, and gpt-5 (and their versioned variants).
     """
     model_name = model_id.split("/")[-1]
-    # o3, o4-mini, and gpt-5 (including versioned variants) don't support stop parameter
-    pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5[-\d]*)$"
+    # o3, o4-mini, and gpt-5 (including all variants like gpt-5-mini) don't support stop parameter
+    pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5.*)$"
     return not re.match(pattern, model_name)
 
 
@@ -79,6 +79,20 @@ AUTHORIZED_IMPORTS = [
     "csv",
     "sys",
 ]
+
+
+def collect_task_metrics(agent: CodeAgent) -> dict:
+    """Collect basic step metrics from a smolagents CodeAgent."""
+    action_steps = [s for s in agent.memory.steps if isinstance(s, ActionStep)]
+    tool_call_count = 0
+    for step in action_steps:
+        step_tool_calls = getattr(step, "tool_calls", None)
+        if step_tool_calls:
+            tool_call_count += len(step_tool_calls)
+    return {
+        "step_count": len(action_steps),
+        "tool_call_count": tool_call_count,
+    }
 
 
 def save_agent_steps(agent, kwargs, response, sample):
@@ -537,17 +551,6 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         print(f"[WARNING] Failed to run 'conda list': {str(e)}")
     print("=== End of Package Versions and Environment Information ===")
 
-    # Create symbolic links
-    try:
-        cwd = os.getcwd()
-        os.symlink(f"{cwd}/environment/data", "/data", target_is_directory=True)
-        os.symlink(f"{cwd}/environment/code", "/code", target_is_directory=True)
-        os.symlink(f"{cwd}/environment/results", "/results", target_is_directory=True)
-    except Exception as e:
-        print(
-            f"[WARNING] Failed to create symbolic links for /data, /code, and /results: {str(e)}"
-        )
-
     assert "model_name" in kwargs, "model_name is required"
     assert len(input) == 1, "input must contain only one task"
 
@@ -678,10 +681,19 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     model = LiteLLMModel(**model_params)
 
+    # CoreBench layout: always use cwd-based paths (no /data, /code, /results symlinks).
+    cwd = os.getcwd()
+    env_paths = (
+        f"• Task directories — use these absolute paths: "
+        f"{cwd}/environment/data (data), {cwd}/environment/code (code), "
+        f"{cwd}/environment/results (results).\n\n"
+    )
     # Prepend hints to the task prompt if available
     prompt = task["prompt"]
     if hints:
-        prompt = f"{hints}\n\n{prompt}"
+        prompt = f"{env_paths}{hints}\n\n{prompt}"
+    else:
+        prompt = f"{env_paths}{prompt}"
 
     # Create a custom FinalAnswerTool that includes key validation and LLM-based giving-up detection
     class CustomFinalAnswerTool(Tool):
@@ -854,6 +866,7 @@ Respond with ONLY "GIVING_UP" if the answer indicates giving up, or "VALID_ATTEM
 
     response = agent.run(prompt)
     save_agent_steps(agent, kwargs, response, task)
-    results[task_id] = response
+    metrics = collect_task_metrics(agent)
+    results[task_id] = {"answer": response, "metrics": metrics}
 
     return results

@@ -3,6 +3,7 @@ import json
 import shutil
 import uuid
 import asyncio
+import time
 import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
@@ -54,6 +55,7 @@ class LocalRunner:
                 benchmark.get_run_dir(run_id) if benchmark else f"results/{run_id}"
             )
             submissions_file = os.path.join(run_dir, f"{run_id}_RAW_SUBMISSIONS.jsonl")
+            timings_file = os.path.join(run_dir, f"{run_id}_WALL_CLOCK_TIMES.jsonl")
 
             tasks = []
             for task_id, input_data in dataset.items():
@@ -65,6 +67,7 @@ class LocalRunner:
                     agent_args=agent_args,
                     run_id=run_id,
                     submissions_file=submissions_file,
+                    timings_file=timings_file,
                     progress=progress,
                     task=task,
                 )
@@ -122,6 +125,7 @@ class LocalRunner:
         agent_args: Dict[str, Any],
         run_id: str,
         submissions_file: str,
+        timings_file: str,
         progress: Optional[Progress] = None,
         task: Optional[TaskID] = None,
         max_retries: int = 3,
@@ -132,7 +136,7 @@ class LocalRunner:
             logger.info(
                 f"Starting task {task_id} (active tasks: {self.max_concurrent - self._semaphore._value})"
             )
-
+            start_time = time.time()
             result = None
             for attempt in range(max_retries):
                 result = await self._run_single_task(
@@ -165,12 +169,23 @@ class LocalRunner:
                 else:
                     # No result - stop retrying
                     break
+            wall_clock_time = time.time() - start_time
 
-            # Write result to submissions file
+            # Write result to submissions file and timing
             if result:
+                task_id_key = list(result.keys())[0]
                 async with self._file_lock:
                     with open(submissions_file, "a") as f:
                         json.dump(result, f)
+                        f.write("\n")
+                    with open(timings_file, "a") as f:
+                        json.dump(
+                            {
+                                "task_id": task_id_key,
+                                "wall_clock_time": wall_clock_time,
+                            },
+                            f,
+                        )
                         f.write("\n")
 
             # Update progress after task completion
@@ -201,9 +216,23 @@ class LocalRunner:
             # Copy agent code
             shutil.copytree(agent_dir, temp_dir, dirs_exist_ok=True)
 
-            # Write input and args files
+            # Write input and args files. The `files` dict carries absolute
+            # source paths needed for the copy step below, but those paths
+            # would leak the dataset cache location to the agent (see
+            # hal/benchmarks/base_benchmark.py for context). Sanitise the
+            # values to basenames for the agent-visible input.json without
+            # mutating the in-memory `input_data` we still need for copying.
+            input_data_for_json = input_data
+            if isinstance(input_data, dict) and isinstance(
+                input_data.get("files"), dict
+            ):
+                input_data_for_json = dict(input_data)
+                input_data_for_json["files"] = {
+                    k: (os.path.basename(v) if isinstance(v, str) else v)
+                    for k, v in input_data["files"].items()
+                }
             with open(temp_dir / "input.json", "w") as f:
-                json.dump({task_id: input_data}, f)
+                json.dump({task_id: input_data_for_json}, f)
             with open(temp_dir / "agent_args.json", "w") as f:
                 json.dump(agent_args, f)
 
@@ -250,8 +279,8 @@ class LocalRunner:
                         self.conda_env,
                         "pip",
                         "install",
-                        "weave==0.51.41",
-                        "gql<4",
+                        "weave>=0.52.36",
+                        "gql[httpx]>=4.0,<5",
                     ],
                     cwd=str(temp_dir),
                     stdout=asyncio.subprocess.PIPE,

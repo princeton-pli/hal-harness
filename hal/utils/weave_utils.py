@@ -8,6 +8,20 @@ import time
 
 logger = logging.getLogger(__name__)
 
+
+def _weave_client_project_id(client: Any) -> str:
+    """Resolve Weave trace project id across SDK versions (public ``project_id`` vs ``_project_id()``)."""
+    project_id = getattr(client, "project_id", None)
+    if isinstance(project_id, str):
+        return project_id
+    legacy = getattr(client, "_project_id", None)
+    if callable(legacy):
+        return legacy()
+    raise AttributeError(
+        f"{type(client).__name__} has neither project_id nor callable _project_id"
+    )
+
+
 # FIXME: move to new file
 MODEL_PRICES_DICT = {
     "text-embedding-3-small": {"prompt_tokens": 0.02 / 1e6, "completion_tokens": 0},
@@ -61,28 +75,21 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 75 / 1e6,
         "completion_tokens": 150 / 1e6,
     },
-    "gpt-5": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
     "gpt-5-mini": {"prompt_tokens": 0.25 / 1e6, "completion_tokens": 2 / 1e6},
     "gpt-5-nano": {"prompt_tokens": 0.05 / 1e6, "completion_tokens": 0.4 / 1e6},
     "gpt-5-pro": {"prompt_tokens": 15 / 1e6, "completion_tokens": 120 / 1e6},
     "gpt-5.1": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
-    "gpt-5.2": {"prompt_tokens": 1.75 / 1e6, "completion_tokens": 14 / 1e6},
     "gpt-5.2-pro": {"prompt_tokens": 21 / 1e6, "completion_tokens": 168 / 1e6},
-    "gpt-5.4": {"prompt_tokens": 2.5 / 1e6, "completion_tokens": 15 / 1e6},
     "gpt-5.4-mini": {"prompt_tokens": 0.75 / 1e6, "completion_tokens": 4.5 / 1e6},
     "gpt-5.4-nano": {"prompt_tokens": 0.2 / 1e6, "completion_tokens": 1.25 / 1e6},
-    "gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
     "openai/gpt-5": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
     "openai/gpt-5-mini": {"prompt_tokens": 0.25 / 1e6, "completion_tokens": 2 / 1e6},
     "openai/gpt-5-nano": {"prompt_tokens": 0.05 / 1e6, "completion_tokens": 0.4 / 1e6},
     "openai/gpt-5-pro": {"prompt_tokens": 15 / 1e6, "completion_tokens": 120 / 1e6},
     "openai/gpt-5.1": {"prompt_tokens": 1.25 / 1e6, "completion_tokens": 10 / 1e6},
-    "openai/gpt-5.2": {"prompt_tokens": 1.75 / 1e6, "completion_tokens": 14 / 1e6},
     "openai/gpt-5.2-pro": {"prompt_tokens": 21 / 1e6, "completion_tokens": 168 / 1e6},
-    "openai/gpt-5.4": {"prompt_tokens": 2.5 / 1e6, "completion_tokens": 15 / 1e6},
     "openai/gpt-5.4-mini": {"prompt_tokens": 0.75 / 1e6, "completion_tokens": 4.5 / 1e6},
     "openai/gpt-5.4-nano": {"prompt_tokens": 0.2 / 1e6, "completion_tokens": 1.25 / 1e6},
-    "openai/gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
     "Mistral-small-zgjes": {
         "prompt_tokens": 0.001 / 1000,
         "completion_tokens": 0.003 / 1000,
@@ -406,6 +413,53 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.50 / 1e6,
         "completion_tokens": 3.0 / 1e6,
     },
+    # Gemini 3.1 Pro Preview (Feb 2026)
+    "gemini/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "google/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    # Gemini 3.5 Flash (GA May 2026; thinking always on)
+    "gemini/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    "gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    "google/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
+    # OpenRouter-routed Gemini aliases (pricing matches Google direct, OpenRouter applies ~5% markup)
+    "openrouter/google/gemini-2.0-flash-001": {
+        "prompt_tokens": 0.10 / 1e6,
+        "completion_tokens": 0.40 / 1e6,
+    },
+    "openrouter/google/gemini-2.5-flash": {
+        "prompt_tokens": 0.30 / 1e6,
+        "completion_tokens": 2.50 / 1e6,
+    },
+    "openrouter/google/gemini-2.5-pro": {
+        "prompt_tokens": 1.25 / 1e6,
+        "completion_tokens": 10.0 / 1e6,
+    },
+    "openrouter/google/gemini-3.1-pro-preview": {
+        "prompt_tokens": 2.0 / 1e6,
+        "completion_tokens": 12.0 / 1e6,
+    },
+    "openrouter/google/gemini-3.5-flash": {
+        "prompt_tokens": 1.50 / 1e6,
+        "completion_tokens": 9.0 / 1e6,
+    },
     "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {
         "prompt_tokens": 0.27 / 1e6,
         "completion_tokens": 0.85 / 1e6,
@@ -462,6 +516,14 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 1 / 1e6,
         "completion_tokens": 5 / 1e6,
     },
+    "openrouter/anthropic/claude-3.5-haiku": {
+        "prompt_tokens": 1 / 1e6,
+        "completion_tokens": 5 / 1e6,
+    },
+    "openrouter/anthropic/claude-3-haiku": {
+        "prompt_tokens": 0.25 / 1e6,
+        "completion_tokens": 1.25 / 1e6,
+    },
     "openrouter/anthropic/claude-sonnet-4.5": {
         "prompt_tokens": 3 / 1e6,
         "completion_tokens": 15 / 1e6,
@@ -501,6 +563,17 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 5 / 1e6,
         "completion_tokens": 25 / 1e6,
     },
+    # Claude Opus 4.7 (Apr 2026, same headline pricing as 4.5/4.6)
+    "claude-opus-4-7": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4-7": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
+    "claude-opus-4.7": {"prompt_tokens": 5 / 1e6, "completion_tokens": 25 / 1e6},
+    "anthropic/claude-opus-4.7": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 25 / 1e6,
+    },
     # Claude Haiku models
     "claude-haiku-3.5": {"prompt_tokens": 1 / 1e6, "completion_tokens": 5 / 1e6},
     "anthropic/claude-haiku-3.5": {
@@ -529,6 +602,18 @@ MODEL_PRICES_DICT = {
     "openai/gpt-5.4": {"prompt_tokens": 2.50 / 1e6, "completion_tokens": 15 / 1e6},
     "gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
     "openai/gpt-5.4-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
+    # GPT-5.5 — released 2026-04-23, dated snapshot 2026-04-23
+    # https://developers.openai.com/api/docs/models/gpt-5.5  ($5 in / $30 out / $0.50 cached per M)
+    "gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "gpt-5.5-2026-04-23": {"prompt_tokens": 5 / 1e6, "completion_tokens": 30 / 1e6},
+    "openai/gpt-5.5-2026-04-23": {
+        "prompt_tokens": 5 / 1e6,
+        "completion_tokens": 30 / 1e6,
+    },
+    # GPT-5.5 Pro — $30 in / $180 out per M (same headline as gpt-5.4-pro)
+    "gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
+    "openai/gpt-5.5-pro": {"prompt_tokens": 30 / 1e6, "completion_tokens": 180 / 1e6},
 }
 
 CACHED_PRICE_OVERRIDES = {
@@ -545,6 +630,32 @@ CACHED_PRICE_OVERRIDES = {
     "anthropic/claude-sonnet-4-5": 0.30 / 1e6,
     "claude-opus-4-5": 0.50 / 1e6,
     "anthropic/claude-opus-4-5": 0.50 / 1e6,
+    "claude-opus-4-7": 0.50 / 1e6,
+    "anthropic/claude-opus-4-7": 0.50 / 1e6,
+    "claude-opus-4.7": 0.50 / 1e6,
+    "anthropic/claude-opus-4.7": 0.50 / 1e6,
+    "openrouter/anthropic/claude-3-haiku": 0.03 / 1e6,
+    "openrouter/anthropic/claude-3-5-haiku": 0.10 / 1e6,
+    "openrouter/anthropic/claude-3.5-haiku": 0.10 / 1e6,
+    "openrouter/anthropic/claude-sonnet-4": 0.30 / 1e6,
+    # Gemini cached input overrides
+    "gemini-2.0-flash": 0.025 / 1e6,
+    "gemini/gemini-2.0-flash": 0.025 / 1e6,
+    "google/gemini-2.0-flash": 0.025 / 1e6,
+    "gemini-2.5-pro": 0.125 / 1e6,
+    "gemini/gemini-2.5-pro": 0.125 / 1e6,
+    "google/gemini-2.5-pro": 0.125 / 1e6,
+    "gemini-3.1-pro-preview": 0.20 / 1e6,
+    "gemini/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "google/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "gemini-3.5-flash": 0.15 / 1e6,
+    "gemini/gemini-3.5-flash": 0.15 / 1e6,
+    "google/gemini-3.5-flash": 0.15 / 1e6,
+    "openrouter/google/gemini-2.0-flash-001": 0.025 / 1e6,
+    "openrouter/google/gemini-2.5-flash": 0.030 / 1e6,
+    "openrouter/google/gemini-2.5-pro": 0.125 / 1e6,
+    "openrouter/google/gemini-3.1-pro-preview": 0.20 / 1e6,
+    "openrouter/google/gemini-3.5-flash": 0.15 / 1e6,
     "claude-opus-4-20250514": 1.50 / 1e6,
     "anthropic/claude-opus-4-20250514": 1.50 / 1e6,
     "claude-opus-4.1-20250805": 1.50 / 1e6,
@@ -566,6 +677,14 @@ CACHED_PRICE_OVERRIDES = {
     "openai/gpt-5.4": 0.25 / 1e6,
     "gpt-5.4-pro": 3.0 / 1e6,
     "openai/gpt-5.4-pro": 3.0 / 1e6,
+    # GPT-5.5: cached input $0.50/M (per developers.openai.com pricing table)
+    "gpt-5.5": 0.50 / 1e6,
+    "openai/gpt-5.5": 0.50 / 1e6,
+    "gpt-5.5-2026-04-23": 0.50 / 1e6,
+    "openai/gpt-5.5-2026-04-23": 0.50 / 1e6,
+    # GPT-5.5 Pro: cached scales like gpt-5.4-pro (~10% of input)
+    "gpt-5.5-pro": 3.0 / 1e6,
+    "openai/gpt-5.5-pro": 3.0 / 1e6,
     "o3-2025-04-16": 0.5 / 1e6,
     "openai/o3-2025-04-16": 0.5 / 1e6,
     # Gemini 3 & 2.5 cached pricing (90% discount)
@@ -676,7 +795,7 @@ def fetch_weave_calls(client) -> List[Dict[str, Any]]:
         return list(
             client.server.calls_query_stream(
                 {
-                    "project_id": client._project_id(),
+                    "project_id": _weave_client_project_id(client),
                     "filter": {"trace_roots_only": False},
                     "sort_by": [{"field": "started_at", "direction": "desc"}],
                 }
@@ -726,7 +845,7 @@ def get_total_cost(client):
         return list(
             client.server.calls_query_stream(
                 CallsQueryReq(
-                    project_id=client._project_id(),
+                    project_id=_weave_client_project_id(client),
                     filter=CallsFilter(trace_roots_only=False),
                     columns=["summary"],
                 )
@@ -841,7 +960,7 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
         print("Exception processing trace of call:", call)
         ended_at = None
 
-    json_call = call.dict()
+    json_call = call.model_dump()
     json_call["started_at"] = started_at
     json_call["ended_at"] = ended_at
     json_call["weave_task_id"] = call.attributes["weave_task_id"]
@@ -850,21 +969,23 @@ def process_weave_output(call: Dict[str, Any]) -> Dict[str, Any]:
     return json_call
 
 
-def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
-    """Get processed Weave calls with progress tracking"""
+def get_weave_calls(client) -> Tuple[Dict[str, Dict[str, Any]], Dict]:
+    """Get processed Weave calls with progress tracking.
+
+    Returns a compact dict keyed by task_id (one message array per task)
+    and a latency dict with first/last call timestamps per task.
+    """
     logger.info("Getting Weave traces (this can take a while)...")
 
-    # dict to store latency for each task
     latency_dict = {}
 
     with create_progress() as progress:
-        # Fetch calls
         task1 = progress.add_task("Fetching Weave calls...", total=1)
         calls = fetch_weave_calls(client)
         progress.update(task1, completed=1)
 
-        # Processed calls
-        processed_calls = []
+        # Group calls by task_id; filter to calls with output.usage (real LLM completions)
+        task_calls: Dict[str, list] = {}
 
         for call in calls:
             # Skip calls that don't have weave_task_id (e.g., internal calls for prompt variation generation)
@@ -873,41 +994,102 @@ def get_weave_calls(client) -> Tuple[List[Dict[str, Any]], str, str]:
                 continue
 
             task_id = call.attributes["weave_task_id"]
-            processed_call = process_weave_output(call)
-            if processed_call:
-                processed_calls.append(processed_call)
 
+            # --- latency tracking (unchanged logic) ---
+            try:
+                started_at = call.started_at.isoformat()
+            except Exception:
+                started_at = None
+
+            if started_at:
                 if task_id not in latency_dict:
                     latency_dict[task_id] = {
-                        "first_call_timestamp": processed_call["started_at"],
-                        "last_call_timestamp": processed_call["started_at"],
+                        "first_call_timestamp": started_at,
+                        "last_call_timestamp": started_at,
                     }
                 else:
-                    if (
-                        processed_call["started_at"]
-                        < latency_dict[task_id]["first_call_timestamp"]
-                    ):
-                        latency_dict[task_id]["first_call_timestamp"] = processed_call[
-                            "started_at"
-                        ]
-                    if (
-                        processed_call["started_at"]
-                        > latency_dict[task_id]["last_call_timestamp"]
-                    ):
-                        latency_dict[task_id]["last_call_timestamp"] = processed_call[
-                            "started_at"
-                        ]
+                    if started_at < latency_dict[task_id]["first_call_timestamp"]:
+                        latency_dict[task_id]["first_call_timestamp"] = started_at
+                    if started_at > latency_dict[task_id]["last_call_timestamp"]:
+                        latency_dict[task_id]["last_call_timestamp"] = started_at
+
+            # --- filter to calls with output.usage ---
+            call_dict = call.model_dump()
+            output = call_dict.get("output")
+            if not isinstance(output, dict) or not output.get("usage"):
+                continue
+
+            task_calls.setdefault(task_id, []).append(call_dict)
 
             progress.update(task1, advance=1)
 
+    # Compute total latency per task
     for task_id in latency_dict:
         latency_dict[task_id]["total_time"] = (
             datetime.fromisoformat(latency_dict[task_id]["last_call_timestamp"])
             - datetime.fromisoformat(latency_dict[task_id]["first_call_timestamp"])
         ).total_seconds()
 
-    logger.info(f"Total Weave traces: {len(processed_calls)}")
-    return processed_calls, latency_dict
+    # Build compact result: one message array + metadata per task
+    compact_results: Dict[str, Dict[str, Any]] = {}
+    for task_id, calls_list in task_calls.items():
+        # The call with the most messages has the fullest conversation
+        max_call = max(
+            calls_list,
+            key=lambda c: len(c.get("inputs", {}).get("messages", [])),
+        )
+
+        messages = list(max_call["inputs"].get("messages", []))
+
+        # Append the assistant's final response from that call
+        choices = max_call.get("output", {}).get("choices", [])
+        if choices:
+            assistant_msg = choices[0].get("message")
+            if assistant_msg:
+                messages.append(assistant_msg)
+
+        # Lightweight per-call metadata (usage + timing only)
+        call_metadata = []
+        for c in sorted(calls_list, key=lambda x: x.get("started_at", "")):
+            try:
+                c_started = (
+                    c["started_at"].isoformat()
+                    if hasattr(c["started_at"], "isoformat")
+                    else c["started_at"]
+                )
+            except Exception:
+                c_started = None
+            try:
+                c_ended = (
+                    c["ended_at"].isoformat()
+                    if hasattr(c["ended_at"], "isoformat")
+                    else c["ended_at"]
+                )
+            except Exception:
+                c_ended = None
+            call_metadata.append(
+                {
+                    "usage": c["output"]["usage"],
+                    "started_at": c_started,
+                    "ended_at": c_ended,
+                }
+            )
+
+        model = max_call["inputs"].get("model") or max_call.get("output", {}).get(
+            "model"
+        )
+
+        compact_results[task_id] = {
+            "messages": messages,
+            "call_metadata": call_metadata,
+            "model": model,
+            "call_count": len(calls_list),
+        }
+
+    logger.info(
+        f"Total Weave traces: {sum(r['call_count'] for r in compact_results.values())}"
+    )
+    return compact_results, latency_dict
 
 
 def get_task_cost(run_id: str, task_id: str) -> dict:
@@ -938,7 +1120,7 @@ def get_task_cost(run_id: str, task_id: str) -> dict:
         return list(
             client.server.calls_query_stream(
                 CallsQueryReq(
-                    project_id=client._project_id(),
+                    project_id=_weave_client_project_id(client),
                     filter=CallsFilter(trace_roots_only=False),
                     columns=["summary", "attributes"],
                 )

@@ -33,9 +33,14 @@ class BenchmarkManager:
             "assistantbench",
             "colbench_backend_programming",
             "colbench_frontend_design",
+            "replicatorbench",
         ]
 
-    def get_benchmark(self, benchmark_name: str) -> BaseBenchmark:
+    def get_benchmark(
+        self,
+        benchmark_name: str,
+        max_tasks: Optional[int] = None,
+    ) -> BaseBenchmark:
         """Get benchmark instance for given name"""
         if benchmark_name == "gaia":
             from .benchmarks.gaia import GaiaBenchmark
@@ -71,15 +76,17 @@ class BenchmarkManager:
         elif benchmark_name == "corebench_easy":
             from .benchmarks.corebench import CoreBenchEasy
 
-            benchmark = CoreBenchEasy(self.agent_dir, self.config)
+            benchmark = CoreBenchEasy(self.agent_dir, self.config, max_tasks=max_tasks)
         elif benchmark_name == "corebench_medium":
             from .benchmarks.corebench import CoreBenchMedium
 
-            benchmark = CoreBenchMedium(self.agent_dir, self.config)
+            benchmark = CoreBenchMedium(
+                self.agent_dir, self.config, max_tasks=max_tasks
+            )
         elif benchmark_name == "corebench_hard":
             from .benchmarks.corebench import CoreBenchHard
 
-            benchmark = CoreBenchHard(self.agent_dir, self.config)
+            benchmark = CoreBenchHard(self.agent_dir, self.config, max_tasks=max_tasks)
         elif benchmark_name == "scienceagentbench":
             from .benchmarks.scienceagentbench import ScienceAgentBench
 
@@ -96,6 +103,12 @@ class BenchmarkManager:
             from .benchmarks.colbench import ColBenchBenchmark
 
             benchmark = ColBenchBenchmark(self.agent_dir, self.config, benchmark_name)
+
+        elif benchmark_name == "replicatorbench":
+            from .benchmarks.replicatorbench import ReplicatorBenchmark
+
+            benchmark = ReplicatorBenchmark(self.agent_dir, self.config)
+
         else:
             raise ValueError(f"Unknown benchmark: {benchmark_name}")
 

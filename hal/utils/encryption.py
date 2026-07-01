@@ -21,13 +21,15 @@ class ZipEncryption:
         with tempfile.TemporaryDirectory() as temp_dir:
             encrypted_files = []
 
-            # Encrypt each JSON file
+            # Encrypt each file
             for file_path in file_paths:
                 file_name = Path(file_path).name
                 encrypted_path = Path(temp_dir) / f"{file_name}.encrypted"
 
-                # Encrypt the JSON file
-                self.json_encryptor.encrypt_json_file(file_path, encrypted_path)
+                if file_path.endswith(".json"):
+                    self.json_encryptor.encrypt_json_file(file_path, encrypted_path)
+                else:
+                    self.json_encryptor.encrypt_raw_file(file_path, encrypted_path)
                 encrypted_files.append(encrypted_path)
 
             # Create zip archive containing the encrypted files

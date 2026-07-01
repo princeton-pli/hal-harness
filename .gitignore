@@ -12,6 +12,7 @@ logs/**
 
 # Results
 results/**
+.prefect_results/
 hal.egg-info/**
 
 # Benchmarks

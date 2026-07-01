@@ -3,6 +3,7 @@ from functools import partial
 import tiktoken
 from mdconvert import MarkdownConverter
 
+import base64
 import subprocess
 from pathlib import Path
 import re
@@ -31,11 +32,16 @@ def supports_stop_parameter(model_id: str) -> bool:
     """
     Check if the model supports the `stop` parameter.
 
-    Not supported with reasoning models openai/o3, openai/o4-mini, and gpt-5 (and their versioned variants).
+    Not supported with reasoning models openai/o3, openai/o4-mini, and the
+    gpt-5 family (including dotted minor versions like 5.1, 5.2, 5.5; dated
+    snapshots like 5.2-2025-12-11; and -pro / -codex variants).
     """
     model_name = model_id.split("/")[-1]
-    # o3, o4-mini, and gpt-5 (including versioned variants) don't support stop parameter
-    pattern = r"^(o3[-\d]*|o4-mini[-\d]*|gpt-5[-\d]*)$"
+    # `[-\w.]*` allows dotted minors (gpt-5.5), dated snapshots
+    # (gpt-5.2-2025-12-11) and named variants (gpt-5.5-pro, gpt-5.2-codex).
+    # The `gpt-5` / `o3` / `o4-mini` prefix anchors keep this from
+    # over-matching other model families.
+    pattern = r"^(o3[-\w.]*|o4-mini[-\w.]*|gpt-5[-\w.]*)$"
     return not re.match(pattern, model_name)
 
 
@@ -80,28 +86,45 @@ except ImportError:
         create_gaia_perturbator = None
         wrap_tools_with_perturbation = None
 
+# NOTE on `.*` suffixes: the smolagents authorisation check is a prefix-tree
+# walk, so a bare entry like "PIL" allows *only* the literal module `PIL` and
+# rejects `PIL.Image`. Submodule access requires the `.*` wildcard. The
+# `posixpath`/`ntpath`/`genericpath` entries cover the post-hoc check that
+# fires when `os.path.join(...)` resolves through `os`'s platform-specific
+# path module. `openpyxl`/`xlrd` are pulled in by `pandas.read_excel` for
+# `.xlsx` and `.xls` parsing respectively.
 AUTHORIZED_IMPORTS = [
-    "requests",
+    "requests.*",
     "zipfile",
     "os",
-    "pandas",
+    "posixpath",
+    "ntpath",
+    "genericpath",
+    # Required for the `write_file` tool's binary-mode workflow: the agent
+    # downloads bytes (e.g. `r = requests.get(url); r.content`) and passes
+    # `base64.b64encode(r.content).decode()` into write_file. Without `base64`
+    # in the allowlist the agent can't actually produce the encoded payload.
+    "base64",
+    "pandas.*",
     "numpy.*",
-    "sympy",
+    "sympy.*",
     "json",
-    "bs4",
+    "bs4.*",
     "pubchempy",
-    "xml",
+    "xml.*",
     "yahoo_finance",
-    "Bio",
-    "sklearn",
+    "Bio.*",
+    "sklearn.*",
     "scipy.*",
     "pydub",
     "io",
-    "PIL",
-    "chess",
-    "PyPDF2",
-    "pptx",
-    "torch",
+    "PIL.*",
+    "chess.*",
+    "PyPDF2.*",
+    "pptx.*",
+    "torch.*",
+    "openpyxl.*",
+    "xlrd.*",
     "datetime",
     "fractions",
     "csv",
@@ -115,8 +138,66 @@ AUTHORIZED_IMPORTS = [
     "collections",
     "functools",
     "mpl_toolkits.mplot3d",
-    "sympy",
 ]
+
+
+# URLs that host benchmark test/validation sets with answers. The agent must
+# not search-result-into or visit these. New mirrors should be added to this
+# list as they are discovered. Each pattern is matched (case-insensitively)
+# against any URL the agent retrieves through `web_search` or `visit_webpage`.
+BENCHMARK_MIRROR_PATTERNS: List[re.Pattern] = [
+    re.compile(p, re.IGNORECASE)
+    for p in [
+        r"huggingface\.co/datasets/gaia-benchmark",
+        r"huggingface\.co/spaces/[^/]+/gaia",
+        r"huggingface\.co/datasets/[^/]+/.*gaia",
+        r"github\.com/[^/]+/gaia[^/]*?/blob/.+/(?:test|validation|metadata)",
+        r"gaia[_-]validation\.jsonl",
+        r"gaia[_-]test\.jsonl",
+        r"/metadata\.jsonl(?:[?#].*)?$",
+    ]
+]
+
+
+def _url_is_benchmark_mirror(url: str) -> bool:
+    """True if `url` matches any known benchmark-mirror pattern."""
+    if not isinstance(url, str) or not url:
+        return False
+    return any(p.search(url) for p in BENCHMARK_MIRROR_PATTERNS)
+
+
+def _filter_search_results_blocks(text: str) -> str:
+    """Drop numbered result blocks whose URL matches a benchmark-mirror pattern.
+
+    The GoogleSearchTool returns a "## Search Results"-prefixed string in which
+    each hit looks like
+
+        0. [Title](https://url)
+        Source: ...
+        snippet...
+
+    separated by blank lines. We drop any block whose URL matches the mirror
+    list; the remaining blocks are returned in order. If the format is not
+    recognised we return the input unchanged.
+    """
+    if not isinstance(text, str) or "[" not in text:
+        return text
+    blocks = re.split(r"\n(?=\d+\.\s+\[)", text)
+    kept: List[str] = []
+    dropped = 0
+    for blk in blocks:
+        m = re.search(r"\[[^\]]+\]\(([^)]+)\)", blk)
+        if m and _url_is_benchmark_mirror(m.group(1)):
+            dropped += 1
+            continue
+        kept.append(blk)
+    if dropped == 0:
+        return text
+    suffix = (
+        f"\n\n[note: {dropped} result(s) hidden because they pointed at a "
+        f"benchmark test-set mirror; do not search for it]"
+    )
+    return "\n".join(kept) + suffix
 
 
 def save_agent_steps(agent, kwargs, response, sample):
@@ -465,6 +546,60 @@ def edit_file(
 
 
 @tool
+def write_file(
+    filename: str,
+    content: str,
+    binary_base64: Optional[bool] = False,
+) -> str:
+    """
+    Save a file inside the agent's current working directory.
+
+    Use this for the "download bytes then inspect" pattern, e.g. saving a PDF
+    or image fetched via `requests.get(url).content` so a later tool call can
+    read it from disk. Writes are restricted to the cwd — no parent traversal,
+    no absolute paths — and no subdirectories may be created.
+
+    Args:
+        filename: Bare filename to write into the cwd (e.g. "doc.pdf"). Must
+            not contain path separators, parent references, or be absolute.
+        content: The data to write. For text, pass a plain string. For binary
+            data, pass the base64-encoded bytes as a string and set
+            `binary_base64=True`.
+        binary_base64: When True, treat `content` as base64-encoded bytes and
+            write the decoded bytes in binary mode.
+
+    Returns:
+        Confirmation string with the bytes-written count.
+    """
+    if not isinstance(filename, str) or not filename:
+        return "Error: filename must be a non-empty string."
+    if (
+        os.sep in filename
+        or "/" in filename
+        or ".." in filename
+        or filename.startswith(".")
+        or os.path.isabs(filename)
+    ):
+        return (
+            "Error: filename must be a bare name in cwd "
+            "(no path separators, no '..', no leading '.', no absolute paths)."
+        )
+    try:
+        if binary_base64:
+            data = base64.b64decode(content, validate=True)
+            with open(filename, "wb") as f:
+                f.write(data)
+            n = len(data)
+        else:
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(content)
+            n = len(content.encode("utf-8"))
+        return f"Wrote {n} bytes to {filename}"
+    except Exception as e:
+        return f"Error writing {filename}: {e}"
+
+
+@tool
 def file_content_search(
     query: str,
     exclude_pattern: Optional[str] = "*.pyc,*.git*,__pycache__,*.bin,*.exe,*.dll,*.so",
@@ -587,6 +722,7 @@ TOOL_NAMES = [
     "execute_bash",
     "inspect_file_as_text",
     "edit_file",
+    "write_file",
     "file_content_search",
     "query_vision_language_model",
     "execute_code_to_interact_with_apis",
@@ -1008,6 +1144,47 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
         return heuristic_confidence, heuristic_details
 
 
+_ANTHROPIC_ADAPTIVE_REQUIRED = ("claude-opus-4-7",)
+_BUDGET_TO_EFFORT = {1024: "low", 8192: "medium", 24576: "high"}
+_anthropic_adaptive_patch_installed = False
+
+
+def _install_anthropic_adaptive_thinking_patch():
+    """Translate `thinking.type=enabled` + `budget_tokens` -> `thinking.type=adaptive`
+    + `output_config.effort` for Anthropic models that reject the old format.
+    litellm 1.76.1 always emits the old format from `reasoning_effort`; Claude
+    Opus 4.7 rejects it. The patch rewrites the request body just before send.
+
+    Note: install-once flag is kept at module scope, not as a class attribute on
+    AnthropicConfig, because litellm's `get_config()` merges every class attr
+    into the request body (Anthropic would 400 on the unknown field).
+    """
+    global _anthropic_adaptive_patch_installed
+    if _anthropic_adaptive_patch_installed:
+        return
+    from litellm.llms.anthropic.chat.transformation import AnthropicConfig
+
+    _original = AnthropicConfig.transform_request
+
+    def _patched(self, model, messages, optional_params, litellm_params, headers):
+        data = _original(
+            self, model, messages, optional_params, litellm_params, headers
+        )
+        if not any(slug in model for slug in _ANTHROPIC_ADAPTIVE_REQUIRED):
+            return data
+        thinking = data.get("thinking")
+        if isinstance(thinking, dict) and thinking.get("type") == "enabled":
+            effort = _BUDGET_TO_EFFORT.get(thinking.get("budget_tokens"), "medium")
+            data["thinking"] = {"type": "adaptive"}
+            data["output_config"] = {"effort": effort}
+        # Opus 4.7 deprecated `temperature` (the API rejects it). Strip silently.
+        data.pop("temperature", None)
+        return data
+
+    AnthropicConfig.transform_request = _patched
+    _anthropic_adaptive_patch_installed = True
+
+
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     assert "model_name" in kwargs, "model_name is required"
     assert len(input) == 1, "input must contain only one task"
@@ -1016,6 +1193,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     import litellm
 
+    _install_anthropic_adaptive_thinking_patch()
+
     model_params = {}
     model_params["model_id"] = kwargs["model_name"]
 
@@ -1023,9 +1202,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if "reasoning_effort" in kwargs:
         if "openrouter/" in kwargs["model_name"]:
             # OpenRouter doesn't support reasoning_effort, convert to reasoning.max_tokens
-            effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
+            # Aligned with Anthropic-direct / Gemini-direct conventions:
+            # medium=8192 matches direct API behaviour. Was {low:1024, medium:2048, high:4096}.
+            effort_to_tokens = {"low": 1024, "medium": 8192, "high": 24576}
             model_params["reasoning"] = {
-                "max_tokens": effort_to_tokens.get(kwargs["reasoning_effort"], 4096)
+                "max_tokens": effort_to_tokens.get(kwargs["reasoning_effort"], 8192)
             }
         else:
             # For Anthropic direct and other providers that support reasoning_effort
@@ -1034,7 +1215,16 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if "temperature" in kwargs:
         model_params["temperature"] = kwargs["temperature"]
 
-    if "gemini" in kwargs["model_name"]:
+    # Anthropic requires temperature=1.0 when extended thinking is enabled.
+    # Safe to force for all providers — OpenAI reasoning models ignore temperature,
+    # and Gemini accepts any value with thinking.
+    if "reasoning_effort" in kwargs:
+        model_params["temperature"] = 1.0
+
+    # `gemini/...` slug routes to Google's OpenAI-compat shim. Skip this branch
+    # for `openrouter/google/gemini-...` slugs so the OpenRouter routing (handled
+    # natively by litellm via the openrouter/ prefix) is preserved.
+    if "gemini" in kwargs["model_name"] and "openrouter/" not in kwargs["model_name"]:
         model_params["model_id"] = kwargs["model_name"].replace("gemini/", "openai/")
         model_params["api_key"] = os.getenv("GEMINI_API_KEY")
         model_params["api_base"] = (
@@ -1059,8 +1249,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         # Be lenient with unknown params on different backends
         litellm.drop_params = True
 
-        # Models that don't support 'stop' parameter
-        MODELS_WITHOUT_STOP_SUPPORT = ["gpt-5", "gpt-5.2", "gpt-5.1"]
+        # Models that don't support 'stop' parameter (reasoning models). Matched
+        # by substring, so a versioned ID like "gpt-5.5-2026-04-23" also hits.
+        MODELS_WITHOUT_STOP_SUPPORT = ["gpt-5", "gpt-5.1", "gpt-5.2", "gpt-5.5"]
 
         def model_requires_stop_filter(model_name: str) -> bool:
             """Check if model requires filtering out 'stop' parameter."""
@@ -1255,16 +1446,42 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             A string with the top search results.
         """
         # Always pass filter_year=None to avoid "no results" errors from overly restrictive searches
-        return _google_search_tool.forward(query=query, filter_year=None)
+        raw = _google_search_tool.forward(query=query, filter_year=None)
+        # Strip results that point at benchmark test-set mirrors.
+        return _filter_search_results_blocks(raw)
+
+    # Wrap VisitWebpageTool to refuse navigation to known benchmark-mirror URLs.
+    _visit_webpage_tool = VisitWebpageTool()
+
+    @tool
+    def visit_webpage(url: str) -> str:
+        """
+        Visit a webpage and return its contents as Markdown. Refuses to visit
+        URLs that host benchmark test-set answers (HuggingFace mirrors, GitHub
+        forks of the dataset, raw validation/metadata JSONLs, …).
+
+        Args:
+            url: The URL to visit.
+
+        Returns:
+            The page contents as Markdown, or a refusal message.
+        """
+        if _url_is_benchmark_mirror(url):
+            return (
+                f"Refused: {url} matches a known benchmark test-set mirror. "
+                "Use primary sources instead of dataset mirrors."
+            )
+        return _visit_webpage_tool.forward(url=url)
 
     CORE_TOOLS = [
         # DuckDuckGoSearchTool(),  # Unreliable - rate limited
         web_search,  # Wrapped GoogleSearchTool that ignores year filter
-        VisitWebpageTool(),
+        visit_webpage,  # Wrapped VisitWebpageTool with mirror-domain blocklist
         PythonInterpreterTool(),
         execute_bash,
         TextInspectorTool(model=model, text_limit=5000),
         edit_file,
+        write_file,
         file_content_search,
         query_vision_language_model,
     ]
@@ -1662,8 +1879,20 @@ Task:
         # Get the original question
         original_question = task["Question"]
 
+        # If the task has an attachment, tell the agent its filename. The harness
+        # places the attachment in cwd under its canonical name (typically
+        # `<task_id>.<ext>`). Without this hint the agent guesses semantic names
+        # (e.g. `question.wav`, `map.xlsx`) from the question text and hits
+        # `Not a regular file`. `file_name` is not ground truth — it's just the
+        # path the agent needs to read the attachment it was given.
+        attachment_hint = ""
+        if task.get("file_name"):
+            attachment_hint = (
+                f"\nAttached file in your current directory: {task['file_name']}\n"
+            )
+
         # Build the base instruction template
-        instruction_template = """Please answer the question below. You should:
+        instruction_template = f"""Please answer the question below. You should:
 
 - Return only your answer, which should be a number, or a short phrase with as few words as possible, or a comma separated list of numbers and/or strings.
 - If the answer is a number, return only the number without any units unless specified otherwise.
@@ -1671,7 +1900,7 @@ Task:
 - If the answer is a comma separated list, apply the above rules to each element in the list.
 
 Here is the question and attached files are stored in your current directory:
-
+{attachment_hint}
 """
 
         # Apply structural perturbations if enabled

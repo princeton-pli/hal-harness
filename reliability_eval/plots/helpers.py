@@ -31,10 +31,16 @@ def filter_oldest_and_newest_per_provider(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def generate_shaded_colors(df: pd.DataFrame) -> List[str]:
+def generate_shaded_colors(
+    df: pd.DataFrame, shade_min: float = 0.1, shade_max: float = 1.6
+) -> List[str]:
     """
     Generate colors with different shades for models from same provider.
     Earlier models are lighter, later models are darker.
+
+    shade_factor 1.0 is the base provider color; <1.0 blends toward white,
+    >1.0 darkens. The default range (0.1 → 1.6) spans lightest to darkest;
+    pass a narrower range (e.g. 0.6 → 1.3) to keep shades closer to the base.
     """
 
     bar_colors = []
@@ -56,9 +62,9 @@ def generate_shaded_colors(df: pd.DataFrame) -> List[str]:
             model_idx = list(provider_models.index).index(row.name)
 
             # Create shades: lighter for earlier, darker for later
-            # Range 0.1 → 1.6: lightest blends 90% toward white,
-            # darkest reduces brightness by 60%
-            shade_factor = 0.1 + (model_idx / (num_models - 1)) * 1.5
+            shade_factor = shade_min + (model_idx / (num_models - 1)) * (
+                shade_max - shade_min
+            )
 
             # Convert hex to RGB
             rgb = mcolors.hex2color(base_color)
@@ -186,21 +192,29 @@ def _bar_with_ci(ax, x_pos, values, colors, df, metric_col):
 
 
 def _add_bar_labels_ci(ax, bars, values, yerr=None):
-    """Add value labels above bars, accounting for error bar height.
-    Automatically adjusts ylim so labels never overshoot."""
-    max_y = 0
+    """Add value labels outside each bar (above for positive, below for negative),
+    accounting for error bar height. Automatically expands ylim so labels stay in frame."""
+    cur_ymin, cur_ymax = ax.get_ylim()
+    max_y = cur_ymax
+    min_y = cur_ymin
     for i, (bar, val) in enumerate(zip(bars, values)):
         if not np.isnan(val):
-            offset = (yerr[i] if yerr is not None else 0) + 0.02
-            label_y = bar.get_height() + offset
+            err = yerr[i] if yerr is not None else 0
+            height = bar.get_height()
+            if height >= 0:
+                label_y = height + err + 0.02
+                va = "bottom"
+                max_y = max(max_y, label_y + 0.05)
+            else:
+                label_y = height - err - 0.02
+                va = "top"
+                min_y = min(min_y, label_y - 0.05)
             ax.text(
                 bar.get_x() + bar.get_width() / 2,
                 label_y,
                 f"{val:.2f}",
                 ha="center",
-                va="bottom",
-                fontsize=10,
+                va=va,
+                fontsize=8,
             )
-            # Track highest label position (+ approx text height)
-            max_y = max(max_y, label_y + 0.05)
-    ax.set_ylim(0, max(max_y, ax.get_ylim()[1]))
+    ax.set_ylim(min_y, max_y)

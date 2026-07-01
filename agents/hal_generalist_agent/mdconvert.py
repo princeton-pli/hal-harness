@@ -1015,7 +1015,14 @@ class MarkdownConverter:
                 if "mlm_model" not in _kwargs and self._mlm_model is not None:
                     _kwargs["mlm_model"] = self._mlm_model
 
-                # If we hit an error log it and keep trying
+                # If we hit an error log it and keep trying. Initialise `res`
+                # for this iteration: otherwise an exception on the very first
+                # converter leaves `res` unbound and the `if res is not None`
+                # check below raises `UnboundLocalError: local variable 'res'`
+                # instead of the intended FileConversionException — the agent
+                # then sees a confusing error and can't tell what went wrong
+                # (e.g. that the file simply doesn't exist).
+                res = None
                 try:
                     res = converter.convert(local_path, **_kwargs)
                 except Exception:
@@ -1043,14 +1050,21 @@ class MarkdownConverter:
         )
 
     def _append_ext(self, extensions, ext):
-        """Append a unique non-None, non-empty extension to a list of extensions."""
+        """Append a unique non-None, non-empty extension to a list of extensions.
+
+        The dedup check below was previously short-circuited with `if True:`,
+        which let mdconvert classify a single file as several extensions at
+        once. That produced errors like `File type was recognized as
+        ['.csv', '.docx']` and broke dispatch for files whose libmagic guess
+        disagreed with their extension. Restoring the dedup keeps each
+        recognised extension in the list exactly once.
+        """
         if ext is None:
             return
         ext = ext.strip()
         if ext == "":
             return
-        # if ext not in extensions:
-        if True:
+        if ext not in extensions:
             extensions.append(ext)
 
     def _guess_ext_magic(self, path):

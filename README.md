@@ -405,6 +405,7 @@ hal-eval --benchmark <benchmark_name> --agent_dir <agent_directory> --agent_func
 - **`--max_concurrent <number>`**: Number of parallel tasks (default: 1)
 - **`--conda_env_name <env_name>`**: Conda environment for agent execution
 - **`--vm`**: Run evaluation on Azure VMs
+- **`--no-download-environment`**: With **`--vm`**, omit the VM’s `environment/` directory (task data, code, and results mounts) when downloading results back to the host, so the SFTP step is much faster. `output.json`, logs, and other files under `/home/agent` are still downloaded. No effect without `--vm`.
 - **`--docker`**: Run evaluation in Docker containers for isolation
 - **`--run_id <run_id>`**: Specify a run ID (useful for continuing runs)
 - **`--continue_run`**: Continue from a previous run (requires run_id)
@@ -590,10 +591,11 @@ Check out this [issue](https://github.com/princeton-pli/hal-harness/issues/16) f
 If you use HAL or the HAL harness in your research, please cite it by using the following BibTeX entry.
 
 ```bibtex
-@Misc{hal,
+@Inproceedings{hal,
   title =        {HAL: A Holistic Agent Leaderboard for Centralized and Reproducible Agent Evaluation},
   author =       {Benedikt Stroebl and Sayash Kapoor and Arvind Narayanan},
+  booktitle =    {The International Conference on Learning Representations}
   howpublished = {\url{https://github.com/princeton-pli/hal-harness}},
-  year =         {2025}
+  year =         {2026}
 }
 ```

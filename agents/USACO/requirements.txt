@@ -99,4 +99,4 @@ wcwidth==0.2.12
 xxhash==3.4.1
 yarl==1.9.2
 litellm
-weave==0.51.41
+weave>=0.52.36

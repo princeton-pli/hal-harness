@@ -1,5 +1,59 @@
 import json
+import logging
 import os
+
+logger = logging.getLogger(__name__)
+
+_EFFORT_TO_TOKENS = {"low": 1024, "medium": 2048, "high": 4096}
+
+
+def _inject_reasoning_kwargs(
+    completion_kwargs: dict,
+    *,
+    model_name: str,
+    reasoning_effort: str | None,
+    is_openrouter: bool,
+    is_native_openai: bool,
+) -> None:
+    """Inject reasoning parameters into litellm completion kwargs in-place.
+
+    Handles three provider branches: OpenRouter, native OpenAI, and
+    Anthropic/other.  Only modifies kwargs when the call targets our agent
+    model and a reasoning_effort was requested.
+    """
+    if reasoning_effort is None:
+        return
+    if completion_kwargs.get("model") != model_name:
+        return
+
+    completion_kwargs["temperature"] = 1.0
+
+    if is_openrouter:
+        reasoning_tokens = _EFFORT_TO_TOKENS.get(reasoning_effort, 4096)
+        extra_body = completion_kwargs.get("extra_body", {})
+        extra_body["reasoning"] = {"max_tokens": reasoning_tokens}
+        extra_body["include_reasoning"] = True
+        completion_kwargs["extra_body"] = extra_body
+        logger.warning(
+            "Injecting reasoning max_tokens=%d for OpenRouter model %s",
+            reasoning_tokens,
+            model_name,
+        )
+    elif is_native_openai:
+        completion_kwargs["reasoning"] = {"effort": reasoning_effort}
+        completion_kwargs.pop("reasoning_effort", None)
+        logger.warning(
+            "Injecting reasoning.effort=%s for model %s",
+            reasoning_effort,
+            model_name,
+        )
+    else:
+        completion_kwargs["reasoning_effort"] = reasoning_effort
+        logger.warning(
+            "Injecting reasoning_effort=%s for model %s",
+            reasoning_effort,
+            model_name,
+        )
 
 
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
@@ -11,72 +65,10 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     litellm.drop_params = True
 
-    # Store the original completion functions
-    original_completion = litellm.completion
-    original_acompletion = litellm.acompletion
+    def _responses_model_name(model: str) -> str:
+        return model if model.startswith("responses/") else f"responses/{model}"
 
-    # Create a wrapper that adds reasoning parameters only for the agent's model
-    def completion_with_reasoning(*args, **completion_kwargs):
-        # Check if this is a call with our agent's model
-        if "model" in completion_kwargs and completion_kwargs["model"] == model_name:
-            if "reasoning_effort" in kwargs:
-                # Set temperature to 1 for reasoning calls
-                completion_kwargs["temperature"] = 1.0
-
-                if "openrouter/" in kwargs["model_name"]:
-                    # For OpenRouter, add reasoning to extra_body
-                    effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
-                    reasoning_tokens = effort_to_tokens.get(
-                        kwargs["reasoning_effort"], 4096
-                    )
-                    extra_body = completion_kwargs.get("extra_body", {})
-                    extra_body["reasoning"] = {"max_tokens": reasoning_tokens}
-                    extra_body["include_reasoning"] = True
-                    completion_kwargs["extra_body"] = extra_body
-                    print(
-                        f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}"
-                    )
-                else:
-                    # For direct Anthropic
-                    completion_kwargs["reasoning_effort"] = kwargs["reasoning_effort"]
-                    print(
-                        f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}"
-                    )
-
-        # Call the original function
-        return original_completion(*args, **completion_kwargs)
-
-    # Create async wrapper
-    async def acompletion_with_reasoning(*args, **completion_kwargs):
-        if "model" in completion_kwargs and completion_kwargs["model"] == model_name:
-            if "reasoning_effort" in kwargs:
-                # Set temperature to 1 for reasoning calls
-                completion_kwargs["temperature"] = 1.0
-
-                if "openrouter/" in kwargs["model_name"]:
-                    # For OpenRouter, add reasoning to extra_body
-                    effort_to_tokens = {"low": 1024, "medium": 2048, "high": 4096}
-                    reasoning_tokens = effort_to_tokens.get(
-                        kwargs["reasoning_effort"], 4096
-                    )
-                    extra_body = completion_kwargs.get("extra_body", {})
-                    extra_body["reasoning"] = {"max_tokens": reasoning_tokens}
-                    extra_body["include_reasoning"] = True
-                    completion_kwargs["extra_body"] = extra_body
-                    print(
-                        f"Setting reasoning tokens to {reasoning_tokens} for OpenRouter model {model_name}"
-                    )
-                else:
-                    # For direct Anthropic
-                    completion_kwargs["reasoning_effort"] = kwargs["reasoning_effort"]
-                    print(
-                        f"Setting reasoning_effort to {kwargs['reasoning_effort']} for model {model_name}"
-                    )
-        return await original_acompletion(*args, **completion_kwargs)
-
-    # Replace both sync and async completion functions
-    litellm.completion = completion_with_reasoning
-    litellm.acompletion = acompletion_with_reasoning
+    model_name = kwargs["model_name"]
 
     # Separate providers for user simulation vs agent
     # User simulation needs OpenAI-compatible API (for tau-bench internals)
@@ -111,6 +103,42 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         api_base = None
         api_key = None
         model_name = kwargs["model_name"]
+
+    is_native_openai = agent_provider == "openai" and api_base is None
+    if is_native_openai:
+        model_name = _responses_model_name(model_name)
+
+    reasoning_effort = kwargs.get("reasoning_effort")
+    is_openrouter = "openrouter/" in kwargs["model_name"]
+
+    # Monkey-patch litellm completion functions to inject reasoning parameters.
+    # This is necessary because tau-bench calls litellm internally and its agent
+    # API provides no way to pass reasoning params through.
+    original_completion = litellm.completion
+    original_acompletion = litellm.acompletion
+
+    def completion_with_reasoning(*args, **completion_kwargs):
+        _inject_reasoning_kwargs(
+            completion_kwargs,
+            model_name=model_name,
+            reasoning_effort=reasoning_effort,
+            is_openrouter=is_openrouter,
+            is_native_openai=is_native_openai,
+        )
+        return original_completion(*args, **completion_kwargs)
+
+    async def acompletion_with_reasoning(*args, **completion_kwargs):
+        _inject_reasoning_kwargs(
+            completion_kwargs,
+            model_name=model_name,
+            reasoning_effort=reasoning_effort,
+            is_openrouter=is_openrouter,
+            is_native_openai=is_native_openai,
+        )
+        return await original_acompletion(*args, **completion_kwargs)
+
+    litellm.completion = completion_with_reasoning
+    litellm.acompletion = acompletion_with_reasoning
 
     from tau_bench.envs import get_env
     from tau_bench.agents.few_shot_agent import FewShotToolCallingAgent

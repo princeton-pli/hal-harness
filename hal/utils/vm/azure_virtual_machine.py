@@ -7,6 +7,19 @@ import subprocess
 import time
 
 from azure.mgmt.compute import ComputeManagementClient
+from azure.mgmt.compute.models import (
+    HardwareProfile,
+    ImageReference,
+    LinuxConfiguration,
+    NetworkInterfaceReference,
+    NetworkProfile,
+    OSDisk,
+    OSProfile,
+    SshConfiguration,
+    SshPublicKey,
+    StorageProfile,
+    VirtualMachine,
+)
 from azure.mgmt.network import NetworkManagementClient
 from azure.identity import DefaultAzureCredential
 
@@ -50,6 +63,24 @@ class AzureVirtualMachine:
         # Create the VM
         self._create()
 
+    def _run_ssh(
+        self, remote_command: str, *, timeout: int = 10
+    ) -> subprocess.CompletedProcess:
+        """Run a command on the VM over SSH."""
+        ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
+        cmd = [
+            "ssh",
+            "-i",
+            ssh_key_path,
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            "ConnectTimeout=5",
+            f"agent@{self.public_ip}",
+            remote_command,
+        ]
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
     def check_for_file_presence_by_path(self, file_path: str) -> bool:
         """
         Checks if a file is present on the virtual machine.
@@ -60,20 +91,10 @@ class AzureVirtualMachine:
         :return: whether or not the file is present
         :rtype: bool
         """
-        ssh_key_path = os.getenv("SSH_PRIVATE_KEY_PATH")
-
-        cmd = [
-            "ssh",
-            "-i",
-            ssh_key_path,
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            "ConnectTimeout=5",
-            f"agent@{self.public_ip}",
-            f"test -f {file_path}",
-        ]
-        result = subprocess.run(cmd, capture_output=True)
+        try:
+            result = self._run_ssh(f"test -f {file_path}")
+        except (subprocess.TimeoutExpired, OSError):
+            return False
 
         return result.returncode == 0
 
@@ -139,52 +160,54 @@ class AzureVirtualMachine:
         # Create VM
         # Use Ubuntu-HPC image for GPU VMs (has NVIDIA drivers pre-installed)
         if self.gpu:
-            image_reference = {
-                "publisher": "microsoft-dsvm",
-                "offer": "ubuntu-hpc",
-                "sku": "2204",
-                "version": "latest",
-            }
+            image_reference = ImageReference(
+                publisher="microsoft-dsvm",
+                offer="ubuntu-hpc",
+                sku="2204",
+                version="latest",
+            )
             logger.info(
                 f"Using Ubuntu-HPC 22.04 image with pre-installed GPU drivers for {self.name}"
             )
         else:
-            image_reference = {
-                "publisher": "Canonical",
-                "offer": "0001-com-ubuntu-server-jammy",
-                "sku": "22_04-lts-gen2",
-                "version": "latest",
-            }
+            image_reference = ImageReference(
+                publisher="Canonical",
+                offer="0001-com-ubuntu-server-jammy",
+                sku="22_04-lts-gen2",
+                version="latest",
+            )
             logger.info(f"Using standard Ubuntu 22.04 image for {self.name}")
 
-        vm_params = {
-            "location": self.location,
-            "storage_profile": {
-                "image_reference": image_reference,
-                "os_disk": {"createOption": "FromImage", "diskSizeGB": 80},
-            },
-            "hardware_profile": {"vm_size": self.vm_size},
-            "os_profile": {
-                "computer_name": self.name,
-                "admin_username": "agent",
-                "custom_data": custom_data,
-                "linux_configuration": {
-                    "disable_password_authentication": True,
-                    "ssh": {
-                        "public_keys": [
-                            {
-                                "path": "/home/agent/.ssh/authorized_keys",
-                                "key_data": self.ssh_public_key,
-                            }
+        vm = VirtualMachine(
+            location=self.location,
+            hardware_profile=HardwareProfile(vm_size=self.vm_size),
+            storage_profile=StorageProfile(
+                image_reference=image_reference,
+                os_disk=OSDisk(create_option="FromImage", disk_size_gb=80),
+            ),
+            os_profile=OSProfile(
+                computer_name=self.name,
+                admin_username="agent",
+                custom_data=custom_data,
+                linux_configuration=LinuxConfiguration(
+                    disable_password_authentication=True,
+                    ssh=SshConfiguration(
+                        public_keys=[
+                            SshPublicKey(
+                                path="/home/agent/.ssh/authorized_keys",
+                                key_data=self.ssh_public_key,
+                            )
                         ]
-                    },
-                },
-            },
-            "network_profile": {"network_interfaces": [{"id": nic.id}]},
-        }
+                    ),
+                ),
+            ),
+            network_profile=NetworkProfile(
+                network_interfaces=[NetworkInterfaceReference(id=nic.id)]
+            ),
+        )
 
         self.compute_client.virtual_machines.begin_create_or_update(
-            self.resource_group, self.name, vm_params
+            self.resource_group, self.name, vm
         ).result()
 
         logger.info(f"VM {self.name} created at {self.public_ip}")
@@ -201,25 +224,54 @@ class AzureVirtualMachine:
         """Wait for startup script to complete by checking for sentinel file.
 
         Uses self.timeout (passed from VirtualMachineRunner.task_timeout).
+        Streams new lines from /home/agent/cloud_init.log to the runner logs.
         """
         start_time = time.time()
         sentinel_file = "/home/agent/startup_complete"
+        startup_log = "/home/agent/cloud_init.log"
+        log_offset = 0
 
         logger.info(
             f"Waiting for startup script to complete on {self.name} (timeout: {self.timeout}s)"
         )
         while time.time() - start_time < self.timeout:
             if self.check_for_file_presence_by_path(sentinel_file):
-                logger.debug(
+                self._stream_startup_log(startup_log, log_offset)
+                logger.info(
                     f"Startup script completed on {self.name} at {self.public_ip}"
                 )
                 return
 
+            log_offset = self._stream_startup_log(startup_log, log_offset)
+            elapsed = int(time.time() - start_time)
+            started = self.check_for_file_presence_by_path(
+                "/home/agent/startup_started"
+            )
+            logger.info(
+                f"Startup in progress on {self.name} ({self.public_ip}): "
+                f"{elapsed}s elapsed, cloud-init started={started}"
+            )
             time.sleep(10)
 
+        self._stream_startup_log(startup_log, log_offset)
         raise TimeoutError(
             f"Startup script did not complete on {self.name} ({self.public_ip}) within {self.timeout} seconds"
         )
+
+    def _stream_startup_log(self, remote_path: str, offset: int) -> int:
+        """Print new bytes from the remote startup log; return the new offset."""
+        try:
+            result = self._run_ssh(
+                f"tail -c +{offset + 1} {remote_path} 2>/dev/null || true"
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return offset
+
+        if result.stdout:
+            for line in result.stdout.splitlines():
+                logger.info(f"{self.name} cloud-init: {line}")
+            return offset + len(result.stdout.encode())
+        return offset
 
     def delete(self) -> None:
         """Delete this VM and all resources."""
