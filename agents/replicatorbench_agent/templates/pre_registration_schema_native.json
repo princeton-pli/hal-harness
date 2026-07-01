@@ -1,0 +1,68 @@
+{
+    "replication_study": {
+        "hypothesis": "Focal hypothesis for the replication, phrased as a testable statement at the level of operationalized variables.",
+        "study_type": "Type of study for the replication (Experimental, Observational, Meta-Analysis, Other); based on the replication dataset.",
+        "data_plan": {
+            "dataset_identifier": " Name/Version.",
+            "source_type": " Data Source (e.g., survey, database).",
+            "wave_or_subset": "Specific waves or subsets (if applicable).",
+            "sample_size": "Sample size of the selected data (if applicable).",
+            "unit_of_analysis": "Unit of analysis (e.g., individual, household).",
+            "access_details": "Access details (e.g., restrictions, request process).",
+            "qualification": {
+                "explanation": "Discuss why this dataset is qualified for replication study. Is the data different enough to provide a different sample than the data used in the original sample, but at the same still maintain high fidelity to the original data?",
+                "similarity_to_original": "What specifically about this data has high-fidelity to the original paper and claim? You MUST reference information from this dataset and from the original dataset. Cite the specific documents where each part of information is. (e.g. This comes from the same survey as the original data source (HILDA))" ,
+                "deviation_from_original": "What specifically about this data deviates from the original paper and original data that make it a new sample?  You MUST reference detailed information from this dataset and from the original dataset. Cite the specific documents where each part of information is. (e.g., While origina data uses wave 1-8 (post_registration.json), this new data uses wave 1-11 (replication_data folder upon inspection))"
+                
+            },
+            "notes": "Any additional information or caveats (e.g., encoding issues, nested structure, missing metadata, unusual column formats, deviations from original data such as scope, variable coding)."
+        },
+        "planned_method": {
+            "steps": "Ordered list of procedural steps to replicate the study on  this dataset.",
+            "models": "Models or statistical approach to use (e.g., regression type).",
+            "outcome_variable": "Dependent/outcome variable to measure or analyze.",
+            "independent_variables": "Primary variables expected to influence the outcome.",
+            "control_variables": "Variables to control in the replication.",
+            "tools_software": "Tools or software specifics to use (e.g., R, Python, packages).",
+            "planned_estimation_and_test": {
+                "estimation": "the target of estimation (e.g., coefficient, ratio, rate)",
+                "test": "the statistical test to evaluate the estimation(e.g., t-test)."
+            },
+            "missing_data_handling": "Planned rules (e.g., listwise deletion).",
+            "multiple_testing_policy": "Correction method if multiple outcomes.",
+            "inference_criteria": "Rules for judging outcomes (e.g., significance threshold, directionality, correction)."
+        },
+         "codebase": {
+            "files": {
+                "file_name": "A detailed description of what this each file does and how it relates to the dataset or experiment."
+            },
+            "notes": "Any overall notes on the code design, dependencies, or runtime environment."
+        },
+        "docker_specs": {
+            "base_image": "A proper base Docker image that contains the necessary software to reproduce the original study (e.g., python:3.10, rocker/verse for R, etc.).",
+            "packages": {
+                "python": [
+                    "List of required Python packages with version constraints (e.g., numpy==1.23.1, pandas>=1.4.0)"
+                ],
+                "r": [
+                    "List of R packages and versions (e.g., dplyr, ggplot2)"
+                ],
+                "other": [
+                    "Other necessary software (e.g., git, make, wget)"
+                ]
+            },
+            "hardware": {
+                "gpu_support": "true if GPU is required for model training or inference, false otherwise",
+                "min_gpu_memory_gb": "Minimum GPU memory required in GB (e.g., 12)",
+                "min_ram_gb": "Minimum system RAM required in GB (e.g., 16)"
+            },
+            "volumes": [
+                "Suggested host paths to mount as volumes inside the container (e.g., ./data:/app/data)"
+            ]
+        },
+        "analysis": {
+            "instructions": "Steps or code logic to run the analysis.",
+            "comparison_metrics": "Metrics used to compare original vs replication results."
+        }
+    }
+}

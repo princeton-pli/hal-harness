@@ -1,0 +1,241 @@
+{
+  "matches": [
+    {
+      "key": "original_study.claim.statement",
+      "extracted": "social distancing measures introduced by governments during the 2020 pandemic reduced the mobility in the concerned cities.",
+      "expected": "Social distancing measures introduced by governments reduce the mobility in the concerned cities."
+    },
+    {
+      "key": "original_study.claim.direction",
+      "extracted": "Negative",
+      "expected": "Negative"
+    },
+    {
+      "key": "original_study.claim.study_type",
+      "extracted": "Observational",
+      "expected": "Observational"
+    },
+    {
+      "key": "original_study.metadata.original_paper_id",
+      "extracted": "10.1101/2020.03.30.20048090",
+      "expected": "https://doi.org/10.1101/2020.03.30.20048090"
+    },
+    {
+      "key": "original_study.metadata.original_paper_title",
+      "extracted": "COVID-19 related social distancing measures and reduction in city mobility",
+      "expected": "COVID-19 related social distancing measures and reduction in city mobility"
+    },
+    {
+      "key": "docker_specs.hardware.gpu_support",
+      "extracted": "No",
+      "expected": "No"
+    }
+  ],
+  "mismatches": [
+    {
+      "key": "original_study.claim.hypothesis",
+      "extracted": [
+        "H*: The introduction of social distancing measures is associated with a decrease in mobility"
+      ],
+      "expected": "The introduction of social distancing measures is associated with a decrease in mobility."
+    },
+    {
+      "key": "original_study.claim.original_coefficient",
+      "extracted": "3.4%",
+      "expected": "23"
+    },
+    {
+      "key": "original_study.claim.original_p_value",
+      "extracted": null,
+      "expected": "N/A"
+    },
+    {
+      "key": "original_study.datasets",
+      "extracted": [
+        {
+          "name": "Citymapper Mobility Index (CMI)",
+          "columns": [
+            "city",
+            "date",
+            "mobility_percentage",
+            "social_distancing_measures"
+          ],
+          "access": {
+            "url": "https://citymapper.com/cmi",
+            "restrictions": "CC-BY-NC 4.0 International license"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "name": "Citymapper Mobility Index",
+          "columns": "City, Date, % Moving, Lockdown",
+          "access": {
+            "url": "https://cdn.citymapper.com/data/cmi/Citymapper_Mobility_Index_20201105.csv",
+            "restrictions": "N/A"
+          }
+        }
+      ]
+    },
+    {
+      "key": "original_study.method.description",
+      "extracted": "The study analyzed mobility data from 41 cities to evaluate the impact of social distancing measures. Mobility data from the Citymapper Mobility Index (CMI) was used, covering the period from March 2, 2020, to March 26, 2020. The effect of these measures was estimated using a multilevel mixed-effects linear regression model.",
+      "expected": "The effect of time and social distancing measures was estimated using a multilevel mixed-effects linear regression model."
+    },
+    {
+      "key": "original_study.method.steps",
+      "extracted": [
+        "Download mobility data from Citymapper Mobility Index from March 2, 2020, to March 26, 2020.",
+        "Tabulate social distancing measures from official government and media websites.",
+        "Classify cities based on the intensity of social distancing measures.",
+        "Estimate the effect of time and social distancing measures using multilevel mixed-effects linear regression model."
+      ],
+      "expected": [
+        "Download data from Citymapper.com.",
+        "Classify cities based on social distancing measures.",
+        "Use multilevel mixed-effects linear regression to estimate effects."
+      ]
+    },
+    {
+      "key": "original_study.results.summary",
+      "extracted": "The median mobility decreased significantly in the analyzed period, largely attributed to the introduction of social distancing measures. The measures resulted in an average daily mobility decrease by 3.4% and an additional reduction of 23% in mobility on the implementation of these measures.",
+      "expected": "Social distancing measures decreased the mobility by an additional 23% (95%CI: 20%, 27%)."
+    },
+    {
+      "key": "original_study.results.numerical_results",
+      "extracted": [
+        {
+          "outcome_name": "daily mobility decrease",
+          "value": 3.4,
+          "unit": "%",
+          "effect_size": null,
+          "confidence_interval": {
+            "lower": 3.3,
+            "upper": 3.6,
+            "level": 95
+          },
+          "p_value": null,
+          "statistical_significance": true
+        },
+        {
+          "outcome_name": "mobility decrease due to social distancing",
+          "value": 23,
+          "unit": "%",
+          "effect_size": null,
+          "confidence_interval": {
+            "lower": 20,
+            "upper": 27,
+            "level": 95
+          },
+          "p_value": null,
+          "statistical_significance": true
+        }
+      ],
+      "expected": [
+        {
+          "outcome_name": "Mobility reduction",
+          "value": "23",
+          "unit": "%",
+          "effect_size": "N/A",
+          "confidence_interval": {
+            "lower": "20",
+            "upper": "27",
+            "level": "95"
+          },
+          "p_value": "N/A",
+          "statistical_significance": "True"
+        }
+      ]
+    },
+    {
+      "key": "original_study.metadata.original_paper_code",
+      "extracted": null,
+      "expected": "N/A"
+    },
+    {
+      "key": "original_study.metadata.original_paper_data",
+      "extracted": "https://citymapper.com/cmi",
+      "expected": "N/A"
+    },
+    {
+      "key": "replication_datasets",
+      "extracted": [
+        {
+          "name": "Citymapper Mobility Index (CMI)",
+          "columns": "city, date, mobility_percentage, social_distancing_measures",
+          "schema_mapping": {
+            "original": "city, date, mobility_percentage, social_distancing_measures",
+            "replication": "city, date, mobility_percentage, social_distancing_measures"
+          },
+          "access": {
+            "url": "https://citymapper.com/cmi",
+            "restrictions": "CC-BY-NC 4.0 International license"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "name": "Google Community Mobility Reports",
+          "columns": "CMRT_transit, CMRT_residential, Lockdown",
+          "schema_mapping": {
+            "original": "City, % Moving",
+            "replication": "CMRT_transit"
+          },
+          "access": {
+            "url": "https://www.google.com/covid19/mobility/index.html?hl=en",
+            "restrictions": "N/A"
+          }
+        }
+      ]
+    },
+    {
+      "key": "docker_specs.base_image",
+      "extracted": "python:3.8-slim",
+      "expected": "N/A"
+    },
+    {
+      "key": "docker_specs.packages.python",
+      "extracted": [
+        "pandas==1.1.5",
+        "statsmodels==0.12.0",
+        "numpy==1.19.5"
+      ],
+      "expected": "N/A"
+    },
+    {
+      "key": "docker_specs.packages.r",
+      "extracted": null,
+      "expected": "N/A"
+    },
+    {
+      "key": "docker_specs.packages.other",
+      "extracted": null,
+      "expected": "Stata 13.0"
+    },
+    {
+      "key": "docker_specs.hardware.min_gpu_memory_gb",
+      "extracted": null,
+      "expected": "N/A"
+    },
+    {
+      "key": "docker_specs.hardware.min_ram_gb",
+      "extracted": 4,
+      "expected": "N/A"
+    },
+    {
+      "key": "docker_specs.volumes",
+      "extracted": "/data",
+      "expected": "N/A"
+    },
+    {
+      "key": "analysis.instructions",
+      "extracted": "1. Download mobility data from Citymapper Mobility Index from March 2, 2020, to March 26, 2020. 2. Tabulate social distancing measures from official government and media websites. 3. Classify cities based on the intensity of social distancing measures. 4. Estimate the effect of time and social distancing measures using multilevel mixed-effects linear regression model.",
+      "expected": "Use multilevel mixed-effects linear regression model to estimate the effect of time and governmental social distancing measures on mobility."
+    },
+    {
+      "key": "analysis.comparison_metrics",
+      "extracted": "Average mobility decrease percentage, additional reduction percentage, confidence intervals",
+      "expected": "Coefficient of lockdown variable, p-value, confidence interval"
+    }
+  ]
+}

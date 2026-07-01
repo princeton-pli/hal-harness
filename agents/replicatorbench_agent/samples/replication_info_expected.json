@@ -1,0 +1,86 @@
+{
+  "original_study": {
+    "claim": {
+      "statement": "Social distancing measures introduced by governments reduce the mobility in the concerned cities.",
+      "hypothesis": "The introduction of social distancing measures is associated with a decrease in mobility.",
+      "original_coefficient": "23",
+      "original_p_value": "N/A",
+      "direction": "Negative",
+      "study_type": "Observational"
+    },
+    "datasets": [
+      {
+        "name": "Citymapper Mobility Index",
+        "columns": "City, Date, % Moving, Lockdown",
+        "access": {
+          "url": "https://cdn.citymapper.com/data/cmi/Citymapper_Mobility_Index_20201105.csv",
+          "restrictions": "N/A"
+        }
+      }
+    ],
+    "method": {
+      "description": "The effect of time and social distancing measures was estimated using a multilevel mixed-effects linear regression model.",
+      "steps": [
+        "Download data from Citymapper.com.",
+        "Classify cities based on social distancing measures.",
+        "Use multilevel mixed-effects linear regression to estimate effects."
+      ]
+    },
+    "results": {
+      "summary": "Social distancing measures decreased the mobility by an additional 23% (95%CI: 20%, 27%).",
+      "numerical_results": [
+        {
+          "outcome_name": "Mobility reduction",
+          "value": "23",
+          "unit": "%",
+          "effect_size": "N/A",
+          "confidence_interval": {
+            "lower": "20",
+            "upper": "27",
+            "level": "95"
+          },
+          "p_value": "N/A",
+          "statistical_significance": "True"
+        }
+      ]
+    },
+    "metadata": {
+      "original_paper_id": "https://doi.org/10.1101/2020.03.30.20048090",
+      "original_paper_title": "COVID-19 related social distancing measures and reduction in city mobility",
+      "original_paper_code": "N/A",
+      "original_paper_data": "N/A"
+    }
+  },
+  "replication_datasets": [
+    {
+      "name": "Google Community Mobility Reports",
+      "columns": "CMRT_transit, CMRT_residential, Lockdown",
+      "schema_mapping": {
+        "original": "City, % Moving",
+        "replication": "CMRT_transit"
+      },
+      "access": {
+        "url": "https://www.google.com/covid19/mobility/index.html?hl=en",
+        "restrictions": "N/A"
+      }
+    }
+  ],
+  "docker_specs": {
+    "base_image": "N/A",
+    "packages": {
+      "python": "N/A",
+      "r": "N/A",
+      "other": "Stata 13.0"
+    },
+    "hardware": {
+      "gpu_support": "No",
+      "min_gpu_memory_gb": "N/A",
+      "min_ram_gb": "N/A"
+    },
+    "volumes": "N/A"
+  },
+  "analysis": {
+    "instructions": "Use multilevel mixed-effects linear regression model to estimate the effect of time and governmental social distancing measures on mobility.",
+    "comparison_metrics": "Coefficient of lockdown variable, p-value, confidence interval"
+  }
+}
